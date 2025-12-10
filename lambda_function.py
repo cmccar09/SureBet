@@ -1,4 +1,4 @@
-n # SureBet Lambda: fetch odds, call Claude 4.5, store bets in DynamoDB
+# SureBet Lambda: fetch odds, call Claude 4.5, store bets in DynamoDB
 
 import os
 import json
@@ -100,7 +100,7 @@ def fetch_betfair_odds(sport='horse_racing'):
             confidence_adj = 0.9
             advice = "Good timing - odds are settling"
         
-        events.append({
+        event = {
             "market_id": f"1.{234567 + i}",
             "event_time": (now + datetime.timedelta(minutes=mins)).strftime("%Y-%m-%dT%H:%M:%SZ"),
             "venue": random.choice(courses),
@@ -112,7 +112,121 @@ def fetch_betfair_odds(sport='horse_racing'):
                 "confidence_adjustment": confidence_adj,
                 "timing_advice": advice
             }
-        })
+        }
+        
+        # Add special markets for darts, rugby, and cricket
+        if sport == 'darts':
+            event["markets"] = {
+                "Match Odds": {
+                    "market_id": f"1.{234567 + i}",
+                    "selections": selections
+                },
+                "Total 180s Over/Under 3.5": {
+                    "market_id": f"1.{234600 + i}",
+                    "selections": [
+                        {"name": "Over 3.5", "odds": round(random.uniform(1.8, 2.3), 2)},
+                        {"name": "Under 3.5", "odds": round(random.uniform(1.7, 2.2), 2)}
+                    ]
+                },
+                "Total 180s Over/Under 6.5": {
+                    "market_id": f"1.{234700 + i}",
+                    "selections": [
+                        {"name": "Over 6.5", "odds": round(random.uniform(2.5, 4.0), 2)},
+                        {"name": "Under 6.5", "odds": round(random.uniform(1.3, 1.6), 2)}
+                    ]
+                },
+                "Correct Score": {
+                    "market_id": f"1.{234800 + i}",
+                    "selections": [
+                        {"name": "3-0", "odds": round(random.uniform(4.0, 7.0), 2)},
+                        {"name": "3-1", "odds": round(random.uniform(4.0, 6.0), 2)},
+                        {"name": "3-2", "odds": round(random.uniform(4.5, 7.0), 2)},
+                        {"name": "0-3", "odds": round(random.uniform(5.0, 10.0), 2)},
+                        {"name": "1-3", "odds": round(random.uniform(5.0, 8.0), 2)},
+                        {"name": "2-3", "odds": round(random.uniform(5.0, 9.0), 2)}
+                    ]
+                }
+            }
+        elif sport == 'rugby':
+            event["markets"] = {
+                "Match Odds": {
+                    "market_id": f"1.{234567 + i}",
+                    "selections": selections
+                },
+                "Total Points Over/Under 45.5": {
+                    "market_id": f"1.{234600 + i}",
+                    "selections": [
+                        {"name": "Over 45.5", "odds": round(random.uniform(1.8, 2.2), 2)},
+                        {"name": "Under 45.5", "odds": round(random.uniform(1.7, 2.1), 2)}
+                    ]
+                },
+                "Handicap": {
+                    "market_id": f"1.{234700 + i}",
+                    "selections": [
+                        {"name": f"{selections[0]['name']} -7.5", "odds": round(random.uniform(1.8, 2.3), 2)},
+                        {"name": f"{selections[1]['name'] if len(selections) > 1 else 'Team 2'} +7.5", "odds": round(random.uniform(1.7, 2.2), 2)}
+                    ]
+                },
+                "First Try Scorer": {
+                    "market_id": f"1.{234800 + i}",
+                    "selections": [
+                        {"name": "Player A", "odds": round(random.uniform(5.0, 9.0), 2)},
+                        {"name": "Player B", "odds": round(random.uniform(6.0, 10.0), 2)},
+                        {"name": "Player C", "odds": round(random.uniform(7.0, 12.0), 2)},
+                        {"name": "Player D", "odds": round(random.uniform(8.0, 15.0), 2)}
+                    ]
+                },
+                "Winning Margin": {
+                    "market_id": f"1.{234900 + i}",
+                    "selections": [
+                        {"name": "1-12 Points", "odds": round(random.uniform(3.0, 5.0), 2)},
+                        {"name": "13+ Points", "odds": round(random.uniform(3.5, 6.0), 2)},
+                        {"name": "Draw", "odds": round(random.uniform(15.0, 25.0), 2)}
+                    ]
+                }
+            }
+        elif sport == 'cricket':
+            event["markets"] = {
+                "Match Odds": {
+                    "market_id": f"1.{234567 + i}",
+                    "selections": selections
+                },
+                "Total Runs Over/Under 280.5": {
+                    "market_id": f"1.{234600 + i}",
+                    "selections": [
+                        {"name": "Over 280.5", "odds": round(random.uniform(1.8, 2.3), 2)},
+                        {"name": "Under 280.5", "odds": round(random.uniform(1.7, 2.2), 2)}
+                    ]
+                },
+                "Top Batsman": {
+                    "market_id": f"1.{234700 + i}",
+                    "selections": [
+                        {"name": "Batsman A", "odds": round(random.uniform(4.0, 7.0), 2)},
+                        {"name": "Batsman B", "odds": round(random.uniform(5.0, 8.0), 2)},
+                        {"name": "Batsman C", "odds": round(random.uniform(6.0, 10.0), 2)},
+                        {"name": "Batsman D", "odds": round(random.uniform(7.0, 12.0), 2)}
+                    ]
+                },
+                "Top Bowler": {
+                    "market_id": f"1.{234800 + i}",
+                    "selections": [
+                        {"name": "Bowler A", "odds": round(random.uniform(4.5, 8.0), 2)},
+                        {"name": "Bowler B", "odds": round(random.uniform(5.5, 9.0), 2)},
+                        {"name": "Bowler C", "odds": round(random.uniform(6.5, 11.0), 2)}
+                    ]
+                },
+                "Method of Dismissal - 1st Wicket": {
+                    "market_id": f"1.{234900 + i}",
+                    "selections": [
+                        {"name": "Caught", "odds": round(random.uniform(2.0, 3.0), 2)},
+                        {"name": "Bowled", "odds": round(random.uniform(3.5, 5.0), 2)},
+                        {"name": "LBW", "odds": round(random.uniform(4.0, 6.0), 2)},
+                        {"name": "Run Out", "odds": round(random.uniform(6.0, 10.0), 2)}
+                    ]
+                }
+            }
+        
+        events.append(event)
     
     return events
 
@@ -307,6 +421,7 @@ def filter_multiple_horses_per_race(predictions):
         race_key = f"{pred.get('race_time')}_{pred.get('course')}"
         bet_type = pred.get('bet_type', 'WIN')
         
+
         if race_key not in race_selections:
             race_selections[race_key] = {'WIN': None, 'EACH_WAY': None}
         
@@ -326,19 +441,36 @@ def filter_multiple_horses_per_race(predictions):
 
 def call_claude_4_5(prompt, races, past_performance=None):
     """
-    Calls AWS Bedrock Claude Sonnet 4.5 to select value bets from races/odds.
-    Uses boto3 with your AWS credentials (no API key needed).
-    Includes learning from past performance.
+    Calls AWS Bedrock Claude to select value bets from races/odds.
     """
+    print(f"[DEBUG] call_claude_4_5 called with {len(races)} events")
     import json
     bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
     
-    # Build context string for prompt
-    context_str = "\n".join([
-        f"Race: {r['race_time']} {r['course']}\n" +
-        "\n".join([f"  {runner['name']} (odds: {runner['odds']})" for runner in r['runners']])
-        for r in races
-    ])
+    # Build context string for prompt - handle both race and event formats
+    context_lines = []
+    for r in races:
+        # Support both horse racing format (race_time, course, runners) and sports format (event_time, venue, selections)
+        event_time = r.get('race_time') or r.get('event_time', '')
+        venue = r.get('course') or r.get('venue', '')
+        selections = r.get('runners') or r.get('selections', [])
+        
+        context_lines.append(f"Event: {event_time} at {venue}")
+        
+        # Check if this is a multi-market event (darts special markets)
+        if 'markets' in r:
+            for market_name, market_data in r['markets'].items():
+                context_lines.append(f"  Market: {market_name}")
+                for sel in market_data.get('selections', []):
+                    context_lines.append(f"    {sel['name']} (odds: {sel['odds']})")
+        else:
+            # Single market (standard format)
+            for sel in selections:
+                context_lines.append(f"  {sel['name']} (odds: {sel['odds']})")
+        
+        context_lines.append("")  # Blank line between events
+    
+    context_str = "\n".join(context_lines)
     
     # Add learning context if available
     learning_context = ""
@@ -382,7 +514,7 @@ RECENT WINS TO EMULATE:
     
     try:
         response = bedrock.invoke_model(
-            modelId='us.anthropic.claude-sonnet-4-5-v1:0',  # Claude 4.5 Sonnet
+            modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',  # Claude 3.5 Sonnet v1 (works with on-demand)
             body=body
         )
         
@@ -513,7 +645,9 @@ def lambda_handler(event, context):
         # 2. Fetch latest odds
         print(f"Fetching Betfair odds for {sport}...")
         events = fetch_betfair_odds(sport)
-        print(f"Found {len(events)} events")
+        print(f"[DEBUG] Found {len(events)} events")
+        for i, e in enumerate(events[:2]):
+            print(f"[DEBUG] Event {i}: {e}")
 
         # 3. Build prompt with timing strategy context (sport-specific)
         sport_labels = {
@@ -526,13 +660,72 @@ def lambda_handler(event, context):
         labels = sport_labels.get(sport, sport_labels['horse_racing'])
         sport_name = sport.replace('_', ' ').title()
         
+        # Add sport-specific market instructions
+        special_market_info = ""
+        if sport == 'darts':
+            special_market_info = (
+                "\n\nDARTS SPECIAL MARKETS AVAILABLE:\n"
+                "Each darts match includes multiple betting markets:\n"
+                "1. Match Odds - Winner of the match\n"
+                "2. Total 180s Over/Under 3.5 - Total maximums in the match\n"
+                "3. Total 180s Over/Under 6.5 - Higher total for high-scoring matches\n"
+                "4. Correct Score - Exact set score (e.g., 3-1, 3-2)\n\n"
+                "ANALYZE ALL MARKETS for each match and identify the best value bets across all market types.\n"
+                "Consider:\n"
+                "- Player form and checkout percentages for Match Odds\n"
+                "- Player 180 averages for Total 180s markets\n"
+                "- Head-to-head history for Correct Score\n"
+                "- Market odds relationships (e.g., if favorite is strong for 3-0, check those odds)\n\n"
+                "For special markets, set bet_type to the market name (e.g., 'Total 180s Over 3.5', 'Correct Score 3-1')\n"
+                "and selection to the specific outcome (e.g., 'Over 3.5', '3-1').\n"
+            )
+        elif sport == 'rugby':
+            special_market_info = (
+                "\n\nRUGBY SPECIAL MARKETS AVAILABLE:\n"
+                "Each rugby match includes multiple betting markets:\n"
+                "1. Match Odds - Winner of the match\n"
+                "2. Total Points Over/Under 45.5 - Combined score\n"
+                "3. Handicap - Points spread betting\n"
+                "4. First Try Scorer - Player to score first try\n"
+                "5. Winning Margin - Margin of victory\n\n"
+                "ANALYZE ALL MARKETS for each match and identify the best value bets.\n"
+                "Consider:\n"
+                "- Team form and attacking/defensive stats for Match Odds\n"
+                "- Average points per game for Over/Under markets\n"
+                "- Head-to-head records for Handicap betting\n"
+                "- Player positions and try-scoring records for First Try Scorer\n"
+                "- Home advantage and historical margins for Winning Margin\n\n"
+                "For special markets, set bet_type to the market name (e.g., 'Total Points Over 45.5', 'First Try Scorer')\n"
+                "and selection to the specific outcome (e.g., 'Over 45.5', 'Player A').\n"
+            )
+        elif sport == 'cricket':
+            special_market_info = (
+                "\n\nCRICKET SPECIAL MARKETS AVAILABLE:\n"
+                "Each cricket match includes multiple betting markets:\n"
+                "1. Match Odds - Winner of the match\n"
+                "2. Total Runs Over/Under 280.5 - Combined runs in match/innings\n"
+                "3. Top Batsman - Highest run scorer for a team\n"
+                "4. Top Bowler - Most wickets taken\n"
+                "5. Method of Dismissal - How 1st wicket falls\n\n"
+                "ANALYZE ALL MARKETS for each match and identify the best value bets.\n"
+                "Consider:\n"
+                "- Team batting/bowling strength and pitch conditions for Match Odds\n"
+                "- Recent scoring trends and venue history for Total Runs\n"
+                "- Batting order and current form for Top Batsman\n"
+                "- Bowling attack strength and conditions for Top Bowler\n"
+                "- Pitch characteristics and opening bowler quality for Method of Dismissal\n\n"
+                "For special markets, set bet_type to the market name (e.g., 'Top Batsman', 'Method of Dismissal')\n"
+                "and selection to the specific outcome (e.g., 'Batsman A', 'Caught').\n"
+            )
+        
         prompt = (
             f"{sport_name} Value Betting Analysis (UK & IRE, 24h Window):\n\n"
             f"TIMING STRATEGY: Optimal betting window is 30-90 minutes before {labels['event']} start.\n"
             f"- Events >2 hours away: Odds too volatile, reduce confidence by 30%\n"
             f"- Events 30-90 mins away: OPTIMAL - full confidence\n"
             f"- Events 15-30 mins away: Good window - slight confidence reduction (10%)\n"
-            f"- Events <15 mins away: Too late - market efficient, minimal value\n\n"
+            f"- Events <15 mins away: Too late - market efficient, minimal value\n"
+            f"{special_market_info}"
             f"MULTI-HORSE STRATEGY (Horse Racing only): You can select up to 2 horses from the SAME race if:\n"
             f"- One is a WIN bet (high confidence, best value)\n"
             f"- One is an EACH WAY bet (good odds but slightly lower confidence for win, good place chance)\n"
@@ -551,7 +744,8 @@ def lambda_handler(event, context):
         )
 
         # 4. Call Claude 4.5 with prompt, context, and learning
-        print("Calling Claude AI...")
+        print("[DEBUG] Calling Claude AI...")
+        print(f"[DEBUG] Events structure: {events[0] if events else 'None'}")
         all_predictions = call_claude_4_5(prompt, events, past_performance)
         print(f"Claude returned {len(all_predictions)} predictions")
         
@@ -670,3 +864,5 @@ def lambda_handler(event, context):
             },
             "body": json.dumps({"error": str(e)})
         }
+
+
