@@ -29,18 +29,21 @@ def fetch_betfair_odds(sport='horse_racing'):
     """
     # Try Betfair API with automated session refresh
     if BETTING_MODULES_AVAILABLE:
+        print(f"Fetching live Betfair odds ({sport})...")
+        from betfair_odds_fetcher import get_live_betfair_events
         try:
-            print(f"Fetching live Betfair odds ({sport})...")
-            from betfair_odds_fetcher import get_live_betfair_events
             events = get_live_betfair_events(sport)
             if events:
                 print(f"Successfully fetched {len(events)} Betfair events in betting window")
                 return events
+            else:
+                print(f"No Betfair events found for {sport}, using mock data...")
         except Exception as e:
-            print(f"Betfair fetch failed: {e}, using mock data as fallback...")
+            print(f"Betfair fetch error: {e}")
+            print("Falling back to mock data...")
     
     # Realistic mock data - simulates actual events for different sports
-    print(f"Using realistic mock data for {sport} (Betfair geo-restricted from AWS)")
+    print(f"Using realistic mock data for {sport}")
     now = datetime.datetime.utcnow()
     import random
     
@@ -363,7 +366,8 @@ def fetch_past_performance():
             'loss_patterns': loss_patterns[:5],  # Top 5 recent losses
             'win_patterns': win_patterns[:5],  # Top 5 recent wins
             'avg_losing_odds': round(sum(p['odds'] for p in loss_patterns) / len(loss_patterns), 2) if loss_patterns else 0,
-            'avg_winning_odds': round(sum(p['odds'] for p in win_patterns) / len(win_patterns), 2) if win_patterns else 0
+            'avg_winning_odds': round(sum(p['odds'] for p in win_patterns) / len(win_patterns), 2) if win_patterns else 0,
+            'last_updated': datetime.datetime.utcnow().isoformat()
         }
         
         return analysis
