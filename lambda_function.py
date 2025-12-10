@@ -26,6 +26,7 @@ def fetch_betfair_odds(sport='horse_racing'):
     Filters events to optimal betting window (15 mins - 24 hours)
     Supports: horse_racing, darts, cricket, rugby, football
     Priority: Free sources with timing analysis > Mock Data
+    Returns: (events, is_mock_data) tuple
     """
     # Try Betfair API with automated session refresh
     if BETTING_MODULES_AVAILABLE:
@@ -35,7 +36,7 @@ def fetch_betfair_odds(sport='horse_racing'):
             events = get_live_betfair_events(sport)
             if events:
                 print(f"Successfully fetched {len(events)} Betfair events in betting window")
-                return events
+                return events, False  # Real data
             else:
                 print(f"No Betfair events found for {sport}, using mock data...")
         except Exception as e:
@@ -231,7 +232,7 @@ def fetch_betfair_odds(sport='horse_racing'):
         
         events.append(event)
     
-    return events
+    return events, True  # Mock data
 
     # List UK/IRE horse racing markets in next 24 hours
     now = datetime.datetime.utcnow()
@@ -648,8 +649,8 @@ def lambda_handler(event, context):
         
         # 2. Fetch latest odds
         print(f"Fetching Betfair odds for {sport}...")
-        events = fetch_betfair_odds(sport)
-        print(f"[DEBUG] Found {len(events)} events")
+        events, is_mock_data = fetch_betfair_odds(sport)
+        print(f"[DEBUG] Found {len(events)} events (mock={is_mock_data})")
         for i, e in enumerate(events[:2]):
             print(f"[DEBUG] Event {i}: {e}")
 
@@ -834,7 +835,8 @@ def lambda_handler(event, context):
         response_body = {
             "bets": bets, 
             "event_count": len(events), 
-            "sport": sport
+            "sport": sport,
+            "is_mock_data": is_mock_data
         }
         if betting_results:
             response_body['betting_results'] = betting_results
