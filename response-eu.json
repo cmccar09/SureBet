@@ -1,0 +1,1 @@
+{"statusCode": 200, "body": "{\"success\": true, \"message\": \"\\u2705 Betfair API accessible from eu-west-1!\", \"markets_count\": 10, \"sample_market\": {\"event\": \"Hexham 10th Dec\", \"market\": \"2m4f Hcap Hrd\", \"market_id\": \"1.251474999\"}, \"odds_test\": \"SUCCESS\", \"region\": \"eu-west-1\", \"timestamp\": \"2025-12-10T13:55:35.556210\"}"}
