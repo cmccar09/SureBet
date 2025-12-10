@@ -1,6 +1,7 @@
 """
 Betfair Odds Fetcher
-Fetches live UK/IRE horse racing odds from Betfair API
+Fetches live odds from Betfair API for multiple sports
+Supports: Horse Racing, Darts, Cricket, Rugby, Football
 Uses session token from AWS Secrets Manager
 """
 
@@ -10,6 +11,15 @@ import requests
 import datetime
 
 secrets_client = boto3.client('secretsmanager')
+
+# Betfair Event Type IDs
+SPORT_EVENT_TYPES = {
+    'horse_racing': '7',
+    'darts': '3',
+    'cricket': '4',
+    'rugby': '5',
+    'football': '1'
+}
 
 def get_betfair_session():
     """Get current Betfair session token from Secrets Manager"""
@@ -27,24 +37,36 @@ def get_betfair_session():
         print(f"Error getting Betfair session: {e}")
         raise Exception("Betfair credentials not found in Secrets Manager")
 
-def fetch_betfair_markets(app_key, session_token):
-    """Fetch UK/IRE horse racing markets from Betfair"""
+def fetch_betfair_markets(app_key, session_token, sport='horse_racing'):
+    """Fetch markets from Betfair for specified sport"""
     url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketCatalogue/"
     
     now = datetime.datetime.utcnow()
     to_time = now + datetime.timedelta(hours=24)
     
-    # Request UK/IRE horse racing WIN markets in next 24 hours
+    event_type_id = SPORT_EVENT_TYPES.get(sport, '7')  # Default to horse racing
+    
+    # Base filter
+    market_filter = {
+        "eventTypeIds": [event_type_id],
+        "marketStartTime": {
+            "from": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "to": to_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        }
+    }
+    
+    # Sport-specific filters
+    if sport == 'horse_racing':
+        market_filter["marketCountries"] = ["GB", "IE"]
+        market_filter["marketTypeCodes"] = ["WIN"]
+    elif sport in ['football', 'rugby', 'cricket']:
+        market_filter["marketTypeCodes"] = ["MATCH_ODDS"]
+    elif sport == 'darts':
+        market_filter["marketTypeCodes"] = ["MATCH_ODDS"]
+    
+    # Request UK/IRE markets in next 24 hours
     request_body = {
-        "filter": {
-            "eventTypeIds": ["7"],  # Horse Racing
-            "marketCountries": ["GB", "IE"],
-            "marketTypeCodes": ["WIN"],
-            "marketStartTime": {
-                "from": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "to": to_time.strftime("%Y-%m-%dT%H:%M:%SZ")
-            }
-        },
+        "filter": market_filter,
         "maxResults": 50,
         "marketProjection": ["RUNNER_METADATA", "EVENT", "MARKET_START_TIME"]
     }
