@@ -149,18 +149,10 @@ def fetch_betfair_odds(sport='horse_racing'):
     Fetch live odds from Betfair for various sports
     Filters events to optimal betting window (15 mins - 24 hours)
     Supports: horse_racing, darts, cricket, rugby, football
-    Priority: The Odds API for darts > Betfair for horse racing > Mock Data
+    Priority: Betfair with timing analysis > Mock Data
     Returns: (events, is_mock_data) tuple
     """
-    # Special handling for darts - use The Odds API
-    if sport == 'darts':
-        print(f"[DARTS] Using The Odds API for darts data...")
-        events, is_mock = fetch_darts_from_theodds()
-        if events:
-            return events, is_mock
-        print(f"[DARTS] The Odds API returned no events, falling back to mock data")
-    
-    # Try Betfair API for other sports (especially horse racing)
+    # Try Betfair API for all sports (especially horse racing and darts during tournaments)
     if BETTING_MODULES_AVAILABLE:
         print(f"[BETFAIR] Attempting to fetch live Betfair odds for {sport}...")
         from betfair_odds_fetcher import get_live_betfair_events
