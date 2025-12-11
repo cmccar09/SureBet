@@ -18,6 +18,130 @@ except ImportError as e:
 # Learning Configuration
 ENABLE_LEARNING = os.environ.get('ENABLE_LEARNING', 'true').lower() == 'true'
 ALLOW_MULTIPLE_HORSES_PER_RACE = os.environ.get('ALLOW_MULTIPLE_HORSES', 'true').lower() == 'true'
+ODDS_API_KEY = os.environ.get('ODDS_API_KEY', '')
+
+# --- The Odds API for Darts ---
+def fetch_darts_from_theodds():
+    """
+    Fetch darts odds from The Odds API
+    Returns: (events, is_mock_data) tuple
+    """
+    if not ODDS_API_KEY:
+        print("[THEODDS] No API key configured")
+        return [], True
+    
+    print("[THEODDS] Fetching darts odds from The Odds API...")
+    
+    # Darts tournaments available on The Odds API
+    darts_sports = [
+        'darts_pdc_world_championship',
+        'darts_premier_league', 
+        'darts_wc'
+    ]
+    
+    all_events = []
+    now = datetime.datetime.utcnow()
+    
+    for sport_key in darts_sports:
+        try:
+            url = f"https://api.the-odds-api.com/v4/sports/{sport_key}/odds"
+            params = {
+                'apiKey': ODDS_API_KEY,
+                'regions': 'uk',
+                'markets': 'h2h,totals',
+                'oddsFormat': 'decimal',
+                'dateFormat': 'iso'
+            }
+            
+            print(f"[THEODDS] Requesting {sport_key}...")
+            response = requests.get(url, params=params, timeout=10)
+            
+            if response.status_code == 200:
+                games = response.json()
+                print(f"[THEODDS] Found {len(games)} games for {sport_key}")
+                
+                for game in games:
+                    # Convert to our format
+                    event_time = datetime.datetime.fromisoformat(game['commence_time'].replace('Z', '+00:00'))
+                    minutes_to_event = (event_time - now).total_seconds() / 60
+                    
+                    # Filter to betting window (15 mins - 24 hours)
+                    if minutes_to_event < 15 or minutes_to_event > 1440:
+                        continue
+                    
+                    # Extract odds from bookmakers
+                    best_odds = {}
+                    total_180s_over = None
+                    total_180s_under = None
+                    
+                    for bookmaker in game.get('bookmakers', []):
+                        for market in bookmaker.get('markets', []):
+                            if market['key'] == 'h2h':
+                                for outcome in market['outcomes']:
+                                    player = outcome['name']
+                                    odds = outcome['price']
+                                    if player not in best_odds or odds > best_odds[player]:
+                                        best_odds[player] = odds
+                            elif market['key'] == 'totals':
+                                for outcome in market['outcomes']:
+                                    if outcome['name'] == 'Over':
+                                        total_180s_over = outcome['price']
+                                    elif outcome['name'] == 'Under':
+                                        total_180s_under = outcome['price']
+                    
+                    # Create selections
+                    selections = []
+                    for player, odds in best_odds.items():
+                        selections.append({
+                            'name': player,
+                            'selectionId': hash(player) % 100000,
+                            'odds': odds
+                        })
+                    
+                    if selections:
+                        event = {
+                            'market_id': game['id'],
+                            'event_time': event_time.isoformat(),
+                            'venue': 'PDC Tournament',
+                            'sport': 'darts',
+                            'event_name': game.get('home_team', '') + ' vs ' + game.get('away_team', ''),
+                            'selections': selections,
+                            'timing': {
+                                'minutes_to_event': int(minutes_to_event),
+                                'timing_quality': 'OPTIMAL' if 30 <= minutes_to_event <= 90 else 'GOOD',
+                                'confidence_adjustment': 1.0 if 30 <= minutes_to_event <= 90 else 0.9,
+                                'timing_advice': 'Optimal betting window (30-90 mins before event)' if 30 <= minutes_to_event <= 90 else f'{int(minutes_to_event)} mins to event'
+                            }
+                        }
+                        
+                        # Add special markets if available
+                        if total_180s_over and total_180s_under:
+                            event['total_180s'] = {
+                                'over': total_180s_over,
+                                'under': total_180s_under
+                            }
+                        
+                        all_events.append(event)
+                        
+            elif response.status_code == 401:
+                print(f"[THEODDS] ✗ Invalid API key")
+                return [], True
+            elif response.status_code == 429:
+                print(f"[THEODDS] ✗ Rate limit exceeded")
+                return [], True
+            else:
+                print(f"[THEODDS] ✗ HTTP {response.status_code}: {response.text[:200]}")
+                
+        except Exception as e:
+            print(f"[THEODDS] ✗ Error fetching {sport_key}: {e}")
+            continue
+    
+    if all_events:
+        print(f"[THEODDS] ✓ Successfully fetched {len(all_events)} real darts events")
+        return all_events, False  # Real data
+    else:
+        print(f"[THEODDS] No darts events found in betting window")
+        return [], True
 
 # --- Free Odds API integration ---
 def fetch_betfair_odds(sport='horse_racing'):
@@ -25,23 +149,35 @@ def fetch_betfair_odds(sport='horse_racing'):
     Fetch live odds from Betfair for various sports
     Filters events to optimal betting window (15 mins - 24 hours)
     Supports: horse_racing, darts, cricket, rugby, football
-    Priority: Free sources with timing analysis > Mock Data
+    Priority: The Odds API for darts > Betfair for horse racing > Mock Data
     Returns: (events, is_mock_data) tuple
     """
-    # Try Betfair API with automated session refresh
+    # Special handling for darts - use The Odds API
+    if sport == 'darts':
+        print(f"[DARTS] Using The Odds API for darts data...")
+        events, is_mock = fetch_darts_from_theodds()
+        if events:
+            return events, is_mock
+        print(f"[DARTS] The Odds API returned no events, falling back to mock data")
+    
+    # Try Betfair API for other sports (especially horse racing)
     if BETTING_MODULES_AVAILABLE:
-        print(f"Fetching live Betfair odds ({sport})...")
+        print(f"[BETFAIR] Attempting to fetch live Betfair odds for {sport}...")
         from betfair_odds_fetcher import get_live_betfair_events
         try:
+            print(f"[BETFAIR] Calling get_live_betfair_events({sport})...")
             events = get_live_betfair_events(sport)
+            print(f"[BETFAIR] get_live_betfair_events returned {len(events) if events else 0} events")
             if events:
-                print(f"Successfully fetched {len(events)} Betfair events in betting window")
+                print(f"[BETFAIR] ✓ Successfully fetched {len(events)} real Betfair events in betting window")
                 return events, False  # Real data
             else:
-                print(f"No Betfair events found for {sport}, using mock data...")
+                print(f"[BETFAIR] ✗ No Betfair events found for {sport} - returning empty list")
+                print(f"[BETFAIR] Possible reasons: No active markets, geo-restriction, or session expired")
         except Exception as e:
-            print(f"Betfair fetch error: {e}")
-            print("Falling back to mock data...")
+            print(f"[BETFAIR] ✗ Betfair API error: {type(e).__name__}: {str(e)}")
+            import traceback
+            print(f"[BETFAIR] Traceback: {traceback.format_exc()}")
     
     # Realistic mock data - simulates actual events for different sports
     print(f"Using realistic mock data for {sport}")
