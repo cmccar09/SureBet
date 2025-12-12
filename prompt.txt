@@ -1,0 +1,150 @@
+Revised Horse Tipping Prompt (UK & IRE, 4h Window)
+Scope
+
+Evaluate all UK & Ireland flat & jumps races with off-time NOW ≤ t ≤ NOW+4h.
+
+Exclude races already run or >4h ahead; skip abandoned/voided.
+
+Unified timestamp: Europe/Dublin.
+
+Objective
+
+Output Top 5 value opportunities (Back or EW).
+
+For each: calibrated P(win), P(place), fair prices, EVs, edge tags, and a Why-Now rationale.
+
+Portfolio ROI ≥ +20% required after costs (lower than old +50% to capture more winners).
+
+Apply discipline: skip slate if no bet clears thresholds.
+
+Data & Ingestion
+
+Markets: composite of top-3 books, Betfair Exchange, tote pools (for place sanity).
+
+Racecard enrichments: going, draw, trip, class, field size, NR flags, EW terms, overround.
+
+Performance signals: speed/sectionals (last 3 runs), pace profile, trainer/jockey 30-day form vs 365d, layoff, class/distance switches, equipment/med changes, weight vs last win.
+
+Track intelligence: 90-day rolling pars, pace/draw bias segmented by going, rail moves.
+
+Market microstructure: T-20, T-10, T-5, T-1 snapshots, drift/steam, liquidity depth.
+
+Integrity filters: Rule-4, late scratches/jockey changes, going updates.
+
+Model Base
+
+Core ranking: Bradley-Terry + Plackett-Luce full-field ordering.
+
+Random effects: horse, sire, trainer, jockey, track×trip×going.
+
+Calibration: 90-day isotonic regression by odds bucket × race type (flat vs jumps).
+
+Uncertainty: Monte Carlo sims (≥10k) → fragility (CI widths, CV).
+
+Feature engineering refinements:
+
+Class-drop sanity (require form within –3% of par).
+
+Bounce guard (only older horses post big figs/short rest).
+
+Going/surface scalers (stricter with ≥1-band change).
+
+Pace/draw v2 (segment by going; apply wide-closer haircut in 12+ fields).
+
+Trainer intent patterns (multi-runner, key jockey bookings).
+
+Debut Rocket & Global Raider priors (light exposure).
+
+Each-Way & Bet Logic
+
+Win vs EW rules:
+
+EW only if:
+
+Odds ≤ 8/1 and EV_place ≥ 1.0 (esp. in 8–12 runner races, odds-on fav scenarios).
+
+Place EV ≥ Win EV ×1.2 and ≥3 places paid.
+
+Win-only if:
+
+Odds > 8/1, unless exchange place market implies big misprice.
+
+Field size ≤7 (poor terms), or place EV <0.
+
+Place-only (exchange) if:
+
+Longshot with strong place EV vs book EW terms.
+
+Auto re-evaluate if field size drops (8→7 runners, etc.) and cancel EW if terms weaken.
+
+Flag enhanced place races (Cheltenham, Royal Ascot, big handicaps).
+
+Selection Gating
+
+A horse qualifies if:
+
+Overlay ≥ +10% vs composite fair price.
+
+Fragility (90% CI width) ≤0.12 unless EV(EW) still >0.
+
+Liquidity ≥ floor (Betfair matched or bookie limit).
+
+Passes data quality guardrails (going confirmed, jockey declared).
+
+Portfolio:
+
+Max 1 bet per race (unless second is a place-hedge with uncorrelated profile).
+
+Diversify odds range (≥1 short/mid contender if value; max 1 >15/1 pick).
+
+Daily exposure cap: ≤2 selections <3/1 unless “pace/draw edge” tagged.
+
+Staking & Risk
+
+Fractional Kelly 0.25× (0.3× for short, high-confidence; 0.2× for volatile longshots).
+
+Per-race stake cap and daily jurisdiction cap.
+
+Drift/steam live rules:
+
+Short prices (≤4/1): scratch if drift >25% by T-1 (unless counter-signal).
+
+Long prices: allow drift ≤15%; reduce stake if >15%.
+
+Scratch if overround spike (>1.20× baseline) invalidates EV.
+
+Stop if projected Portfolio ROI <+20% after final T-1 check.
+
+Output Schema
+
+For each selection, output:
+
+Race: time, course, jurisdiction.
+
+Horse: name.
+
+Probabilities: P(win), P(place) ± CI.
+
+Odds: fractional & decimal (snapshot), overround noted.
+
+EW terms: places, fraction.
+
+Value: EV(win), EV(place), EV(EW) if relevant.
+
+Tags: edge type {pace/draw edge, class-drop sanity, EW value, Global Raider, hot T-J combo, market-confirmed, draw-bias confirmed, fragile(reason)}.
+
+Why now?: single strongest edge today (e.g., lone pace, draw bias, undervalued fav, ground shift buffered).
+
+Staking: recommended stake (units).
+
+Timestamp: “Odds snapshot [HH:MM, Europe/Dublin]”.
+
+Governance & Audit
+
+Re-price after NRs (apply Rule-4), recalc EVs.
+
+Drop bet if going/terms shift reduces EV below threshold.
+
+Maintain audit log (probabilities, EV calcs, market moves, rationale).
+
+Output “No Bets – ROI threshold not met” if no valid picks.
