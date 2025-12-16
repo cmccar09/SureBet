@@ -17,15 +17,27 @@ if (Test-Path "./betfair-creds.json") {
     Write-Host "WARNING: betfair-creds.json not found" -ForegroundColor Yellow
 }
 
-# Step 1: Check for API keys
+# Step 1: Check for API access (AWS Bedrock preferred, API keys as fallback)
 $anthropicKey = $env:ANTHROPIC_API_KEY
 $openaiKey = $env:OPENAI_API_KEY
 
-if (-not $anthropicKey -and -not $openaiKey) {
+# Check if AWS credentials are configured
+$awsConfigured = $false
+try {
+    $awsTest = aws sts get-caller-identity 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        $awsConfigured = $true
+    }
+} catch {}
+
+if (-not $awsConfigured -and -not $anthropicKey -and -not $openaiKey) {
     Write-Host ""
-    Write-Host "ERROR: No LLM API key found!" -ForegroundColor Red
+    Write-Host "ERROR: No LLM API access found!" -ForegroundColor Red
     Write-Host ""
-    Write-Host "Set one of these environment variables:" -ForegroundColor Yellow
+    Write-Host "Option 1 (Recommended): Configure AWS credentials for Bedrock" -ForegroundColor Yellow
+    Write-Host '  aws configure'
+    Write-Host ""
+    Write-Host "Option 2: Set an API key:" -ForegroundColor Yellow
     Write-Host '  $env:ANTHROPIC_API_KEY = "your-anthropic-key"'
     Write-Host '  $env:OPENAI_API_KEY = "your-openai-key"'
     Write-Host ""
@@ -33,8 +45,10 @@ if (-not $anthropicKey -and -not $openaiKey) {
 }
 
 Write-Host ""
-Write-Host "API Key: " -NoNewline
-if ($anthropicKey) {
+Write-Host "LLM Provider: " -NoNewline
+if ($awsConfigured) {
+    Write-Host "AWS Bedrock (Claude via AWS) ✓" -ForegroundColor Green
+} elseif ($anthropicKey) {
     Write-Host "Anthropic Claude ✓" -ForegroundColor Green
 } else {
     Write-Host "OpenAI GPT ✓" -ForegroundColor Green
