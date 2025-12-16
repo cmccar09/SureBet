@@ -27,6 +27,12 @@ except ImportError:
     HAS_ANTHROPIC = False
 
 try:
+    import boto3
+    HAS_BOTO3 = True
+except ImportError:
+    HAS_BOTO3 = False
+
+try:
     import pandas as pd
     HAS_PANDAS = True
 except ImportError:
@@ -158,16 +164,35 @@ If no selections meet the thresholds, return just the header row.
     
     # Determine provider
     if provider == "auto":
-        if HAS_ANTHROPIC and os.getenv("ANTHROPIC_API_KEY"):
+        if HAS_BOTO3:  # Prefer AWS Bedrock (no API key needed)
+            provider = "bedrock"
+        elif HAS_ANTHROPIC and os.getenv("ANTHROPIC_API_KEY"):
             provider = "anthropic"
         elif HAS_OPENAI and os.getenv("OPENAI_API_KEY"):
             provider = "openai"
         else:
-            print("ERROR: No API key found. Set ANTHROPIC_API_KEY or OPENAI_API_KEY", file=sys.stderr)
+            print("ERROR: No API access found. Configure AWS credentials or set ANTHROPIC_API_KEY/OPENAI_API_KEY", file=sys.stderr)
             sys.exit(1)
     
     try:
-        if provider == "anthropic":
+        if provider == "bedrock":
+            bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
+            
+            body = json.dumps({
+                "anthropic_version": "bedrock-2023-05-31",
+                "max_tokens": 4096,
+                "messages": [{"role": "user", "content": full_prompt}]
+            })
+            
+            response = bedrock.invoke_model(
+                modelId="anthropic.claude-3-5-sonnet-20241022-v2:0",
+                body=body
+            )
+            
+            response_body = json.loads(response['body'].read())
+            return response_body['content'][0]['text']
+        
+        elif provider == "anthropic":
             client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))
             response = client.messages.create(
                 model="claude-3-5-sonnet-20241022",
