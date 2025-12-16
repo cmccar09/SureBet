@@ -72,31 +72,37 @@ def load_market_data(snapshot_path: str) -> pd.DataFrame:
         # Handle JSON format (from betfair responses)
         with open(snapshot_path, 'r') as f:
             data = json.load(f)
-        # Extract markets - structure varies, try common patterns
-        markets = []
+        
+        # Extract races array from response
+        races = []
         if isinstance(data, list):
-            markets = data
+            races = data
         elif isinstance(data, dict):
-            markets = data.get('result', data.get('markets', data.get('data', [])))
+            # Try different keys
+            races = data.get('races', data.get('result', data.get('markets', data.get('data', []))))
+        
+        if not races:
+            print(f"WARNING: No races found in JSON. Keys: {data.keys() if isinstance(data, dict) else 'list'}")
+            return pd.DataFrame()
         
         # Flatten to DataFrame
         rows = []
-        for market in markets:
-            if not isinstance(market, dict):
+        for race in races:
+            if not isinstance(race, dict):
                 continue
-            market_id = market.get('marketId', 'UNKNOWN')
-            market_name = market.get('marketName', market.get('event', {}).get('name', ''))
-            venue = market.get('event', {}).get('venue', market.get('venue', ''))
-            start_time = market.get('marketStartTime', market.get('start_time', ''))
+            market_id = race.get('market_id', race.get('marketId', 'UNKNOWN'))
+            market_name = race.get('market_name', race.get('marketName', ''))
+            venue = race.get('venue', race.get('course', race.get('event', {}).get('venue', '')))
+            start_time = race.get('start_time', race.get('marketStartTime', ''))
             
-            runners = market.get('runners', [])
+            runners = race.get('runners', [])
             for runner in runners:
                 rows.append({
                     'market_id': market_id,
                     'market_name': market_name,
                     'venue': venue,
                     'start_time_dublin': start_time,
-                    'runner_name': runner.get('runnerName', runner.get('name', '')),
+                    'runner_name': runner.get('name', runner.get('runnerName', '')),
                     'selection_id': runner.get('selectionId', ''),
                     'best_back': runner.get('ex', {}).get('availableToBack', [{}])[0].get('price', ''),
                     'best_lay': runner.get('ex', {}).get('availableToLay', [{}])[0].get('price', ''),
