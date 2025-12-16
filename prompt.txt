@@ -13,7 +13,7 @@ Output Top 5 value opportunities (Back or EW).
 
 For each: calibrated P(win), P(place), fair prices, EVs, edge tags, and a Why-Now rationale.
 
-Portfolio ROI ≥ +20% required after costs (lower than old +50% to capture more winners).
+Portfolio ROI ≥ +5% required after costs (lower than old +50% to capture more winners).
 
 Apply discipline: skip slate if no bet clears thresholds.
 
@@ -113,7 +113,7 @@ Long prices: allow drift ≤15%; reduce stake if >15%.
 
 Scratch if overround spike (>1.20× baseline) invalidates EV.
 
-Stop if projected Portfolio ROI <+20% after final T-1 check.
+Stop if projected Portfolio ROI <+5% after final T-1 check.
 
 Output Schema
 
@@ -147,7 +147,7 @@ Drop bet if going/terms shift reduces EV below threshold.
 
 Maintain audit log (probabilities, EV calcs, market moves, rationale).
 
-IMPORTANT: Always output 3-5 selections showing best relative value, even if below +20% ROI threshold.
+IMPORTANT: Always output 3-5 selections showing best relative value, even if below +5% ROI threshold.
 - Mark selections above threshold as "MEETS_THRESHOLD"
 - Mark selections below threshold as "BELOW_THRESHOLD" 
 - This allows transparency and tracking of near-miss opportunities
