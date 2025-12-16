@@ -1,0 +1,222 @@
+import React, { useState, useEffect } from 'react';
+import './App.css';
+
+const API_BASE_URL = 'http://localhost:5001/api';
+
+function App() {
+  const [picks, setPicks] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [filter, setFilter] = useState('today');
+
+  useEffect(() => {
+    fetchPicks();
+  }, [filter]);
+
+  const fetchPicks = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const endpoint = filter === 'today' 
+        ? `${API_BASE_URL}/picks/today`
+        : `${API_BASE_URL}/picks`;
+      
+      const response = await fetch(endpoint);
+      const data = await response.json();
+
+      if (data.success) {
+        setPicks(data.picks || []);
+      } else {
+        setError(data.error || 'Failed to load picks');
+      }
+    } catch (err) {
+      console.error('Error fetching picks:', err);
+      setError('Cannot connect to API server. Make sure it\'s running on port 5001');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatOdds = (odds) => {
+    if (!odds) return 'N/A';
+    const decimal = parseFloat(odds);
+    if (isNaN(decimal)) return odds;
+    
+    // Convert decimal to fractional
+    const fractional = decimal - 1;
+    if (fractional < 1) {
+      return `${Math.round(1/fractional)}/${1}`;
+    }
+    return `${Math.round(fractional)}/${1}`;
+  };
+
+  const formatTime = (timeStr) => {
+    if (!timeStr) return 'TBC';
+    try {
+      const date = new Date(timeStr);
+      return date.toLocaleTimeString('en-GB', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+      });
+    } catch {
+      return timeStr;
+    }
+  };
+
+  const getBetTypeBadge = (betType) => {
+    const type = (betType || 'WIN').toUpperCase();
+    const color = type === 'EW' ? '#f59e0b' : '#10b981';
+    return (
+      <span style={{
+        background: color,
+        color: 'white',
+        padding: '4px 8px',
+        borderRadius: '4px',
+        fontSize: '12px',
+        fontWeight: 'bold'
+      }}>
+        {type}
+      </span>
+    );
+  };
+
+  const getConfidenceColor = (confidence) => {
+    const conf = parseFloat(confidence) || 0;
+    if (conf >= 70) return '#10b981';
+    if (conf >= 50) return '#f59e0b';
+    return '#ef4444';
+  };
+
+  return (
+    <div className="App">
+      <header className="App-header">
+        <h1>🏇 Today's Betting Picks</h1>
+        <p>Value opportunities from AI analysis</p>
+        
+        <div className="filter-buttons">
+          <button 
+            className={filter === 'today' ? 'active' : ''} 
+            onClick={() => setFilter('today')}
+          >
+            Today Only
+          </button>
+          <button 
+            className={filter === 'all' ? 'active' : ''} 
+            onClick={() => setFilter('all')}
+          >
+            All Picks
+          </button>
+          <button onClick={fetchPicks} className="refresh-btn">
+            🔄 Refresh
+          </button>
+        </div>
+      </header>
+
+      <main className="picks-container">
+        {loading && <div className="loading">Loading picks...</div>}
+        
+        {error && (
+          <div className="error">
+            <h3>Error loading picks</h3>
+            <p>{error}</p>
+            <p className="hint">Check AWS credentials are configured</p>
+          </div>
+        )}
+
+        {!loading && !error && picks.length === 0 && (
+          <div className="no-picks">
+            <h3>No picks found</h3>
+            <p>No selections meet the ROI threshold today</p>
+          </div>
+        )}
+
+        {!loading && !error && picks.length > 0 && (
+          <div className="picks-grid">
+            {picks.map((pick, index) => (
+              <div key={pick.bet_id || index} className="pick-card">
+                <div className="pick-header">
+                  <h2>{pick.horse}</h2>
+                  {getBetTypeBadge(pick.bet_type)}
+                </div>
+                
+                <div className="pick-venue">
+                  <span className="venue-icon">📍</span>
+                  <span>{pick.course}</span>
+                  <span className="time">{formatTime(pick.race_time)}</span>
+                </div>
+
+                <div className="pick-odds">
+                  <div className="odds-item">
+                    <span className="label">Odds:</span>
+                    <span className="value">{formatOdds(pick.odds)}</span>
+                  </div>
+                  <div className="odds-item">
+                    <span className="label">Win Prob:</span>
+                    <span className="value">{(parseFloat(pick.p_win || 0) * 100).toFixed(0)}%</span>
+                  </div>
+                  {pick.p_place && (
+                    <div className="odds-item">
+                      <span className="label">Place Prob:</span>
+                      <span className="value">{(parseFloat(pick.p_place) * 100).toFixed(0)}%</span>
+                    </div>
+                  )}
+                </div>
+
+                {pick.ew_places && pick.ew_places > 0 && (
+                  <div className="ew-terms">
+                    <span>EW: {pick.ew_places} places @ 1/{Math.round(1/parseFloat(pick.ew_fraction || 0.2))}</span>
+                  </div>
+                )}
+
+                {pick.confidence && (
+                  <div className="confidence-bar">
+                    <div 
+                      className="confidence-fill" 
+                      style={{
+                        width: `${pick.confidence}%`,
+                        background: getConfidenceColor(pick.confidence)
+                      }}
+                    />
+                    <span className="confidence-text">
+                      {Math.round(pick.confidence)}% confidence
+                    </span>
+                  </div>
+                )}
+
+                {pick.why_now && (
+                  <div className="rationale">
+                    <strong>Why Now:</strong> {pick.why_now}
+                  </div>
+                )}
+
+                {pick.tags && pick.tags.length > 0 && (
+                  <div className="tags">
+                    {(Array.isArray(pick.tags) ? pick.tags : pick.tags.split(',')).map((tag, i) => (
+                      <span key={i} className="tag">{tag.trim()}</span>
+                    ))}
+                  </div>
+                )}
+
+                {pick.ev && (
+                  <div className="ev-badge">
+                    EV: {(parseFloat(pick.ev) * 100).toFixed(1)}%
+                  </div>
+                )}
+
+                <div className="pick-footer">
+                  <span className="timestamp">
+                    {new Date(pick.timestamp).toLocaleString('en-GB')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
+export default App;
