@@ -147,4 +147,8 @@ Drop bet if going/terms shift reduces EV below threshold.
 
 Maintain audit log (probabilities, EV calcs, market moves, rationale).
 
-Output “No Bets – ROI threshold not met” if no valid picks.
+IMPORTANT: Always output 3-5 selections showing best relative value, even if below +20% ROI threshold.
+- Mark selections above threshold as "MEETS_THRESHOLD"
+- Mark selections below threshold as "BELOW_THRESHOLD" 
+- This allows transparency and tracking of near-miss opportunities
+- Only output "No selections available" if literally no races/markets found

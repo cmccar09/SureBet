@@ -128,14 +128,23 @@ function App() {
         {!loading && !error && picks.length === 0 && (
           <div className="no-picks">
             <h3>No picks found</h3>
-            <p>No selections meet the ROI threshold today</p>
+            <p>No selections available today</p>
           </div>
         )}
 
         {!loading && !error && picks.length > 0 && (
-          <div className="picks-grid">
-            {picks.map((pick, index) => (
-              <div key={pick.bet_id || index} className="pick-card">
+          <>
+            {picks.some(p => parseFloat(p.roi || 0) < 0.20) && (
+              <div className="threshold-warning">
+                ⚠️ Some selections below 20% ROI threshold - showing for reference only
+              </div>
+            )}
+            <div className="picks-grid">
+            {picks.map((pick, index) => {
+              const roi = parseFloat(pick.roi || 0);
+              const belowThreshold = roi < 0.20;
+              return (
+              <div key={pick.bet_id || index} className={`pick-card ${belowThreshold ? 'below-threshold' : ''}`}>
                 <div className="pick-header">
                   <h2>{pick.horse}</h2>
                   {getBetTypeBadge(pick.bet_type)}
@@ -199,11 +208,19 @@ function App() {
                   </div>
                 )}
 
-                {pick.ev && (
-                  <div className="ev-badge">
-                    EV: {(parseFloat(pick.ev) * 100).toFixed(1)}%
-                  </div>
-                )}
+                <div className="metrics-row">
+                  {pick.roi && (
+                    <div className={`roi-badge ${belowThreshold ? 'below-threshold' : ''}`}>
+                      ROI: {(parseFloat(pick.roi) * 100).toFixed(1)}%
+                      {belowThreshold && <span className="threshold-flag"> (Below 20%)</span>}
+                    </div>
+                  )}
+                  {pick.ev && (
+                    <div className="ev-badge">
+                      EV: {(parseFloat(pick.ev) * 100).toFixed(1)}%
+                    </div>
+                  )}
+                </div>
 
                 <div className="pick-footer">
                   <span className="timestamp">
@@ -211,8 +228,10 @@ function App() {
                   </span>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
+          </>
         )}
       </main>
     </div>
