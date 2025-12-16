@@ -103,14 +103,19 @@ def load_market_data(snapshot_path: str) -> pd.DataFrame:
             
             runners = race.get('runners', [])
             for runner in runners:
+                # Handle both Betfair API format and simplified snapshot format
+                odds = runner.get('odds', '')  # Simplified format
+                if not odds:  # Try Betfair Exchange format
+                    odds = runner.get('ex', {}).get('availableToBack', [{}])[0].get('price', '')
+                
                 rows.append({
                     'market_id': market_id,
                     'market_name': market_name,
                     'venue': venue,
                     'start_time_dublin': start_time,
                     'runner_name': runner.get('name', runner.get('runnerName', '')),
-                    'selection_id': runner.get('selectionId', ''),
-                    'best_back': runner.get('ex', {}).get('availableToBack', [{}])[0].get('price', ''),
+                    'selection_id': runner.get('selectionId', runner.get('selection_id', '')),
+                    'best_back': odds,
                     'best_lay': runner.get('ex', {}).get('availableToLay', [{}])[0].get('price', ''),
                 })
         df = pd.DataFrame(rows)
@@ -159,7 +164,7 @@ def call_llm_for_race(prompt_text: str, race_data: str, provider: str = "auto") 
 Analyze this race using the prompt logic above. Return ONLY the selections in CSV format with these exact columns:
 runner_name,selection_id,market_id,market_name,venue,start_time_dublin,p_win,p_place,ew_places,ew_fraction,tags,why_now
 
-If no selections meet the thresholds, return just the header row.
+IMPORTANT: Always output 3-5 selections showing best relative value, even if Portfolio ROI is below +5% threshold. This provides transparency and allows user to see the analysis.
 """
     
     # Determine provider
@@ -362,6 +367,34 @@ def main():
     
     # Process races
     selections = process_all_races(snapshot_path, prompt_text, args.provider, args.max_races)
+    
+    # Rank and keep only top 5 by win probability
+    if selections:
+        print(f"\nRanking {len(selections)} selections by win probability...")
+        
+        # Convert p_win to float for sorting
+        for sel in selections:
+            try:
+                p_win = sel.get('p_win', '0')
+                if isinstance(p_win, str):
+                    p_win = p_win.strip('%').strip()
+                sel['p_win_float'] = float(p_win) if p_win and p_win != 'N/A' else 0.0
+            except (ValueError, AttributeError):
+                sel['p_win_float'] = 0.0
+        
+        # Sort by p_win descending and take top 5
+        selections.sort(key=lambda x: x['p_win_float'], reverse=True)
+        top_selections = selections[:5]
+        
+        print(f"✓ Selected top 5 picks:")
+        for i, sel in enumerate(top_selections, 1):
+            print(f"  {i}. {sel.get('runner_name', 'Unknown')} @ {sel.get('venue', 'Unknown')} (p_win: {sel.get('p_win', 'N/A')})")
+        
+        # Remove the temporary sort field
+        for sel in top_selections:
+            sel.pop('p_win_float', None)
+        
+        selections = top_selections
     
     # Save output
     save_selections_csv(selections, args.out)
