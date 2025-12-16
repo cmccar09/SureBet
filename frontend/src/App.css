@@ -1,0 +1,253 @@
+.App {
+  min-height: 100vh;
+  padding: 20px;
+}
+
+.App-header {
+  text-align: center;
+  color: white;
+  margin-bottom: 40px;
+}
+
+.App-header h1 {
+  font-size: 3em;
+  margin: 0;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.App-header p {
+  font-size: 1.2em;
+  opacity: 0.9;
+  margin: 10px 0 20px 0;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.filter-buttons button {
+  padding: 12px 24px;
+  border: 2px solid white;
+  background: rgba(255,255,255,0.1);
+  color: white;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.filter-buttons button:hover {
+  background: rgba(255,255,255,0.2);
+  transform: translateY(-2px);
+}
+
+.filter-buttons button.active {
+  background: white;
+  color: #667eea;
+  font-weight: bold;
+}
+
+.refresh-btn {
+  margin-left: 10px;
+}
+
+.picks-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.loading, .error, .no-picks {
+  text-align: center;
+  padding: 60px 20px;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.error {
+  background: #fee;
+  color: #c00;
+}
+
+.error .hint {
+  font-size: 0.9em;
+  opacity: 0.7;
+  margin-top: 10px;
+}
+
+.picks-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  gap: 24px;
+}
+
+.pick-card {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pick-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+.pick-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.pick-header h2 {
+  margin: 0;
+  font-size: 1.8em;
+  color: #333;
+}
+
+.pick-venue {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #666;
+  font-size: 1.1em;
+  margin-bottom: 16px;
+}
+
+.venue-icon {
+  font-size: 1.2em;
+}
+
+.time {
+  margin-left: auto;
+  font-weight: bold;
+  color: #667eea;
+}
+
+.pick-odds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+  padding: 16px;
+  background: #f8f9ff;
+  border-radius: 8px;
+}
+
+.odds-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.odds-item .label {
+  font-size: 0.85em;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.odds-item .value {
+  font-size: 1.3em;
+  font-weight: bold;
+  color: #333;
+}
+
+.ew-terms {
+  background: #fff3cd;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 0.9em;
+  color: #856404;
+  margin: 12px 0;
+}
+
+.confidence-bar {
+  position: relative;
+  height: 32px;
+  background: #e5e7eb;
+  border-radius: 8px;
+  margin: 16px 0;
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  transition: width 0.5s ease;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-right: 8px;
+}
+
+.confidence-text {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-weight: bold;
+  color: #333;
+  font-size: 0.9em;
+  text-shadow: 0 0 2px white;
+}
+
+.rationale {
+  background: #f0f0f0;
+  padding: 12px;
+  border-radius: 8px;
+  margin: 12px 0;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+.rationale strong {
+  color: #667eea;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.tag {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.85em;
+}
+
+.ev-badge {
+  display: inline-block;
+  background: #10b981;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  margin: 8px 0;
+}
+
+.pick-footer {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.85em;
+  color: #999;
+}
+
+@media (max-width: 768px) {
+  .picks-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .App-header h1 {
+    font-size: 2em;
+  }
+}
