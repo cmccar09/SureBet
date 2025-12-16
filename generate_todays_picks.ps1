@@ -42,11 +42,26 @@ if ($anthropicKey) {
 
 # Step 2: Generate selections with prompt logic
 Write-Host ""
-Write-Host "Step 1: Generating selections using prompt.txt logic..." -ForegroundColor Cyan
+Write-Host "Step 1: Fetching live Betfair odds..." -ForegroundColor Cyan
 Write-Host ""
 
-# Skip Betfair snapshot fetch for now and use existing response file
-& "C:/Users/charl/OneDrive/futuregenAI/Betting/.venv/Scripts/python.exe" run_saved_prompt.py --prompt ./prompt.txt --snapshot ./response.json --out ./today_picks.csv --max_races 5
+$pythonExe = "C:/Users/charl/OneDrive/futuregenAI/Betting/.venv/Scripts/python.exe"
+$snapshotFile = "./response_live.json"
+
+# Fetch live data from Betfair API
+& $pythonExe betfair_delayed_snapshots.py --out $snapshotFile --hours 24 --max_races 50
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host ""
+    Write-Host "ERROR: Failed to fetch Betfair data" -ForegroundColor Red
+    exit 1
+}
+
+Write-Host ""
+Write-Host "Step 2: Generating selections using prompt.txt logic..." -ForegroundColor Cyan
+Write-Host ""
+
+& $pythonExe run_saved_prompt.py --prompt ./prompt.txt --snapshot $snapshotFile --out ./today_picks.csv --max_races 5
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
