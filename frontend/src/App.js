@@ -134,15 +134,15 @@ function App() {
 
         {!loading && !error && picks.length > 0 && (
           <>
-            {picks.some(p => parseFloat(p.roi || 0) < 0.20) && (
+            {picks.some(p => parseFloat(p.roi || 0) < 0.05) && (
               <div className="threshold-warning">
-                ⚠️ Some selections below 20% ROI threshold - showing for reference only
+                ⚠️ Some selections below 5% ROI threshold - showing for reference only
               </div>
             )}
             <div className="picks-grid">
             {picks.map((pick, index) => {
               const roi = parseFloat(pick.roi || 0);
-              const belowThreshold = roi < 0.20;
+              const belowThreshold = roi < 0.05;
               return (
               <div key={pick.bet_id || index} className={`pick-card ${belowThreshold ? 'below-threshold' : ''}`}>
                 <div className="pick-header">
@@ -212,7 +212,7 @@ function App() {
                   {pick.roi && (
                     <div className={`roi-badge ${belowThreshold ? 'below-threshold' : ''}`}>
                       ROI: {(parseFloat(pick.roi) * 100).toFixed(1)}%
-                      {belowThreshold && <span className="threshold-flag"> (Below 20%)</span>}
+                      {belowThreshold && <span className="threshold-flag"> (Below 5%)</span>}
                     </div>
                   )}
                   {pick.ev && (
