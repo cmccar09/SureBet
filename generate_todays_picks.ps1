@@ -113,7 +113,37 @@ Write-Host ""
 Write-Host "Step 3: Verifying in DynamoDB..." -ForegroundColor Cyan
 Write-Host ""
 
-aws dynamodb scan --table-name SureBetBets --filter-expression "begins_with(#d, :today)" --expression-attribute-names '{\"#d\":\"date\"}' --expression-attribute-values '{\":today\":{\"S\":\"2025-12-16\"}}' --query "Items[*].[horse.S, course.S, bet_type.S]" --output table
+# Use Python to query DynamoDB (more reliable than AWS CLI in PowerShell)
+$pythonCode = @'
+import boto3
+from datetime import datetime
+
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+table = dynamodb.Table('SureBetBets')
+
+# Get today's picks
+today = datetime.now().strftime('%Y-%m-%d')
+response = table.scan()
+items = [item for item in response.get('Items', []) if item.get('date', '').startswith(today)]
+
+if items:
+    print(f'\n✓ Found {len(items)} picks for today:\n')
+    for item in items[:5]:
+        horse = item.get('horse', 'Unknown')
+        course = item.get('course', 'Unknown')
+        bet_type = item.get('bet_type', 'WIN')
+        roi = float(item.get('roi', 0))
+        print(f'  • {horse} @ {course} - {bet_type} (ROI: {roi:.1%})')
+    if len(items) > 5:
+        print(f'  ... and {len(items)-5} more')
+else:
+    print('\n⚠ No picks found in DynamoDB for today')
+    print('   This could mean:')
+    print('   - No races met the 5% ROI threshold')
+    print('   - save_selections_to_dynamodb.py failed silently')
+'@
+
+.venv\Scripts\python.exe -c $pythonCode
 
 Write-Host ""
 Write-Host "="*60
