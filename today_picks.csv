@@ -1,0 +1,4 @@
+runner_name,selection_id,market_id,market_name,venue,start_time_dublin,p_win,p_place,ew_places,ew_fraction,tags,why_now
+Golden Spirit,12345678,1.234567890,Win,Kempton Park,2025-12-16T15:30:00,0.28,0.52,3,0.2,"pace/draw edge, EW value","Strong early pace profile, drawn rail 1, undervalued by 15%"
+Silver Thunder,87654321,1.234567891,Win,Cheltenham,2025-12-16T14:15:00,0.22,0.48,4,0.25,"class-drop sanity, hot T-J combo","Class dropper from G2, Henderson/Geraghty combo 4 from 6"
+Royal Command,11223344,1.234567892,Win,Ascot,2025-12-16T16:45:00,0.35,0.61,3,0.2,"draw-bias confirmed, market-confirmed","Rail bias last 7 days, steam from 5/1 to 7/2"

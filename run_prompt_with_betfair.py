@@ -82,7 +82,7 @@ def build_argparser():
 
     # Gating / relaxation (RELAXED DEFAULTS)
     ap.add_argument("--min_back", type=float, default=1.2, help="Minimum back price to consider")
-    ap.add_argument("--min_overlay", type=float, default=0.02, help="Minimum overlay (e.g., 0.02 = +2%)")
+    ap.add_argument("--min_overlay", type=float, default=0.02, help="Minimum overlay (e.g., 0.02 = +2%%)")
     ap.add_argument("--relax_if_empty", action="store_true", default=True, help="If no picks, relax overlay ↓ stepwise")
     ap.add_argument("--relax_steps", type=int, default=5, help="How many relax iterations if empty")
     ap.add_argument("--relax_delta", type=float, default=0.01, help="Overlay decrement per relax step")
@@ -92,6 +92,14 @@ def build_argparser():
                     help="Write a markdown debug report explaining filters and counts")
     ap.add_argument("--analysis_report", type=str, default="./top5_analysis.md",
                     help="Write a human-readable Top 5 analysis with Win/EW calls")
+    
+    # Database integration
+    ap.add_argument("--save_to_dynamodb", action="store_true",
+                    help="Save selections to DynamoDB SureBetBets table")
+    ap.add_argument("--dynamodb_table", type=str, default="SureBetBets",
+                    help="DynamoDB table name")
+    ap.add_argument("--dynamodb_region", type=str, default="us-east-1",
+                    help="AWS region for DynamoDB")
     return ap
 
 # ------------------------ Utilities ------------------------
@@ -370,7 +378,8 @@ def run_saved_prompt_if_needed(args) -> None:
     if not args.use_saved_prompt:
         return
     if not args.prompt_cmd:
-        default_cmd = "python3 betfair-prompt/run_saved_prompt.py --scope today --out {out}"
+        # Use local run_saved_prompt.py script with same Python interpreter
+        default_cmd = f"{sys.executable} run_saved_prompt.py --prompt ./prompt.txt --out {{out}}"
     else:
         default_cmd = args.prompt_cmd
     cmd = default_cmd.format(out=args.probs_csv)
@@ -384,7 +393,7 @@ def run_saved_prompt_if_needed(args) -> None:
 def _build_snapshot_cmd(args, *, override: dict | None = None):
     """Construct the bf_script command, optionally overriding some flags (used for fallbacks)."""
     od = override or {}
-    cmd = ["python3", args.bf_script]
+    cmd = [sys.executable, args.bf_script]
     # decide once vs snapshots
     if args.once or not args.snapshots or od.get("force_once", False):
         cmd += ["--once"]
@@ -595,6 +604,16 @@ def main():
         with open(args.analysis_report, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
         debug(f"[OK] Wrote analysis → {args.analysis_report}")
+    
+    # Save to DynamoDB if requested
+    if args.save_to_dynamodb and not final_top5.empty:
+        debug("\n[DYNAMODB] Saving selections to database...")
+        cmd = f"python save_selections_to_dynamodb.py --selections {args.out_csv} --table {args.dynamodb_table} --region {args.dynamodb_region}"
+        ret = subprocess.run(cmd, shell=True)
+        if ret.returncode == 0:
+            debug(f"[OK] Saved {len(final_top5)} selections to DynamoDB")
+        else:
+            debug(f"[ERROR] Failed to save to DynamoDB (code {ret.returncode})")
 
     if args.debug_report:
         schema = {"probs_cols": list(probs.columns), "snaps_cols": list(snaps.columns)}
