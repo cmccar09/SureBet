@@ -7,11 +7,12 @@ frontend:
         - npm install
     build:
       commands:
+        - cd frontend
         - npm run build
   artifacts:
-    baseDirectory: build
+    baseDirectory: frontend/build
     files:
       - '**/*'
   cache:
     paths:
-      - node_modules/**/*
+      - frontend/node_modules/**/*
