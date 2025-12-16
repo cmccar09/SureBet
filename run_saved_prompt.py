@@ -185,7 +185,7 @@ If no selections meet the thresholds, return just the header row.
             })
             
             response = bedrock.invoke_model(
-                modelId="anthropic.claude-sonnet-4-5-20250929-v1:0",
+                modelId="us.anthropic.claude-sonnet-4-5-20250929-v1:0",
                 body=body
             )
             
