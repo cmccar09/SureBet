@@ -1,56 +1,26 @@
+# Sensitive credentials and certificates
+betfair-creds.json
+betfair-client.key
+betfair-client.crt
+*.pem
+*.key
+*.crt
+
+# Session and response data
+refresh-response.json
+response*.json
+test*.json
+
+# Logs and history
+logs/
+history/
+
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-env/
+*.pyc
+.venv/
 venv/
-ENV/
-*.egg-info/
-.pytest_cache/
-
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-frontend/build/
-frontend/.env.local
-
-# AWS
-lambda-*.zip
-*-deployed.zip
-response*.json
-betfair-creds.json
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
 
 # OS
 .DS_Store
 Thumbs.db
-
-# Dependencies
-boto3/
-botocore/
-requests/
-urllib3/
-charset_normalizer/
-certifi/
-idna/
-dateutil/
-jmespath/
-s3transfer/
-six.py
-*dist-info/
-bin/
-lambda-package/
-
-# Test files
-test_*.py
-*_test.py

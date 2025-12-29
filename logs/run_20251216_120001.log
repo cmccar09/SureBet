@@ -1,6 +1,0 @@
-[12:00:01] ========================================
-[12:00:01] SCHEDULED BETTING WORKFLOW
-[12:00:01] ========================================
-[12:00:02] Betfair credentials loaded
-[12:00:02] ERROR: No LLM API key found!
-[12:00:02] Set ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable
