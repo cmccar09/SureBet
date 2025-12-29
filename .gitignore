@@ -2,6 +2,8 @@
 betfair-creds.json
 betfair-client.key
 betfair-client.crt
+betfair-client.key.OLD
+betfair-client.crt.OLD
 *.pem
 *.key
 *.crt
@@ -24,3 +26,7 @@ venv/
 # OS
 .DS_Store
 Thumbs.db
+
+# Backup files
+*.OLD
+*.bak
