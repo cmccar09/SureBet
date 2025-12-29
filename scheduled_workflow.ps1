@@ -40,14 +40,54 @@ if (Test-Path "$PSScriptRoot\betfair-creds.json") {
     Write-Log "WARNING: betfair-creds.json not found" "Yellow"
 }
 
-# Check for LLM API key
-if (-not $env:ANTHROPIC_API_KEY -and -not $env:OPENAI_API_KEY) {
-    Write-Log "ERROR: No LLM API key found!" "Red"
-    Write-Log "Set ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable" "Yellow"
+# Check for LLM API access (AWS Bedrock preferred, API keys as fallback)
+$awsConfigured = $false
+try {
+    $awsTest = aws sts get-caller-identity 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        $awsConfigured = $true
+        Write-Log "LLM Provider: AWS Bedrock (Claude via AWS)" "Green"
+    }
+} catch {}
+
+if (-not $awsConfigured -and -not $env:ANTHROPIC_API_KEY -and -not $env:OPENAI_API_KEY) {
+    Write-Log "ERROR: No LLM API access found!" "Red"
+    Write-Log "Option 1: AWS Bedrock - run 'aws configure' to set up credentials" "Yellow"
+    Write-Log "Option 2: Set ANTHROPIC_API_KEY or OPENAI_API_KEY environment variable" "Yellow"
     exit 1
+} elseif ($env:ANTHROPIC_API_KEY) {
+    Write-Log "LLM Provider: Anthropic Claude" "Green"
+} elseif ($env:OPENAI_API_KEY) {
+    Write-Log "LLM Provider: OpenAI GPT" "Green"
 }
 
 $pythonExe = "C:/Users/charl/OneDrive/futuregenAI/Betting/.venv/Scripts/python.exe"
+
+# STEP 0: Refresh Betfair session token (every 4 hours or if stale)
+$credFile = "$PSScriptRoot\betfair-creds.json"
+if (Test-Path $credFile) {
+    $credModTime = (Get-Item $credFile).LastWriteTime
+    $hoursSinceRefresh = ((Get-Date) - $credModTime).TotalHours
+    
+    if ($hoursSinceRefresh -gt 4) {
+        Write-Log "`nSTEP 0: Refreshing Betfair session token..." "Cyan"
+        Write-Log "  Last refresh: $($hoursSinceRefresh.ToString('0.0')) hours ago" "Yellow"
+        
+        & $pythonExe "$PSScriptRoot\refresh_token.py" 2>&1 | Tee-Object -Append -FilePath $logFile
+        
+        if ($LASTEXITCODE -eq 0) {
+            Write-Log "  Session token refreshed successfully" "Green"
+            # Reload credentials
+            $creds = Get-Content "$PSScriptRoot\betfair-creds.json" | ConvertFrom-Json
+            $env:BETFAIR_APP_KEY = $creds.app_key
+            $env:BETFAIR_SESSION = $creds.session_token
+        } else {
+            Write-Log "  WARNING: Token refresh failed - continuing with existing token" "Yellow"
+        }
+    } else {
+        Write-Log "  Betfair token is fresh ($($hoursSinceRefresh.ToString('0.0')) hours old)" "Gray"
+    }
+}
 
 # STEP 1: Learn from yesterday (if enabled)
 $enableLearning = $true
@@ -132,6 +172,35 @@ if (Test-Path $outputCsv) {
     }
 } else {
     Write-Log "  No output file generated" "Red"
+}
+
+# STEP 4: Send daily summary email (only once per day at 6pm)
+$currentHour = (Get-Date).Hour
+if ($currentHour -eq 18) {
+    Write-Log "`nSTEP 4: Sending daily summary email..." "Cyan"
+    
+    $recipientEmail = $env:SUMMARY_EMAIL
+    if (-not $recipientEmail) {
+        Write-Log "  WARNING: SUMMARY_EMAIL environment variable not set" "Yellow"
+        Write-Log "  Set SUMMARY_EMAIL to receive daily summaries" "Yellow"
+    } else {
+        # Check if we already sent today
+        $todaySlug = Get-Date -Format "yyyyMMdd"
+        $sentMarker = "$PSScriptRoot\logs\email_sent_$todaySlug.txt"
+        
+        if (-not (Test-Path $sentMarker)) {
+            & $pythonExe "$PSScriptRoot\send_daily_summary.py" --to $recipientEmail 2>&1 | Tee-Object -Append -FilePath $logFile
+            
+            if ($LASTEXITCODE -eq 0) {
+                Write-Log "  Daily summary sent to $recipientEmail" "Green"
+                New-Item -ItemType File -Path $sentMarker -Force | Out-Null
+            } else {
+                Write-Log "  WARNING: Failed to send email" "Yellow"
+            }
+        } else {
+            Write-Log "  Daily summary already sent today" "Gray"
+        }
+    }
 }
 
 # Summary

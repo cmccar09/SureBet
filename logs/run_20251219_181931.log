@@ -1,0 +1,138 @@
+[18:19:31] ========================================
+[18:19:31] SCHEDULED BETTING WORKFLOW
+[18:19:31] ========================================
+[18:19:31] Betfair credentials loaded
+[18:19:33] LLM Provider: AWS Bedrock (Claude via AWS)
+[18:19:33] 
+STEP 1: Learning from yesterday's results...
+[18:19:33]   No yesterday's selections found - skipping learning
+[18:19:33] 
+STEP 2: Generating today's picks...
+[18:19:33]   Fetching live Betfair odds...
+C:\Users\charl\OneDrive\futuregenAI\Betting\betfair_delayed_snapshots.py:31: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now = datetime.utcnow()
+C:\Users\charl\OneDrive\futuregenAI\Betting\betfair_delayed_snapshots.py:99: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  now = datetime.utcnow()
+Loading Betfair credentials...
+Fetching markets (next 24 hours)...
+Found 45 markets
+Fetching odds batch 1/5...
+Fetching odds batch 2/5...
+Fetching odds batch 3/5...
+Fetching odds batch 4/5...
+Fetching odds batch 5/5...
+Fetched odds for 45 markets
+Formatted 44 races with odds
+[OK] Saved snapshot to C:\Users\charl\OneDrive\futuregenAI\Betting\response_live.json
+  Races: 44
+  Timestamp: 2025-12-19T18:19:37.528584Z
+[18:19:37]   Applying prompt logic to live markets...
+Using AWS Bedrock (Claude 4.5 via AWS)
+Using AWS Bedrock (Claude 4.5 via AWS)
+Using AWS Bedrock (Claude 4.5 via AWS)
+Using AWS Bedrock (Claude 4.5 via AWS)
+Using AWS Bedrock (Claude 4.5 via AWS)
+Using AWS Bedrock (Claude 4.5 via AWS)
+Using AWS Bedrock (Claude 4.5 via AWS)
+Using AWS Bedrock (Claude 4.5 via AWS)
+Using AWS Bedrock (Claude 4.5 via AWS)
+Using AWS Bedrock (Claude 4.5 via AWS)
+Loaded prompt from: C:\Users\charl\OneDrive\futuregenAI\Betting\prompt.txt (4483 chars)
+Loading market data from: C:\Users\charl\OneDrive\futuregenAI\Betting\response_live.json
+Found 44 races
+Processing first 10 races (max_races=10)
+
+[1/10] Processing: Newcastle - 5f Hcap
+  Calling auto API...
+  [OK] Found 3 selection(s)
+
+[2/10] Processing: Newcastle - 5f Hcap
+  Calling auto API...
+  [OK] Found 5 selection(s)
+
+[3/10] Processing: Dundalk - 1m Cond Stks
+  Calling auto API...
+  [OK] Found 4 selection(s)
+
+[4/10] Processing: Dundalk - 1m4f Hcap
+  Calling auto API...
+  [OK] Found 3 selection(s)
+
+[5/10] Processing: Dundalk - 1m2f Hcap
+  Calling auto API...
+  [OK] Found 5 selection(s)
+
+[6/10] Processing: Ascot - 2m5f Grad Chs
+  Calling auto API...
+  [OK] Found 3 selection(s)
+
+[7/10] Processing: Ascot - 2m7f Nov Hcap Hrd
+  Calling auto API...
+  [OK] Found 5 selection(s)
+
+[8/10] Processing: Ascot - 2m3f Hcap Chs
+  Calling auto API...
+  [OK] Found 5 selection(s)
+
+[9/10] Processing: Ascot - 3m Grd1 Hrd
+  Calling auto API...
+  [OK] Found 5 selection(s)
+
+[10/10] Processing: Ascot - 3m Hcap Chs
+  Calling auto API...
+  [OK] Found 5 selection(s)
+
+Ranking 43 selections by win probability...
+[OK] Selected top 5 picks:
+  1. Firefox @ Ascot (p_win: 0.53)
+  2. Shatin Venture @ Newcastle (p_win: 0.29)
+  3. Iroko @ Ascot (p_win: 0.29)
+  4. Take Heart @ Dundalk (p_win: 0.28)
+  5. Honesty Policy @ Ascot (p_win: 0.26)
+
+[OK] Saved 5 selection(s) to: C:\Users\charl\OneDrive\futuregenAI\Betting\history\selections_20251219_181933.csv
+
+============================================================
+SUMMARY: 5 selections generated
+Output: C:\Users\charl\OneDrive\futuregenAI\Betting\history\selections_20251219_181933.csv
+============================================================
+[18:22:53]   Generated 5 pick(s)
+[18:22:53] 
+STEP 3: Saving to DynamoDB...
+C:\Users\charl\OneDrive\futuregenAI\Betting\save_selections_to_dynamodb.py:79: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  'timestamp': datetime.utcnow().isoformat(),
+C:\Users\charl\OneDrive\futuregenAI\Betting\save_selections_to_dynamodb.py:80: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  'date': datetime.utcnow().strftime("%Y-%m-%d"),
+C:\Users\charl\OneDrive\futuregenAI\Betting\save_selections_to_dynamodb.py:114: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  'created_at': datetime.utcnow().isoformat(),
+============================================================
+Save Selections to DynamoDB
+============================================================
+
+Loading selections from: C:\Users\charl\OneDrive\futuregenAI\Betting\history\selections_20251219_181933.csv
+Found 5 selections
+
+Formatting for DynamoDB...
+Formatted 5 bet items
+
+Saving to DynamoDB...
+Connecting to DynamoDB table: SureBetBets (region: us-east-1)
+[OK] Saved: Firefox at Ascot (EW)
+[OK] Saved: Shatin Venture at Newcastle (EW)
+[OK] Saved: Iroko at Ascot (EW)
+[OK] Saved: Take Heart at Dundalk (EW)
+[OK] Saved: Honesty Policy at Ascot (EW)
+
+============================================================
+Results: 5 saved, 0 errors
+============================================================
+
+[OK] Complete
+[18:22:56]   Successfully saved to database
+[18:22:56] 
+========================================
+[18:22:56] WORKFLOW COMPLETE
+[18:22:56] ========================================
+[18:22:56] Timestamp: 2025-12-19 18:22:56
+[18:22:56] Log file: C:\Users\charl\OneDrive\futuregenAI\Betting\logs\run_20251219_181931.log
+[18:22:56] ========================================

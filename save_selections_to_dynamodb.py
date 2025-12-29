@@ -164,11 +164,11 @@ def save_to_dynamodb(bets: list[dict], table_name: str = None, region: str = 'us
                 table.put_item(Item=bet_converted)
                 
                 success_count += 1
-                print(f"✓ Saved: {bet['horse']} at {bet['course']} ({bet['bet_type']})")
+                print(f"[OK] Saved: {bet['horse']} at {bet['course']} ({bet['bet_type']})")
                 
             except Exception as e:
                 error_count += 1
-                print(f"✗ Failed to save {bet.get('horse', 'unknown')}: {e}", file=sys.stderr)
+                print(f"[ERROR] Failed to save {bet.get('horse', 'unknown')}: {e}", file=sys.stderr)
         
         return success_count, error_count
         
@@ -195,7 +195,7 @@ def save_to_json_backup(bets: list[dict], output_path: str):
     with open(output_path, 'w') as f:
         json.dump(bets_json, f, indent=2)
     
-    print(f"✓ Backup saved to: {output_path}")
+    print(f"[OK] Backup saved to: {output_path}")
 
 def main():
     parser = argparse.ArgumentParser(description="Save selections to DynamoDB SureBetBets table")
@@ -250,7 +250,7 @@ def main():
     if args.backup:
         save_to_json_backup(bets, args.backup)
     
-    print("\n✓ Complete")
+    print("\n[OK] Complete")
 
 if __name__ == "__main__":
     main()

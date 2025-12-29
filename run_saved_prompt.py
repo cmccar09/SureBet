@@ -169,8 +169,28 @@ IMPORTANT: Always output 3-5 selections showing best relative value, even if Por
     
     # Determine provider
     if provider == "auto":
-        if HAS_BOTO3:  # Prefer AWS Bedrock (no API key needed)
-            provider = "bedrock"
+        # Check AWS Bedrock first (preferred - no API key needed)
+        if HAS_BOTO3:
+            try:
+                boto3_session = boto3.Session()
+                credentials = boto3_session.get_credentials()
+                if credentials is not None:
+                    provider = "bedrock"
+                    print("Using AWS Bedrock (Claude 4.5 via AWS)", file=sys.stderr)
+                else:
+                    raise Exception("No AWS credentials found")
+            except Exception as e:
+                print(f"AWS Bedrock not available: {e}", file=sys.stderr)
+                # Fall through to API key check
+                if HAS_ANTHROPIC and os.getenv("ANTHROPIC_API_KEY"):
+                    provider = "anthropic"
+                elif HAS_OPENAI and os.getenv("OPENAI_API_KEY"):
+                    provider = "openai"
+                else:
+                    print("ERROR: No LLM access configured", file=sys.stderr)
+                    print("Option 1: Configure AWS - run 'aws configure'", file=sys.stderr)
+                    print("Option 2: Set ANTHROPIC_API_KEY or OPENAI_API_KEY", file=sys.stderr)
+                    sys.exit(1)
         elif HAS_ANTHROPIC and os.getenv("ANTHROPIC_API_KEY"):
             provider = "anthropic"
         elif HAS_OPENAI and os.getenv("OPENAI_API_KEY"):
@@ -312,7 +332,7 @@ def process_all_races(snapshot_path: str, prompt_text: str, provider: str, max_r
         selections = parse_csv_response(response)
         
         if selections:
-            print(f"  ✓ Found {len(selections)} selection(s)")
+            print(f"  [OK] Found {len(selections)} selection(s)")
             all_selections.extend(selections)
         else:
             print("  No selections met thresholds")
@@ -336,7 +356,7 @@ def save_selections_csv(selections: list[dict], output_path: str):
         writer.writeheader()
         writer.writerows(selections)
     
-    print(f"\n✓ Saved {len(selections)} selection(s) to: {output_path}")
+    print(f"\n[OK] Saved {len(selections)} selection(s) to: {output_path}")
 
 def main():
     parser = argparse.ArgumentParser(description="Run betting prompt with live market data")
@@ -386,7 +406,7 @@ def main():
         selections.sort(key=lambda x: x['p_win_float'], reverse=True)
         top_selections = selections[:5]
         
-        print(f"✓ Selected top 5 picks:")
+        print(f"[OK] Selected top 5 picks:")
         for i, sel in enumerate(top_selections, 1):
             print(f"  {i}. {sel.get('runner_name', 'Unknown')} @ {sel.get('venue', 'Unknown')} (p_win: {sel.get('p_win', 'N/A')})")
         

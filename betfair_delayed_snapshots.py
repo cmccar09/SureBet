@@ -212,7 +212,7 @@ def main():
     with open(args.out, 'w') as f:
         json.dump(snapshot, f, indent=2)
     
-    print(f"✓ Saved snapshot to {args.out}")
+    print(f"[OK] Saved snapshot to {args.out}")
     print(f"  Races: {snapshot['total_races']}")
     print(f"  Timestamp: {snapshot['timestamp']}")
     

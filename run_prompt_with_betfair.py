@@ -56,7 +56,7 @@ def build_argparser():
     ap.add_argument("--countries", type=str, default="",
                     help="(snapshot) Restrict to countries, e.g. 'GB,IE,US'. Blank = ALL (recommended).")
     ap.add_argument("--window_hours", type=float, default=4.0,
-                    help="(snapshot) Window length in hours (now→now+Xh)")
+                    help="(snapshot) Window length in hours (now to now+Xh)")
     ap.add_argument("--depth", type=int, default=3,
                     help="(snapshot) Best prices depth")
     ap.add_argument("--outfile_prefix", type=str, default="./snapshots",
@@ -64,7 +64,7 @@ def build_argparser():
     ap.add_argument("--outfile", type=str, default="",
                     help="(snapshot) Explicit output CSV path for --once")
     ap.add_argument("--ts", type=str, default="",
-                    help="(snapshot) Timestamp token YYYYMMDD_HHMMSS → ./snapshots/run_<ts>_once.csv")
+                    help="(snapshot) Timestamp token YYYYMMDD_HHMMSS -> ./snapshots/run_<ts>_once.csv")
 
     # Keep-alive / auth recovery (preflight only)
     ap.add_argument("--keepalive_cmd", type=str, default="",
@@ -83,7 +83,7 @@ def build_argparser():
     # Gating / relaxation (RELAXED DEFAULTS)
     ap.add_argument("--min_back", type=float, default=1.2, help="Minimum back price to consider")
     ap.add_argument("--min_overlay", type=float, default=0.02, help="Minimum overlay (e.g., 0.02 = +2%%)")
-    ap.add_argument("--relax_if_empty", action="store_true", default=True, help="If no picks, relax overlay ↓ stepwise")
+    ap.add_argument("--relax_if_empty", action="store_true", default=True, help="If no picks, relax overlay down stepwise")
     ap.add_argument("--relax_steps", type=int, default=5, help="How many relax iterations if empty")
     ap.add_argument("--relax_delta", type=float, default=0.01, help="Overlay decrement per relax step")
 
@@ -383,7 +383,7 @@ def run_saved_prompt_if_needed(args) -> None:
     else:
         default_cmd = args.prompt_cmd
     cmd = default_cmd.format(out=args.probs_csv)
-    debug(f"[PROMPT] Running saved prompt → {args.probs_csv}\n CMD: {cmd}")
+    debug(f"[PROMPT] Running saved prompt -> {args.probs_csv}\n CMD: {cmd}")
     ensure_parent_dir(args.probs_csv)
     ret = subprocess.run(cmd, cwd=args.prompt_workdir, shell=True)
     if ret.returncode != 0 or not os.path.exists(args.probs_csv):
@@ -479,7 +479,7 @@ def run_snapshots_if_needed(args) -> str | None:
             cmd2 = _build_snapshot_cmd(args, override=od)
             rc2 = _run_snapshot_cmd(cmd2)
             if rc2 == 0 and os.path.exists(tmp_outfile) and csv_rows(tmp_outfile) > 0:
-                debug(f"[OK] Fallback snapshot succeeded → {tmp_outfile}")
+                debug(f"[OK] Fallback snapshot succeeded -> {tmp_outfile}")
                 # replace snap_csv for downstream
                 snap_csv = tmp_outfile
             else:
@@ -500,7 +500,7 @@ def write_debug_report(path: str, sections: list[tuple[str, str]]):
     with open(path, "w", encoding="utf-8") as f:
         for title, body in sections:
             f.write(f"## {title}\n\n{body}\n\n")
-    debug(f"[OK] Wrote debug report → {path}")
+    debug(f"[OK] Wrote debug report -> {path}")
 
 # ------------------------ Main flow ------------------------
 
@@ -549,7 +549,7 @@ def main():
         filtered = shortlist(scored, args.min_back, min_overlay)
         bpm = best_per_market(filtered)
         top5 = bpm.sort_values(["ev_win","overlay","p_win"], ascending=False).head(5)
-        explain.append(f"Step {step}: min_back≥{args.min_back}, min_overlay≥{min_overlay:.3f} → candidates={len(filtered)}, markets={bpm['market_id'].nunique() if not bpm.empty else 0}, top5={len(top5)}")
+        explain.append(f"Step {step}: min_back>={args.min_back}, min_overlay>={min_overlay:.3f} -> candidates={len(filtered)}, markets={bpm['market_id'].nunique() if not bpm.empty else 0}, top5={len(top5)}")
         if not top5.empty:
             final_top5 = top5
             break
@@ -603,7 +603,7 @@ def main():
         ensure_parent_dir(args.analysis_report)
         with open(args.analysis_report, "w", encoding="utf-8") as f:
             f.write("\n".join(lines))
-        debug(f"[OK] Wrote analysis → {args.analysis_report}")
+        debug(f"[OK] Wrote analysis -> {args.analysis_report}")
     
     # Save to DynamoDB if requested
     if args.save_to_dynamodb and not final_top5.empty:
