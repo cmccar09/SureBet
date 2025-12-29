@@ -1,32 +1,68 @@
-# Sensitive credentials and certificates
-betfair-creds.json
-betfair-client.key
-betfair-client.crt
-betfair-client.key.OLD
-betfair-client.crt.OLD
-*.pem
-*.key
-*.crt
+# ==========================================
+# SECURITY: NEVER COMMIT THESE FILES
+# ==========================================
 
-# Session and response data
+# RSA Private Keys and Certificates
+*.key
+*.pem
+*.crt
+*.cer
+*.p12
+*.pfx
+betfair-client.*
+betfair-creds.json
+*.key.OLD
+*.crt.OLD
+
+# AWS and API Credentials
+*.json.secret
+*-creds.json
+*.env
+.env
+.env.local
+.env.production
+
+# Session tokens and responses
 refresh-response.json
 response*.json
 test*.json
+*-response.json
 
-# Logs and history
+# Logs and history (may contain sensitive data)
 logs/
 history/
+*.log
 
 # Python
 __pycache__/
 *.pyc
+*.pyo
 .venv/
 venv/
+env/
+*.egg-info/
 
-# OS
+# Node modules (if using frontend locally)
+node_modules/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Backup files
-*.OLD
 *.bak
+*.backup
+*.OLD
+*.swp
+*~
+
+# IDE files
+.vscode/
+.idea/
+*.sublime-*
