@@ -7,6 +7,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   min-height: 100vh;
+  /* Improve mobile touch scrolling */
+  -webkit-overflow-scrolling: touch;
+  /* Prevent iOS zoom on input focus */
+  touch-action: manipulation;
 }
 
 code {
@@ -17,3 +21,12 @@ code {
 * {
   box-sizing: border-box;
 }
+
+/* Improve touch target sizes on mobile */
+@media (max-width: 768px) {
+  button, a, input, select {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+

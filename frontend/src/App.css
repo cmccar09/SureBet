@@ -3,10 +3,22 @@
   padding: 20px;
 }
 
+@media (max-width: 768px) {
+  .App {
+    padding: 12px;
+  }
+}
+
 .App-header {
   text-align: center;
   color: white;
   margin-bottom: 40px;
+}
+
+@media (max-width: 768px) {
+  .App-header {
+    margin-bottom: 24px;
+  }
 }
 
 .App-header h1 {
@@ -15,10 +27,28 @@
   text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
 }
 
+@media (max-width: 768px) {
+  .App-header h1 {
+    font-size: 2em;
+  }
+}
+
+@media (max-width: 480px) {
+  .App-header h1 {
+    font-size: 1.6em;
+  }
+}
+
 .App-header p {
   font-size: 1.2em;
   opacity: 0.9;
   margin: 10px 0 20px 0;
+}
+
+@media (max-width: 768px) {
+  .App-header p {
+    font-size: 1em;
+  }
 }
 
 .filter-buttons {
@@ -26,6 +56,13 @@
   gap: 10px;
   justify-content: center;
   margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 480px) {
+  .filter-buttons {
+    gap: 8px;
+  }
 }
 
 .filter-buttons button {
@@ -37,6 +74,13 @@
   cursor: pointer;
   font-size: 16px;
   transition: all 0.3s ease;
+}
+
+@media (max-width: 480px) {
+  .filter-buttons button {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
 }
 
 .filter-buttons button:hover {
@@ -72,12 +116,27 @@
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
+@media (max-width: 768px) {
+  .threshold-warning {
+    margin: 0 0 16px 0;
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}
+
 .loading, .error, .no-picks {
   text-align: center;
   padding: 60px 20px;
   background: white;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+@media (max-width: 768px) {
+  .loading, .error, .no-picks {
+    padding: 40px 16px;
+    border-radius: 12px;
+  }
 }
 
 .error {
@@ -97,6 +156,19 @@
   gap: 24px;
 }
 
+@media (max-width: 768px) {
+  .picks-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .picks-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}
+
 .pick-card {
   background: white;
   border-radius: 16px;
@@ -105,9 +177,22 @@
   transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 
+@media (max-width: 768px) {
+  .pick-card {
+    padding: 16px;
+    border-radius: 12px;
+  }
+}
+
 .pick-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+}
+
+@media (max-width: 768px) {
+  .pick-card:hover {
+    transform: translateY(-2px);
+  }
 }
 .pick-card.below-threshold {
   border: 2px solid #f59e0b;
@@ -129,6 +214,18 @@
   color: #333;
 }
 
+@media (max-width: 768px) {
+  .pick-header h2 {
+    font-size: 1.4em;
+  }
+}
+
+@media (max-width: 480px) {
+  .pick-header h2 {
+    font-size: 1.2em;
+  }
+}
+
 .pick-venue {
   display: flex;
   align-items: center;
@@ -136,6 +233,13 @@
   color: #666;
   font-size: 1.1em;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .pick-venue {
+    font-size: 1em;
+  }
 }
 
 .venue-icon {
@@ -158,6 +262,14 @@
   border-radius: 8px;
 }
 
+@media (max-width: 480px) {
+  .pick-odds {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    padding: 12px;
+  }
+}
+
 .odds-item {
   display: flex;
   flex-direction: column;
@@ -175,6 +287,12 @@
   color: #333;
 }
 
+@media (max-width: 480px) {
+  .odds-item .value {
+    font-size: 1.1em;
+  }
+}
+
 .ew-terms {
   background: #fff3cd;
   padding: 8px 12px;
@@ -182,6 +300,13 @@
   font-size: 0.9em;
   color: #856404;
   margin: 12px 0;
+}
+
+@media (max-width: 480px) {
+  .ew-terms {
+    font-size: 0.85em;
+    padding: 6px 10px;
+  }
 }
 
 .confidence-bar {
@@ -220,6 +345,14 @@
   margin: 12px 0;
   font-size: 0.95em;
   line-height: 1.5;
+  word-break: break-word;
+}
+
+@media (max-width: 480px) {
+  .rationale {
+    font-size: 0.9em;
+    padding: 10px;
+  }
 }
 
 .rationale strong {
@@ -241,6 +374,13 @@
   font-size: 0.85em;
 }
 
+@media (max-width: 480px) {
+  .tag {
+    padding: 5px 10px;
+    font-size: 0.8em;
+  }
+}
+
 .ev-badge {
   display: inline-block;
   background: #10b981;
@@ -251,12 +391,26 @@
   margin: 8px 0;
 }
 
+@media (max-width: 480px) {
+  .ev-badge {
+    padding: 5px 10px;
+    font-size: 13px;
+    margin: 6px 0;
+  }
+}
+
 .metrics-row {
   display: flex;
   gap: 10px;
   margin-top: 12px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+@media (max-width: 480px) {
+  .metrics-row {
+    gap: 8px;
+  }
 }
 
 .roi-badge {
@@ -268,6 +422,13 @@
   font-size: 14px;
   font-weight: 700;
   box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
+}
+
+@media (max-width: 480px) {
+  .roi-badge {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
 }
 
 .roi-badge.below-threshold {
@@ -295,12 +456,10 @@
   color: #999;
 }
 
-@media (max-width: 768px) {
-  .picks-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .App-header h1 {
-    font-size: 2em;
+@media (max-width: 480px) {
+  .pick-footer {
+    font-size: 0.8em;
   }
 }
+
+/* Remove old media query and consolidate */
