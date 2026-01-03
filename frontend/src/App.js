@@ -317,20 +317,6 @@ function App() {
                   </div>
                 )}
 
-                <div className="metrics-row">
-                  {pick.roi && (
-                    <div className={`roi-badge ${belowThreshold ? 'below-threshold' : ''}`}>
-                      ROI: {(parseFloat(pick.roi) * 100).toFixed(1)}%
-                      {belowThreshold && <span className="threshold-flag"> (Below 5%)</span>}
-                    </div>
-                  )}
-                  {pick.ev && (
-                    <div className="ev-badge">
-                      EV: {(parseFloat(pick.ev) * 100).toFixed(1)}%
-                    </div>
-                  )}
-                </div>
-
                 <div className="pick-footer">
                   <span className="timestamp">
                     {new Date(pick.timestamp).toLocaleString('en-GB')}
