@@ -200,6 +200,21 @@ function App() {
                   </div>
                 )}
 
+                {pick.stake && (
+                  <div className="stake-recommendation">
+                    <strong>💰 Suggested Stake:</strong> 
+                    <span className="stake-amount">€{pick.stake}</span>
+                    <span className="stake-note"> (from €{pick.bankroll || 1000} bank)</span>
+                    {pick.expected_roi && (
+                      <div className="expected-roi">
+                        Expected ROI: <span className={pick.expected_roi > 0 ? 'positive' : 'negative'}>
+                          {pick.expected_roi > 0 ? '+' : ''}{pick.expected_roi}%
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {pick.tags && pick.tags.length > 0 && (
                   <div className="tags">
                     {(Array.isArray(pick.tags) ? pick.tags : pick.tags.split(',')).map((tag, i) => (
