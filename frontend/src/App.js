@@ -197,25 +197,24 @@ function App() {
               
               return (
               <div key={pick.bet_id || index} className={`pick-card ${belowThreshold ? 'below-threshold' : ''}`}>
-                {/* ROI INDICATOR BADGE - TOP RIGHT CORNER */}
-                <div style={{
-                  position: 'absolute',
-                  top: '12px',
-                  right: '12px',
-                  background: belowThreshold ? '#f59e0b' : '#10b981',
-                  color: 'white',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  fontWeight: 'bold',
-                  fontSize: '14px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                }}>
-                  {belowThreshold ? '⚠️' : '✓'} {(roi * 100).toFixed(1)}% ROI
-                </div>
-                
-                <div className="pick-header">
-                  <h2>{horseName}</h2>
-                  {getBetTypeBadge(pick.bet_type)}
+                <div className="pick-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
+                  <h2 style={{margin: 0}}>{horseName}</h2>
+                  <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                    {getBetTypeBadge(pick.bet_type)}
+                    {/* ROI INDICATOR BADGE */}
+                    <div style={{
+                      background: belowThreshold ? '#f59e0b' : '#10b981',
+                      color: 'white',
+                      padding: '6px 12px',
+                      borderRadius: '6px',
+                      fontWeight: 'bold',
+                      fontSize: '14px',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                      whiteSpace: 'nowrap'
+                    }}>
+                      {belowThreshold ? '⚠️' : '✓'} {(roi * 100).toFixed(1)}% ROI
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="pick-venue">
