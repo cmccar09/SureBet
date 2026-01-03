@@ -159,11 +159,6 @@ function App() {
             <div className="picks-summary">
               Showing top {Math.min(5, picks.length)} of {picks.length} selections
             </div>
-            {picks.slice(0, 5).some(p => parseFloat(p.roi || 0) < 0.05) && (
-              <div className="threshold-warning">
-                ⚠️ Some selections below 5% ROI threshold - showing for reference only
-              </div>
-            )}
             <div className="picks-grid">
             {picks.slice(0, 5).map((pick, index) => {
               const roi = parseFloat(pick.roi || 0);
@@ -202,6 +197,22 @@ function App() {
               
               return (
               <div key={pick.bet_id || index} className={`pick-card ${belowThreshold ? 'below-threshold' : ''}`}>
+                {/* ROI INDICATOR BADGE - TOP RIGHT CORNER */}
+                <div style={{
+                  position: 'absolute',
+                  top: '12px',
+                  right: '12px',
+                  background: belowThreshold ? '#f59e0b' : '#10b981',
+                  color: 'white',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontWeight: 'bold',
+                  fontSize: '14px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                }}>
+                  {belowThreshold ? '⚠️' : '✓'} {(roi * 100).toFixed(1)}% ROI
+                </div>
+                
                 <div className="pick-header">
                   <h2>{horseName}</h2>
                   {getBetTypeBadge(pick.bet_type)}
