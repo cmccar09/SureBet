@@ -297,12 +297,29 @@ function App() {
               const horseName = typeof pick.horse === 'string' ? pick.horse : 'Unknown';
               const courseName = typeof pick.course === 'string' ? pick.course : 'Unknown';
               
-              // Calculate bet amounts and returns
-              const stake = parseFloat(pick.stake || 2.0);
+              // Calculate recommended bet size using fractional Kelly Criterion
               const odds = parseFloat(pick.odds || 0);
               const pWin = parseFloat(pick.p_win || 0);
               const pPlace = parseFloat(pick.p_place || 0);
               const betType = (pick.bet_type || 'WIN').toUpperCase();
+              
+              // Kelly Criterion: (odds * p_win - 1) / (odds - 1)
+              // We use fractional Kelly (1/4 Kelly) for safety
+              const bankroll = 100; // Assume €100 bankroll
+              let kellyFraction = 0;
+              
+              if (betType === 'WIN' && odds > 1 && pWin > 0) {
+                kellyFraction = ((odds * pWin) - 1) / (odds - 1);
+              } else if (betType === 'EW' && odds > 1 && pWin > 0) {
+                // For EW bets, use ROI to calculate Kelly
+                // Kelly = edge / odds
+                const edge = roi / 100; // Convert ROI percentage to decimal
+                kellyFraction = Math.max(0, edge / (odds - 1));
+              }
+              
+              // Use 1/4 Kelly for conservative sizing, cap at 5% of bankroll
+              const recommendedFraction = Math.max(0, Math.min(kellyFraction * 0.25, 0.05));
+              const stake = Math.max(1.0, Math.round(bankroll * recommendedFraction * 2) / 2); // Round to nearest €0.50, minimum €1
               
               // Calculate potential returns
               let potentialWin = 0;
