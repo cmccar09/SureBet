@@ -54,7 +54,7 @@ function App() {
     setError(null);
 
     try {
-      const endpoint = `${API_BASE_URL}/workflow/run`;
+      const endpoint = `${API_BASE_URL}/api/workflow/run`;
       console.log('Triggering workflow from:', endpoint);
       const response = await fetch(endpoint);
       
