@@ -3,7 +3,7 @@ import './App.css';
 
 // Use API Gateway (no caching issues)
 const API_BASE_URL = process.env.REACT_APP_API_URL || 
-                     'https://7tdrotq8dl.execute-api.us-east-1.amazonaws.com/prod/api';
+                     'https://7tdrotq8dl.execute-api.us-east-1.amazonaws.com/prod';
 
 function App() {
   const [picks, setPicks] = useState([]);
@@ -55,7 +55,9 @@ function App() {
     
     try {
       // Call cloud API to trigger workflow Lambda
-      const response = await fetch(`${API_BASE_URL}/api/workflow/run`);
+      const response = await fetch(`${API_BASE_URL}/api/workflow/run`, {
+        method: 'POST'
+      });
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
