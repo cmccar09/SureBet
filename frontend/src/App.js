@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://192.168.0.43:5001/api';
+// Use Lambda URL for production (Amplify), fallback to local for dev
+const API_BASE_URL = process.env.REACT_APP_API_URL || 
+                     'https://lk2iyjgzwxhks4lq35bfxziylq0xwcfv.lambda-url.us-east-1.on.aws/api';
 
 function App() {
   const [picks, setPicks] = useState([]);
@@ -22,7 +24,13 @@ function App() {
         ? `${API_BASE_URL}/picks/today`
         : `${API_BASE_URL}/picks`;
       
+      console.log('Fetching from:', endpoint);
       const response = await fetch(endpoint);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
       const data = await response.json();
 
       if (data.success) {
@@ -32,7 +40,7 @@ function App() {
       }
     } catch (err) {
       console.error('Error fetching picks:', err);
-      setError('Cannot connect to API server. Make sure it\'s running on port 5001');
+      setError(`Cannot load picks: ${err.message}`);
     } finally {
       setLoading(false);
     }
@@ -40,27 +48,32 @@ function App() {
 
   const formatOdds = (odds) => {
     if (!odds) return 'N/A';
-    const decimal = parseFloat(odds);
-    if (isNaN(decimal)) return odds;
-    
-    // Convert decimal to fractional
-    const fractional = decimal - 1;
-    if (fractional < 1) {
-      return `${Math.round(1/fractional)}/${1}`;
+    try {
+      const decimal = parseFloat(odds);
+      if (isNaN(decimal)) return odds;
+      
+      // Convert decimal to fractional
+      const fractional = decimal - 1;
+      if (fractional < 1) {
+        return `${Math.round(1/fractional)}/${1}`;
+      }
+      return `${Math.round(fractional)}/${1}`;
+    } catch (e) {
+      return 'N/A';
     }
-    return `${Math.round(fractional)}/${1}`;
   };
 
   const formatTime = (timeStr) => {
     if (!timeStr) return 'TBC';
     try {
       const date = new Date(timeStr);
+      if (isNaN(date.getTime())) return timeStr;
       return date.toLocaleTimeString('en-GB', { 
         hour: '2-digit', 
         minute: '2-digit',
         hour12: false 
       });
-    } catch {
+    } catch (e) {
       return timeStr;
     }
   };
