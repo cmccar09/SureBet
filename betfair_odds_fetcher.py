@@ -31,7 +31,39 @@ SPORT_MARKET_TYPES = {
 }
 
 def get_betfair_session():
-    """Get current Betfair session token from Secrets Manager"""
+    """Get current Betfair session token - tries local login first, then Secrets Manager"""
+    
+    # Try local authentication first (for local testing)
+    try:
+        import os
+        if os.path.exists('betfair-creds.json'):
+            print("Using local authentication...")
+            with open('betfair-creds.json', 'r') as f:
+                creds = json.load(f)
+            
+            # Do interactive login
+            url = "https://identitysso.betfair.com/api/login"
+            headers = {
+                'X-Application': creds['app_key'],
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'Accept': 'application/json'
+            }
+            data = {
+                'username': creds['username'],
+                'password': creds['password']
+            }
+            
+            response = requests.post(url, headers=headers, data=data, timeout=30)
+            if response.status_code == 200:
+                result = response.json()
+                session_token = result.get('sessionToken') or result.get('token')
+                if session_token:
+                    print(f"✓ Local authentication successful")
+                    return creds['app_key'], session_token
+    except Exception as e:
+        print(f"Local auth failed, trying Secrets Manager: {e}")
+    
+    # Fall back to Secrets Manager (for Lambda)
     try:
         response = secrets_client.get_secret_value(SecretId='betfair-credentials')
         secret_string = response['SecretString']
@@ -44,7 +76,7 @@ def get_betfair_session():
         return credentials['app_key'], credentials['session_token']
     except Exception as e:
         print(f"Error getting Betfair session: {e}")
-        raise Exception("Betfair credentials not found in Secrets Manager")
+        raise Exception("Betfair credentials not found in Secrets Manager or locally")
 
 def fetch_betfair_markets(app_key, session_token, sport='horse_racing', market_types=None):
     """Fetch markets from Betfair for specified sport"""
