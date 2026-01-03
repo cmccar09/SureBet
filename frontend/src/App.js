@@ -313,7 +313,20 @@ function App() {
               
               // Use 1/4 Kelly for conservative sizing, cap at 5% of bankroll
               const recommendedFraction = Math.max(0, Math.min(kellyFraction * 0.25, 0.05));
-              const stake = Math.max(1.0, Math.round(bankroll * recommendedFraction * 2) / 2); // Round to nearest €0.50, minimum €1
+              let stake = Math.round(bankroll * recommendedFraction * 2) / 2; // Round to nearest €0.50
+              
+              // Apply minimum stakes based on bet type and quality
+              if (betType === 'EW') {
+                // EW bets: minimum €10 each way = €20 total
+                stake = Math.max(20, stake);
+              } else {
+                // WIN bets: minimum €25, but €30 for really good prospects (ROI > 10%)
+                if (roi > 10) {
+                  stake = Math.max(30, stake);
+                } else {
+                  stake = Math.max(25, stake);
+                }
+              }
               
               // Calculate potential returns
               let potentialWin = 0;
