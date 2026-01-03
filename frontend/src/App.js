@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// Use Lambda URL for production (Amplify), fallback to local for dev
+// Use API Gateway (no caching issues)
 const API_BASE_URL = process.env.REACT_APP_API_URL || 
-                     'https://lk2iyjgzwxhks4lq35bfxziylq0xwcfv.lambda-url.us-east-1.on.aws/api';
+                     'https://7tdrotq8dl.execute-api.us-east-1.amazonaws.com/prod/api';
 
 function App() {
   const [picks, setPicks] = useState([]);
