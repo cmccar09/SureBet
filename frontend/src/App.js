@@ -135,7 +135,35 @@ function App() {
   };
 
   const getConfidenceColor = (confidence) => {
-    cons  <button onClick={checkResults} className="results-btn" disabled={resultsLoading}>
+    const conf = parseFloat(confidence) || 0;
+    if (conf >= 70) return '#10b981';
+    if (conf >= 50) return '#f59e0b';
+    return '#ef4444';
+  };
+
+  return (
+    <div className="App">
+      <header className="App-header">
+        <h1>🏇 Today's Betting Picks</h1>
+        <p>Value opportunities from AI analysis</p>
+        
+        <div className="filter-buttons">
+          <button 
+            className={filter === 'today' ? 'active' : ''} 
+            onClick={() => setFilter('today')}
+          >
+            Today Only
+          </button>
+          <button 
+            className={filter === 'all' ? 'active' : ''} 
+            onClick={() => setFilter('all')}
+          >
+            All Picks
+          </button>
+          <button onClick={fetchPicks} className="refresh-btn">
+            🔄 Refresh
+          </button>
+          <button onClick={checkResults} className="results-btn" disabled={resultsLoading}>
             {resultsLoading ? '⏳ Checking...' : '📊 Check Results'}
           </button>
         </div>
@@ -196,34 +224,6 @@ function App() {
           </div>
         )}
         
-  };
-
-  return (
-    <div className="App">
-      <header className="App-header">
-        <h1>🏇 Today's Betting Picks</h1>
-        <p>Value opportunities from AI analysis</p>
-        
-        <div className="filter-buttons">
-          <button 
-            className={filter === 'today' ? 'active' : ''} 
-            onClick={() => setFilter('today')}
-          >
-            Today Only
-          </button>
-          <button 
-            className={filter === 'all' ? 'active' : ''} 
-            onClick={() => setFilter('all')}
-          >
-            All Picks
-          </button>
-          <button onClick={fetchPicks} className="refresh-btn">
-            🔄 Refresh
-          </button>
-        </div>
-      </header>
-
-      <main className="picks-container">
         {loading && <div className="loading">Loading picks...</div>}
         
         {error && (

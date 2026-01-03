@@ -31,7 +31,7 @@ if (-not $sessionToken -or -not $appKey) {
 Write-Host "`nSetting Lambda environment variables..." -ForegroundColor Yellow
 
 aws lambda update-function-configuration `
-    --function-name betting-api-picks `
+    --function-name betting `
     --environment "Variables={BETFAIR_SESSION_TOKEN=$sessionToken,BETFAIR_APP_KEY=$appKey}" `
     --region us-east-1
 
