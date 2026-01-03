@@ -53,9 +53,33 @@ function App() {
     setRefreshing(true);
     setError(null);
     
-    // Just refresh the picks - workflow runs automatically every 2 hours
-    await fetchPicks();
-    setRefreshing(false);
+    try {
+      // Call local trigger server to run workflow
+      const response = await fetch('http://localhost:5001/trigger');
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setError('✓ Generating new picks... Refreshing in 60 seconds...');
+        
+        // Auto-refresh after 60 seconds
+        setTimeout(() => {
+          fetchPicks();
+          setError(null);
+        }, 60000);
+      } else {
+        setError(data.error || 'Failed to trigger workflow');
+      }
+    } catch (err) {
+      console.error('Error triggering workflow:', err);
+      setError(`Cannot trigger workflow: ${err.message}. Make sure local_trigger_server.py is running.`);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const checkResults = async () => {
