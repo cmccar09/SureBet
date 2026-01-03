@@ -343,15 +343,40 @@ def check_today_results(headers):
     }
 
 def trigger_workflow(headers):
-    """Return success - workflow should be run locally via scheduled task"""
-    return {
-        'statusCode': 200,
-        'headers': headers,
-        'body': json.dumps({
-            'success': True,
-            'message': 'Workflow trigger received',
-            'status': 'scheduled',
-            'info': 'The workflow runs via Windows scheduled task every 2 hours. To run immediately, execute: .\\scheduled_workflow.ps1'
-        })
-    }
+    """Trigger the betting workflow Lambda to generate new picks"""
+    import boto3
+    
+    lambda_client = boto3.client('lambda', region_name='us-east-1')
+    
+    try:
+        # Invoke the workflow Lambda asynchronously
+        response = lambda_client.invoke(
+            FunctionName='betting-workflow',
+            InvocationType='Event',  # Async invocation
+            Payload=json.dumps({
+                'source': 'api-trigger',
+                'trigger': 'manual-refresh'
+            })
+        )
+        
+        return {
+            'statusCode': 202,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'message': 'Workflow triggered successfully',
+                'status': 'processing',
+                'info': 'New picks will be generated in ~60-90 seconds. Refresh picks to see updates.'
+            })
+        }
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': headers,
+            'body': json.dumps({
+                'success': False,
+                'error': str(e),
+                'message': 'Failed to trigger workflow. Make sure betting-workflow Lambda exists and API has invoke permissions.'
+            })
+        }
 

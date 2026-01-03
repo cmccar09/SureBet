@@ -54,8 +54,8 @@ function App() {
     setError(null);
     
     try {
-      // Call local trigger server to run workflow
-      const response = await fetch('http://localhost:5001/trigger');
+      // Call cloud API to trigger workflow Lambda
+      const response = await fetch(`${API_BASE_URL}/api/workflow/run`);
       
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -64,19 +64,19 @@ function App() {
       const data = await response.json();
       
       if (data.success) {
-        setError('✓ Generating new picks... Refreshing in 60 seconds...');
+        setError('✓ Generating new picks... Refreshing in 90 seconds...');
         
-        // Auto-refresh after 60 seconds
+        // Auto-refresh after 90 seconds
         setTimeout(() => {
           fetchPicks();
           setError(null);
-        }, 60000);
+        }, 90000);
       } else {
-        setError(data.error || 'Failed to trigger workflow');
+        setError(data.error || data.message || 'Failed to trigger workflow');
       }
     } catch (err) {
       console.error('Error triggering workflow:', err);
-      setError(`Cannot trigger workflow: ${err.message}. Make sure local_trigger_server.py is running.`);
+      setError(`Cannot trigger workflow: ${err.message}`);
     } finally {
       setRefreshing(false);
     }
