@@ -173,6 +173,33 @@ function App() {
               const horseName = typeof pick.horse === 'string' ? pick.horse : 'Unknown';
               const courseName = typeof pick.course === 'string' ? pick.course : 'Unknown';
               
+              // Calculate bet amounts and returns
+              const stake = parseFloat(pick.stake || 2.0);
+              const odds = parseFloat(pick.odds || 0);
+              const pWin = parseFloat(pick.p_win || 0);
+              const pPlace = parseFloat(pick.p_place || 0);
+              const betType = (pick.bet_type || 'WIN').toUpperCase();
+              
+              // Calculate potential returns
+              let potentialWin = 0;
+              let expectedReturn = 0;
+              
+              if (betType === 'WIN') {
+                potentialWin = stake * odds;
+                expectedReturn = potentialWin * pWin;
+              } else if (betType === 'EW') {
+                const ewFraction = parseFloat(pick.ew_fraction || 0.2);
+                const halfStake = stake / 2;
+                const winReturn = halfStake * odds;
+                const placeOdds = 1 + ((odds - 1) * ewFraction);
+                const placeReturn = halfStake * placeOdds;
+                potentialWin = winReturn + placeReturn;
+                expectedReturn = (winReturn * pWin) + (placeReturn * pPlace);
+              }
+              
+              const profit = potentialWin - stake;
+              const expectedProfit = expectedReturn - stake;
+              
               return (
               <div key={pick.bet_id || index} className={`pick-card ${belowThreshold ? 'below-threshold' : ''}`}>
                 <div className="pick-header">
@@ -186,14 +213,39 @@ function App() {
                   <span className="time">{formatTime(pick.race_time)} (Dublin)</span>
                 </div>
                 
-                {/* STAKE PROMINENTLY AT TOP */}
-                {pick.stake && (
-                  <div className="stake-recommendation" style={{marginTop: '12px', marginBottom: '12px'}}>
-                    <strong>💰 Bet:</strong> 
-                    <span className="stake-amount" style={{fontSize: '1.3em'}}>€{pick.stake}</span>
-                    <span className="stake-note"> (from €{pick.bankroll || 1000} bank)</span>
+                {/* BET RECOMMENDATION BOX */}
+                <div className="bet-recommendation-box" style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  padding: '16px',
+                  borderRadius: '8px',
+                  marginTop: '12px',
+                  marginBottom: '12px'
+                }}>
+                  <div style={{fontSize: '14px', opacity: 0.9, marginBottom: '8px'}}>
+                    💰 Recommended Bet
                   </div>
-                )}
+                  <div style={{fontSize: '28px', fontWeight: 'bold', marginBottom: '8px'}}>
+                    €{stake.toFixed(2)}
+                  </div>
+                  <div style={{fontSize: '13px', opacity: 0.85, marginBottom: '12px'}}>
+                    {betType === 'EW' ? `€${(stake/2).toFixed(2)} Win + €${(stake/2).toFixed(2)} Place` : 'Win bet'}
+                  </div>
+                  <div style={{borderTop: '1px solid rgba(255,255,255,0.3)', paddingTop: '12px'}}>
+                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
+                      <span style={{fontSize: '13px', opacity: 0.9}}>If wins:</span>
+                      <span style={{fontSize: '16px', fontWeight: 'bold'}}>
+                        +€{profit.toFixed(2)}
+                      </span>
+                    </div>
+                    <div style={{display: 'flex', justifyContent: 'space-between'}}>
+                      <span style={{fontSize: '13px', opacity: 0.9}}>Expected value:</span>
+                      <span style={{fontSize: '16px', fontWeight: 'bold', color: expectedProfit > 0 ? '#a7f3d0' : '#fca5a5'}}>
+                        {expectedProfit > 0 ? '+' : ''}€{expectedProfit.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="pick-odds">
                   <div className="odds-item">
