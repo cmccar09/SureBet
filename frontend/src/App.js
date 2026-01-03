@@ -75,10 +75,12 @@ function App() {
     try {
       const date = new Date(timeStr);
       if (isNaN(date.getTime())) return timeStr;
-      return date.toLocaleTimeString('en-GB', { 
+      // Dublin/Ireland time (Europe/Dublin timezone)
+      return date.toLocaleTimeString('en-IE', { 
         hour: '2-digit', 
         minute: '2-digit',
-        hour12: false 
+        hour12: false,
+        timeZone: 'Europe/Dublin'
       });
     } catch (e) {
       return timeStr;
@@ -178,8 +180,17 @@ function App() {
                 <div className="pick-venue">
                   <span className="venue-icon">📍</span>
                   <span>{courseName}</span>
-                  <span className="time">{formatTime(pick.race_time)}</span>
+                  <span className="time">{formatTime(pick.race_time)} (Dublin)</span>
                 </div>
+                
+                {/* STAKE PROMINENTLY AT TOP */}
+                {pick.stake && (
+                  <div className="stake-recommendation" style={{marginTop: '12px', marginBottom: '12px'}}>
+                    <strong>💰 Bet:</strong> 
+                    <span className="stake-amount" style={{fontSize: '1.3em'}}>€{pick.stake}</span>
+                    <span className="stake-note"> (from €{pick.bankroll || 1000} bank)</span>
+                  </div>
+                )}
 
                 <div className="pick-odds">
                   <div className="odds-item">
@@ -225,18 +236,11 @@ function App() {
                   </div>
                 )}
 
-                {pick.stake && (
-                  <div className="stake-recommendation">
-                    <strong>💰 Suggested Stake:</strong> 
-                    <span className="stake-amount">€{pick.stake}</span>
-                    <span className="stake-note"> (from €{pick.bankroll || 1000} bank)</span>
-                    {pick.expected_roi && (
-                      <div className="expected-roi">
-                        Expected ROI: <span className={pick.expected_roi > 0 ? 'positive' : 'negative'}>
-                          {pick.expected_roi > 0 ? '+' : ''}{pick.expected_roi}%
-                        </span>
-                      </div>
-                    )}
+                {pick.expected_roi && (
+                  <div className="expected-roi" style={{marginTop: '8px'}}>
+                    Expected ROI: <span className={pick.expected_roi > 0 ? 'positive' : 'negative'}>
+                      {pick.expected_roi > 0 ? '+' : ''}{pick.expected_roi}%
+                    </span>
                   </div>
                 )}
 
