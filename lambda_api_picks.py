@@ -51,6 +51,8 @@ def lambda_handler(event, context):
         # Route requests - handle both /api/picks and /picks
         if 'picks/today' in path or path.endswith('/today'):
             return get_today_picks(headers)
+        elif 'results/today' in path or path.endswith('/results'):
+            return check_today_results(headers)
         elif 'picks' in path:
             return get_all_picks(headers)
         elif 'health' in path:
@@ -65,6 +67,7 @@ def lambda_handler(event, context):
                     'endpoints': [
                         '/api/picks/today',
                         '/api/picks',
+                        '/api/results/today',
                         '/api/health'
                     ]
                 })
@@ -145,5 +148,192 @@ def get_health(headers):
             'status': 'ok',
             'service': 'betting-picks-api',
             'timestamp': datetime.now().isoformat()
+        })
+    }
+
+def check_today_results(headers):
+    """Check results for today's picks by fetching from Betfair"""
+    import requests
+    import os
+    
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    # Get today's picks
+    response = table.scan(
+        FilterExpression='#d = :today',
+        ExpressionAttributeNames={'#d': 'date'},
+        ExpressionAttributeValues={':today': today}
+    )
+    
+    picks = response.get('Items', [])
+    picks = [decimal_to_float(item) for item in picks]
+    
+    if not picks:
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'message': 'No picks for today',
+                'picks': [],
+                'results': []
+            })
+        }
+    
+    # Load Betfair credentials from environment or Secrets Manager
+    session_token = os.environ.get('BETFAIR_SESSION_TOKEN', '')
+    app_key = os.environ.get('BETFAIR_APP_KEY', '')
+    
+    if not session_token or not app_key:
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'message': 'Betfair credentials not configured - results unavailable',
+                'picks': picks,
+                'results': [],
+                'error': 'Configure BETFAIR_SESSION_TOKEN and BETFAIR_APP_KEY environment variables'
+            })
+        }
+    
+    # Extract unique market IDs
+    market_ids = list(set([str(pick.get('market_id', '')) for pick in picks if pick.get('market_id')]))
+    
+    if not market_ids:
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'message': 'No market IDs found in picks',
+                'picks': picks,
+                'results': []
+            })
+        }
+    
+    # Fetch market results from Betfair
+    url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketBook/"
+    betfair_headers = {
+        "X-Application": app_key,
+        "X-Authentication": session_token,
+        "Content-Type": "application/json"
+    }
+    
+    all_results = []
+    
+    # Process in batches of 10
+    for i in range(0, len(market_ids), 10):
+        batch = market_ids[i:i+10]
+        payload = {
+            "marketIds": batch,
+            "priceProjection": {"priceData": ["EX_BEST_OFFERS"]},
+        }
+        
+        try:
+            resp = requests.post(url, headers=betfair_headers, json=payload, timeout=10)
+            resp.raise_for_status()
+            market_data = resp.json()
+            
+            # Parse results
+            for market in market_data:
+                market_id = market.get('marketId')
+                status = market.get('status')
+                
+                for runner in market.get('runners', []):
+                    selection_id = str(runner.get('selectionId'))
+                    runner_status = runner.get('status', '')
+                    
+                    all_results.append({
+                        'market_id': market_id,
+                        'selection_id': selection_id,
+                        'market_status': status,
+                        'runner_status': runner_status,
+                        'is_winner': runner_status == 'WINNER',
+                        'is_placed': runner_status in ['WINNER', 'PLACED'],
+                        'last_price': runner.get('lastPriceTraded', 0)
+                    })
+        except Exception as e:
+            print(f"Error fetching batch: {e}")
+            continue
+    
+    # Match picks with results
+    picks_with_results = []
+    wins = 0
+    places = 0
+    losses = 0
+    pending = 0
+    total_stake = 0
+    total_return = 0
+    
+    for pick in picks:
+        pick_market_id = str(pick.get('market_id', ''))
+        pick_selection_id = str(pick.get('selection_id', ''))
+        stake = float(pick.get('stake', 2.0))
+        odds = float(pick.get('odds', 0))
+        bet_type = pick.get('bet_type', 'WIN').upper()
+        
+        # Find matching result
+        result = next((r for r in all_results 
+                      if r['market_id'] == pick_market_id 
+                      and r['selection_id'] == pick_selection_id), None)
+        
+        pick_result = pick.copy()
+        
+        if result:
+            pick_result['result'] = result
+            market_status = result['market_status']
+            
+            if market_status in ['CLOSED', 'SETTLED']:
+                if result['is_winner']:
+                    wins += 1
+                    pick_result['outcome'] = 'WON'
+                    if bet_type == 'WIN':
+                        total_return += stake * odds
+                    else:  # EW
+                        ew_fraction = float(pick.get('ew_fraction', 0.2))
+                        total_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
+                elif result['is_placed'] and bet_type == 'EW':
+                    places += 1
+                    pick_result['outcome'] = 'PLACED'
+                    ew_fraction = float(pick.get('ew_fraction', 0.2))
+                    total_return += (stake/2) * (1 + (odds-1) * ew_fraction)
+                else:
+                    losses += 1
+                    pick_result['outcome'] = 'LOST'
+            else:
+                pending += 1
+                pick_result['outcome'] = 'PENDING'
+        else:
+            pending += 1
+            pick_result['outcome'] = 'NO_RESULT'
+        
+        total_stake += stake
+        picks_with_results.append(pick_result)
+    
+    profit = total_return - total_stake
+    roi = (profit / total_stake * 100) if total_stake > 0 else 0
+    
+    summary = {
+        'total_picks': len(picks),
+        'wins': wins,
+        'places': places,
+        'losses': losses,
+        'pending': pending,
+        'total_stake': round(total_stake, 2),
+        'total_return': round(total_return, 2),
+        'profit': round(profit, 2),
+        'roi': round(roi, 1),
+        'strike_rate': round((wins / (wins + losses) * 100) if (wins + losses) > 0 else 0, 1)
+    }
+    
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'success': True,
+            'date': today,
+            'summary': summary,
+            'picks': picks_with_results
         })
     }

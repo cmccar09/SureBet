@@ -10,6 +10,8 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [filter, setFilter] = useState('today');
+  const [results, setResults] = useState(null);
+  const [resultsLoading, setResultsLoading] = useState(false);
 
   useEffect(() => {
     fetchPicks();
@@ -43,6 +45,34 @@ function App() {
       setError(`Cannot load picks: ${err.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const checkResults = async () => {
+    setResultsLoading(true);
+    setError(null);
+
+    try {
+      const endpoint = `${API_BASE_URL}/results/today`;
+      console.log('Checking results from:', endpoint);
+      const response = await fetch(endpoint);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+
+      if (data.success) {
+        setResults(data);
+      } else {
+        setError(data.error || 'Failed to load results');
+      }
+    } catch (err) {
+      console.error('Error checking results:', err);
+      setError(`Cannot load results: ${err.message}`);
+    } finally {
+      setResultsLoading(false);
     }
   };
 
@@ -105,10 +135,67 @@ function App() {
   };
 
   const getConfidenceColor = (confidence) => {
-    const conf = parseFloat(confidence) || 0;
-    if (conf >= 70) return '#10b981';
-    if (conf >= 50) return '#f59e0b';
-    return '#ef4444';
+    cons  <button onClick={checkResults} className="results-btn" disabled={resultsLoading}>
+            {resultsLoading ? '⏳ Checking...' : '📊 Check Results'}
+          </button>
+        </div>
+      </header>
+
+      <main className="picks-container">
+        {/* Results Summary */}
+        {results && results.summary && (
+          <div className="results-summary">
+            <h2>📊 Today's Performance</h2>
+            <div className="results-grid">
+              <div className="result-stat">
+                <div className="stat-label">Total Picks</div>
+                <div className="stat-value">{results.summary.total_picks}</div>
+              </div>
+              <div className="result-stat win">
+                <div className="stat-label">Wins</div>
+                <div className="stat-value">{results.summary.wins}</div>
+              </div>
+              <div className="result-stat place">
+                <div className="stat-label">Places</div>
+                <div className="stat-value">{results.summary.places}</div>
+              </div>
+              <div className="result-stat loss">
+                <div className="stat-label">Losses</div>
+                <div className="stat-value">{results.summary.losses}</div>
+              </div>
+              <div className="result-stat pending">
+                <div className="stat-label">Pending</div>
+                <div className="stat-value">{results.summary.pending}</div>
+              </div>
+              <div className="result-stat">
+                <div className="stat-label">Strike Rate</div>
+                <div className="stat-value">{results.summary.strike_rate}%</div>
+              </div>
+              <div className="result-stat">
+                <div className="stat-label">Total Stake</div>
+                <div className="stat-value">€{results.summary.total_stake}</div>
+              </div>
+              <div className="result-stat">
+                <div className="stat-label">Total Return</div>
+                <div className="stat-value">€{results.summary.total_return}</div>
+              </div>
+              <div className={`result-stat ${results.summary.profit >= 0 ? 'profit' : 'loss'}`}>
+                <div className="stat-label">Profit/Loss</div>
+                <div className="stat-value">
+                  {results.summary.profit >= 0 ? '+' : ''}€{results.summary.profit}
+                </div>
+              </div>
+              <div className={`result-stat ${results.summary.roi >= 0 ? 'profit' : 'loss'}`}>
+                <div className="stat-label">ROI</div>
+                <div className="stat-value">{results.summary.roi}%</div>
+              </div>
+            </div>
+            <button onClick={() => setResults(null)} className="close-results">
+              ✕ Close Results
+            </button>
+          </div>
+        )}
+        
   };
 
   return (

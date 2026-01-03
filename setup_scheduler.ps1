@@ -14,8 +14,8 @@ $taskBaseName = "BettingWorkflow"
 $scriptPath = "$PSScriptRoot\scheduled_workflow.ps1"
 $pythonVenv = "C:\Users\charl\OneDrive\futuregenAI\Betting\.venv"
 
-# Times to run: 10am, 12pm, 2pm, 4pm, 6pm
-$runTimes = @("10:00", "12:00", "14:00", "16:00", "18:00")
+# Times to run: 10am, 12pm, 2pm, 4pm, 6pm, 10pm (for results fetching)
+$runTimes = @("10:00", "12:00", "14:00", "16:00", "18:00", "22:00")
 
 Write-Host "="*60 -ForegroundColor Cyan
 if ($Remove) {
@@ -58,6 +58,12 @@ foreach ($time in $runTimes) {
         -RunOnlyIfNetworkAvailable `
         -ExecutionTimeLimit (New-TimeSpan -Hours 1)
     
+    # Define principal - run whether user is logged in or not
+    $principal = New-ScheduledTaskPrincipal `
+        -UserId "$env:USERDOMAIN\$env:USERNAME" `
+        -LogonType S4U `
+        -RunLevel Highest
+    
     # Register the task
     try {
         Register-ScheduledTask `
@@ -65,6 +71,7 @@ foreach ($time in $runTimes) {
             -Action $action `
             -Trigger $trigger `
             -Settings $settings `
+            -Principal $principal `
             -Description "Automated betting workflow - generates and saves picks every 2 hours" `
             -Force | Out-Null
         
