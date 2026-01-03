@@ -49,8 +49,15 @@ function App() {
   const formatOdds = (odds) => {
     if (!odds) return 'N/A';
     try {
+      // Handle if odds is an object (e.g., {fractional, decimal, overround})
+      if (typeof odds === 'object') {
+        if (odds.fractional) return String(odds.fractional);
+        if (odds.decimal) odds = odds.decimal;
+        else return 'N/A';
+      }
+      
       const decimal = parseFloat(odds);
-      if (isNaN(decimal)) return odds;
+      if (isNaN(decimal)) return String(odds);
       
       // Convert decimal to fractional
       const fractional = decimal - 1;
@@ -156,16 +163,21 @@ function App() {
             {picks.map((pick, index) => {
               const roi = parseFloat(pick.roi || 0);
               const belowThreshold = roi < 0.05;
+              
+              // Safely extract values, handling objects
+              const horseName = typeof pick.horse === 'string' ? pick.horse : 'Unknown';
+              const courseName = typeof pick.course === 'string' ? pick.course : 'Unknown';
+              
               return (
               <div key={pick.bet_id || index} className={`pick-card ${belowThreshold ? 'below-threshold' : ''}`}>
                 <div className="pick-header">
-                  <h2>{pick.horse}</h2>
+                  <h2>{horseName}</h2>
                   {getBetTypeBadge(pick.bet_type)}
                 </div>
                 
                 <div className="pick-venue">
                   <span className="venue-icon">📍</span>
-                  <span>{pick.course}</span>
+                  <span>{courseName}</span>
                   <span className="time">{formatTime(pick.race_time)}</span>
                 </div>
 
