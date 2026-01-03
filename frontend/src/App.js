@@ -52,42 +52,10 @@ function App() {
   const triggerWorkflow = async () => {
     setRefreshing(true);
     setError(null);
-
-    try {
-      const endpoint = `${API_BASE_URL}/api/workflow/run`;
-      console.log('Triggering workflow from:', endpoint);
-      const response = await fetch(endpoint);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-
-      if (data.success) {
-        // Wait 2 seconds then refresh picks
-        setTimeout(() => {
-          fetchPicks();
-        }, 2000);
-        
-        // Show success message briefly
-        const originalError = error;
-        setError('✓ Generating new picks... Refreshing in 60 seconds...');
-        
-        // Auto-refresh after 60 seconds
-        setTimeout(() => {
-          fetchPicks();
-          setError(originalError);
-        }, 60000);
-      } else {
-        setError(data.message || data.info || 'Could not trigger workflow');
-      }
-    } catch (err) {
-      console.error('Error triggering workflow:', err);
-      setError(`Cannot trigger workflow: ${err.message}`);
-    } finally {
-      setRefreshing(false);
-    }
+    
+    // Just refresh the picks - workflow runs automatically every 2 hours
+    await fetchPicks();
+    setRefreshing(false);
   };
 
   const checkResults = async () => {
