@@ -341,7 +341,7 @@ function App() {
                       boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                       whiteSpace: 'nowrap'
                     }}>
-                      {belowThreshold ? '⚠️' : '✓'} {(roi * 100).toFixed(1)}% ROI
+                      {belowThreshold ? '⚠️' : '✓'} {roi.toFixed(1)}% ROI
                     </div>
                   </div>
                 </div>
