@@ -53,6 +53,8 @@ def lambda_handler(event, context):
             return get_today_picks(headers)
         elif 'results/today' in path or path.endswith('/results'):
             return check_today_results(headers)
+        elif 'workflow/run' in path or path.endswith('/run'):
+            return trigger_workflow(headers)
         elif 'picks' in path:
             return get_all_picks(headers)
         elif 'health' in path:
@@ -68,6 +70,7 @@ def lambda_handler(event, context):
                         '/api/picks/today',
                         '/api/picks',
                         '/api/results/today',
+                        '/api/workflow/run',
                         '/api/health'
                     ]
                 })
@@ -337,3 +340,54 @@ def check_today_results(headers):
             'picks': picks_with_results
         })
     }
+
+def trigger_workflow(headers):
+    """Trigger the betting workflow Lambda to generate new picks"""
+    import boto3
+    
+    lambda_client = boto3.client('lambda', region_name='us-east-1')
+    
+    try:
+        # Invoke the workflow Lambda asynchronously
+        response = lambda_client.invoke(
+            FunctionName='betting-workflow',
+            InvocationType='Event',  # Async invocation
+            Payload=json.dumps({
+                'source': 'api-trigger',
+                'trigger': 'manual-refresh'
+            })
+        )
+        
+        return {
+            'statusCode': 202,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'message': 'Workflow triggered successfully',
+                'status': 'processing',
+                'info': 'New picks will be generated in ~60-90 seconds. Refresh picks to see updates.'
+            })
+        }
+    except lambda_client.exceptions.ResourceNotFoundException:
+        # Workflow Lambda doesn't exist, return instructions
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success': False,
+                'message': 'Workflow Lambda not deployed',
+                'info': 'The workflow Lambda function is not available. Run workflow locally or deploy betting-workflow Lambda.',
+                'local_command': 'Run: .\\scheduled_workflow.ps1'
+            })
+        }
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': headers,
+            'body': json.dumps({
+                'success': False,
+                'error': str(e),
+                'message': 'Failed to trigger workflow'
+            })
+        }
+

@@ -12,6 +12,7 @@ function App() {
   const [filter, setFilter] = useState('today');
   const [results, setResults] = useState(null);
   const [resultsLoading, setResultsLoading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchPicks();
@@ -45,6 +46,47 @@ function App() {
       setError(`Cannot load picks: ${err.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const triggerWorkflow = async () => {
+    setRefreshing(true);
+    setError(null);
+
+    try {
+      const endpoint = `${API_BASE_URL}/workflow/run`;
+      console.log('Triggering workflow from:', endpoint);
+      const response = await fetch(endpoint);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+
+      if (data.success) {
+        // Wait 2 seconds then refresh picks
+        setTimeout(() => {
+          fetchPicks();
+        }, 2000);
+        
+        // Show success message briefly
+        const originalError = error;
+        setError('✓ Generating new picks... Refreshing in 60 seconds...');
+        
+        // Auto-refresh after 60 seconds
+        setTimeout(() => {
+          fetchPicks();
+          setError(originalError);
+        }, 60000);
+      } else {
+        setError(data.message || data.info || 'Could not trigger workflow');
+      }
+    } catch (err) {
+      console.error('Error triggering workflow:', err);
+      setError(`Cannot trigger workflow: ${err.message}`);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -160,8 +202,8 @@ function App() {
           >
             All Picks
           </button>
-          <button onClick={fetchPicks} className="refresh-btn">
-            🔄 Refresh
+          <button onClick={triggerWorkflow} className="refresh-btn" disabled={refreshing}>
+            {refreshing ? '⏳ Generating...' : '🔄 Generate New Picks'}
           </button>
           <button onClick={checkResults} className="results-btn" disabled={resultsLoading}>
             {resultsLoading ? '⏳ Checking...' : '📊 Check Results'}
