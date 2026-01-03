@@ -156,13 +156,16 @@ function App() {
 
         {!loading && !error && picks.length > 0 && (
           <>
-            {picks.some(p => parseFloat(p.roi || 0) < 0.05) && (
+            <div className="picks-summary">
+              Showing top {Math.min(5, picks.length)} of {picks.length} selections
+            </div>
+            {picks.slice(0, 5).some(p => parseFloat(p.roi || 0) < 0.05) && (
               <div className="threshold-warning">
                 ⚠️ Some selections below 5% ROI threshold - showing for reference only
               </div>
             )}
             <div className="picks-grid">
-            {picks.map((pick, index) => {
+            {picks.slice(0, 5).map((pick, index) => {
               const roi = parseFloat(pick.roi || 0);
               const belowThreshold = roi < 0.05;
               
