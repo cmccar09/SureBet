@@ -73,7 +73,7 @@ if (Test-Path $credFile) {
         Write-Log "`nSTEP 0: Refreshing Betfair session token..." "Cyan"
         Write-Log "  Last refresh: $($hoursSinceRefresh.ToString('0.0')) hours ago" "Yellow"
         
-        & $pythonExe "$PSScriptRoot\refresh_token.py" 2>&1 | Tee-Object -Append -FilePath $logFile
+        & $pythonExe "$PSScriptRoot\refresh_token_simple.py" 2>&1 | Tee-Object -Append -FilePath $logFile
         
         if ($LASTEXITCODE -eq 0) {
             Write-Log "  Session token refreshed successfully" "Green"
@@ -96,20 +96,31 @@ if ($enableLearning) {
     
     $yesterday = (Get-Date).AddDays(-1).ToString("yyyy-MM-dd")
     $yesterdaySlug = (Get-Date).AddDays(-1).ToString("yyyyMMdd")
-    $selectionsFile = "$PSScriptRoot\history\selections_$yesterdaySlug.csv"
+    $selectionsFile = "$PSScriptRoot\history\selections_$yesterdaySlug*.csv" | Get-Item -ErrorAction SilentlyContinue | Select-Object -Last 1
     $resultsFile = "$PSScriptRoot\history\results_$yesterdaySlug.json"
     
-    if (Test-Path $selectionsFile) {
+    if ($selectionsFile) {
+        $selectionsPath = $selectionsFile.FullName
+        
         if (Test-Path $resultsFile) {
-            Write-Log "  Evaluating performance for $yesterday..." "Yellow"
-            & $pythonExe "$PSScriptRoot\evaluate_performance.py" --selections $selectionsFile --results $resultsFile --apply 2>&1 | Tee-Object -Append -FilePath $logFile
+            Write-Log "  Results already fetched, evaluating performance for $yesterday..." "Yellow"
+            & $pythonExe "$PSScriptRoot\evaluate_performance.py" --selections $selectionsPath --results $resultsFile --apply 2>&1 | Tee-Object -Append -FilePath $logFile
+            
+            Write-Log "  Regenerating learning insights from all historical data..." "Yellow"
+            & $pythonExe "$PSScriptRoot\generate_learning_insights.py" 2>&1 | Tee-Object -Append -FilePath $logFile
         } else {
             Write-Log "  Fetching results for $yesterday..." "Yellow"
-            & $pythonExe "$PSScriptRoot\fetch_race_results.py" --date $yesterday --selections $selectionsFile --out $resultsFile 2>&1 | Tee-Object -Append -FilePath $logFile
+            & $pythonExe "$PSScriptRoot\fetch_race_results.py" --date $yesterday --selections $selectionsPath --out $resultsFile 2>&1 | Tee-Object -Append -FilePath $logFile
             
             if (Test-Path $resultsFile) {
                 Write-Log "  Evaluating performance..." "Yellow"
-                & $pythonExe "$PSScriptRoot\evaluate_performance.py" --selections $selectionsFile --results $resultsFile --apply 2>&1 | Tee-Object -Append -FilePath $logFile
+                & $pythonExe "$PSScriptRoot\evaluate_performance.py" --selections $selectionsPath --results $resultsFile --apply 2>&1 | Tee-Object -Append -FilePath $logFile
+                
+                Write-Log "  Regenerating learning insights from all historical data..." "Yellow"
+                & $pythonExe "$PSScriptRoot\generate_learning_insights.py" 2>&1 | Tee-Object -Append -FilePath $logFile
+            } else {
+                Write-Log "  WARNING: Results fetch failed - markets may be too old (>24hrs)" "Yellow"
+                Write-Log "  Skipping learning for this day" "Gray"
             }
         }
     } else {
@@ -117,13 +128,35 @@ if ($enableLearning) {
     }
 }
 
+# STEP 1.5: Fetch TODAY's results at end of day (before markets expire)
+$currentHour = (Get-Date).Hour
+if ($currentHour -ge 22) {  # 10pm or later
+    Write-Log "`nSTEP 1.5: Fetching today's results (end of day)..." "Cyan"
+    
+    $today = (Get-Date).ToString("yyyy-MM-dd")
+    $todaySlug = Get-Date -Format "yyyyMMdd"
+    $todaySelectionsFile = "$PSScriptRoot\history\selections_$todaySlug*.csv" | Get-Item -ErrorAction SilentlyContinue | Select-Object -Last 1
+    $todayResultsFile = "$PSScriptRoot\history\results_$todaySlug.json"
+    
+    if ($todaySelectionsFile -and -not (Test-Path $todayResultsFile)) {
+        Write-Log "  Fetching results while markets are still available..." "Yellow"
+        & $pythonExe "$PSScriptRoot\fetch_race_results.py" --date $today --selections $todaySelectionsFile.FullName --out $todayResultsFile 2>&1 | Tee-Object -Append -FilePath $logFile
+        
+        if (Test-Path $todayResultsFile) {
+            Write-Log "  Successfully saved today's results for tomorrow's learning" "Green"
+        }
+    } elseif (Test-Path $todayResultsFile) {
+        Write-Log "  Today's results already fetched" "Gray"
+    } else {
+        Write-Log "  No selections made today - skipping results fetch" "Gray"
+    }
+}
+
 # STEP 2: Generate today's picks
 Write-Log "`nSTEP 2: Generating today's picks..." "Cyan"
 
-$todaySlug = Get-Date -Format "yyyyMMdd"
-$todayTime = Get-Date -Format "HHmmss"
-$outputCsv = "$PSScriptRoot\history\selections_${todaySlug}_${todayTime}.csv"
-$latestLink = "$PSScriptRoot\today_picks.csv"
+# Enhanced analysis saves directly to today_picks.csv
+$outputCsv = "$PSScriptRoot\today_picks.csv"
 
 # Create history directory
 New-Item -ItemType Directory -Force -Path "$PSScriptRoot\history" | Out-Null
@@ -139,23 +172,21 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-Write-Log "  Applying prompt logic to live markets..." "Yellow"
-& $pythonExe "$PSScriptRoot\run_saved_prompt.py" --prompt "$PSScriptRoot\prompt.txt" --snapshot $snapshotFile --out $outputCsv --max_races 10 2>&1 | Tee-Object -Append -FilePath $logFile
+Write-Log "  Applying ENHANCED multi-pass AI analysis to live markets..." "Yellow"
+# Use enhanced analysis - saves to today_picks.csv and history folder
+& $pythonExe "$PSScriptRoot\run_enhanced_analysis.py" 2>&1 | Tee-Object -Append -FilePath $logFile
 
 if ($LASTEXITCODE -ne 0) {
     Write-Log "ERROR: Failed to generate selections" "Red"
     exit 1
 }
 
-# Check if we got picks
+# Check if we got picks (enhanced analysis saves to today_picks.csv)
 if (Test-Path $outputCsv) {
     $pickCount = (Get-Content $outputCsv | Measure-Object -Line).Lines - 1
     
     if ($pickCount -gt 0) {
         Write-Log "  Generated $pickCount pick(s)" "Green"
-        
-        # Copy to latest
-        Copy-Item $outputCsv $latestLink -Force
         
         # STEP 3: Save to DynamoDB
         Write-Log "`nSTEP 3: Saving to DynamoDB..." "Cyan"

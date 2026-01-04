@@ -28,6 +28,52 @@ def convert_floats(obj):
         return [convert_floats(item) for item in obj]
     return obj
 
+def load_market_odds(snapshot_path: str = 'response_live.json') -> dict:
+    """Load actual market odds from Betfair snapshot"""
+    odds_map = {}  # {selection_id: odds}
+    
+    if not os.path.exists(snapshot_path):
+        print(f"WARNING: Snapshot file not found: {snapshot_path}")
+        return odds_map
+    
+    try:
+        with open(snapshot_path, 'r') as f:
+            data = json.load(f)
+        
+        for race in data.get('races', []):
+            for runner in race.get('runners', []):
+                selection_id = str(runner.get('selectionId', ''))
+                odds = runner.get('odds', None)
+                if selection_id and odds:
+                    odds_map[selection_id] = float(odds)
+    except Exception as e:
+        print(f"WARNING: Failed to load market odds: {e}")
+    
+    return odds_map
+
+def load_market_odds(snapshot_path: str = 'response_live.json') -> dict:
+    """Load actual market odds from Betfair snapshot"""
+    odds_map = {}  # {selection_id: odds}
+    
+    if not os.path.exists(snapshot_path):
+        print(f"WARNING: Snapshot file not found: {snapshot_path}")
+        return odds_map
+    
+    try:
+        with open(snapshot_path, 'r') as f:
+            data = json.load(f)
+        
+        for race in data.get('races', []):
+            for runner in race.get('runners', []):
+                selection_id = str(runner.get('selectionId', ''))
+                odds = runner.get('odds', None)
+                if selection_id and odds:
+                    odds_map[selection_id] = float(odds)
+    except Exception as e:
+        print(f"WARNING: Failed to load market odds: {e}")
+    
+    return odds_map
+
 def load_selections(csv_path: str) -> pd.DataFrame:
     """Load selections CSV"""
     if not os.path.exists(csv_path):
@@ -38,8 +84,11 @@ def load_selections(csv_path: str) -> pd.DataFrame:
     df.columns = [c.strip().lower() for c in df.columns]
     return df
 
-def format_bet_for_dynamodb(row: pd.Series) -> dict:
+def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None) -> dict:
     """Convert CSV row to DynamoDB bet item"""
+    
+    if market_odds is None:
+        market_odds = {}
     
     # Extract key fields
     horse = str(row.get('runner_name', 'Unknown'))
@@ -58,20 +107,79 @@ def format_bet_for_dynamodb(row: pd.Series) -> dict:
     p_win = float(row.get('p_win', 0))
     p_place = float(row.get('p_place', 0))
     
-    # Calculate implied odds from probability
-    implied_odds = (1 / p_win) if p_win > 0 else 0
+    # Get actual market odds from snapshot, fall back to implied odds
+    market_odds_value = market_odds.get(selection_id)
+    if market_odds_value:
+        implied_odds = market_odds_value
+    else:
+        # Fall back to implied odds from probability
+        implied_odds = (1 / p_win) if p_win > 0 else 0
+        print(f"  WARNING: No market odds found for {horse} (ID: {selection_id}), using implied odds {implied_odds:.2f}")
     
     # Parse EW terms
     ew_places = int(row.get('ew_places', 0)) if pd.notna(row.get('ew_places')) else 0
     ew_fraction = float(row.get('ew_fraction', 0)) if pd.notna(row.get('ew_fraction')) else 0
     
-    # Determine bet type
-    bet_type = "EW" if ew_places > 0 and ew_fraction > 0 else "WIN"
+    # Determine bet type - use CSV value if present, otherwise infer from EW terms
+    bet_type = row.get('bet_type', '').strip().upper() if pd.notna(row.get('bet_type')) else ''
+    if not bet_type:
+        # Fallback: infer from EW terms
+        bet_type = "EW" if ew_places > 0 and ew_fraction > 0 else "WIN"
     
     # Extract tags and rationale
     tags = str(row.get('tags', '')).split(',') if pd.notna(row.get('tags')) else []
     tags = [t.strip() for t in tags if t.strip()]
     why_now = str(row.get('why_now', 'Value identified'))
+    
+    # Calculate Expected Value (EV) properly for WIN vs EW bets
+    if bet_type == 'WIN':
+        ev = (implied_odds * p_win) - 1 if p_win > 0 else 0
+    else:  # EW bet
+        # Split stake 50/50 between win and place
+        # If horse wins: you get both win return AND place return
+        # If horse places (but doesn't win): you get only place return
+        # If horse loses: you get nothing
+        
+        place_odds = 1 + ((implied_odds - 1) * ew_fraction)
+        
+        # If horse wins (probability p_win): get full win return + place return
+        win_scenario_return = (0.5 * implied_odds) + (0.5 * place_odds)
+        
+        # If horse places but doesn't win (probability p_place - p_win): get only place return
+        place_only_prob = max(0, p_place - p_win)
+        place_scenario_return = 0.5 * place_odds
+        
+        # Expected return
+        total_return = (p_win * win_scenario_return) + (place_only_prob * place_scenario_return)
+        ev = total_return - 1  # Subtract the full stake
+    
+    # Calculate Decision Rating (combined score for easy decision making)
+    roi_pct = ev * 100
+    confidence_score = int(p_win * 100) if p_win > 0 else 50
+    
+    # Scoring system (0-100 scale):
+    # - ROI weight: 40% (normalized to 0-40, capped at 50% ROI = max score)
+    # - EV weight: 30% (normalized to 0-30, capped at €10 EV = max score)
+    # - Confidence weight: 20% (normalized to 0-20)
+    # - Place probability weight: 10% (for EW bets)
+    
+    roi_score = min(40, (roi_pct / 50) * 40) if roi_pct > 0 else 0
+    ev_score = min(30, (ev / 10) * 30) if ev > 0 else 0
+    confidence_weight = (confidence_score / 100) * 20
+    place_weight = (p_place * 10) if bet_type == 'EW' else (p_win * 10)
+    
+    decision_score = roi_score + ev_score + confidence_weight + place_weight
+    
+    # Map to categories
+    if decision_score >= 70:
+        decision_rating = "DO IT"
+        rating_color = "green"
+    elif decision_score >= 45:
+        decision_rating = "RISKY"
+        rating_color = "orange"
+    else:
+        decision_rating = "NOT GREAT"
+        rating_color = "red"
     
     # Build bet item matching your Lambda schema
     bet_item = {
@@ -91,7 +199,6 @@ def format_bet_for_dynamodb(row: pd.Series) -> dict:
         'odds': implied_odds,
         'p_win': p_win,
         'p_place': p_place,
-        'ev': (implied_odds * p_win) - 1 if p_win > 0 else 0,  # Simplified EV
         
         # EW terms
         'ew_places': ew_places,
@@ -100,9 +207,14 @@ def format_bet_for_dynamodb(row: pd.Series) -> dict:
         # Analysis
         'why_now': why_now,
         'tags': tags,
-        'confidence': int(p_win * 100) if p_win > 0 else 50,
-        'roi': (implied_odds * p_win) - 1 if p_win > 0 else 0,
+        'confidence': confidence_score,
+        'roi': roi_pct,  # ROI as percentage
         'recommendation': 'BACK' if bet_type == 'WIN' else 'EW',
+        
+        # Decision Rating (NEW - combined metric)
+        'decision_rating': decision_rating,  # "DO IT", "RISKY", or "NOT GREAT"
+        'decision_score': round(decision_score, 1),  # 0-100 numerical score
+        'rating_color': rating_color,  # For UI display
         
         # Source tracking
         'source': 'learning_workflow',
@@ -220,12 +332,17 @@ def main():
         print("No selections to save")
         return
     
+    # Load market odds from snapshot
+    print("\nLoading market odds from snapshot...")
+    market_odds = load_market_odds()
+    print(f"Loaded odds for {len(market_odds)} runners")
+    
     # Convert to bet items
     print("\nFormatting for DynamoDB...")
     bets = []
     for idx, row in df.iterrows():
         try:
-            bet_item = format_bet_for_dynamodb(row)
+            bet_item = format_bet_for_dynamodb(row, market_odds)
             bets.append(bet_item)
         except Exception as e:
             print(f"⚠️  Warning: Failed to format row {idx}: {e}")
