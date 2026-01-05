@@ -72,11 +72,24 @@ def merge_all_selections_with_results(days_back: int = 30) -> pd.DataFrame:
             with open(results_file, 'r') as f:
                 results_data = json.load(f)
             
-            # Results can be either a list or dict with 'markets' key
+            # Results can be either:
+            # 1. Flat list of runners with market_id/selection_id
+            # 2. Nested dict with 'markets' key containing runners
             if isinstance(results_data, list):
-                markets = results_data
+                # Check if it's a flat list (new format)
+                if results_data and 'market_id' in results_data[0]:
+                    # Flat format: convert to dict for easier lookup
+                    results_lookup = {
+                        (str(r.get('market_id')), str(r.get('selection_id'))): r 
+                        for r in results_data
+                    }
+                else:
+                    # Old nested format
+                    markets = results_data
+                    results_lookup = None
             else:
                 markets = results_data.get('markets', [])
+                results_lookup = None
             
             # Merge selections with results
             for _, row in selections_df.iterrows():
@@ -85,15 +98,26 @@ def merge_all_selections_with_results(days_back: int = 30) -> pd.DataFrame:
                 
                 # Find result for this selection
                 result = None
-                for market in markets:
-                    if str(market.get('market_id')) == market_id:
-                        for runner in market.get('runners', []):
-                            if str(runner.get('selection_id')) == selection_id:
-                                result = runner
-                                break
-                        break
+                
+                # Use flat lookup if available
+                if results_lookup is not None:
+                    result = results_lookup.get((market_id, selection_id))
+                else:
+                    # Old nested format
+                    for market in markets:
+                        if str(market.get('market_id')) == market_id:
+                            for runner in market.get('runners', []):
+                                if str(runner.get('selection_id')) == selection_id:
+                                    result = runner
+                                    break
+                            break
                 
                 if result:
+                    # Handle both old and new status formats
+                    status = result.get('status', 'UNKNOWN')
+                    is_winner = result.get('is_winner', False) or status == 'WINNER'
+                    is_placed = result.get('is_placed', False) or status in ['WINNER', 'PLACED']
+                    
                     merged = {
                         'date': date_str,
                         'runner_name': row.get('runner_name', ''),
@@ -104,9 +128,9 @@ def merge_all_selections_with_results(days_back: int = 30) -> pd.DataFrame:
                         'bet_type': row.get('bet_type', 'EW'),
                         'tags': row.get('tags', ''),
                         'why_now': row.get('why_now', ''),
-                        'status': result.get('status', 'UNKNOWN'),
-                        'won': result.get('status') == 'WINNER',
-                        'placed': result.get('status') in ['WINNER', 'PLACED']
+                        'status': status,
+                        'won': is_winner,
+                        'placed': is_placed
                     }
                     all_data.append(merged)
         

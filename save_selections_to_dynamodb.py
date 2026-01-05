@@ -463,12 +463,12 @@ def main():
             if roi < args.min_roi:
                 filtered_out += 1
                 horse = bet_item.get('horse', 'Unknown')
-                print(f"⛔ FILTERED: {horse} (ROI: {roi:.1f}% < {args.min_roi}% minimum)")
+                print(f"FILTERED: {horse} (ROI: {roi:.1f}% < {args.min_roi}% minimum)")
                 continue
             
             bets.append(bet_item)
         except Exception as e:
-            print(f"⚠️  Warning: Failed to format row {idx}: {e}")
+            print(f"WARNING: Failed to format row {idx}: {e}")
     
     print(f"\nFormatted {len(bets)} bet items (filtered out {filtered_out} low ROI bets)")
     

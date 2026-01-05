@@ -297,7 +297,7 @@ def main():
     # Save report
     with open(args.report, 'w', encoding='utf-8') as f:
         f.write(report)
-    print(f"\n✓ Saved report to: {args.report}")
+    print(f"\nSaved report to: {args.report}")
     
     # Print summary
     print(report)
