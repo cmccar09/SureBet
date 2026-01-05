@@ -1,154 +1,261 @@
-Revised Horse Tipping Prompt (UK & IRE, 4h Window)
-Scope
+PROFESSIONAL HORSE RACING ANALYSIS - DETAILED WINNER FINDING SYSTEM (UK & IRE)
 
+=== PRIMARY OBJECTIVE ===
+Find GENUINE WINNERS through exhaustive analysis. We need horses that will actually WIN races, not just value plays.
+Focus on WIN bets for strong contenders and EACH-WAY bets for solid place prospects.
+Every selection must be justified through comprehensive head-to-head comparison and detailed research.
+
+=== SCOPE ===
 Evaluate all UK & Ireland flat & jumps races with off-time NOW ≤ t ≤ NOW+4h.
-
 Exclude races already run or >4h ahead; skip abandoned/voided.
-
 Unified timestamp: Europe/Dublin.
 
-Objective
-
-Output Top 5 value opportunities (Back or EW).
-
-For each: calibrated P(win), P(place), fair prices, EVs, edge tags, and a Why-Now rationale.
-
-Portfolio ROI ≥ +5% required after costs (lower than old +50% to capture more winners).
-
-Apply discipline: skip slate if no bet clears thresholds.
-
-Data & Ingestion
-
-Markets: composite of top-3 books, Betfair Exchange, tote pools (for place sanity).
-
-Racecard enrichments: going, draw, trip, class, field size, NR flags, EW terms, overround.
-
-Performance signals: speed/sectionals (last 3 runs), pace profile, trainer/jockey 30-day form vs 365d, layoff, class/distance switches, equipment/med changes, weight vs last win.
-
-Track intelligence: 90-day rolling pars, pace/draw bias segmented by going, rail moves.
-
-Market microstructure: T-20, T-10, T-5, T-1 snapshots, drift/steam, liquidity depth.
-
-Integrity filters: Rule-4, late scratches/jockey changes, going updates.
-
-Model Base
-
-Core ranking: Bradley-Terry + Plackett-Luce full-field ordering.
-
-Random effects: horse, sire, trainer, jockey, track×trip×going.
-
-Calibration: 90-day isotonic regression by odds bucket × race type (flat vs jumps).
-
-Uncertainty: Monte Carlo sims (≥10k) → fragility (CI widths, CV).
-
-Feature engineering refinements:
-
-Class-drop sanity (require form within –3% of par).
-
-Bounce guard (only older horses post big figs/short rest).
-
-Going/surface scalers (stricter with ≥1-band change).
-
-Pace/draw v2 (segment by going; apply wide-closer haircut in 12+ fields).
-
-Trainer intent patterns (multi-runner, key jockey bookings).
-
-Debut Rocket & Global Raider priors (light exposure).
-
-Each-Way & Bet Logic
-
-Win vs EW rules:
-
-EW only if:
-
-Odds ≤ 8/1 and EV_place ≥ 1.0 (esp. in 8–12 runner races, odds-on fav scenarios).
-
-Place EV ≥ Win EV ×1.2 and ≥3 places paid.
-
-Win-only if:
-
-Odds > 8/1, unless exchange place market implies big misprice.
-
-Field size ≤7 (poor terms), or place EV <0.
-
-Place-only (exchange) if:
-
-Longshot with strong place EV vs book EW terms.
-
-Auto re-evaluate if field size drops (8→7 runners, etc.) and cancel EW if terms weaken.
-
-Flag enhanced place races (Cheltenham, Royal Ascot, big handicaps).
-
-Selection Gating
-
-A horse qualifies if:
-
-Overlay ≥ +10% vs composite fair price.
-
-Fragility (90% CI width) ≤0.12 unless EV(EW) still >0.
-
-Liquidity ≥ floor (Betfair matched or bookie limit).
-
-Passes data quality guardrails (going confirmed, jockey declared).
-
-Portfolio:
-
-Max 1 bet per race (unless second is a place-hedge with uncorrelated profile).
-
-Diversify odds range (≥1 short/mid contender if value; max 1 >15/1 pick).
-
-Daily exposure cap: ≤2 selections <3/1 unless “pace/draw edge” tagged.
-
-Staking & Risk
-
-Fractional Kelly 0.25× (0.3× for short, high-confidence; 0.2× for volatile longshots).
-
-Per-race stake cap and daily jurisdiction cap.
-
-Drift/steam live rules:
-
-Short prices (≤4/1): scratch if drift >25% by T-1 (unless counter-signal).
-
-Long prices: allow drift ≤15%; reduce stake if >15%.
-
-Scratch if overround spike (>1.20× baseline) invalidates EV.
-
-Stop if projected Portfolio ROI <+5% after final T-1 check.
-
-Output Schema
-
-For each selection, output:
-
-Race: time, course, jurisdiction.
-
-Horse: name.
-
-Probabilities: P(win), P(place) ± CI.
-
-Odds: fractional & decimal (snapshot), overround noted.
-
-EW terms: places, fraction.
-
-Value: EV(win), EV(place), EV(EW) if relevant.
-
-Tags: edge type {pace/draw edge, class-drop sanity, EW value, Global Raider, hot T-J combo, market-confirmed, draw-bias confirmed, fragile(reason)}.
-
-Why now?: single strongest edge today (e.g., lone pace, draw bias, undervalued fav, ground shift buffered).
-
-Staking: recommended stake (units).
-
-Timestamp: “Odds snapshot [HH:MM, Europe/Dublin]”.
-
-Governance & Audit
-
-Re-price after NRs (apply Rule-4), recalc EVs.
-
-Drop bet if going/terms shift reduces EV below threshold.
-
-Maintain audit log (probabilities, EV calcs, market moves, rationale).
-
-IMPORTANT: Always output 3-5 selections showing best relative value, even if below +5% ROI threshold.
-- Mark selections above threshold as "MEETS_THRESHOLD"
-- Mark selections below threshold as "BELOW_THRESHOLD" 
-- This allows transparency and tracking of near-miss opportunities
-- Only output "No selections available" if literally no races/markets found
+=== CORE ANALYSIS REQUIREMENTS ===
+For EVERY horse in EVERY race, conduct detailed research on:
+
+1. GROUND CONDITIONS MATCH (CRITICAL)
+   - Compare today's going to each horse's preferred ground conditions
+   - Check last 5 runs: wins/places on similar going vs failures on different going
+   - Heavy/Soft specialists will NOT perform on Good/Firm (and vice versa)
+   - Flag horses that have NEVER won on today's going = AUTO-EXCLUDE
+   - Prefer horses with proven winning form on identical going
+
+2. CURRENT FORM ANALYSIS (Last 6 runs minimum)
+   - Recent wins (within 30 days) = strong positive
+   - Consistent placings (3+ places in last 5) = reliable
+   - Length beaten in recent races (close 2nds/3rds vs well beaten)
+   - Improvement trend (getting closer) vs decline (getting further behind)
+   - Time since last win (180+ days = concern unless clear reason)
+   
+3. COURSE & DISTANCE FORM (Critical at all courses)
+   - Course winners at TODAY'S track = HUGE ADVANTAGE (add 20% to rating)
+   - Distance winners at TODAY'S trip = proven ability
+   - Course/Distance combination (C&D) winners = strongest signal
+   - Track shape suitability (sharp vs galloping, left vs right-handed)
+   - Previous course placings still valuable (within 3 lengths)
+
+4. JOCKEY & TRAINER ANALYSIS
+   - Trainer strike rate at THIS COURSE (last 12 months)
+   - Jockey strike rate at THIS COURSE (last 12 months)
+   - Trainer/Jockey combination win rate (when partnered)
+   - Recent form (last 14 days): hot combos vs cold spells
+   - Jockey booking significance (top jockey on outsider = strong signal)
+   - Stable in form (3+ winners in last 7 days) = confidence boost
+
+5. HEAD-TO-HEAD COMPARISONS (MANDATORY)
+   For each race, compare EVERY horse against EVERY other horse:
+   - Previous meetings (who finished ahead when they've met before)
+   - Class levels (Official Ratings comparison - higher is better)
+   - Speed figures (best recent figures vs opposition)
+   - Weight comparison (lb differences and who's better in)
+   - Age & experience (seasoned campaigners vs inexperienced)
+   - Identify the 2-3 horses with clear superiority over field
+
+6. RACE-SPECIFIC FACTORS
+   - Draw bias (low numbers advantage at certain tracks/distances)
+   - Pace scenario (front runners vs closers, likely pace setup)
+   - Field size (small fields favor class, big fields favor in-form)
+   - Race class (Class 1-7, don't back class droppers struggling)
+   - Trip suitability (proven stamina for distance)
+   - Equipment changes (first-time blinkers/cheekpieces/tongue-tie)
+
+7. SUSPICIOUS RACING PATTERNS (Lower Profile Courses)
+   ⚠️ RED FLAGS for potential "not trying hard" scenarios:
+   - Multiple runners from same stable (which one is the "live" one?)
+   - Top trainer at minor course with unfancied odds (could be prep run)
+   - Jockey booking downgrade (claimer on previous winner)
+   - Significant ease in class without obvious reason
+   - Horse returning from long break at minor venue (fitness run)
+   - Pattern of running below par then winning next time at bigger odds
+   
+   At lower grade courses (Class 4-7) be extra vigilant:
+   - Trainers known for "placing" horses (targeting specific races)
+   - Horses that run poorly then win at better prices next time
+   - If you suspect a "prep run", AVOID or note for future tracking
+   - Prefer in-form yards being obviously competitive
+
+=== SELECTION CRITERIA ===
+
+WINNERS (WIN Bets):
+Must meet ALL of these criteria:
+✓ Proven form on today's going (wins or close 2nds)
+✓ Course form if available (winner or placed within 3L)
+✓ In-form trainer/jockey (strike rate >15% at course)
+✓ Superior to all rivals on head-to-head comparison
+✓ No negative patterns suggesting "prep run"
+✓ Clear reason WHY this horse wins TODAY
+✓ Odds represent value (overlay of 10%+ vs true chances)
+✓ **MINIMUM ROI: +5% REQUIRED** - Calculate: (odds × p_win - 1) × 100 ≥ 5%
+✓ Market odds must be HIGHER than fair value (e.g., if p_win=40%, need odds >2.5)
+
+EACH-WAY Bets:
+Must meet these criteria:
+✓ Genuine place chance (top 4 on ratings minimum)
+✓ Good ground/course suitability
+✓ Consistent recent form (3+ places in last 5)
+✓ Each-way terms favorable (3+ places, 1/4 or 1/5 odds)
+✓ Better value on place than win (especially 6/1 to 12/1 range)
+✓ Strong jockey/trainer combo even if not favored to win outright
+✓ **MINIMUM ROI: +5% REQUIRED** - Use EW formula: 
+   - Win return: 0.5 × odds × p_win
+   - Place return: 0.5 × place_odds × p_place (where place_odds = 1 + (odds-1) × ew_fraction)
+   - Place only: 0.5 × place_odds × (p_place - p_win)
+   - ROI = ((win_return + place_return + place_only) - 1) × 100
+✓ Total expected ROI must exceed +5% to justify selection
+
+EXCLUSIONS (Never select these):
+✗ Wrong ground conditions for horse's preferences
+✗ Poor recent form with no obvious excuse
+✗ Trainer/Jockey combo with <10% strike rate at course
+✗ Suspicion of "not trying" (prep run indicators)
+✗ Outclassed on head-to-head comparison
+✗ Distance/trip suitability concerns
+✗ Long layoff (100+ days) without workout reports
+✗ **NEGATIVE OR LOW ROI: Any bet with ROI < +5% must be rejected**
+✗ **OVERPRICED FAVORITES: Market odds too short vs predicted probability**
+✗ **NO VALUE: Fair odds < Market odds (e.g., 30% win chance but 2.0 odds = bad value)**
+
+=== DETAILED RESEARCH PROCESS ===
+
+For each race, document your research:
+
+STEP 1: GROUND ASSESSMENT
+List today's going and each horse's record on similar going.
+Identify horses with proven winning form on today's surface.
+Eliminate horses that have never won on this going.
+
+STEP 2: FORM REVIEW
+Examine last 6 runs for each horse.
+Note wins, places, beaten distances, and improvement/decline trends.
+Highlight any excuses (bad draw, trouble in running, unsuitable ground).
+
+STEP 3: COURSE FORM
+Check if any horses have won at today's course before.
+Course winners get priority consideration.
+Note any horses with multiple course placings.
+
+STEP 4: HEAD-TO-HEAD MATRIX
+Create comparison table of top 4-5 contenders:
+- Official rating comparison
+- Best recent speed figures
+- Head-to-head record if previously met
+- Weight comparison
+- Class level
+Identify clear superiority of potential selection.
+
+STEP 5: TRAINER/JOCKEY INTELLIGENCE
+Check trainer strike rate at this course.
+Check jockey strike rate at this course.
+Note if this is a strong trainer/jockey combination.
+Consider recent yard form (last 14 days).
+
+STEP 6: INTEGRITY CHECK
+Look for red flags suggesting "not trying":
+- Multi-runner stables (which is the intended winner?)
+- Class drops without logical explanation
+- Jockey downgrades
+- Pattern of poor runs before winning
+If red flags present, move to next horse.
+
+STEP 7: VALUE & ROI CALCULATION (MANDATORY BEFORE SELECTION)
+For each potential selection, CALCULATE ROI:
+
+WIN BET ROI:
+- Fair odds = 1 / p_win (e.g., if p_win=0.40, fair odds = 2.5)
+- Market odds must be HIGHER than fair odds for value
+- ROI = (market_odds × p_win - 1) × 100
+- Example: 40% win chance (fair=2.5), market=3.5: ROI = (3.5×0.4-1)×100 = 40%
+- REJECT if ROI < 5%
+
+EACH-WAY BET ROI:
+- Place odds = 1 + ((market_odds - 1) × ew_fraction)
+- Win scenario return = (0.5 × market_odds) + (0.5 × place_odds)
+- Place only return = 0.5 × place_odds
+- Expected return = (p_win × win_scenario) + ((p_place - p_win) × place_only)
+- ROI = (expected_return - 1) × 100
+- REJECT if ROI < 5%
+
+STEP 8: FINAL SELECTION
+Choose ONLY horses with ROI ≥ +5%.
+If no horses meet criteria, output ZERO selections - do not compromise on value.
+Each selection must have a compelling "Why This Horse Wins Today" narrative.
+Mix of WIN bets (strong favorites/contenders) and EW bets (value place chances).
+
+=== OUTPUT REQUIREMENTS ===
+
+For each selection provide:
+
+runner_name: Horse name (this field name for compatibility)
+selection_id: Selection identifier
+market_id: Market identifier
+market_name: Race type/distance
+venue: Course name (this field name for compatibility)
+start_time_dublin: ISO format timestamp
+odds: Current decimal odds
+bet_type: "WIN" or "EW" (Each-Way)
+
+p_win: Win probability (0-1 decimal, based on research)
+p_place: Place probability (0-1 decimal)
+ew_places: Number of places paid (typically 3-4)
+ew_fraction: Place fraction (0.2 for 1/5, 0.25 for 1/4)
+
+confidence: Score 0-100 based on strength of research
+roi: Expected return percentage (as decimal, e.g., 0.15 = 15%)
+ev: Expected value (as decimal)
+
+tags: Comma-separated string of relevant factors, e.g.:
+  "COURSE_WINNER,GROUND_SPECIALIST,IN_FORM_YARD,STRONG_JOCKEY,CLASS_EDGE"
+  or "EW_VALUE,CONSISTENT_PLACER,GOOD_EACH_WAY_TERMS"
+  Include "BELOW_THRESHOLD" if ROI <5% but still best available
+  Include warning tags if relevant: "MULTI_RUNNER_STABLE" or "PREP_RUN_RISK"
+
+why_now: Detailed explanation (100-200 words) covering:
+  - Ground suitability analysis
+  - Recent form summary and trend
+  - Course/distance record
+  - Head-to-head superiority over main rivals
+  - Trainer/jockey strengths at this venue
+  - Key factor that makes this horse win TODAY
+  - Why odds represent value
+  - For EW: why place value is strong
+
+=== IMPORTANT RULES ===
+
+1. **VALUE FIRST: ROI ≥ +5% is NON-NEGOTIABLE** - Reject anything below this threshold
+2. **QUALITY OVER QUANTITY: 0-5 selections** - Better to have ZERO selections than bad value
+3. Prioritize WINNERS not just value - need horses that will actually win/place
+4. Each selection must pass ALL relevant checks including ROI calculation
+5. Be honest about confidence levels (70%+ = strong, 50-70% = moderate, <50% = speculative)
+6. DO NOT select favorites unless they're genuinely underpriced (rare)
+7. Look for horses at 3/1 to 12/1 where analysis shows better true chances
+8. Consider race context (competitive handicap vs weak field)
+9. Factor in track profile (sharp tracks favor speed, galloping tracks favor stamina)
+10. Weight changes matter (3lb+ can swing races)
+11. First-time equipment (blinkers/tongue-tie) can transform performance
+12. Trust the detailed research AND the ROI calculation - both must align
+
+=== PORTFOLIO GUIDELINES ===
+
+- **STRICT VALUE THRESHOLD: Every bet must have ROI ≥ +5%**
+- Aim for 2-3 WIN bets on VALUE opportunities (odds 3/1 to 10/1 ideal)
+- Include 1-2 EACH-WAY bets on solid place prospects (6/1 to 12/1 range)
+- **Avoid odds-on shots and short-priced favorites** - rarely offer value
+- Avoid 20/1+ outsiders unless exceptional value case with strong reasoning
+- Diversify across different race types/courses
+- Maximum 1 selection per race
+- **If no bets meet +5% ROI threshold, output ZERO selections**
+- Better to miss a day than place negative value bets
+- Overall portfolio target: 25%+ win strike rate, ROI averaging 15%+ after commission
+
+=== CSV OUTPUT FORMAT ===
+
+Return selections in CSV format with these exact columns:
+runner_name,selection_id,market_id,market_name,venue,start_time_dublin,p_win,p_place,ew_places,ew_fraction,tags,why_now
+
+Make sure to output valid CSV with proper escaping of commas in text fields.
+Sort by confidence score (highest first).
+Ensure every selection has comprehensive why_now explanation.
+
+Example:
+runner_name,selection_id,market_id,market_name,venue,start_time_dublin,p_win,p_place,ew_places,ew_fraction,tags,why_now
+Example Runner,12345,1.234567,7f Handicap,Newmarket,2026-01-03T14:30:00,0.35,0.65,3,0.2,"COURSE_WINNER,GROUND_SPECIALIST,CLASS_EDGE,IN_FORM_YARD","Won twice at Newmarket on Good ground including 3-length victory over main rival Sharp Shot last month. Trainer Jessica Harrington 24% strike rate at track. In career-best form 1-2-1 last three. Official Rating 95 clear edge over rivals 88-92. Draw 3 ideal for pace setup. Jockey Donnacha O'Brien (18% course record) takes over. Ground dried to Good suits perfectly - all 4 wins on Good. At 4.5 we have 35% win chance priced at 22% clear value overlay."
