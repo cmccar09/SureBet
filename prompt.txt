@@ -94,7 +94,7 @@ Must meet these criteria:
 ✓ Good ground/course suitability
 ✓ Consistent recent form (3+ places in last 5)
 ✓ Each-way terms favorable (3+ places, 1/4 or 1/5 odds)
-✓ Better value on place than win (especially 6/1 to 12/1 range)
+✓ Better value on place than win (especially 4/1 to 14/1 range)
 ✓ Strong jockey/trainer combo even if not favored to win outright
 ✓ **MINIMUM ROI: +5% REQUIRED** - Use EW formula: 
    - Win return: 0.5 × odds × p_win
@@ -227,7 +227,7 @@ why_now: Detailed explanation (100-200 words) covering:
 4. Each selection must pass ALL relevant checks including ROI calculation
 5. Be honest about confidence levels (70%+ = strong, 50-70% = moderate, <50% = speculative)
 6. DO NOT select favorites unless they're genuinely underpriced (rare)
-7. Look for horses at 3/1 to 12/1 where analysis shows better true chances
+7. Look for horses at 2/1 to 14/1 where analysis shows better true chances
 8. Consider race context (competitive handicap vs weak field)
 9. Factor in track profile (sharp tracks favor speed, galloping tracks favor stamina)
 10. Weight changes matter (3lb+ can swing races)
@@ -237,8 +237,8 @@ why_now: Detailed explanation (100-200 words) covering:
 === PORTFOLIO GUIDELINES ===
 
 - **STRICT VALUE THRESHOLD: Every bet must have ROI ≥ +5%**
-- Aim for 2-3 WIN bets on VALUE opportunities (odds 3/1 to 10/1 ideal)
-- Include 1-2 EACH-WAY bets on solid place prospects (6/1 to 12/1 range)
+- Aim for 2-3 WIN bets on VALUE opportunities (odds 2/1 to 14/1 ideal)
+- Include 1-2 EACH-WAY bets on solid place prospects (4/1 to 14/1 range)
 - **Avoid odds-on shots and short-priced favorites** - rarely offer value
 - Avoid 20/1+ outsiders unless exceptional value case with strong reasoning
 - Diversify across different race types/courses
