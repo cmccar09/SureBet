@@ -78,6 +78,9 @@ For EVERY horse in EVERY race, conduct detailed research on:
 
 WINNERS (WIN Bets):
 Must meet ALL of these criteria:
+✓ **ODDS RANGE: 3.0 to 15.0 DECIMAL ONLY (2/1 to 14/1)** - HARD REQUIREMENT
+✓ **REJECT ANY ODDS < 3.0 (under 2/1) - These are always poor value**
+✓ **REJECT ANY ODDS > 15.0 (over 14/1) - Too risky**
 ✓ Proven form on today's going (wins or close 2nds)
 ✓ Course form if available (winner or placed within 3L)
 ✓ In-form trainer/jockey (strike rate >15% at course)
@@ -90,6 +93,9 @@ Must meet ALL of these criteria:
 
 EACH-WAY Bets:
 Must meet these criteria:
+✓ **ODDS RANGE: 3.0 to 15.0 DECIMAL ONLY (2/1 to 14/1)** - HARD REQUIREMENT
+✓ **REJECT ANY ODDS < 3.0 (under 2/1) - These are always poor value**
+✓ **REJECT ANY ODDS > 15.0 (over 14/1) - Too risky**
 ✓ Genuine place chance (top 4 on ratings minimum)
 ✓ Good ground/course suitability
 ✓ Consistent recent form (3+ places in last 5)
@@ -104,6 +110,9 @@ Must meet these criteria:
 ✓ Total expected ROI must be ≥ 0% (fair value or better)
 
 EXCLUSIONS (Never select these):
+✗ **ODDS < 3.0 (UNDER 2/1): AUTOMATIC REJECTION - Favorites are ALWAYS poor value**
+✗ **ODDS > 15.0 (OVER 14/1): AUTOMATIC REJECTION - Too speculative**
+✗ **ANY HORSE SAYING "despite poor value" OR "despite terrible value" = FORBIDDEN**
 ✗ Wrong ground conditions for horse's preferences
 ✗ Poor recent form with no obvious excuse
 ✗ Trainer/Jockey combo with <10% strike rate at course
@@ -221,13 +230,16 @@ why_now: Detailed explanation (100-200 words) covering:
 
 === IMPORTANT RULES ===
 
-1. **FAIR VALUE MINIMUM: ROI ≥ 0% is NON-NEGOTIABLE** - Reject negative expected value
-2. **QUALITY OVER QUANTITY: 0-15 selections** - Accept any fair value or better
-3. Prioritize WINNERS not just value - need horses that will actually win/place
-4. Each selection must pass ALL relevant checks including ROI calculation
-5. Be honest about confidence levels (70%+ = strong, 50-70% = moderate, <50% = speculative)
-6. DO NOT select favorites unless they're genuinely underpriced (rare)
-7. Look for horses at 2/1 to 14/1 where analysis shows better true chances
+1. **ODDS RANGE MANDATORY: 3.0 to 15.0 DECIMAL (2/1 to 14/1) - ABSOLUTE REQUIREMENT**
+2. **REJECT ALL ODDS < 3.0: Favorites under 2/1 are FORBIDDEN - always poor value**
+3. **REJECT ALL ODDS > 15.0: Longshots over 14/1 are too speculative**
+4. **FAIR VALUE MINIMUM: ROI ≥ 0% is NON-NEGOTIABLE** - Reject negative expected value
+5. **QUALITY OVER QUANTITY: 0-15 selections** - Accept any fair value or better
+6. Prioritize WINNERS not just value - need horses that will actually win/place
+7. Each selection must pass ALL relevant checks including ROI calculation
+8. Be honest about confidence levels (70%+ = strong, 50-70% = moderate, <50% = speculative)
+9. **NEVER justify selections with "despite poor value" - if value is poor, DON'T SELECT IT**
+10. ONLY analyze horses at 2/1 to 14/1 - ignore everything else completely
 8. Consider race context (competitive handicap vs weak field)
 9. Factor in track profile (sharp tracks favor speed, galloping tracks favor stamina)
 10. Weight changes matter (3lb+ can swing races)
@@ -236,15 +248,16 @@ why_now: Detailed explanation (100-200 words) covering:
 
 === PORTFOLIO GUIDELINES ===
 
+- **ODDS FILTER FIRST: Only consider horses 3.0-15.0 odds (2/1 to 14/1)**
 - **BREAKEVEN THRESHOLD: Every bet must have ROI ≥ 0% (fair value)**
-- Aim for 3-5 WIN bets on fair value or better (odds 2/1 to 14/1 ideal)
+- **NO FAVORITES: Automatically skip ALL horses with odds < 3.0 (under 2/1)**
+- Aim for 3-5 WIN bets on fair value or better (odds 2/1 to 14/1 ONLY)
 - Include 2-3 EACH-WAY bets on solid place prospects (4/1 to 14/1 range)
-- Short-priced favorites acceptable if analysis shows fair value or better
-- Avoid 20/1+ outsiders unless exceptional value case with strong reasoning
+- Avoid 20/1+ outsiders - stick to 2/1 to 14/1 range strictly
 - Diversify across different race types/courses
 - Maximum 1 selection per race
-- **If no bets meet 0% ROI threshold, output ZERO selections**
-- Goal: Don't lose money on bad value, accept breakeven for volume
+- **If no bets meet BOTH odds range AND 0% ROI threshold, output ZERO selections**
+- Goal: Find value in mid-range odds where market is less efficient
 - Overall portfolio target: 25%+ win strike rate, ROI averaging 5%+ after commission
 
 === CSV OUTPUT FORMAT ===
