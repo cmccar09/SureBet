@@ -84,6 +84,108 @@ def load_selections(csv_path: str) -> pd.DataFrame:
     df.columns = [c.strip().lower() for c in df.columns]
     return df
 
+def calculate_combined_confidence(row: pd.Series) -> tuple:
+    """
+    Calculate Combined Confidence Rating (0-100)
+    Consolidates multiple confidence signals into one unified metric
+    
+    Components:
+    1. Win Probability (40%) - Core prediction strength
+    2. Place Probability (20%) - Backup safety measure
+    3. Value Edge (20%) - How much better than market odds
+    4. Consistency Score (20%) - Internal signal agreement
+    
+    Returns: (combined_confidence, confidence_grade, confidence_explanation)
+    """
+    # Extract raw signals
+    p_win = float(row.get('p_win', 0))
+    p_place = float(row.get('p_place', 0))
+    odds = float(row.get('odds', 0))
+    
+    # Optional signals if available
+    research_confidence = float(row.get('confidence', 0)) / 100 if 'confidence' in row else None
+    
+    # 1. WIN PROBABILITY COMPONENT (40% weight)
+    # Direct measure of how likely we think the horse will win
+    win_component = p_win * 40
+    
+    # 2. PLACE PROBABILITY COMPONENT (20% weight)
+    # Safety net - even if doesn't win, likely to place
+    place_component = p_place * 20
+    
+    # 3. VALUE EDGE COMPONENT (20% weight)
+    # How much better is our probability vs market implied probability
+    if odds > 1:
+        market_implied_prob = 1 / odds
+        edge = p_win - market_implied_prob
+        # Normalize edge: 15%+ edge = full 20 points
+        edge_component = min(20, (edge / 0.15) * 20) if edge > 0 else 0
+    else:
+        edge_component = 0
+    
+    # 4. CONSISTENCY SCORE COMPONENT (20% weight)
+    # How well do our different signals agree?
+    signals = [p_win]
+    if p_place > 0:
+        # For consistency, place should be higher than win (logical check)
+        place_consistency = 1.0 if p_place >= p_win else (p_place / p_win)
+        signals.append(place_consistency)
+    
+    if research_confidence is not None:
+        # Research confidence should align with p_win
+        research_alignment = 1.0 - abs(p_win - research_confidence)
+        signals.append(research_alignment)
+    
+    # Calculate consistency as variance from mean
+    if len(signals) > 1:
+        mean_signal = sum(signals) / len(signals)
+        variance = sum((s - mean_signal) ** 2 for s in signals) / len(signals)
+        # Low variance = high consistency
+        consistency_score = max(0, 1 - (variance * 5))  # Scale variance
+    else:
+        consistency_score = 0.7  # Default moderate consistency
+    
+    consistency_component = consistency_score * 20
+    
+    # TOTAL COMBINED CONFIDENCE
+    combined_confidence = win_component + place_component + edge_component + consistency_component
+    combined_confidence = max(0, min(100, combined_confidence))  # Clamp to 0-100
+    
+    # Grade the confidence
+    if combined_confidence >= 70:
+        confidence_grade = "VERY HIGH"
+        grade_color = "green"
+        explanation = "Multiple strong signals align - high conviction bet"
+    elif combined_confidence >= 50:
+        confidence_grade = "HIGH"
+        grade_color = "lightgreen"
+        explanation = "Good signals with reasonable consistency"
+    elif combined_confidence >= 35:
+        confidence_grade = "MODERATE"
+        grade_color = "orange"
+        explanation = "Mixed signals - proceed with caution"
+    else:
+        confidence_grade = "LOW"
+        grade_color = "red"
+        explanation = "Weak or conflicting signals - avoid or minimal stake"
+    
+    # Detailed breakdown for transparency
+    breakdown = {
+        'win_component': round(win_component, 1),
+        'place_component': round(place_component, 1),
+        'edge_component': round(edge_component, 1),
+        'consistency_component': round(consistency_component, 1),
+        'raw_signals': {
+            'p_win': p_win,
+            'p_place': p_place,
+            'market_edge': edge if odds > 1 else 0,
+            'consistency_score': round(consistency_score, 2)
+        }
+    }
+    
+    return (round(combined_confidence, 1), confidence_grade, grade_color, explanation, breakdown)
+
+
 def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None) -> dict:
     """Convert CSV row to DynamoDB bet item"""
     
@@ -153,6 +255,9 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None) -> dict:
         total_return = (p_win * win_scenario_return) + (place_only_prob * place_scenario_return)
         ev = total_return - 1  # Subtract the full stake
     
+    # Calculate Combined Confidence Rating (NEW - unified confidence metric)
+    combined_conf, conf_grade, conf_color, conf_explanation, conf_breakdown = calculate_combined_confidence(row)
+    
     # Calculate Decision Rating (combined score for easy decision making)
     roi_pct = ev * 100
     confidence_score = int(p_win * 100) if p_win > 0 else 50
@@ -211,10 +316,17 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None) -> dict:
         'roi': roi_pct,  # ROI as percentage
         'recommendation': 'BACK' if bet_type == 'WIN' else 'EW',
         
-        # Decision Rating (NEW - combined metric)
+        # Decision Rating (bet quality indicator)
         'decision_rating': decision_rating,  # "DO IT", "RISKY", or "NOT GREAT"
         'decision_score': round(decision_score, 1),  # 0-100 numerical score
         'rating_color': rating_color,  # For UI display
+        
+        # Combined Confidence Rating (NEW - unified confidence metric)
+        'combined_confidence': combined_conf,  # 0-100 consolidated confidence
+        'confidence_grade': conf_grade,  # "VERY HIGH", "HIGH", "MODERATE", "LOW"
+        'confidence_color': conf_color,  # For UI display
+        'confidence_explanation': conf_explanation,  # Human-readable reason
+        'confidence_breakdown': conf_breakdown,  # Detailed component scores
         
         # Source tracking
         'source': 'learning_workflow',
