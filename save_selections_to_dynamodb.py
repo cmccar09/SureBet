@@ -428,6 +428,7 @@ def main():
     parser.add_argument("--region", type=str, default="us-east-1", help="AWS region")
     parser.add_argument("--backup", type=str, default="", help="JSON backup path (optional)")
     parser.add_argument("--dry_run", action="store_true", help="Don't actually save to DynamoDB")
+    parser.add_argument("--min_roi", type=float, default=5.0, help="Minimum ROI threshold in percentage (default: 5.0)")
     
     args = parser.parse_args()
     
@@ -450,16 +451,26 @@ def main():
     print(f"Loaded odds for {len(market_odds)} runners")
     
     # Convert to bet items
-    print("\nFormatting for DynamoDB...")
+    print(f"\nFormatting for DynamoDB (minimum ROI: {args.min_roi}%)...")
     bets = []
+    filtered_out = 0
     for idx, row in df.iterrows():
         try:
             bet_item = format_bet_for_dynamodb(row, market_odds)
+            
+            # Filter by minimum ROI threshold
+            roi = float(bet_item.get('roi', 0))
+            if roi < args.min_roi:
+                filtered_out += 1
+                horse = bet_item.get('horse', 'Unknown')
+                print(f"⛔ FILTERED: {horse} (ROI: {roi:.1f}% < {args.min_roi}% minimum)")
+                continue
+            
             bets.append(bet_item)
         except Exception as e:
             print(f"⚠️  Warning: Failed to format row {idx}: {e}")
     
-    print(f"Formatted {len(bets)} bet items")
+    print(f"\nFormatted {len(bets)} bet items (filtered out {filtered_out} low ROI bets)")
     
     # Save to DynamoDB
     if not args.dry_run:
