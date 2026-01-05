@@ -41,7 +41,7 @@ def main():
     print(f"\n📁 Found selections: {selections_file}")
     
     # Save to DynamoDB
-    cmd = f'python save_selections_to_dynamodb.py --selections "{selections_file}" --min_roi 2.5'
+    cmd = f'python save_selections_to_dynamodb.py --selections "{selections_file}" --min_roi 0.0'
     
     print(f"\n🚀 Saving to DynamoDB...")
     print(f"Command: {cmd}\n")

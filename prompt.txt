@@ -84,9 +84,9 @@ Must meet ALL of these criteria:
 ✓ Superior to all rivals on head-to-head comparison
 ✓ No negative patterns suggesting "prep run"
 ✓ Clear reason WHY this horse wins TODAY
-✓ Odds represent value (overlay of 10%+ vs true chances)
-✓ **MINIMUM ROI: +2.5% REQUIRED** - Calculate: (odds × p_win - 1) × 100 ≥ 2.5%
-✓ Market odds must be HIGHER than fair value (e.g., if p_win=40%, need odds >2.5)
+✓ Odds represent value (overlay of 5%+ vs true chances preferred)
+✓ **MINIMUM ROI: 0% BREAKEVEN** - Calculate: (odds × p_win - 1) × 100 ≥ 0%
+✓ Market odds equal to or HIGHER than fair value (e.g., if p_win=40%, need odds ≥2.5)
 
 EACH-WAY Bets:
 Must meet these criteria:
@@ -96,12 +96,12 @@ Must meet these criteria:
 ✓ Each-way terms favorable (3+ places, 1/4 or 1/5 odds)
 ✓ Better value on place than win (especially 4/1 to 14/1 range)
 ✓ Strong jockey/trainer combo even if not favored to win outright
-✓ **MINIMUM ROI: +2.5% REQUIRED** - Use EW formula: 
+✓ **MINIMUM ROI: 0% BREAKEVEN** - Use EW formula: 
    - Win return: 0.5 × odds × p_win
    - Place return: 0.5 × place_odds × p_place (where place_odds = 1 + (odds-1) × ew_fraction)
    - Place only: 0.5 × place_odds × (p_place - p_win)
    - ROI = ((win_return + place_return + place_only) - 1) × 100
-✓ Total expected ROI must exceed +2.5% to justify selection
+✓ Total expected ROI must be ≥ 0% (fair value or better)
 
 EXCLUSIONS (Never select these):
 ✗ Wrong ground conditions for horse's preferences
@@ -111,9 +111,9 @@ EXCLUSIONS (Never select these):
 ✗ Outclassed on head-to-head comparison
 ✗ Distance/trip suitability concerns
 ✗ Long layoff (100+ days) without workout reports
-✗ **NEGATIVE OR LOW ROI: Any bet with ROI < +2.5% must be rejected**
-✗ **OVERPRICED FAVORITES: Market odds too short vs predicted probability**
-✗ **NO VALUE: Fair odds < Market odds (e.g., 30% win chance but 2.0 odds = bad value)**
+✗ **NEGATIVE ROI: Any bet with ROI < 0% must be rejected (losing value)**
+✗ **OVERPRICED: Market odds too short vs predicted probability**
+✗ **BAD VALUE: Fair odds < Market odds (e.g., 30% win chance but 2.0 odds = 20% loss)**
 
 === DETAILED RESEARCH PROCESS ===
 
@@ -162,10 +162,10 @@ For each potential selection, CALCULATE ROI:
 
 WIN BET ROI:
 - Fair odds = 1 / p_win (e.g., if p_win=0.40, fair odds = 2.5)
-- Market odds must be HIGHER than fair odds for value
+- Market odds must equal or exceed fair odds for value
 - ROI = (market_odds × p_win - 1) × 100
 - Example: 40% win chance (fair=2.5), market=3.5: ROI = (3.5×0.4-1)×100 = 40%
-- REJECT if ROI < 2.5%
+- REJECT if ROI < 0% (negative expected value)
 
 EACH-WAY BET ROI:
 - Place odds = 1 + ((market_odds - 1) × ew_fraction)
@@ -173,10 +173,10 @@ EACH-WAY BET ROI:
 - Place only return = 0.5 × place_odds
 - Expected return = (p_win × win_scenario) + ((p_place - p_win) × place_only)
 - ROI = (expected_return - 1) × 100
-- REJECT if ROI < 2.5%
+- REJECT if ROI < 0% (negative expected value)
 
 STEP 8: FINAL SELECTION
-Choose ONLY horses with ROI ≥ +2.5%.
+Choose ONLY horses with ROI ≥ 0% (breakeven or better).
 If no horses meet criteria, output ZERO selections - do not compromise on value.
 Each selection must have a compelling "Why This Horse Wins Today" narrative.
 Mix of WIN bets (strong favorites/contenders) and EW bets (value place chances).
@@ -221,8 +221,8 @@ why_now: Detailed explanation (100-200 words) covering:
 
 === IMPORTANT RULES ===
 
-1. **VALUE FIRST: ROI ≥ +2.5% is NON-NEGOTIABLE** - Reject anything below this threshold
-2. **QUALITY OVER QUANTITY: 0-10 selections** - Better to have ZERO selections than bad value
+1. **FAIR VALUE MINIMUM: ROI ≥ 0% is NON-NEGOTIABLE** - Reject negative expected value
+2. **QUALITY OVER QUANTITY: 0-15 selections** - Accept any fair value or better
 3. Prioritize WINNERS not just value - need horses that will actually win/place
 4. Each selection must pass ALL relevant checks including ROI calculation
 5. Be honest about confidence levels (70%+ = strong, 50-70% = moderate, <50% = speculative)
@@ -236,16 +236,16 @@ why_now: Detailed explanation (100-200 words) covering:
 
 === PORTFOLIO GUIDELINES ===
 
-- **STRICT VALUE THRESHOLD: Every bet must have ROI ≥ +2.5%**
-- Aim for 2-3 WIN bets on VALUE opportunities (odds 2/1 to 14/1 ideal)
-- Include 1-2 EACH-WAY bets on solid place prospects (4/1 to 14/1 range)
-- **Avoid odds-on shots and short-priced favorites** - rarely offer value
+- **BREAKEVEN THRESHOLD: Every bet must have ROI ≥ 0% (fair value)**
+- Aim for 3-5 WIN bets on fair value or better (odds 2/1 to 14/1 ideal)
+- Include 2-3 EACH-WAY bets on solid place prospects (4/1 to 14/1 range)
+- Short-priced favorites acceptable if analysis shows fair value or better
 - Avoid 20/1+ outsiders unless exceptional value case with strong reasoning
 - Diversify across different race types/courses
 - Maximum 1 selection per race
-- **If no bets meet +2.5% ROI threshold, output ZERO selections**
-- Better to miss a day than place negative value bets
-- Overall portfolio target: 25%+ win strike rate, ROI averaging 10%+ after commission
+- **If no bets meet 0% ROI threshold, output ZERO selections**
+- Goal: Don't lose money on bad value, accept breakeven for volume
+- Overall portfolio target: 25%+ win strike rate, ROI averaging 5%+ after commission
 
 === CSV OUTPUT FORMAT ===
 
