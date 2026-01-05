@@ -376,7 +376,7 @@ function App() {
                   <span className="time">{formatTime(pick.race_time)} (Dublin)</span>
                 </div>
                 
-                {/* BET RECOMMENDATION BOX */}
+                {/* BET RECOMMENDATION BOX WITH COMBINED CONFIDENCE */}
                 <div className="bet-recommendation-box" style={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
@@ -385,6 +385,55 @@ function App() {
                   marginTop: '12px',
                   marginBottom: '12px'
                 }}>
+                  {/* Combined Confidence - Top Prominent Display */}
+                  {pick.combined_confidence && (
+                    <div style={{
+                      background: 'rgba(255, 255, 255, 0.15)',
+                      padding: '12px',
+                      borderRadius: '6px',
+                      marginBottom: '12px',
+                      border: '2px solid rgba(255, 255, 255, 0.3)'
+                    }}>
+                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px'}}>
+                        <span style={{fontSize: '14px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px'}}>
+                          🎯 Confidence Rating
+                        </span>
+                        <span style={{
+                          background: pick.confidence_color || 'gray',
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          textTransform: 'uppercase',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }}>
+                          {pick.confidence_grade || 'N/A'}
+                        </span>
+                      </div>
+                      <div style={{fontSize: '32px', fontWeight: 'bold', marginBottom: '4px'}}>
+                        {pick.combined_confidence.toFixed(1)}/100
+                      </div>
+                      <div style={{fontSize: '12px', opacity: 0.9, lineHeight: '1.4', marginBottom: '8px'}}>
+                        {pick.confidence_explanation || 'Multiple confidence signals consolidated'}
+                      </div>
+                      {pick.confidence_breakdown && (
+                        <div style={{
+                          fontSize: '11px',
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '6px',
+                          opacity: 0.85
+                        }}>
+                          <div>Win: {pick.confidence_breakdown.win_component?.toFixed(1) || 0}</div>
+                          <div>Place: {pick.confidence_breakdown.place_component?.toFixed(1) || 0}</div>
+                          <div>Edge: {pick.confidence_breakdown.edge_component?.toFixed(1) || 0}</div>
+                          <div>Consistency: {pick.confidence_breakdown.consistency_component?.toFixed(1) || 0}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Stake Recommendation */}
                   <div style={{fontSize: '14px', opacity: 0.9, marginBottom: '8px'}}>
                     💰 Recommended Bet
                   </div>
@@ -427,63 +476,8 @@ function App() {
                   )}
                 </div>
 
-                {pick.ew_places && pick.ew_places > 0 && (
-                  <div className="ew-terms">
-                    <span>EW: {pick.ew_places} places @ 1/{Math.round(1/parseFloat(pick.ew_fraction || 0.2))}</span>
-                  </div>
-                )}
-
-                {/* COMBINED CONFIDENCE RATING */}
-                {pick.combined_confidence && (
-                  <div style={{
-                    background: 'linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%)',
-                    color: 'white',
-                    padding: '12px 16px',
-                    borderRadius: '8px',
-                    marginTop: '12px',
-                    marginBottom: '12px'
-                  }}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
-                      <span style={{fontSize: '13px', fontWeight: '600', opacity: 0.9}}>
-                        🎯 Combined Confidence
-                      </span>
-                      <span style={{
-                        background: pick.confidence_color || 'gray',
-                        padding: '4px 10px',
-                        borderRadius: '4px',
-                        fontSize: '11px',
-                        fontWeight: 'bold',
-                        textTransform: 'uppercase'
-                      }}>
-                        {pick.confidence_grade || 'N/A'}
-                      </span>
-                    </div>
-                    <div style={{fontSize: '24px', fontWeight: 'bold', marginBottom: '6px'}}>
-                      {pick.combined_confidence.toFixed(1)}/100
-                    </div>
-                    <div style={{fontSize: '12px', opacity: 0.85, lineHeight: '1.4'}}>
-                      {pick.confidence_explanation || 'Multiple confidence signals consolidated'}
-                    </div>
-                    {pick.confidence_breakdown && (
-                      <div style={{
-                        marginTop: '10px',
-                        paddingTop: '10px',
-                        borderTop: '1px solid rgba(255,255,255,0.2)',
-                        fontSize: '11px',
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
-                        gap: '6px'
-                      }}>
-                        <div>Win: {pick.confidence_breakdown.win_component?.toFixed(1) || 0}</div>
-                        <div>Place: {pick.confidence_breakdown.place_component?.toFixed(1) || 0}</div>
-                        <div>Edge: {pick.confidence_breakdown.edge_component?.toFixed(1) || 0}</div>
-                        <div>Consistency: {pick.confidence_breakdown.consistency_component?.toFixed(1) || 0}</div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {pick.confidence && !pick.combined_confidence && (
+                {/* COMBINED CONFIDENCE RATING - Fallback for old picks */}
+                {!pick.combined_confidence && pick.confidence && (
                   <div className="confidence-bar">
                     <div 
                       className="confidence-fill" 
