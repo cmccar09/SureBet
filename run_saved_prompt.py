@@ -11,6 +11,7 @@ import glob
 import json
 import csv
 import io
+import time
 from pathlib import Path
 from datetime import datetime, timezone
 
@@ -209,13 +210,41 @@ IMPORTANT: Always output 3-5 selections showing best relative value, even if Por
                 "messages": [{"role": "user", "content": full_prompt}]
             })
             
-            response = bedrock.invoke_model(
-                modelId="us.anthropic.claude-sonnet-4-5-20250929-v1:0",
-                body=body
-            )
+            # Retry logic with exponential backoff
+            max_retries = 4
+            retry_delay = 3  # Start with 3 seconds
             
-            response_body = json.loads(response['body'].read())
-            return response_body['content'][0]['text']
+            for attempt in range(max_retries):
+                try:
+                    response = bedrock.invoke_model(
+                        modelId="us.anthropic.claude-sonnet-4-20250514-v1:0",
+                        body=body
+                    )
+                    
+                    response_body = json.loads(response['body'].read())
+                    return response_body['content'][0]['text']
+                    
+                except KeyboardInterrupt:
+                    # Don't retry on keyboard interrupt
+                    raise
+                except Exception as e:
+                    error_msg = str(e)
+                    # Always retry network/connection issues
+                    is_retryable = any(x in error_msg.lower() for x in [
+                        'timeout', 'connection', 'network', 'ssl', 'socket',
+                        'read', 'recv', 'reset', 'broken pipe', 'timed out'
+                    ])
+                    
+                    if attempt < max_retries - 1 and is_retryable:
+                        print(f"  Network error on attempt {attempt + 1}, retrying in {retry_delay}s...", file=sys.stderr)
+                        time.sleep(retry_delay)
+                        retry_delay *= 2  # Exponential backoff
+                        continue
+                    else:
+                        # Last attempt or non-retryable error
+                        if attempt == max_retries - 1:
+                            print(f"  Failed after {max_retries} attempts", file=sys.stderr)
+                        raise
         
         elif provider == "anthropic":
             client = anthropic.Anthropic(api_key=os.getenv("ANTHROPIC_API_KEY"))

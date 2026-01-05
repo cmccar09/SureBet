@@ -93,7 +93,7 @@ def send_email_via_ses(subject, html_body, text_body, to_email):
     
     try:
         response = ses.send_email(
-            Source='betting@futuregenai.com',  # Must be verified in SES
+            Source='directorai@futuregenai.com',  # Must be verified in SES
             Destination={'ToAddresses': [to_email]},
             Message={
                 'Subject': {'Data': subject},
@@ -103,10 +103,10 @@ def send_email_via_ses(subject, html_body, text_body, to_email):
                 }
             }
         )
-        print(f"✅ Email sent! Message ID: {response['MessageId']}")
+        print(f"Email sent! Message ID: {response['MessageId']}")
         return True
     except Exception as e:
-        print(f"❌ Failed to send email via SES: {e}")
+        print(f"Failed to send email via SES: {e}")
         return False
 
 def send_email_via_smtp(subject, html_body, text_body, to_email):
@@ -115,7 +115,7 @@ def send_email_via_smtp(subject, html_body, text_body, to_email):
     smtp_password = os.environ.get('SMTP_PASSWORD')
     
     if not smtp_user or not smtp_password:
-        print("❌ SMTP credentials not set (SMTP_USER, SMTP_PASSWORD)")
+        print("SMTP credentials not set (SMTP_USER, SMTP_PASSWORD)")
         return False
     
     msg = MIMEMultipart('alternative')
@@ -131,10 +131,10 @@ def send_email_via_smtp(subject, html_body, text_body, to_email):
         server.login(smtp_user, smtp_password)
         server.sendmail(smtp_user, [to_email], msg.as_string())
         server.quit()
-        print("✅ Email sent via SMTP!")
+        print("Email sent via SMTP!")
         return True
     except Exception as e:
-        print(f"❌ Failed to send email via SMTP: {e}")
+        print(f"Failed to send email via SMTP: {e}")
         return False
 
 def generate_summary_email():
@@ -185,25 +185,25 @@ def generate_summary_email():
     
     if pick_count > 0:
         html_parts.append(f'<p>✅ Generated <span class="stat">{pick_count}</span> picks</p>')
-        text_parts.append(f"\n✅ Generated {pick_count} picks")
+        text_parts.append(f"\nGenerated {pick_count} picks")
     else:
         html_parts.append('<p class="warning">⚠️ No picks generated today</p>')
         html_parts.append('<p>Possible reasons: No races met ROI threshold, Betfair API error, or no races scheduled</p>')
-        text_parts.append("\n⚠️ No picks generated today")
+        text_parts.append("\nNo picks generated today")
     
     # Betting Status
     if auto_betting_enabled:
         if actual_bets_placed > 0:
             html_parts.append(f'<p>💰 <span class="stat">{actual_bets_placed}</span> bets placed automatically</p>')
-            text_parts.append(f"💰 {actual_bets_placed} bets placed automatically")
+            text_parts.append(f"\n{actual_bets_placed} bets placed automatically")
         else:
             html_parts.append('<p class="warning">⚠️ Auto-betting enabled but NO bets placed</p>')
             html_parts.append('<p>Check: Betfair account balance, API connectivity, selection criteria</p>')
-            text_parts.append("\n⚠️ Auto-betting enabled but NO bets placed")
+            text_parts.append("\nAuto-betting enabled but NO bets placed")
     else:
         html_parts.append('<p class="info">ℹ️ Auto-betting is DISABLED (dry-run mode)</p>')
         html_parts.append('<p>Set ENABLE_AUTO_BETTING=true to place real bets</p>')
-        text_parts.append("\nℹ️ Auto-betting is DISABLED (dry-run mode)")
+        text_parts.append("\nAuto-betting is DISABLED (dry-run mode)")
     
     html_parts.append('</div>')
     
@@ -220,7 +220,7 @@ def generate_summary_email():
         html_parts.append(f'<p>Win Rate: {win_rate:.1f}%</p>')
         html_parts.append('</div>')
         
-        text_parts.append(f"\n📈 Yesterday's Results:")
+        text_parts.append(f"\nYesterday's Results:")
         text_parts.append(f"  Races: {yesterday_stats['total_races']}")
         text_parts.append(f"  Wins: {yesterday_stats['wins']}")
         text_parts.append(f"  Places: {yesterday_stats['places']}")
@@ -233,7 +233,7 @@ def generate_summary_email():
     html_parts.append('<p>Prompt adjustments are applied automatically based on performance</p>')
     html_parts.append('</div>')
     
-    text_parts.append("\n🧠 Learning System: ENABLED")
+    text_parts.append("\nLearning System: ENABLED")
     
     # Footer
     html_parts.append("""
@@ -277,7 +277,7 @@ def main():
         success = send_email_via_ses(subject, html_body, text_body, args.to)
     
     if not success:
-        print("\n📧 Email preview:")
+        print("\nEmail preview:")
         print("=" * 60)
         print(text_body)
         print("=" * 60)

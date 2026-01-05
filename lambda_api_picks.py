@@ -172,17 +172,34 @@ def check_today_results(headers):
     picks = response.get('Items', [])
     picks = [decimal_to_float(item) for item in picks]
     
-    if not picks:
+    # Debug logging
+    print(f"Total picks retrieved: {len(picks)}")
+    print(f"Sample ROIs: {[float(p.get('roi', 0)) for p in picks[:5]]}")
+    
+    # Filter for positive ROI picks only
+    positive_roi_picks = [pick for pick in picks if float(pick.get('roi', 0)) > 0]
+    
+    print(f"Positive ROI picks: {len(positive_roi_picks)}")
+    print(f"BEFORE filter - picks variable length: {len(picks)}")
+    
+    if not positive_roi_picks:
+        print("NO POSITIVE ROI PICKS - returning empty")
         return {
             'statusCode': 200,
             'headers': headers,
             'body': json.dumps({
                 'success': True,
-                'message': 'No picks for today',
+                'message': f'No positive ROI picks for today (checked {len(picks)} total picks)',
                 'picks': [],
-                'results': []
+                'results': [],
+                'total_picks_today': len(picks)
             })
         }
+    
+    # Use only positive ROI picks for results checking
+    picks = positive_roi_picks
+    print(f"AFTER filter - picks variable length: {len(picks)}")
+    print(f"Proceeding with {len(picks)} positive ROI picks")
     
     # Load Betfair credentials from environment or Secrets Manager
     session_token = os.environ.get('BETFAIR_SESSION_TOKEN', '')
@@ -338,7 +355,9 @@ def check_today_results(headers):
             'success': True,
             'date': today,
             'summary': summary,
-            'picks': picks_with_results
+            'picks': picks_with_results,
+            'debug_timestamp': datetime.now().isoformat(),
+            'total_picks_today': len(positive_roi_picks)
         })
     }
 

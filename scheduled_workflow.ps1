@@ -189,8 +189,8 @@ if (Test-Path $outputCsv) {
         Write-Log "  Generated $pickCount pick(s)" "Green"
         
         # STEP 3: Save to DynamoDB (with ROI filter)
-        Write-Log "`nSTEP 3: Saving to DynamoDB (minimum ROI: 5%)..." "Cyan"
-        & $pythonExe "$PSScriptRoot\save_selections_to_dynamodb.py" --selections $outputCsv --min_roi 5.0 2>&1 | Tee-Object -Append -FilePath $logFile
+        Write-Log "`nSTEP 3: Saving to DynamoDB (minimum ROI: 2.5%)..." "Cyan"
+        & $pythonExe "$PSScriptRoot\save_selections_to_dynamodb.py" --selections $outputCsv --min_roi 2.5 2>&1 | Tee-Object -Append -FilePath $logFile
         
         if ($LASTEXITCODE -eq 0) {
             Write-Log "  Successfully saved to database" "Green"

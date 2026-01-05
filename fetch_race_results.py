@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
 fetch_race_results.py - Fetch actual race results from Betfair to evaluate predictions
+
+Note: For settled/historical markets, Betfair requires markets to be queried while they're still
+available. For truly historical data, you need the Historical Data API (subscription required).
+This script will attempt to fetch recent settled markets, but may not work for races >24hrs old.
 """
 
 import os
@@ -29,28 +33,42 @@ def load_betfair_creds():
 def get_market_results(market_ids: list[str], session_token: str, app_key: str) -> dict:
     """Fetch settled market results from Betfair"""
     
+    # Use listMarketBook with betSettled status for historical results
     url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketBook/"
     
     headers = {
         "X-Application": app_key,
         "X-Authentication": session_token,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json"
     }
     
-    payload = {
-        "marketIds": market_ids,
-        "priceProjection": {
-            "priceData": ["EX_BEST_OFFERS"]
+    results = []
+    
+    # Process markets in batches of 10 (API limit)
+    for i in range(0, len(market_ids), 10):
+        batch = market_ids[i:i+10]
+        
+        payload = {
+            "marketIds": batch,
+            "priceProjection": {
+                "priceData": ["EX_BEST_OFFERS", "EX_TRADED"]
+            },
+            "orderProjection": "ALL",
+            "matchProjection": "ROLLED_UP_BY_PRICE"
         }
-    }
+        
+        try:
+            response = requests.post(url, headers=headers, json=payload, timeout=30)
+            response.raise_for_status()
+            batch_results = response.json()
+            results.extend(batch_results if isinstance(batch_results, list) else [])
+            print(f"  Fetched {len(batch)} markets (batch {i//10 + 1})")
+        except Exception as e:
+            print(f"  WARNING: Failed to fetch batch {i//10 + 1}: {e}", file=sys.stderr)
+            continue
     
-    try:
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        print(f"ERROR fetching results: {e}", file=sys.stderr)
-        return []
+    return results
 
 def parse_settled_markets(market_data: list) -> list[dict]:
     """Parse settled market data to extract winners"""
@@ -60,22 +78,26 @@ def parse_settled_markets(market_data: list) -> list[dict]:
         market_id = market.get("marketId")
         status = market.get("status")
         
-        if status != "CLOSED":
+        # Markets can be CLOSED, SUSPENDED, or SETTLED
+        if status not in ["CLOSED", "SETTLED"]:
+            print(f"  Market {market_id}: status={status} (not settled yet)")
             continue
         
         runners = market.get("runners", [])
         for runner in runners:
             selection_id = runner.get("selectionId")
-            status = runner.get("status")
+            runner_status = runner.get("status", "")
             
             results.append({
                 "market_id": market_id,
-                "selection_id": selection_id,
-                "status": status,  # WINNER, LOSER, PLACED
-                "is_winner": status == "WINNER",
-                "is_placed": status in ["WINNER", "PLACED"]
+                "selection_id": str(selection_id),
+                "status": runner_status,  # WINNER, LOSER, PLACED, REMOVED
+                "is_winner": runner_status == "WINNER",
+                "is_placed": runner_status in ["WINNER", "PLACED"],
+                "last_price_traded": runner.get("lastPriceTraded", 0.0)
             })
     
+    print(f"  Parsed {len(results)} runner results from {len(market_data)} markets")
     return results
 
 def fetch_results_for_date(date_str: str, session_token: str, app_key: str) -> pd.DataFrame:
@@ -120,14 +142,32 @@ def main():
         print("ERROR: --selections path required to get market IDs", file=sys.stderr)
         sys.exit(1)
     
-    selections_df = pd.read_csv(args.selections)
-    market_ids = selections_df["market_id"].unique().tolist()
+    if not os.path.exists(args.selections):
+        print(f"ERROR: Selections file not found: {args.selections}", file=sys.stderr)
+        sys.exit(1)
     
-    print(f"Found {len(market_ids)} markets to check")
+    selections_df = pd.read_csv(args.selections)
+    market_ids = selections_df["market_id"].astype(str).unique().tolist()
+    
+    print(f"Found {len(market_ids)} unique markets to check")
+    
+    # Calculate hours since race date
+    hours_old = (datetime.now().date() - target_date).days * 24
+    if hours_old > 48:
+        print(f"\n⚠️  WARNING: Races are {hours_old/24:.1f} days old", file=sys.stderr)
+        print("  Betfair free API typically only retains settled markets for 24-48 hours", file=sys.stderr)
+        print("  Historical data requires Betfair Historical Data subscription", file=sys.stderr)
+        print("  Attempting to fetch anyway...\n", file=sys.stderr)
     
     # Fetch results
     market_data = get_market_results(market_ids, session_token, app_key)
-    results = parse_settled_markets(market_data)
+    
+    if not market_data:
+        print("\n❌ No market data returned - markets may be too old or API error", file=sys.stderr)
+        print("  Creating empty results file to prevent re-attempts", file=sys.stderr)
+        results = []
+    else:
+        results = parse_settled_markets(market_data)
     
     # Save results
     with open(args.out, 'w') as f:

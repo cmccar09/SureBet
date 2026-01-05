@@ -608,7 +608,7 @@ def main():
     # Save to DynamoDB if requested
     if args.save_to_dynamodb and not final_top5.empty:
         debug("\n[DYNAMODB] Saving selections to database...")
-        cmd = f"python save_selections_to_dynamodb.py --selections {args.out_csv} --table {args.dynamodb_table} --region {args.dynamodb_region} --min_roi 5.0"
+        cmd = f"python save_selections_to_dynamodb.py --selections {args.out_csv} --table {args.dynamodb_table} --region {args.dynamodb_region} --min_roi 2.5"
         ret = subprocess.run(cmd, shell=True)
         if ret.returncode == 0:
             debug(f"[OK] Saved {len(final_top5)} selections to DynamoDB")

@@ -1,0 +1,34 @@
+
+'charmap' codec can't encode character '\u274c' in position 86: character maps to <undefined>
+2026-01-03T12:57:45.488000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 INIT_START Runtime Version: python:3.11.v109	Runtime Version ARN: arn:aws:lambda:us-east-1::runtime:49f733259c7ce7e0deee75ff91c6afe35c7d58b04ed300f32701216263b4590c
+2026-01-03T12:57:46.463000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 START RequestId: 14387c1f-f526-4a1b-8f5d-34c0409158e1 Version: $LATEST
+2026-01-03T12:57:46.464000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 ============================================================
+2026-01-03T12:57:46.464000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 BETTING WORKFLOW LAMBDA EXECUTION
+2026-01-03T12:57:46.464000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 Time: 2026-01-03T12:57:46.464178
+2026-01-03T12:57:46.464000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 ============================================================
+2026-01-03T12:57:46.464000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 === LEARNING LAYER ===
+2026-01-03T12:57:46.575000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 === 7-DAY PERFORMANCE ===
+2026-01-03T12:57:46.575000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 Bets: 40 | Wins: 0 (0.0%)
+2026-01-03T12:57:46.575000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 Staked: Ç0.00 | Returns: Ç0.00
+2026-01-03T12:57:46.575000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 Profit: Ç+0.00 | ROI: +0.0%
+2026-01-03T12:57:46.632000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 Error calculating bankroll: float() argument must be a string or a real number, not 'dict', using initial value
+2026-01-03T12:57:46.632000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 Fetching Betfair odds...
+2026-01-03T12:57:46.632000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 Authenticating with Betfair...
+2026-01-03T12:57:46.632000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: Fetching betfair-ssl-certificate from Secrets Manager...
+2026-01-03T12:57:46.723000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: Got response, parsing secret...
+2026-01-03T12:57:46.723000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: Secret keys: ['private_key', 'certificate']
+2026-01-03T12:57:46.723000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: Writing certificate (1114 chars)
+2026-01-03T12:57:46.724000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: Certificate file written
+2026-01-03T12:57:46.724000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: Writing private key (1722 chars)
+2026-01-03T12:57:46.724000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: Private key file written
+2026-01-03T12:57:46.724000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: Files written successfully
+2026-01-03T12:57:46.724000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: Cert path: /tmp/betfair-client.crt, Key path: /tmp/betfair-client.key
+2026-01-03T12:57:46.724000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: About to return paths
+2026-01-03T12:57:46.724000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: cert_path=/tmp/betfair-client.crt, key_path=/tmp/betfair-client.key
+2026-01-03T12:57:46.724000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 Using certificate-based authentication
+2026-01-03T12:57:46.724000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: Cert file exists: True
+2026-01-03T12:57:46.724000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: Key file exists: True
+2026-01-03T12:57:46.724000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: Making request to https://identitysso-cert.betfair.com/api/certlogin
+2026-01-03T12:57:47.135000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 DEBUG: Request completed
+2026-01-03T12:57:47.135000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 Response status: 400
+2026-01-03T12:57:47.135000+00:00 2026/01/03/[$LATEST]4b3c96145e1e4be99a3ce740a304ed52 Response body: <html><head><title>Application Server - Error report</title><style><!--H1 {font-family:Tahoma,Arial,sans-serif;color:white;background-color:#525D76;font-size:22px;} H2 {font-family:Tahoma,Arial,sans-serif;color:white;background-color:#525D76;font-size:16px;} H3 {font-family:Tahoma,Arial,sans-serif;color:white;background-color:#525D76;font-size:14px;} BODY {font-family:Tahoma,Arial,sans-serif;color:black;background-color:white;} B {font-family:Tahoma,Arial,sans-serif;color:white;background-color:

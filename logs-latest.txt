@@ -1,0 +1,14 @@
+2026-01-03T12:10:13 INIT_START Runtime Version: python:3.11.v109	Runtime Version ARN: arn:aws:lambda:us-east-1::runtime:49f733259c7ce7e0deee75ff91c6afe35c7d58b04ed300f32701216263b4590c
+2026-01-03T12:10:14 START RequestId: 57677df5-39c2-43e4-ad14-c8158b5cc1c7 Version: $LATEST
+2026-01-03T12:10:14 ============================================================
+2026-01-03T12:10:14 BETTING WORKFLOW LAMBDA EXECUTION
+2026-01-03T12:10:14 Time: 2026-01-03T12:10:14.866438
+2026-01-03T12:10:14 ============================================================
+2026-01-03T12:10:14 === LEARNING LAYER ===
+2026-01-03T12:10:14 === 7-DAY PERFORMANCE ===
+2026-01-03T12:10:14 Bets: 40 | Wins: 0 (0.0%)
+2026-01-03T12:10:14 Staked: Ç0.00 | Returns: Ç0.00
+2026-01-03T12:10:14 Profit: Ç+0.00 | ROI: +0.0%
+2026-01-03T12:10:15 Error calculating bankroll: float() argument must be a string or a real number, not 'dict', using initial value
+2026-01-03T12:10:15 Fetching Betfair odds...
+2026-01-03T12:10:15 Authenticating with Betfair...

@@ -1,0 +1,15 @@
+
+'charmap' codec can't encode character '\u2713' in position 86: character maps to <undefined>
+2026-01-03T12:11:54.077000+00:00 2026/01/03/[$LATEST]eb03d9161f0341feaab97333d46fbfb7 START RequestId: 20a42399-54aa-49df-bde7-1e37f8d9e8e7 Version: $LATEST
+2026-01-03T12:11:54.078000+00:00 2026/01/03/[$LATEST]eb03d9161f0341feaab97333d46fbfb7 ============================================================
+2026-01-03T12:11:54.078000+00:00 2026/01/03/[$LATEST]eb03d9161f0341feaab97333d46fbfb7 BETTING WORKFLOW LAMBDA EXECUTION
+2026-01-03T12:11:54.078000+00:00 2026/01/03/[$LATEST]eb03d9161f0341feaab97333d46fbfb7 Time: 2026-01-03T12:11:54.078127
+2026-01-03T12:11:54.078000+00:00 2026/01/03/[$LATEST]eb03d9161f0341feaab97333d46fbfb7 ============================================================
+2026-01-03T12:11:54.078000+00:00 2026/01/03/[$LATEST]eb03d9161f0341feaab97333d46fbfb7 === LEARNING LAYER ===
+2026-01-03T12:11:54.149000+00:00 2026/01/03/[$LATEST]eb03d9161f0341feaab97333d46fbfb7 === 7-DAY PERFORMANCE ===
+2026-01-03T12:11:54.149000+00:00 2026/01/03/[$LATEST]eb03d9161f0341feaab97333d46fbfb7 Bets: 40 | Wins: 0 (0.0%)
+2026-01-03T12:11:54.149000+00:00 2026/01/03/[$LATEST]eb03d9161f0341feaab97333d46fbfb7 Staked: Ç0.00 | Returns: Ç0.00
+2026-01-03T12:11:54.149000+00:00 2026/01/03/[$LATEST]eb03d9161f0341feaab97333d46fbfb7 Profit: Ç+0.00 | ROI: +0.0%
+2026-01-03T12:11:54.208000+00:00 2026/01/03/[$LATEST]eb03d9161f0341feaab97333d46fbfb7 Error calculating bankroll: float() argument must be a string or a real number, not 'dict', using initial value
+2026-01-03T12:11:54.208000+00:00 2026/01/03/[$LATEST]eb03d9161f0341feaab97333d46fbfb7 Fetching Betfair odds...
+2026-01-03T12:11:54.208000+00:00 2026/01/03/[$LATEST]eb03d9161f0341feaab97333d46fbfb7 Authenticating with Betfair...

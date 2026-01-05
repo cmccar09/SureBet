@@ -33,11 +33,20 @@ def load_results(path: str) -> pd.DataFrame:
 def merge_selections_with_results(selections: pd.DataFrame, results: pd.DataFrame) -> pd.DataFrame:
     """Merge predictions with actual outcomes"""
     
-    # Ensure numeric types
-    selections["selection_id"] = pd.to_numeric(selections["selection_id"], errors="coerce")
-    results["selection_id"] = pd.to_numeric(results["selection_id"], errors="coerce")
+    # Ensure results DataFrame has required columns
+    if "selection_id" not in results.columns:
+        print("ERROR: Results DataFrame missing 'selection_id' column", file=sys.stderr)
+        print(f"Available columns: {results.columns.tolist()}", file=sys.stderr)
+        return selections
     
-    # Merge
+    # Ensure numeric types for merge
+    selections["selection_id"] = pd.to_numeric(selections["selection_id"], errors="coerce")
+    selections["market_id"] = selections["market_id"].astype(str)
+    
+    results["selection_id"] = pd.to_numeric(results["selection_id"], errors="coerce")
+    results["market_id"] = results["market_id"].astype(str)
+    
+    # Merge on both market_id and selection_id
     merged = selections.merge(
         results[["market_id", "selection_id", "is_winner", "is_placed"]],
         on=["market_id", "selection_id"],

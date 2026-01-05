@@ -17,12 +17,12 @@ key_file = os.path.join(script_dir, creds.get('key_file', 'betfair-client.key'))
 
 # Verify certificate files exist
 if not os.path.exists(cert_file):
-    print(f"❌ Certificate file not found: {cert_file}")
+    print(f"ERROR: Certificate file not found: {cert_file}")
     print(f"   Run: .\\generate_betfair_cert.ps1")
     exit(1)
 
 if not os.path.exists(key_file):
-    print(f"❌ Certificate key file not found: {key_file}")
+    print(f"ERROR: Certificate key file not found: {key_file}")
     print(f"   Run: .\\generate_betfair_cert.ps1")
     exit(1)
 
