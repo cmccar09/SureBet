@@ -1,6 +1,28 @@
 {
-  "generated_at": "2026-01-05T15:15:04.412623",
-  "sample_size": 0,
-  "message": "Insufficient data - need settled results from at least 5 days",
-  "prompt_guidance": "INSUFFICIENT DATA - Continue with standard analysis approach."
+  "generated_at": "2026-01-06T10:53:54.978345",
+  "sample_size": 33,
+  "date_range": "20251229 to 20260104",
+  "overall_stats": {
+    "total_bets": 33,
+    "wins": 7,
+    "win_rate": 0.21212121212121213,
+    "places": 7,
+    "place_rate": 0.21212121212121213,
+    "avg_p_win": 0.33681818181818185
+  },
+  "winning_patterns": [
+    {
+      "pattern": "BELOW_THRESHOLD",
+      "win_rate": "27.3%",
+      "expected": "28.0%",
+      "sample_size": 11,
+      "action": "KEEP - this strategy is working"
+    }
+  ],
+  "failing_patterns": [],
+  "recommendations": [
+    "CRITICAL: Win rate (21.2%) is significantly below predictions (33.7%). AI is overconfident. Consider increasing selectivity or adjusting probability estimates.",
+    "EW bets: 27 bets, 25.9% place rate"
+  ],
+  "prompt_guidance": "\nHISTORICAL PERFORMANCE INSIGHTS (Last 33 bets):\n\nWHAT'S WORKING:\n- BELOW_THRESHOLD: 27.3% win rate (expected 28.0%)\n\nRECOMMENDATIONS:\n- CRITICAL: Win rate (21.2%) is significantly below predictions (33.7%). AI is overconfident. Consider increasing selectivity or adjusting probability estimates.\n- EW bets: 27 bets, 25.9% place rate\n"
 }
