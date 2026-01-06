@@ -348,9 +348,46 @@ function App() {
               const profit = potentialWin - stake;
               const expectedProfit = expectedReturn - stake;
               
+              // Get decision rating styling
+              const decisionRating = pick.decision_rating || 'RISKY';
+              const decisionScore = pick.decision_score || 50;
+              
+              let decisionBg, decisionIcon, decisionText;
+              if (decisionRating === 'DO IT') {
+                decisionBg = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+                decisionIcon = '🟢';
+                decisionText = 'Strong Bet';
+              } else if (decisionRating === 'RISKY') {
+                decisionBg = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
+                decisionIcon = '🟠';
+                decisionText = 'Moderate Risk';
+              } else {
+                decisionBg = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+                decisionIcon = '🔴';
+                decisionText = 'Skip This';
+              }
+              
               return (
               <div key={pick.bet_id || index} className={`pick-card ${belowThreshold ? 'below-threshold' : ''}`}>
-                <div className="pick-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
+                {/* DECISION RATING - Top Prominent Display */}
+                <div style={{
+                  background: decisionBg,
+                  color: 'white',
+                  padding: '16px',
+                  borderRadius: '8px 8px 0 0',
+                  marginBottom: '16px',
+                  textAlign: 'center',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                }}>
+                  <div style={{fontSize: '18px', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '1px'}}>
+                    {decisionIcon} {decisionRating} - {decisionScore.toFixed(0)}/100
+                  </div>
+                  <div style={{fontSize: '13px', opacity: 0.95}}>
+                    {decisionText}
+                  </div>
+                </div>
+                
+                <div className="pick-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', padding: '0 16px'}}>
                   <h2 style={{margin: 0}}>{horseName}</h2>
                   <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
                     {getBetTypeBadge(pick.bet_type)}
@@ -370,59 +407,100 @@ function App() {
                   </div>
                 </div>
                 
-                <div className="pick-venue">
+                <div className="pick-venue" style={{padding: '0 16px'}}>
                   <span className="venue-icon">📍</span>
                   <span>{courseName}</span>
                   <span className="time">{formatTime(pick.race_time)} (Dublin)</span>
                 </div>
                 
-                {/* BET RECOMMENDATION BOX WITH COMBINED CONFIDENCE */}
-                <div className="bet-recommendation-box" style={{
+                {/* RECOMMENDED STAKE - Simplified */}
+                <div style={{
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   color: 'white',
                   padding: '16px',
                   borderRadius: '8px',
-                  marginTop: '12px',
+                  margin: '16px',
                   marginBottom: '12px'
                 }}>
-                  {/* Combined Confidence - Top Prominent Display */}
-                  {pick.combined_confidence && (
-                    <div style={{
-                      background: 'rgba(255, 255, 255, 0.15)',
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                    <div>
+                      <div style={{fontSize: '14px', opacity: 0.9, marginBottom: '4px'}}>
+                        💰 Recommended Stake
+                      </div>
+                      <div style={{fontSize: '28px', fontWeight: 'bold'}}>
+                        €{stake.toFixed(2)}
+                      </div>
+                      <div style={{fontSize: '12px', opacity: 0.85, marginTop: '4px'}}>
+                        {betType === 'EW' ? `€${(stake/2).toFixed(2)} Win + €${(stake/2).toFixed(2)} Place` : 'Win bet'}
+                      </div>
+                    </div>
+                    <div style={{textAlign: 'right'}}>
+                      <div style={{fontSize: '13px', opacity: 0.9, marginBottom: '4px'}}>
+                        If wins:
+                      </div>
+                      <div style={{fontSize: '20px', fontWeight: 'bold', color: '#a7f3d0'}}>
+                        +€{profit.toFixed(2)}
+                      </div>
+                      <div style={{fontSize: '12px', opacity: 0.85, marginTop: '4px'}}>
+                        EV: {expectedProfit > 0 ? '+' : ''}€{expectedProfit.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* KEY STATS - Compact */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '1fr 1fr 1fr',
+                  gap: '12px',
+                  padding: '0 16px',
+                  marginBottom: '16px'
+                }}>
+                  <div style={{textAlign: 'center'}}>
+                    <div style={{fontSize: '12px', color: '#6b7280', marginBottom: '4px'}}>Odds</div>
+                    <div style={{fontSize: '18px', fontWeight: 'bold'}}>{formatOdds(pick.odds)}</div>
+                  </div>
+                  <div style={{textAlign: 'center'}}>
+                    <div style={{fontSize: '12px', color: '#6b7280', marginBottom: '4px'}}>Win</div>
+                    <div style={{fontSize: '18px', fontWeight: 'bold'}}>{(parseFloat(pick.p_win || 0) * 100).toFixed(0)}%</div>
+                  </div>
+                  <div style={{textAlign: 'center'}}>
+                    <div style={{fontSize: '12px', color: '#6b7280', marginBottom: '4px'}}>Place</div>
+                    <div style={{fontSize: '18px', fontWeight: 'bold'}}>{(parseFloat(pick.p_place || 0) * 100).toFixed(0)}%</div>
+                  </div>
+                </div>
+                
+                {/* COMBINED CONFIDENCE - Collapsed by default, expandable */}
+                {pick.combined_confidence && (
+                  <details style={{margin: '0 16px', marginBottom: '16px'}}>
+                    <summary style={{
+                      cursor: 'pointer',
                       padding: '12px',
+                      background: '#f3f4f6',
                       borderRadius: '6px',
-                      marginBottom: '12px',
-                      border: '2px solid rgba(255, 255, 255, 0.3)'
+                      fontWeight: '600',
+                      fontSize: '14px',
+                      userSelect: 'none'
                     }}>
-                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px'}}>
-                        <span style={{fontSize: '14px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px'}}>
-                          🎯 Confidence Rating
-                        </span>
-                        <span style={{
-                          background: pick.confidence_color || 'gray',
-                          padding: '6px 12px',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          textTransform: 'uppercase',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-                        }}>
-                          {pick.confidence_grade || 'N/A'}
-                        </span>
-                      </div>
-                      <div style={{fontSize: '32px', fontWeight: 'bold', marginBottom: '4px'}}>
-                        {pick.combined_confidence.toFixed(1)}/100
-                      </div>
-                      <div style={{fontSize: '12px', opacity: 0.9, lineHeight: '1.4', marginBottom: '8px'}}>
+                      📊 Confidence Details: {pick.combined_confidence.toFixed(0)}/100 ({pick.confidence_grade || 'N/A'})
+                    </summary>
+                    <div style={{
+                      padding: '12px',
+                      background: '#f9fafb',
+                      borderRadius: '0 0 6px 6px',
+                      marginTop: '4px',
+                      fontSize: '13px'
+                    }}>
+                      <div style={{marginBottom: '8px'}}>
                         {pick.confidence_explanation || 'Multiple confidence signals consolidated'}
                       </div>
                       {pick.confidence_breakdown && (
                         <div style={{
-                          fontSize: '11px',
                           display: 'grid',
                           gridTemplateColumns: '1fr 1fr',
                           gap: '6px',
-                          opacity: 0.85
+                          fontSize: '12px',
+                          color: '#6b7280'
                         }}>
                           <div>Win: {pick.confidence_breakdown.win_component?.toFixed(1) || 0}</div>
                           <div>Place: {pick.confidence_breakdown.place_component?.toFixed(1) || 0}</div>
@@ -431,90 +509,24 @@ function App() {
                         </div>
                       )}
                     </div>
-                  )}
-                  
-                  {/* Stake Recommendation */}
-                  <div style={{fontSize: '14px', opacity: 0.9, marginBottom: '8px'}}>
-                    💰 Recommended Bet
-                  </div>
-                  <div style={{fontSize: '28px', fontWeight: 'bold', marginBottom: '8px'}}>
-                    €{stake.toFixed(2)}
-                  </div>
-                  <div style={{fontSize: '13px', opacity: 0.85, marginBottom: '12px'}}>
-                    {betType === 'EW' ? `€${(stake/2).toFixed(2)} Win + €${(stake/2).toFixed(2)} Place` : 'Win bet'}
-                  </div>
-                  <div style={{borderTop: '1px solid rgba(255,255,255,0.3)', paddingTop: '12px'}}>
-                    <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: '6px'}}>
-                      <span style={{fontSize: '13px', opacity: 0.9}}>If wins:</span>
-                      <span style={{fontSize: '16px', fontWeight: 'bold'}}>
-                        +€{profit.toFixed(2)}
-                      </span>
-                    </div>
-                    <div style={{display: 'flex', justifyContent: 'space-between'}}>
-                      <span style={{fontSize: '13px', opacity: 0.9}}>Expected value:</span>
-                      <span style={{fontSize: '16px', fontWeight: 'bold', color: expectedProfit > 0 ? '#a7f3d0' : '#fca5a5'}}>
-                        {expectedProfit > 0 ? '+' : ''}€{expectedProfit.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="pick-odds">
-                  <div className="odds-item">
-                    <span className="label">Odds:</span>
-                    <span className="value">{formatOdds(pick.odds)}</span>
-                  </div>
-                  <div className="odds-item">
-                    <span className="label">Win Prob:</span>
-                    <span className="value">{(parseFloat(pick.p_win || 0) * 100).toFixed(0)}%</span>
-                  </div>
-                  {pick.p_place && (
-                    <div className="odds-item">
-                      <span className="label">Place Prob:</span>
-                      <span className="value">{(parseFloat(pick.p_place) * 100).toFixed(0)}%</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* COMBINED CONFIDENCE RATING - Fallback for old picks */}
-                {!pick.combined_confidence && pick.confidence && (
-                  <div className="confidence-bar">
-                    <div 
-                      className="confidence-fill" 
-                      style={{
-                        width: `${pick.confidence}%`,
-                        background: getConfidenceColor(pick.confidence)
-                      }}
-                    />
-                    <span className="confidence-text">
-                      {Math.round(pick.confidence)}% confidence
-                    </span>
-                  </div>
+                  </details>
                 )}
 
                 {pick.why_now && (
-                  <div className="rationale">
+                  <div className="rationale" style={{margin: '0 16px', marginBottom: '16px'}}>
                     <strong>Why Now:</strong> {pick.why_now}
                   </div>
                 )}
 
-                {pick.expected_roi && (
-                  <div className="expected-roi" style={{marginTop: '8px'}}>
-                    Expected ROI: <span className={pick.expected_roi > 0 ? 'positive' : 'negative'}>
-                      {pick.expected_roi > 0 ? '+' : ''}{pick.expected_roi}%
-                    </span>
-                  </div>
-                )}
-
                 {pick.tags && pick.tags.length > 0 && (
-                  <div className="tags">
+                  <div className="tags" style={{margin: '0 16px', marginBottom: '16px'}}>
                     {(Array.isArray(pick.tags) ? pick.tags : pick.tags.split(',')).map((tag, i) => (
                       <span key={i} className="tag">{tag.trim()}</span>
                     ))}
                   </div>
                 )}
 
-                <div className="pick-footer">
+                <div className="pick-footer" style={{padding: '0 16px'}}>
                   <span className="timestamp">
                     {new Date(pick.timestamp).toLocaleString('en-GB')}
                   </span>
