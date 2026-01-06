@@ -421,6 +421,87 @@ def save_to_json_backup(bets: list[dict], output_path: str):
     
     print(f"[OK] Backup saved to: {output_path}")
 
+def filter_picks_per_race(bets: list) -> tuple:
+    """
+    Filter picks to enforce race-level rules:
+    - Maximum 2 picks per race
+    - If 2 picks for same race, one must be WIN and one must be EW
+    
+    Returns: (filtered_bets, removed_count)
+    """
+    from collections import defaultdict
+    
+    # Group bets by race
+    races = defaultdict(list)
+    for bet in bets:
+        # Create race key from course + race_time
+        race_key = f"{bet.get('course', 'Unknown')}_{bet.get('race_time', '')}"
+        races[race_key].append(bet)
+    
+    filtered_bets = []
+    removed_count = 0
+    
+    for race_key, race_bets in races.items():
+        if len(race_bets) <= 2:
+            # Check if we have 2 picks with same bet type
+            if len(race_bets) == 2:
+                bet_types = [bet.get('bet_type', 'WIN') for bet in race_bets]
+                
+                # If both are same type, keep only the higher decision_score one
+                if bet_types[0] == bet_types[1]:
+                    # Sort by decision_score descending
+                    sorted_bets = sorted(race_bets, key=lambda x: float(x.get('decision_score', 0)), reverse=True)
+                    filtered_bets.append(sorted_bets[0])
+                    removed_count += 1
+                    print(f"  REMOVED: {sorted_bets[1]['horse']} - duplicate {bet_types[0]} type (kept higher scoring pick)")
+                else:
+                    # Different types (WIN and EW) - keep both
+                    filtered_bets.extend(race_bets)
+            else:
+                # Only 1 pick for this race - keep it
+                filtered_bets.extend(race_bets)
+        else:
+            # More than 2 picks for this race
+            # Sort by decision_score and keep top 2
+            sorted_bets = sorted(race_bets, key=lambda x: float(x.get('decision_score', 0)), reverse=True)
+            
+            # Check if top 2 have different bet types
+            top_two = sorted_bets[:2]
+            bet_types = [bet.get('bet_type', 'WIN') for bet in top_two]
+            
+            if bet_types[0] != bet_types[1]:
+                # Different types - perfect, keep both
+                filtered_bets.extend(top_two)
+                removed_count += len(sorted_bets) - 2
+                for removed_bet in sorted_bets[2:]:
+                    print(f"  REMOVED: {removed_bet['horse']} - exceeded 2 picks per race limit")
+            else:
+                # Both same type - need to find one with different type
+                kept_bets = [top_two[0]]  # Keep highest scoring
+                
+                # Look for best pick with different type
+                different_type_bet = None
+                for bet in sorted_bets[1:]:
+                    if bet.get('bet_type', 'WIN') != bet_types[0]:
+                        different_type_bet = bet
+                        break
+                
+                if different_type_bet:
+                    kept_bets.append(different_type_bet)
+                    print(f"  KEPT: {kept_bets[0]['horse']} ({bet_types[0]}) + {different_type_bet['horse']} ({different_type_bet.get('bet_type')})")
+                else:
+                    # No different type available, just keep the top one
+                    print(f"  KEPT: Only {kept_bets[0]['horse']} ({bet_types[0]}) - no different bet type available")
+                
+                filtered_bets.extend(kept_bets)
+                removed_count += len(sorted_bets) - len(kept_bets)
+                
+                for removed_bet in sorted_bets:
+                    if removed_bet not in kept_bets:
+                        print(f"  REMOVED: {removed_bet['horse']} - race limit + bet type rules")
+    
+    return filtered_bets, removed_count
+
 def main():
     parser = argparse.ArgumentParser(description="Save selections to DynamoDB SureBetBets table")
     parser.add_argument("--selections", type=str, required=True, help="Path to selections CSV")
@@ -471,6 +552,12 @@ def main():
             print(f"WARNING: Failed to format row {idx}: {e}")
     
     print(f"\nFormatted {len(bets)} bet items (filtered out {filtered_out} low ROI bets)")
+    
+    # Apply race-level filtering rules
+    print(f"\nApplying race-level filtering (max 2 picks/race, mixed types)...")
+    bets, race_filtered = filter_picks_per_race(bets)
+    print(f"Removed {race_filtered} picks due to race-level rules")
+    print(f"Final pick count: {len(bets)} bets")
     
     # Save to DynamoDB
     if not args.dry_run:
