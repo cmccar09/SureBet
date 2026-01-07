@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// Use API Gateway (no caching issues)
+// Use Lambda Function URL in eu-west-1
 const API_BASE_URL = process.env.REACT_APP_API_URL || 
-                     'https://7tdrotq8dl.execute-api.us-east-1.amazonaws.com/prod';
+                     'https://lq7f6d45qygsvjqaej3w2xdlbu0cibvk.lambda-url.eu-west-1.on.aws';
 
 function App() {
   const [picks, setPicks] = useState([]);
