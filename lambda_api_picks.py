@@ -49,12 +49,12 @@ def lambda_handler(event, context):
     print(f"Path check - 'workflow/run' in path: {'workflow/run' in path}")
     
     try:
-        # Route requests - handle both /api/picks and /picks
-        if 'picks/today' in path or path.endswith('/today'):
-            return get_today_picks(headers)
-        elif 'results/today' in path or path.endswith('/results'):
+        # Route requests - check more specific paths first
+        if 'results/today' in path:
             return check_today_results(headers)
-        elif 'workflow/run' in path or 'workflow' in path or path.endswith('/run'):
+        elif 'picks/today' in path:
+            return get_today_picks(headers)
+        elif 'workflow/run' in path or 'workflow' in path:
             return trigger_workflow(headers)
         elif 'picks' in path:
             return get_all_picks(headers)
@@ -119,7 +119,7 @@ def get_all_picks(headers):
     }
 
 def get_today_picks(headers):
-    """Get today's picks only"""
+    """Get today's picks only - filter to show only upcoming races"""
     today = datetime.now().strftime('%Y-%m-%d')
     
     response = table.scan(
@@ -130,15 +130,39 @@ def get_today_picks(headers):
     
     items = response.get('Items', [])
     items = [decimal_to_float(item) for item in items]
-    items.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+    
+    # Filter out races that have already started
+    now = datetime.utcnow()
+    future_picks = []
+    
+    for item in items:
+        race_time_str = item.get('race_time', '')
+        if race_time_str:
+            try:
+                # Parse race time (ISO format)
+                race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
+                # Only include if race is in the future
+                if race_time.replace(tzinfo=None) > now:
+                    future_picks.append(item)
+            except Exception as e:
+                print(f"Error parsing race time {race_time_str}: {e}")
+                # Include if we can't parse (safer than excluding)
+                future_picks.append(item)
+        else:
+            # Include if no race time (safer than excluding)
+            future_picks.append(item)
+    
+    future_picks.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+    
+    print(f"Total picks: {len(items)}, Future picks: {len(future_picks)}")
     
     return {
         'statusCode': 200,
         'headers': headers,
         'body': json.dumps({
             'success': True,
-            'picks': items,
-            'count': len(items),
+            'picks': future_picks,
+            'count': len(future_picks),
             'date': today
         })
     }
@@ -156,65 +180,73 @@ def get_health(headers):
     }
 
 def check_today_results(headers):
-    """Check results for today's picks by fetching from Betfair"""
-    import requests
-    import os
-    
+    """Check results for today's picks - ONLY MODERATE RISK or better (tracked performance)"""
     today = datetime.now().strftime('%Y-%m-%d')
     
-    # Get today's picks
+    # Get today's picks that are tracked for performance
     response = table.scan(
-        FilterExpression='#d = :today',
+        FilterExpression='#d = :today AND track_performance = :track',
         ExpressionAttributeNames={'#d': 'date'},
-        ExpressionAttributeValues={':today': today}
+        ExpressionAttributeValues={':today': today, ':track': True}
     )
     
     picks = response.get('Items', [])
     picks = [decimal_to_float(item) for item in picks]
     
     # Debug logging
-    print(f"Total picks retrieved: {len(picks)}")
+    print(f"Total TRACKED picks retrieved: {len(picks)} (MODERATE RISK or better)")
     print(f"Sample ROIs: {[float(p.get('roi', 0)) for p in picks[:5]]}")
     
-    # Filter for positive ROI picks only
-    positive_roi_picks = [pick for pick in picks if float(pick.get('roi', 0)) > 0]
-    
-    print(f"Positive ROI picks: {len(positive_roi_picks)}")
-    print(f"BEFORE filter - picks variable length: {len(picks)}")
-    
-    if not positive_roi_picks:
-        print("NO POSITIVE ROI PICKS - returning empty")
+    if not picks:
+        print("NO TRACKED PICKS - returning empty")
         return {
             'statusCode': 200,
             'headers': headers,
             'body': json.dumps({
                 'success': True,
-                'message': f'No positive ROI picks for today (checked {len(picks)} total picks)',
+                'message': f'No tracked picks for today (only MODERATE RISK or better)',
                 'picks': [],
                 'results': [],
-                'total_picks_today': len(picks)
+                'total_picks_today': 0
             })
         }
     
-    # Use only positive ROI picks for results checking
+    # Use only tracked picks for results checking
     picks = positive_roi_picks
     print(f"AFTER filter - picks variable length: {len(picks)}")
     print(f"Proceeding with {len(picks)} positive ROI picks")
     
     # Load Betfair credentials from environment or Secrets Manager
+    import os
     session_token = os.environ.get('BETFAIR_SESSION_TOKEN', '')
     app_key = os.environ.get('BETFAIR_APP_KEY', '')
     
     if not session_token or not app_key:
+        # Return picks with summary showing all as pending (only tracked picks)
+        summary = {
+            'total_picks': len(picks),
+            'tracked_only': True,
+            'note': 'Only MODERATE RISK or better selections',
+            'wins': 0,
+            'places': 0,
+            'losses': 0,
+            'pending': len(picks),
+            'total_stake': round(sum([float(p.get('stake', 2.0)) for p in picks]), 2),
+            'total_return': 0.0,
+            'profit': 0.0,
+            'roi': 0.0,
+            'strike_rate': 0.0
+        }
         return {
             'statusCode': 200,
             'headers': headers,
             'body': json.dumps({
                 'success': True,
-                'message': 'Betfair credentials not configured - results unavailable',
+                'message': 'Betfair credentials not configured - showing pending picks',
+                'date': today,
+                'summary': summary,
                 'picks': picks,
-                'results': [],
-                'error': 'Configure BETFAIR_SESSION_TOKEN and BETFAIR_APP_KEY environment variables'
+                'note': 'Configure BETFAIR_SESSION_TOKEN and BETFAIR_APP_KEY to fetch live results'
             })
         }
     
@@ -230,6 +262,36 @@ def check_today_results(headers):
                 'message': 'No market IDs found in picks',
                 'picks': picks,
                 'results': []
+            })
+        }
+    
+    # Import requests only if we need it
+    try:
+        import requests
+    except ImportError:
+        # Return summary without live results if requests is not available
+        summary = {
+            'total_picks': len(picks),
+            'wins': 0,
+            'places': 0,
+            'losses': 0,
+            'pending': len(picks),
+            'total_stake': round(sum([float(p.get('stake', 2.0)) for p in picks]), 2),
+            'total_return': 0.0,
+            'profit': 0.0,
+            'roi': 0.0,
+            'strike_rate': 0.0
+        }
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'message': 'Results library not available - showing pending picks',
+                'date': today,
+                'summary': summary,
+                'picks': picks,
+                'note': 'Install requests library in Lambda layer to fetch live results'
             })
         }
     

@@ -1,517 +1,589 @@
-#!/usr/bin/env python3
-"""
-Lambda handler for scheduled betting workflow
-Runs every 2 hours to fetch odds, generate picks, and store in DynamoDB
-Includes learning layer and bankroll management
-"""
+# SureBet Lambda: fetch odds, call Claude 4.5, store bets in DynamoDB
 
 import os
 import json
 import boto3
+import datetime
 import requests
-from datetime import datetime, timedelta
-from decimal import Decimal
 
-# Initialize AWS clients
-dynamodb = boto3.resource('dynamodb')
-bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
-secretsmanager = boto3.client('secretsmanager', region_name='eu-west-1')
-
-# Import learning layer functions
+# Import automated betting modules
 try:
-    from lambda_learning_layer import (
-        calculate_bet_stake,
-        get_current_bankroll,
-        analyze_recent_performance,
-        adjust_selection_confidence
-    )
-    LEARNING_ENABLED = True
-except ImportError:
-    print("Learning layer not available - stakes will use default values")
-    LEARNING_ENABLED = False
+    from betfair_odds_fetcher import get_live_betfair_races
+    from betfair_cert_auth import authenticate_with_certificate, get_betfair_cert_from_secrets
+    BETTING_MODULES_AVAILABLE = True
+except ImportError as e:
+    print(f"Betting modules not available: {e}")
+    BETTING_MODULES_AVAILABLE = False
 
-def get_betfair_certificates():
-    """Retrieve Betfair SSL certificates from Secrets Manager"""
+# Learning data
+def get_latest_performance():
+    """Get latest learning insights to adjust strategy"""
     try:
-        response = secretsmanager.get_secret_value(SecretId='betfair-ssl-certificate')
-        secret = json.loads(response['SecretString'])
+        learning_table_name = os.environ.get('LEARNING_TABLE', 'BettingPerformance')
+        dynamodb = boto3.resource('dynamodb')
+        table = dynamodb.Table(learning_table_name)
         
-        # Write to /tmp (Lambda's writable directory)
-        cert_path = '/tmp/betfair-client.crt'
-        key_path = '/tmp/betfair-client.key'
+        response = table.query(
+            KeyConditionExpression='period = :period',
+            ExpressionAttributeValues={':period': 'last_7_days'},
+            ScanIndexForward=False,
+            Limit=1
+        )
         
-        with open(cert_path, 'w') as f:
-            f.write(secret['certificate'])
-        
-        with open(key_path, 'w') as f:
-            f.write(secret['private_key'])
-        
-        print("✓ SSL certificates loaded from Secrets Manager")
-        return cert_path, key_path
-        
-    except secretsmanager.exceptions.ResourceNotFoundException:
-        print("WARNING: SSL certificates not found in Secrets Manager")
-        print("Please upload certificates: aws secretsmanager create-secret --name betfair-ssl-certificate")
-        return None, None
+        items = response.get('Items', [])
+        if items:
+            item = items[0]
+            insights_data = json.loads(item.get('insights', '{}'))
+            analysis_data = json.loads(item.get('analysis', '{}'))
+            return {
+                'roi': float(item.get('overall_roi', 0)),
+                'win_rate': float(item.get('overall_win_rate', 0)),
+                'insights': insights_data,
+                'analysis': analysis_data,
+                'loss_patterns': insights_data.get('loss_patterns', []),
+                'recommendations': insights_data.get('recommendations', [])
+            }
     except Exception as e:
-        print(f"Error loading certificates: {e}")
-        return None, None
+        print(f"Could not fetch learning data: {e}")
+    
+    return None
 
-def convert_floats(obj):
-    """Convert floats to Decimal for DynamoDB"""
-    if isinstance(obj, float):
-        return Decimal(str(obj))
-    elif isinstance(obj, dict):
-        return {k: convert_floats(v) for k, v in obj.items()}
-    elif isinstance(obj, list):
-        return [convert_floats(i) for i in obj]
-    return obj
-
+# --- Free Odds API integration ---
 def fetch_betfair_odds():
-    """Fetch live horse racing odds from Betfair"""
-    print("Fetching Betfair odds...")
-    
-    # Load credentials from environment
-    creds = {
-        'username': os.environ.get('BETFAIR_USERNAME'),
-        'password': os.environ.get('BETFAIR_PASSWORD'),
-        'app_key': os.environ.get('BETFAIR_APP_KEY'),
-        'session_token': os.environ.get('BETFAIR_SESSION_TOKEN', '')
-    }
-    
-    if not all([creds['username'], creds['password'], creds['app_key']]):
-        raise Exception("ERROR: Betfair credentials not configured in Lambda environment variables")
-    
-    # Try to refresh session token if needed
-    if not creds['session_token']:
-        print("Authenticating with Betfair...")
-        session_token = refresh_betfair_session(creds)
-        if session_token:
-            creds['session_token'] = session_token
-        else:
-            raise Exception("ERROR: Betfair authentication failed. Check credentials and SSL certificates in Secrets Manager.")
-    
-    # Fetch live markets
-    try:
-        url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketCatalogue/"
-        headers = {
-            "X-Application": creds['app_key'],
-            "X-Authentication": creds['session_token'],
-            "Content-Type": "application/json"
-        }
-        
-        now = datetime.utcnow()
-        to_time = now + timedelta(hours=24)
-        
-        payload = {
-            "filter": {
-                "eventTypeIds": ["7"],  # Horse Racing
-                "marketCountries": ["GB", "IE"],
-                "marketTypeCodes": ["WIN"],
-                "marketStartTime": {
-                    "from": now.isoformat() + "Z",
-                    "to": to_time.isoformat() + "Z"
-                }
-            },
-            "maxResults": 50,
-            "marketProjection": ["RUNNER_DESCRIPTION", "EVENT", "MARKET_START_TIME"]
-        }
-        
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
-        
-        if response.status_code == 200:
-            markets = response.json()
+    """
+    Fetch live horse racing odds using Betfair certificate authentication
+    Filters races to optimal betting window (15 mins - 24 hours)
+    """
+    # Try Betfair API with certificate authentication
+    if BETTING_MODULES_AVAILABLE:
+        try:
+            print("Fetching live Betfair odds using certificate authentication...")
             
-            # Get odds for each market
-            races = []
-            for market in markets[:10]:  # Limit to 10 races
-                market_id = market['marketId']
-                
-                # Fetch odds
-                odds_url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketBook/"
-                odds_payload = {
-                    "marketIds": [market_id],
-                    "priceProjection": {"priceData": ["EX_BEST_OFFERS"]}
-                }
-                
-                odds_response = requests.post(odds_url, headers=headers, json=odds_payload, timeout=30)
-                
-                if odds_response.status_code == 200:
-                    odds_data = odds_response.json()
-                    if odds_data and len(odds_data) > 0:
-                        market_book = odds_data[0]
-                        
-                        runners = []
-                        for i, runner_catalog in enumerate(market.get('runners', [])):
-                            runner_id = runner_catalog['selectionId']
-                            
-                            # Find matching runner in market book
-                            runner_book = next((r for r in market_book.get('runners', []) if r['selectionId'] == runner_id), None)
-                            
-                            if runner_book and runner_book.get('status') == 'ACTIVE':
-                                best_odds = runner_book.get('ex', {}).get('availableToBack', [])
-                                odds = best_odds[0]['price'] if best_odds else 0
-                                
-                                runners.append({
-                                    "name": runner_catalog.get('runnerName', f'Runner {i+1}'),
-                                    "selection_id": str(runner_id),
-                                    "odds": odds
-                                })
-                        
-                        races.append({
-                            "market_id": market_id,
-                            "market_name": market.get('marketName', 'Unknown'),
-                            "venue": market.get('event', {}).get('venue', 'Unknown'),
-                            "race_time": market.get('marketStartTime'),
-                            "runners": runners
-                        })
+            # Get credentials from environment
+            username = os.environ.get('BETFAIR_USERNAME')
+            password = os.environ.get('BETFAIR_PASSWORD')
+            app_key = os.environ.get('BETFAIR_APP_KEY')
             
-            print(f"Fetched {len(races)} races from Betfair")
-            return races
-        else:
-            raise Exception(f"Betfair API error {response.status_code}: {response.text}")
+            if not all([username, password, app_key]):
+                print("ERROR: Missing Betfair credentials in environment variables")
+                print(f"BETFAIR_USERNAME: {'✓' if username else '✗'}")
+                print(f"BETFAIR_PASSWORD: {'✓' if password else '✗'}")
+                print(f"BETFAIR_APP_KEY: {'✓' if app_key else '✗'}")
+                return []
             
-    except requests.exceptions.RequestException as e:
-        raise Exception(f"Network error connecting to Betfair: {e}")
-    except Exception as e:
-        raise Exception(f"Error fetching Betfair data: {e}")
-
-def refresh_betfair_session(creds):
-    """Refresh Betfair session token using SSL certificate authentication"""
-    try:
-        # Get SSL certificates
-        cert_path, key_path = get_betfair_certificates()
-        
-        if cert_path and key_path:
-            # Certificate-based authentication (NO username/password needed)
-            url = "https://identitysso-cert.betfair.com/api/certlogin"
-            print("Using certificate-based authentication")
+            # Authenticate and fetch races
+            session_token = authenticate_with_certificate(username, password, app_key)
+            if not session_token:
+                print("ERROR: Betfair authentication failed")
+                return []
             
-            headers = {
-                'X-Application': creds['app_key'],
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
+            # Store session token in environment for betfair_odds_fetcher
+            os.environ['BETFAIR_SESSION_TOKEN'] = session_token
             
-            # Certificate auth - no username/password in body
-            data = {
-                'username': creds['username']  # Only username required with cert
-            }
-            
-            response = requests.post(
-                url, 
-                headers=headers, 
-                data=data, 
-                cert=(cert_path, key_path),
-                timeout=30
-            )
-        else:
-            # No certificates - use standard auth (will fail from Lambda)
-            url = "https://identitysso.betfair.com/api/login"
-            print("WARNING: No certificates - using standard authentication")
-            
-            headers = {
-                'X-Application': creds['app_key'],
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
-            data = {
-                'username': creds['username'],
-                'password': creds['password']
-            }
-            
-            response = requests.post(
-                url,
-                headers=headers,
-                data=data,
-                timeout=30
-            )
-                'Content-Type': 'application/x-www-form-urlencoded'
-            }
-            data = {
-                'username': creds['username'],
-                'password': creds['password']
-            }
-            
-            response = requests.post(
-                url,
-                headers=headers,
-                data=data,
-                timeout=30
-            )
-        
-        if response.status_code == 200:
-            result = response.json()
-            
-            # Handle both response formats
-            if result.get('loginStatus') == 'SUCCESS':
-                token = result.get('sessionToken')
-            elif result.get('status') == 'SUCCESS':
-                token = result.get('token') or result.get('sessionToken')
+            races = get_live_betfair_races()
+            if races:
+                print(f"✓ Successfully fetched {len(races)} real Betfair races")
+                return races
             else:
-                token = None
-            
-            if token:
-                print(f"✓ Betfair authentication successful")
-                return token
-        
-        print(f"❌ Betfair authentication failed: HTTP {response.status_code}")
-        print(f"   Response: {response.text[:200]}")
-        return None
-        
-    except Exception as e:
-        print(f"❌ Error during Betfair authentication: {e}")
-        return None
-
-# Mock data removed - system will only use real Betfair data
-# If authentication fails, Lambda will error (not silently use fake data)
-
-def load_prompt():
-    """Load betting strategy prompt"""
-    # Try to load from file, fallback to default
-    try:
-        with open('prompt.txt', 'r') as f:
-            return f.read()
-    except:
-        return """You are an expert horse racing analyst. Analyze the provided races and return your top 5 betting opportunities.
-
-For each selection provide:
-- horse: runner name
-- course: venue
-- race_time: start time
-- odds: decimal odds
-- bet_type: 'WIN' or 'EW' (each-way)
-- p_win: win probability (0-1 decimal)
-- p_place: place probability for EW bets (0-1 decimal)
-- ew_places: number of places paid for EW (typically 3-4)
-- ew_fraction: place fraction for EW (typically 0.2 or 0.25)
-- roi: expected return on investment as decimal (e.g., 0.15 for 15%)
-- ev: expected value as decimal
-- confidence: confidence score 0-100
-- why_now: brief explanation
-- tags: array of relevant tags
-
-Return a JSON array with exactly 5 selections."""
-
-def call_claude_bedrock(prompt_text, race_data):
-    """Call Claude via AWS Bedrock"""
-    print("Calling Claude via Bedrock...")
+                print("WARNING: No races found in betting window")
+                return []
+        except Exception as e:
+            print(f"ERROR: Betfair fetch failed: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
     
-    # Format race data
-    races_text = ""
-    for i, race in enumerate(race_data, 1):
-        races_text += f"\nRace {i}: {race['market_name']} at {race['venue']}\n"
-        races_text += f"Start Time: {race['race_time']}\n"
-        races_text += f"Market ID: {race['market_id']}\n"
-        races_text += "Runners:\n"
-        for runner in race['runners']:
-            races_text += f"  - {runner['name']}: {runner['odds']} (ID: {runner['selection_id']})\n"
-    
-    full_prompt = f"{prompt_text}\n\nRACE DATA:\n{races_text}\n\nReturn exactly 5 selections as JSON array."
-    
-    try:
-        # Use Claude Sonnet 4 via Bedrock
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "max_tokens": 4000,
-            "messages": [{"role": "user", "content": full_prompt}]
+    # No mock data fallback - return empty if Betfair fails
+    print("ERROR: Betting modules not available - cannot fetch races")
+    return []
+
+    # List UK/IRE horse racing markets in next 24 hours
+    now = datetime.datetime.utcnow()
+    to_time = now + datetime.timedelta(hours=24)
+    market_filter = {
+        "filter": {
+            "eventTypeIds": ["7"],  # Horse Racing
+            "marketCountries": ["GB", "IE"],
+            "marketTypeCodes": ["WIN"],
+            "marketStartTime": {
+                "from": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "to": to_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+            }
+        },
+        "maxResults": "100",
+        "marketProjection": ["RUNNER_METADATA", "MARKET_START_TIME", "EVENT"]
+    }
+    headers = {
+        "X-Application": BETFAIR_APP_KEY,
+        "X-Authentication": BETFAIR_SESSION,
+        "Content-Type": "application/json"
+    }
+    url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketCatalogue/"
+    resp = requests.post(url, headers=headers, data=json.dumps(market_filter))
+    if resp.status_code != 200:
+        raise Exception(f"Betfair API error: {resp.status_code} {resp.text}")
+    markets = resp.json()
+    # For each market, get odds (listMarketBook)
+    market_ids = [m["marketId"] for m in markets]
+    if not market_ids:
+        return []
+    book_req = {
+        "marketIds": market_ids,
+        "priceProjection": {"priceData": ["EX_BEST_OFFERS"]}
+    }
+    book_url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketBook/"
+    book_resp = requests.post(book_url, headers=headers, data=json.dumps(book_req))
+    if book_resp.status_code != 200:
+        raise Exception(f"Betfair API error: {book_resp.status_code} {book_resp.text}")
+    books = {b["marketId"]: b for b in book_resp.json()}
+    # Structure output
+    races = []
+    for m in markets:
+        market_id = m["marketId"]
+        event = m.get("event", {})
+        course = event.get("venue", "")
+        race_time = m.get("marketStartTime", "")
+        runners = []
+        book = books.get(market_id, {})
+        for r in m.get("runners", []):
+            sel_id = r["selectionId"]
+            name = r["runnerName"]
+            # Find best back price
+            best_back = None
+            if book and "runners" in book:
+                for br in book["runners"]:
+                    if br["selectionId"] == sel_id:
+                        offers = br.get("ex", {}).get("availableToBack", [])
+                        if offers:
+                            best_back = offers[0]["price"]
+                        break
+            runners.append({"name": name, "selectionId": sel_id, "odds": best_back})
+        races.append({
+            "market_id": market_id,
+            "race_time": race_time,
+            "course": course,
+            "runners": runners
         })
+    return races
+
+def call_claude_4_5(prompt, races, performance_data=None):
+    """
+    Calls AWS Bedrock Claude Sonnet 4.5 to select value bets from races/odds.
+    Uses boto3 with your AWS credentials (no API key needed).
+    Incorporates learning insights if available.
+    """
+    import json
+    bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
+    
+    # Build context string for prompt
+    context_str = "\n".join([
+        f"Race: {r['race_time']} {r['course']}\n" +
+        "\n".join([f"  {runner['name']} (odds: {runner['odds']})" for runner in r['runners']])
+        for r in races
+    ])
+    
+    # Add performance insights if available with ACTIONABLE ADJUSTMENTS
+    learning_context = ""
+    confidence_adjustment = 0  # Will reduce if overconfident
+    roi_threshold_adjustment = 0  # Will increase if too many losses
+    
+    if performance_data:
+        insights = performance_data.get('insights', {})
+        loss_patterns = performance_data.get('loss_patterns', [])
+        recommendations = performance_data.get('recommendations', [])
+        roi = performance_data.get('roi', 0)
         
+        learning_context = f"\n\n=== LEARNING FROM RECENT PERFORMANCE ===\n"
+        learning_context += f"Last 7 days ROI: {roi:.1f}%\n"
+        
+        # Critical loss patterns (teach Claude what went wrong)
+        if loss_patterns:
+            learning_context += "\n🔴 LOSS PATTERNS DETECTED (Learn from these mistakes):\n"
+            for pattern in loss_patterns:
+                learning_context += f"  • {pattern}\n"
+        
+        if insights.get('strengths'):
+            learning_context += "\n✅ What's working (double down on these):\n"
+            for strength in insights['strengths']:
+                learning_context += f"  ✓ {strength}\n"
+        
+        if insights.get('weaknesses'):
+            learning_context += "\n⚠️ What's failing (avoid these patterns):\n"
+            for weakness in insights['weaknesses']:
+                learning_context += f"  ⚠ {weakness}\n"
+        
+        if recommendations:
+            learning_context += "\n🎯 APPLY THESE CHANGES NOW:\n"
+            for rec in recommendations:
+                learning_context += f"  → {rec}\n"
+                
+                # Auto-adjust based on recommendations
+                if 'Reduce ALL confidence' in rec or 'overconfident' in rec:
+                    confidence_adjustment = -15  # Reduce confidence by 15%
+                elif 'Reduce confidence on favorites' in rec:
+                    learning_context += "     (For odds <3.0, reduce confidence by 20%)\n"
+                
+                if 'require 20%+ ROI' in rec or 'Tighten' in rec:
+                    roi_threshold_adjustment = 5  # Increase ROI requirement by 5%
+        
+        learning_context += f"\n💡 CALIBRATION ADJUSTMENTS THIS RUN:\n"
+        if confidence_adjustment != 0:
+            learning_context += f"  • All confidence scores adjusted by {confidence_adjustment:+d}%\n"
+        if roi_threshold_adjustment != 0:
+            learning_context += f"  • ROI threshold increased by {roi_threshold_adjustment:+d}%\n"
+        
+        learning_context += "\nUse these lessons to make BETTER selections than last time.\n"
+    
+    full_prompt = prompt + learning_context + "\n\n" + context_str + "\n\nReturn a JSON array of bet objects."
+    
+    # Prepare request for Claude 3.5 Sonnet via Bedrock
+    body = json.dumps({
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 2048,
+        "temperature": 0.2,
+        "system": "You are a meticulous racing quant generating calibrated per-runner probabilities. Learn from past performance to improve selections. Always return valid JSON array.",
+        "messages": [
+            {
+                "role": "user",
+                "content": full_prompt
+            }
+        ]
+    })
+    
+    try:
         response = bedrock.invoke_model(
-            modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
+            modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',  # Claude 3.5 Sonnet
             body=body
         )
         
         response_body = json.loads(response['body'].read())
         content = response_body['content'][0]['text']
         
-        # Extract JSON from response
-        start = content.find('[')
-        end = content.rfind(']') + 1
-        if start >= 0 and end > start:
-            selections = json.loads(content[start:end])
-            print(f"Claude returned {len(selections)} selections")
-            return selections
-        else:
-            print("No valid JSON found in response")
-            return []
-            
+        # Parse Claude's response - handle text before JSON
+        try:
+            # Try direct parsing first
+            bets = json.loads(content)
+            if not isinstance(bets, list):
+                bets = [bets]
+        except Exception as e:
+            # Claude may have added explanation text - extract JSON array
+            print(f"Initial parse failed, extracting JSON from text: {e}")
+            try:
+                # Find JSON array in content
+                start = content.find('[')
+                end = content.rfind(']') + 1
+                if start >= 0 and end > start:
+                    json_str = content[start:end]
+                    bets = json.loads(json_str)
+                    print(f"Extracted JSON successfully: {len(bets)} bets")
+                else:
+                    print(f"No JSON array found in content")
+                    bets = []
+            except Exception as e2:
+                print(f"Failed to extract JSON: {e2}")
+                print(f"Raw content: {content}")
+                bets = []
+        
+        return bets
+        
     except Exception as e:
-        print(f"Error calling Bedrock: {e}")
-        return []
+        print(f"Bedrock API error: {str(e)}")
+        raise Exception(f"Bedrock API error: {str(e)}")
 
-def store_picks_in_dynamodb(picks, metadata=None):
-    """Store picks in DynamoDB"""
+def store_bets_in_dynamodb(bets, prompt, model_response, races=None):
+    from decimal import Decimal
+    
+    def convert_floats(obj):
+        """Convert float values to Decimal for DynamoDB"""
+        if isinstance(obj, float):
+            return Decimal(str(obj))
+        elif isinstance(obj, dict):
+            return {k: convert_floats(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [convert_floats(item) for item in obj]
+        return obj
+    
     table_name = os.environ.get("SUREBET_DDB_TABLE", "SureBetBets")
+    dynamodb = boto3.resource("dynamodb")
     table = dynamodb.Table(table_name)
     
-    print(f"Storing {len(picks)} picks in DynamoDB...")
+    # Delete old picks from today to prevent accumulation
+    today = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+    try:
+        print(f"Cleaning up old picks from {today}...")
+        response = table.query(
+            KeyConditionExpression='bet_date = :date',
+            ExpressionAttributeValues={':date': today}
+        )
+        old_items = response.get('Items', [])
+        for item in old_items:
+            table.delete_item(Key={'bet_date': item['bet_date'], 'bet_id': item['bet_id']})
+        print(f"Deleted {len(old_items)} old picks")
+    except Exception as e:
+        print(f"Error cleaning old picks: {e}")
     
-    timestamp = datetime.utcnow().isoformat()
-    date_str = datetime.utcnow().strftime("%Y-%m-%d")
+    # Build lookup for market_id by course
+    market_id_lookup = {}
+    if races:
+        for race in races:
+            course = race.get('course', '')
+            market_id = race.get('market_id', '')
+            if course and market_id:
+                market_id_lookup[course] = market_id
     
-    for pick in picks:
-        # Create unique bet ID
-        bet_id = f"{pick.get('race_time','')}_{pick.get('horse','')}"
+    for bet in bets:
+        # Normalize field names (handle both old and new formats from Claude)
+        horse = bet.get("horse") or bet.get("selection") or "Unknown"
+        course = bet.get("course") or bet.get("venue") or "Unknown"
+        race_time = bet.get("race_time") or bet.get("event_time") or ""
+        
+        bet_id = f"{race_time}_{horse}".replace(" ", "_").replace(":", "")
+        if not bet_id or bet_id == "__":
+            timestamp_slug = datetime.datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            bet_id = f"bet_{timestamp_slug}_{bet.get('selection_id', '')}"
+        
+        # Calculate decision metrics
+        p_win = float(bet.get("p_win", 0))
+        p_place = float(bet.get("p_place", p_win * 2.5))
+        odds = float(bet.get("odds", 0))
+        confidence = float(bet.get("confidence", 50))
+        roi = float(bet.get("roi", bet.get("ev", 0)))
+        bet_type = bet.get("bet_type", "WIN")
+        
+        # Combined Confidence (0-100) - weighted combination of all signals
+        edge_component = min(20, (roi / 50) * 20) if roi > 0 else 0  # 0-20 points
+        win_component = min(40, p_win * 40)  # 0-40 points
+        place_component = min(20, p_place * 20)  # 0-20 points
+        consistency_component = min(20, (confidence / 100) * 20)  # 0-20 points
+        
+        combined_confidence = round(edge_component + win_component + place_component + consistency_component, 1)
+        
+        # Confidence Grade
+        if combined_confidence >= 75:
+            conf_grade = "VERY HIGH"
+            conf_color = "darkgreen"
+        elif combined_confidence >= 60:
+            conf_grade = "HIGH"
+            conf_color = "green"
+        elif combined_confidence >= 45:
+            conf_grade = "MODERATE"
+            conf_color = "orange"
+        else:
+            conf_grade = "LOW"
+            conf_color = "red"
+        
+        # Decision Score (0-100) - overall bet quality
+        roi_score = min(40, (roi / 50) * 40) if roi > 0 else 0
+        ev_score = min(30, (roi / 10) * 30) if roi > 0 else 0
+        confidence_weight = (confidence / 100) * 20
+        place_weight = (p_place * 10) if bet_type == 'EW' or bet_type == 'EACH_WAY' else (p_win * 10)
+        
+        decision_score = round(roi_score + ev_score + confidence_weight + place_weight, 1)
+        
+        # Decision Rating
+        if decision_score >= 70:
+            decision_rating = "DO IT"
+            rating_color = "green"
+        elif decision_score >= 45:
+            decision_rating = "RISKY"
+            rating_color = "orange"
+        else:
+            decision_rating = "NOT GREAT"
+            rating_color = "red"
+        
+        # Track performance only for MODERATE RISK or better (exclude RISKY and NOT GREAT)
+        # MODERATE = combined_confidence >= 45, or decision_rating = DO IT
+        track_performance = (combined_confidence >= 45 or decision_rating == "DO IT")
+        
+        # Convert all floats to Decimals
+        bet_converted = convert_floats(bet)
+        bet_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+        
+        # Get market_id if available
+        market_id = market_id_lookup.get(course, '')
         
         item = {
             "bet_id": bet_id,
-            "timestamp": timestamp,
-            "date": date_str,
-            "horse": pick.get("horse", "Unknown"),
-            "course": pick.get("course", "Unknown"),
-            "race_time": pick.get("race_time"),
-            "market_id": pick.get("market_id", ""),
-            "selection_id": str(pick.get("selection_id", "")),
-            "odds": convert_floats(pick.get("odds", 0)),
-            "bet_type": pick.get("bet_type", "WIN"),
-            "p_win": convert_floats(pick.get("p_win", 0)),
-            "p_place": convert_floats(pick.get("p_place", 0)),
-            "ew_places": int(pick.get("ew_places", 0)),
-            "ew_fraction": convert_floats(pick.get("ew_fraction", 0)),
-            "roi": convert_floats(pick.get("roi", 0)),
-            "ev": convert_floats(pick.get("ev", 0)),
-            "confidence": convert_floats(pick.get("confidence", 0)),
-            "why_now": pick.get("why_now", ""),
-            "tags": pick.get("tags", []),
-            "market_name": pick.get("market_name", ""),
-            "stake": convert_floats(pick.get("stake", 0)),
-            "bankroll": convert_floats(pick.get("bankroll", 1000)),
-            "expected_roi": convert_floats(pick.get("expected_roi", 0)),
-            "result": pick.get("result", "pending"),
-            "created_by": "lambda-scheduled",
-            "status": "active"
+            "bet_date": bet_date,
+            "timestamp": datetime.datetime.utcnow().isoformat(),
+            "date": bet_date,  # Keep for backwards compatibility
+            "bet": bet_converted,
+            "prompt": prompt,
+            "model_response": convert_floats(model_response),
+            # Expanded schema for audit/review:
+            "race_time": race_time,
+            "course": course,
+            "horse": horse,
+            "bet_type": bet_type,
+            "odds": convert_floats(odds),
+            "p_win": convert_floats(p_win),
+            "p_place": convert_floats(p_place),
+            "ev": convert_floats(bet.get("ev", roi)),
+            "why_now": bet.get("why_now"),
+            "confidence": convert_floats(confidence),
+            "roi": convert_floats(roi),
+            "recommendation": bet.get("recommendation", "CONSIDER"),
+            # Betfair metadata
+            "market_id": market_id,  # Betfair market ID for result fetching
+            # Performance tracking
+            "track_performance": track_performance,  # Only track MODERATE RISK or better
+            # Decision metrics
+            "decision_score": convert_floats(decision_score),
+            "decision_rating": decision_rating,
+            "rating_color": rating_color,
+            "combined_confidence": convert_floats(combined_confidence),
+            "confidence_grade": conf_grade,
+            "confidence_color": conf_color,
+            "confidence_breakdown": {
+                "edge_component": convert_floats(edge_component),
+                "win_component": convert_floats(win_component),
+                "place_component": convert_floats(place_component),
+                "consistency_component": convert_floats(consistency_component)
+            },
+            "audit": {
+                "created_by": "lambda",
+                "created_at": datetime.datetime.utcnow().isoformat(),
+                "status": "pending_outcome"
+            },
+            # Learning fields (to be updated after race)
+            "outcome": None,  # Will be: "won", "lost", "placed", "did_not_run"
+            "actual_position": None,
+            "learning_notes": None,
+            "feedback_processed": False
         }
-        
-        # Add metadata if provided
-        if metadata:
-            item["metadata"] = convert_floats(metadata)
-        
         table.put_item(Item=item)
-        print(f"  Stored: {pick.get('horse')} at {pick.get('course')}")
-    
-    print(f"Successfully stored {len(picks)} picks")
+        print(f"Stored bet: {bet_id}")
 
 def lambda_handler(event, context):
-    """Main Lambda handler - runs on schedule"""
     try:
-        print("="*60)
-        print("BETTING WORKFLOW LAMBDA EXECUTION")
-        print(f"Time: {datetime.utcnow().isoformat()}")
-        print("="*60)
+        print("Lambda execution started")
         
-        # Step 0: Analyze recent performance and get current bankroll
-        if LEARNING_ENABLED:
-            print("\n=== LEARNING LAYER ===")
-            recent_perf = analyze_recent_performance(days=7)
-            current_bankroll = get_current_bankroll()
+        # 1. Fetch latest performance data for learning
+        print("Fetching learning insights...")
+        performance_data = get_latest_performance()
+        if performance_data:
+            print(f"✓ Using performance insights (ROI: {performance_data['roi']:.1f}%)")
         else:
-            recent_perf = None
-            current_bankroll = 1000.0  # Default
+            print("No learning data available yet")
         
-        # Step 1: Fetch odds
+        # 2. Fetch latest odds
+        print("Fetching Betfair odds...")
         races = fetch_betfair_odds()
-        print(f"\nFetched {len(races)} races")
+        print(f"Found {len(races)} races")
+
+        # 3. Build prompt with timing strategy context
+        prompt = (
+            "Horse Racing Value Betting Analysis (UK & IRE, 24h Window):\n\n"
+            "TIMING STRATEGY: Optimal betting window is 30-90 minutes before race start.\n"
+            "- Races >2 hours away: Odds too volatile, reduce confidence by 30%\n"
+            "- Races 30-90 mins away: OPTIMAL - full confidence\n"
+            "- Races 15-30 mins away: Good window - slight confidence reduction (10%)\n"
+            "- Races <15 mins away: Too late - market efficient, minimal value\n\n"
+            "Evaluate all provided races and ALWAYS return your Top 5 best opportunities.\n\n"
+            "For each prediction, include:\n"
+            "- race_time, course, horse, bet_type, odds\n"
+            "- p_win: probability of winning (0-1 decimal)\n"
+            "- ev: expected value as decimal (e.g., 0.15 for 15% ROI)\n"
+            "- roi: expected return on investment percentage\n"
+            "- confidence: score 0-100 (adjusted for race timing as above)\n"
+            "- why_now: brief explanation including timing factor\n"
+            "- recommendation: 'BET' if ROI ≥ 15% and confidence ≥ 70 and in optimal window, 'CONSIDER' if ROI ≥ 10% or confidence ≥ 60, otherwise 'AVOID'\n\n"
+            "Return a JSON array with exactly 5 objects sorted by adjusted confidence.\n"
+            "Consider race timing in your confidence scores and recommendations.\n"
+        )
+
+        # 4. Call Claude 4.5 with prompt, context, and learning insights
+        print("Calling Claude AI...")
+        all_predictions = call_claude_4_5(prompt, races, performance_data)
+        print(f"Claude returned {len(all_predictions)} predictions")
         
-        if not races:
-            print("No races available, exiting")
-            return {
-                "statusCode": 200,
-                "body": json.dumps({"message": "No races available"})
-            }
-        
-        # Step 2: Load prompt
-        prompt_text = load_prompt()
-        
-        # Step 3: Generate picks
-        picks = call_claude_bedrock(prompt_text, races[:5])  # Limit to 5 races
-        
-        if not picks:
-            print("No picks generated")
-            return {
-                "statusCode": 200,
-                "body": json.dumps({"message": "No picks generated"})
-            }
-        
-        # Step 4: Apply learning and calculate stakes
-        print("\n=== CALCULATING STAKES ===")
-        for pick in picks:
-            # Adjust confidence based on recent performance
-            if LEARNING_ENABLED and recent_perf:
-                pick = adjust_selection_confidence(pick, recent_perf)
+        # 5. Enhance predictions with timing analysis
+        for pred in all_predictions:
+            # Find matching race for timing data
+            race_timing = None
+            for race in races:
+                if race.get('venue') == pred.get('course'):
+                    race_timing = race.get('timing', {})
+                    break
             
-            # Calculate optimal stake
-            if LEARNING_ENABLED:
-                odds = float(pick.get('odds', 0))
-                p_win = float(pick.get('p_win', 0))
-                p_place = float(pick.get('p_place', p_win * 2.5))
-                bet_type = pick.get('bet_type', 'WIN')
-                ew_fraction = float(pick.get('ew_fraction', 0.2))
+            if race_timing:
+                pred['timing'] = race_timing
+                pred['minutes_to_race'] = race_timing.get('minutes_to_race', 0)
+                pred['timing_advice'] = race_timing.get('timing_advice', '')
+                pred['should_bet_now'] = race_timing.get('should_bet_now', False)
                 
-                stake = calculate_bet_stake(
-                    odds=odds,
-                    p_win=p_win,
-                    bankroll=current_bankroll,
-                    bet_type=bet_type,
-                    p_place=p_place,
-                    ew_fraction=ew_fraction
-                )
+                # Adjust recommendation based on timing
+                if not race_timing.get('should_bet_now', False):
+                    pred['recommendation'] = 'AVOID'
+                    pred['why_now'] = f"TIMING: {race_timing.get('timing_advice')}. {pred.get('why_now', '')}"
+            
+            # Ensure recommendation field exists
+            if 'recommendation' not in pred:
+                roi = pred.get('roi', pred.get('ev', 0))
+                confidence = pred.get('confidence', 0)
+                timing_ok = pred.get('should_bet_now', True)
                 
-                pick['stake'] = stake
-                pick['bankroll'] = current_bankroll
-                
-                # Calculate expected ROI
-                if bet_type == 'WIN':
-                    expected_return = p_win * odds * stake
-                    expected_roi = ((expected_return - stake) / stake * 100)
-                else:  # EW
-                    win_return = p_win * odds * stake
-                    place_return = p_place * (1 + (odds - 1) * ew_fraction) * stake
-                    expected_return = (win_return + place_return) / 2
-                    expected_roi = ((expected_return - stake) / stake * 100)
-                
-                pick['expected_roi'] = round(expected_roi, 1)
-                
-                print(f"  {pick.get('horse')}: €{stake} stake (expected ROI: {expected_roi:+.1f}%)")
-            else:
-                # Default stake
-                pick['stake'] = 10.0
-                pick['bankroll'] = current_bankroll
+                if roi >= 15 and confidence >= 70 and timing_ok:
+                    pred['recommendation'] = 'BET'
+                elif (roi >= 10 or confidence >= 60) and timing_ok:
+                    pred['recommendation'] = 'CONSIDER'
+                else:
+                    pred['recommendation'] = 'AVOID'
         
-        # Step 5: Store in DynamoDB
-        metadata = {
-            "race_count": len(races),
-            "timestamp": datetime.utcnow().isoformat(),
-            "source": "lambda-scheduled",
-            "bankroll": current_bankroll
-        }
-        if recent_perf:
-            metadata['recent_performance'] = recent_perf
+        bets = all_predictions
+
+        # 5. Store bets in DynamoDB
+        print("Storing bets in DynamoDB...")
+        store_bets_in_dynamodb(bets, prompt, bets, races)
+
+        # 5. Automated betting (if enabled)
+        betting_results = None
+        auto_betting_enabled = os.environ.get('ENABLE_AUTO_BETTING', 'false').lower() == 'true'
         
-        store_picks_in_dynamodb(picks, metadata)
-        
-        print("\n" + "="*60)
-        print("WORKFLOW COMPLETE")
-        print(f"Generated and stored {len(picks)} picks")
-        print("="*60)
+        if auto_betting_enabled and BETTING_MODULES_AVAILABLE:
+            print("🎰 Auto-betting enabled - placing bets...")
+            try:
+                betting_results = auto_place_bets(bets)
+                print(f"Betting results: {json.dumps(betting_results, default=str)}")
+            except Exception as e:
+                print(f"Auto-betting error: {e}")
+                betting_results = {'error': str(e)}
+        elif auto_betting_enabled:
+            print("⚠️ Auto-betting enabled but modules not available")
+            betting_results = {'error': 'Betting modules not installed'}
+        else:
+            print("ℹ️ Auto-betting disabled (dry-run mode)")
+            # No dry-run bet display since we removed betting modules
+            betting_results = {
+                'dry_run': True,
+                'message': 'Auto-betting disabled - predictions stored in DynamoDB only'
+            }
+
+        # 6. Return bets to frontend
+        print("Returning response")
+        response_body = {"bets": bets, "race_count": len(races)}
+        if betting_results:
+            response_body['betting_results'] = betting_results
         
         return {
             "statusCode": 200,
-            "body": json.dumps({
-                "success": True,
-                "picks_generated": len(picks),
-                "races_analyzed": len(races),
-                "timestamp": datetime.utcnow().isoformat()
-            })
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
+            },
+            "body": json.dumps(response_body)
         }
-        
     except Exception as e:
-        print(f"ERROR: {e}")
+        print(f"ERROR: {str(e)}")
         import traceback
         traceback.print_exc()
-        
         return {
             "statusCode": 500,
-            "body": json.dumps({
-                "success": False,
-                "error": str(e)
-            })
+            "headers": {
+                "Access-Control-Allow-Origin": "*",
+                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
+                "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
+            },
+            "body": json.dumps({"error": str(e)})
         }

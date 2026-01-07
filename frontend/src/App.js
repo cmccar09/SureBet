@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
-// Use Lambda Function URL in eu-west-1
+// Use API Gateway in eu-west-1
 const API_BASE_URL = process.env.REACT_APP_API_URL || 
-                     'https://lq7f6d45qygsvjqaej3w2xdlbu0cibvk.lambda-url.eu-west-1.on.aws';
+                     'https://mnybvagd5m.execute-api.eu-west-1.amazonaws.com';
 
 function App() {
   const [picks, setPicks] = useState([]);
@@ -283,7 +283,14 @@ function App() {
               Showing top {Math.min(5, picks.length)} of {picks.length} selections
             </div>
             <div className="picks-grid">
-            {picks.slice(0, 5).map((pick, index) => {
+            {picks
+              .sort((a, b) => {
+                // Sort by race_time - soonest first
+                const timeA = new Date(a.race_time || '9999-12-31').getTime();
+                const timeB = new Date(b.race_time || '9999-12-31').getTime();
+                return timeA - timeB;
+              })
+              .slice(0, 5).map((pick, index) => {
               const roi = parseFloat(pick.roi || 0);
               const belowThreshold = roi < 0.05;
               
