@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Lambda: Learning Analysis
+Lambda: Daily Training & Learning Analysis
 Runs HOURLY to continuously analyze race results and improve strategy
+TRAINS DAILY to progressively achieve GREEN status picks (75%+ confidence, 20%+ ROI)
 Generates insights with detailed loss analysis and pattern recognition
 Updates after every result batch for real-time learning
 """
@@ -16,6 +17,12 @@ from collections import defaultdict
 dynamodb = boto3.resource('dynamodb')
 table_name = os.environ.get('SUREBET_DDB_TABLE', 'SureBetBets')
 learning_table_name = os.environ.get('LEARNING_TABLE', 'BettingPerformance')
+
+# GREEN STATUS THRESHOLDS (Progressive Goals)
+GREEN_CONFIDENCE_MIN = 75.0  # High confidence
+GREEN_ROI_MIN = 20.0  # Strong value
+HIGH_CONFIDENCE_MIN = 60.0
+MODERATE_CONFIDENCE_MIN = 45.0
 
 def get_results_for_period(days=7):
     """Get all bets with results from last N days"""
@@ -305,8 +312,138 @@ def generate_insights(analysis):
     
     return insights
 
-def store_learning_data(analysis, insights):
-    """Store performance data and insights in DynamoDB"""
+def calculate_quality_metrics(results):
+    """Calculate quality distribution and progress toward GREEN status"""
+    
+    quality_distribution = {
+        'green_count': 0,  # 75%+ confidence, 20%+ ROI, DO IT
+        'high_count': 0,   # 60%+ confidence
+        'moderate_count': 0,  # 45%+ confidence
+        'low_count': 0,    # <45% confidence
+        'top_pick_wins': 0,  # Track first pick success
+        'daily_quality_score': 0,
+        'improvement_needed': []
+    }
+    
+    for bet in results:
+        confidence = float(bet.get('combined_confidence', 0))
+        expected_roi = float(bet.get('expected_roi', 0))
+        decision_rating = bet.get('decision_rating', '')
+        actual_result = bet.get('actual_result', '')
+        
+        # Calculate quality tiers
+        is_green = (confidence >= GREEN_CONFIDENCE_MIN and 
+                   expected_roi >= GREEN_ROI_MIN and 
+                   decision_rating == "DO IT")
+        
+        if is_green:
+            quality_distribution['green_count'] += 1
+            # Validate if it actually won
+            if actual_result in ['WON', 'PLACED']:
+                quality_distribution['top_pick_wins'] += 1
+        elif confidence >= HIGH_CONFIDENCE_MIN:
+            quality_distribution['high_count'] += 1
+        elif confidence >= MODERATE_CONFIDENCE_MIN:
+            quality_distribution['moderate_count'] += 1
+        else:
+            quality_distribution['low_count'] += 1
+    
+    # Calculate daily quality score (0-100)
+    total = len(results)
+    if total > 0:
+        green_pct = quality_distribution['green_count'] / total
+        high_pct = quality_distribution['high_count'] / total
+        moderate_pct = quality_distribution['moderate_count'] / total
+        
+        quality_distribution['daily_quality_score'] = (
+            (green_pct * 50) +  # Green picks most important
+            (high_pct * 30) +   # High quality significant
+            (moderate_pct * 15) # Moderate quality baseline
+        )
+    
+    # Determine improvement areas
+    if quality_distribution['green_count'] == 0:
+        quality_distribution['improvement_needed'].append("CRITICAL: Need to achieve first GREEN status pick (75%+ confidence, 20%+ ROI)")
+    elif quality_distribution['green_count'] < 3:
+        quality_distribution['improvement_needed'].append(f"GOAL: Increase GREEN picks from {quality_distribution['green_count']} to 3+ per day")
+    
+    if quality_distribution['high_count'] < 5:
+        quality_distribution['improvement_needed'].append(f"GOAL: Increase HIGH confidence picks from {quality_distribution['high_count']} to 5+ per day")
+    
+    return quality_distribution
+
+def calculate_training_adjustments(analysis, quality_metrics):
+    """Calculate progressive training adjustments to reach GREEN status"""
+    
+    adjustments = {
+        'confidence_calibration': 1.0,  # Multiply all confidence by this
+        'roi_threshold_change': 0,    # Add this to ROI requirements
+        'odds_range_focus': [],       # Which odds ranges to prioritize
+        'course_mastery': {},         # Course-specific adjustments
+        'pattern_boosts': {},         # Patterns to boost
+        'pattern_penalties': {},      # Patterns to avoid
+        'training_phase': 'foundation',  # Current training phase
+        'days_to_green': 999         # Estimated days until first GREEN
+    }
+    
+    overall_roi = analysis['overall']['roi']
+    win_rate = analysis['overall']['win_rate']
+    green_count = quality_metrics['green_count']
+    
+    # Determine training phase based on progress
+    if green_count >= 3 and overall_roi >= 20:
+        adjustments['training_phase'] = 'mastery'
+        adjustments['days_to_green'] = 0  # Already achieved!
+    elif green_count >= 1 or overall_roi >= 15:
+        adjustments['training_phase'] = 'green_push'
+        adjustments['days_to_green'] = 7
+    elif win_rate >= 0.35 and overall_roi >= 10:
+        adjustments['training_phase'] = 'quality_refinement'
+        adjustments['days_to_green'] = 14
+    else:
+        adjustments['training_phase'] = 'foundation'
+        adjustments['days_to_green'] = 21
+    
+    # Confidence calibration based on overconfidence
+    loss_data = analysis['loss_analysis']
+    if loss_data['high_confidence_losses'] > 3:
+        # Too overconfident
+        adjustments['confidence_calibration'] = 0.85  # Reduce 15%
+    elif loss_data['high_confidence_losses'] > 1:
+        adjustments['confidence_calibration'] = 0.90  # Reduce 10%
+    else:
+        adjustments['confidence_calibration'] = 1.0  # No change
+    
+    # ROI threshold adjustments
+    if overall_roi < 10:
+        adjustments['roi_threshold_change'] = +5  # Need stricter filters
+    elif overall_roi > 25:
+        adjustments['roi_threshold_change'] = -2  # Can be slightly looser
+    
+    # Find best odds ranges
+    for odds_range, stats in analysis['by_odds_range'].items():
+        if stats['count'] >= 3 and stats.get('roi', 0) >= 15:
+            adjustments['odds_range_focus'].append({
+                'range': odds_range,
+                'roi': stats['roi'],
+                'boost': +10  # Boost confidence by 10% in this range
+            })
+        elif stats['count'] >= 3 and stats.get('roi', 0) < -10:
+            adjustments['pattern_penalties'][f'odds_{odds_range}'] = -15
+    
+    # Course mastery
+    for course, stats in analysis['by_course'].items():
+        if stats['count'] >= 3:
+            roi = stats.get('roi', 0)
+            if roi >= 20:
+                adjustments['course_mastery'][course] = {'adjustment': +15, 'confidence': 'high'}
+            elif roi <= -15:
+                adjustments['course_mastery'][course] = {'adjustment': -20, 'confidence': 'avoid'}
+    
+    return adjustments
+
+def store_learning_data(analysis, insights, quality_metrics, adjustments):
+    """Store performance data and insights in DynamoDB with quality metrics"""
     try:
         learning_table = dynamodb.Table(learning_table_name)
     except:
@@ -330,6 +467,135 @@ def store_learning_data(analysis, insights):
     
     # Convert to JSON-serializable format
     def convert_to_json(obj):
+    
+    quality_distribution = {
+        'green_count': 0,  # 75%+ confidence, 20%+ ROI, DO IT
+        'high_count': 0,   # 60%+ confidence
+        'moderate_count': 0,  # 45%+ confidence
+        'low_count': 0,    # <45% confidence
+        'top_pick_wins': 0,  # Track first pick success
+        'daily_quality_score': 0,
+        'improvement_needed': []
+    }
+    
+    for bet in results:
+        confidence = float(bet.get('combined_confidence', 0))
+        expected_roi = float(bet.get('expected_roi', 0))
+        decision_rating = bet.get('decision_rating', '')
+        actual_result = bet.get('actual_result', '')
+        
+        # Calculate quality tiers
+        is_green = (confidence >= GREEN_CONFIDENCE_MIN and 
+                   expected_roi >= GREEN_ROI_MIN and 
+                   decision_rating == "DO IT")
+        
+        if is_green:
+            quality_distribution['green_count'] += 1
+            # Validate if it actually won
+            if actual_result in ['WON', 'PLACED']:
+                quality_distribution['top_pick_wins'] += 1
+        elif confidence >= HIGH_CONFIDENCE_MIN:
+            quality_distribution['high_count'] += 1
+        elif confidence >= MODERATE_CONFIDENCE_MIN:
+            quality_distribution['moderate_count'] += 1
+        else:
+            quality_distribution['low_count'] += 1
+    
+    # Calculate daily quality score (0-100)
+    total = len(results)
+    if total > 0:
+        green_pct = quality_distribution['green_count'] / total
+        high_pct = quality_distribution['high_count'] / total
+        moderate_pct = quality_distribution['moderate_count'] / total
+        
+        quality_distribution['daily_quality_score'] = (
+            (green_pct * 50) +  # Green picks most important
+            (high_pct * 30) +   # High quality significant
+            (moderate_pct * 15) # Moderate quality baseline
+        )
+    
+    # Determine improvement areas
+    if quality_distribution['green_count'] == 0:
+        quality_distribution['improvement_needed'].append("CRITICAL: Need to achieve first GREEN status pick (75%+ confidence, 20%+ ROI)")
+    elif quality_distribution['green_count'] < 3:
+        quality_distribution['improvement_needed'].append(f"GOAL: Increase GREEN picks from {quality_distribution['green_count']} to 3+ per day")
+    
+    if quality_distribution['high_count'] < 5:
+        quality_distribution['improvement_needed'].append(f"GOAL: Increase HIGH confidence picks from {quality_distribution['high_count']} to 5+ per day")
+    
+    return quality_distribution
+
+def calculate_training_adjustments(analysis, quality_metrics):
+    """Calculate progressive training adjustments to reach GREEN status"""
+    
+    adjustments = {
+        'confidence_calibration': 0,  # Multiply all confidence by this
+        'roi_threshold_change': 0,    # Add this to ROI requirements
+        'odds_range_focus': [],       # Which odds ranges to prioritize
+        'course_mastery': {},         # Course-specific adjustments
+        'pattern_boosts': {},         # Patterns to boost
+        'pattern_penalties': {},      # Patterns to avoid
+        'training_phase': 'foundation',  # Current training phase
+        'days_to_green': 999         # Estimated days until first GREEN
+    }
+    
+    overall_roi = analysis['overall']['roi']
+    win_rate = analysis['overall']['win_rate']
+    green_count = quality_metrics['green_count']
+    
+    # Determine training phase based on progress
+    if green_count >= 3 and overall_roi >= 20:
+        adjustments['training_phase'] = 'mastery'
+        adjustments['days_to_green'] = 0  # Already achieved!
+    elif green_count >= 1 or overall_roi >= 15:
+        adjustments['training_phase'] = 'green_push'
+        adjustments['days_to_green'] = 7
+    elif win_rate >= 0.35 and overall_roi >= 10:
+        adjustments['training_phase'] = 'quality_refinement'
+        adjustments['days_to_green'] = 14
+    else:
+        adjustments['training_phase'] = 'foundation'
+        adjustments['days_to_green'] = 21
+    
+    # Confidence calibration based on overconfidence
+    loss_data = analysis['loss_analysis']
+    if loss_data['high_confidence_losses'] > 3:
+        # Too overconfident
+        adjustments['confidence_calibration'] = 0.85  # Reduce 15%
+    elif loss_data['high_confidence_losses'] > 1:
+        adjustments['confidence_calibration'] = 0.90  # Reduce 10%
+    else:
+        adjustments['confidence_calibration'] = 1.0  # No change
+    
+    # ROI threshold adjustments
+    if overall_roi < 10:
+        adjustments['roi_threshold_change'] = +5  # Need stricter filters
+    elif overall_roi > 25:
+        adjustments['roi_threshold_change'] = -2  # Can be slightly looser
+    
+    # Find best odds ranges
+    for odds_range, stats in analysis['by_odds_range'].items():
+        if stats['count'] >= 3 and stats.get('roi', 0) >= 15:
+            adjustments['odds_range_focus'].append({
+                'range': odds_range,
+                'roi': stats['roi'],
+                'boost': +10  # Boost confidence by 10% in this range
+            })
+        elif stats['count'] >= 3 and stats.get('roi', 0) < -10:
+            adjustments['pattern_penalties'][f'odds_{odds_range}'] = -15
+    
+    # Course mastery
+    for course, stats in analysis['by_course'].items():
+        if stats['count'] >= 3:
+            roi = stats.get('roi', 0)
+            if roi >= 20:
+                adjustments['course_mastery'][course] = {'adjustment': +15, 'confidence': 'high'}
+            elif roi <= -15:
+                adjustments['course_mastery'][course] = {'adjustment': -20, 'confidence': 'avoid'}
+    
+    return adjustments
+
+def convert_to_json(obj):
         if isinstance(obj, Decimal):
             return float(obj)
         elif isinstance(obj, defaultdict) or isinstance(obj, dict):
@@ -339,27 +605,35 @@ def store_learning_data(analysis, insights):
         return obj
     
     analysis_json = convert_to_json(analysis)
+    quality_json = convert_to_json(quality_metrics)
+    adjustments_json = convert_to_json(adjustments)
     
-    # Store in DynamoDB
+    # Store in DynamoDB with quality and training data
     item = {
         'period': 'last_7_days',
         'timestamp': datetime.utcnow().isoformat(),
         'analysis': json.dumps(analysis_json),
         'insights': json.dumps(insights),
+        'quality_metrics': json.dumps(quality_json),  # NEW: Track quality distribution
+        'training_adjustments': json.dumps(adjustments_json),  # NEW: Progressive training
         'overall_roi': Decimal(str(analysis['overall']['roi'])),
         'overall_win_rate': Decimal(str(analysis['overall']['win_rate'])),
         'total_bets': analysis['overall']['total_bets'],
-        'total_pnl': Decimal(str(analysis['overall']['total_pnl']))
+        'total_pnl': Decimal(str(analysis['overall']['total_pnl'])),
+        'green_count': quality_metrics['green_count'],  # NEW: Track GREEN picks
+        'daily_quality_score': Decimal(str(quality_metrics['daily_quality_score'])),  # NEW: Quality score
+        'training_phase': adjustments['training_phase']  # NEW: Current training phase
     }
     
     learning_table.put_item(Item=item)
     print(f"✓ Stored learning data in {learning_table_name}")
 
 def lambda_handler(event, context):
-    """Main Lambda handler"""
+    """Main Lambda handler - Daily Training System"""
     
-    print("=== LEARNING ANALYSIS ===")
+    print("=== DAILY TRAINING & LEARNING ANALYSIS ===")
     print(f"Time: {datetime.utcnow().isoformat()}")
+    print(f"🎯 GOAL: Achieve GREEN status picks (75%+ confidence, 20%+ ROI)")
     
     # Get results from last 7 days
     results = get_results_for_period(days=7)
@@ -371,6 +645,10 @@ def lambda_handler(event, context):
             'body': json.dumps({'message': 'Insufficient data', 'results_count': len(results)})
         }
     
+    # Calculate quality metrics (path to GREEN)
+    print("\n📊 Calculating quality distribution...")
+    quality_metrics = calculate_quality_metrics(results)
+    
     # Analyze performance
     print("\nAnalyzing performance patterns...")
     analysis = analyze_performance(results)
@@ -379,12 +657,53 @@ def lambda_handler(event, context):
     print("\nGenerating insights...")
     insights = generate_insights(analysis)
     
+    # Calculate training adjustments (progressive improvement)
+    print("\n🎓 Calculating training adjustments...")
+    adjustments = calculate_training_adjustments(analysis, quality_metrics)
+    
     # Print summary
     print("\n=== PERFORMANCE SUMMARY ===")
     print(f"Total bets: {analysis['overall']['total_bets']}")
     print(f"Win rate: {analysis['overall']['win_rate']*100:.1f}%")
     print(f"ROI: {analysis['overall']['roi']:.1f}%")
     print(f"Total P&L: €{analysis['overall']['total_pnl']:.2f}")
+    
+    print("\n=== QUALITY DISTRIBUTION (Path to GREEN) ===")
+    print(f"🟢 GREEN picks (75%+ conf, 20%+ ROI): {quality_metrics['green_count']}")
+    print(f"🟡 HIGH picks (60%+ conf): {quality_metrics['high_count']}")
+    print(f"🟠 MODERATE picks (45%+ conf): {quality_metrics['moderate_count']}")
+    print(f"⚪ LOW picks (<45% conf): {quality_metrics['low_count']}")
+    print(f"📈 Daily Quality Score: {quality_metrics['daily_quality_score']:.1f}/100")
+    print(f"🏆 Top Pick Wins: {quality_metrics['top_pick_wins']}")
+    
+    print("\n=== TRAINING PROGRESS ===")
+    print(f"Phase: {adjustments['training_phase'].upper()}")
+    if adjustments['days_to_green'] == 0:
+        print("🎉 ACHIEVEMENT UNLOCKED: GREEN STATUS REACHED!")
+    else:
+        print(f"Days to GREEN estimate: {adjustments['days_to_green']}")
+    
+    print("\n=== IMPROVEMENT AREAS ===")
+    for improvement in quality_metrics['improvement_needed']:
+        print(f"🎯 {improvement}")
+    
+    print("\n=== TRAINING ADJUSTMENTS (Auto-applied) ===")
+    if adjustments['confidence_calibration'] != 1.0:
+        change_pct = (adjustments['confidence_calibration'] - 1.0) * 100
+        print(f"⚙️ Confidence calibration: {change_pct:+.0f}%")
+    
+    if adjustments['roi_threshold_change'] != 0:
+        print(f"⚙️ ROI threshold adjustment: {adjustments['roi_threshold_change']:+.0f}%")
+    
+    if adjustments['odds_range_focus']:
+        print("⚙️ Focus on these odds ranges:")
+        for focus in adjustments['odds_range_focus']:
+            print(f"   {focus['range']}: ROI {focus['roi']:.1f}% → Boost confidence {focus['boost']:+d}%")
+    
+    if adjustments['course_mastery']:
+        print("⚙️ Course-specific adjustments:")
+        for course, data in list(adjustments['course_mastery'].items())[:5]:
+            print(f"   {course}: {data['adjustment']:+d}% ({data['confidence']})")
     
     print("\n=== LOSS ANALYSIS ===")
     loss_data = analysis['loss_analysis']
@@ -408,13 +727,13 @@ def lambda_handler(event, context):
     for rec in insights['recommendations']:
         print(f"→ {rec}")
     
-    # Store learning data
-    store_learning_data(analysis, insights)
+    # Store learning data with quality and training metrics
+    store_learning_data(analysis, insights, quality_metrics, adjustments)
     
     return {
         'statusCode': 200,
         'body': json.dumps({
-            'message': 'Learning analysis complete',
+            'message': 'Daily training analysis complete',
             'results_analyzed': len(results),
             'roi': float(analysis['overall']['roi']),
             'win_rate': float(analysis['overall']['win_rate']),

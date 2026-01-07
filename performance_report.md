@@ -1,25 +1,23 @@
 
 # Performance Evaluation Report
-Generated: 2026-01-06 21:49:11
+Generated: 2026-01-07 17:15:06
 
 ## Overall Metrics
 - Total Selections: 5
 - Wins: 0 (0.0%)
 - Places: 0 (0.0%)
-- Expected Strike Rate: 51.2%
-- Calibration Error: 51.2%
+- Expected Strike Rate: 34.4%
+- Calibration Error: 34.4%
 
 ## Calibration Analysis
 
-- Predicted: 32.0% → Actual: 0.0% (n=1, error=32.0%)
-- Predicted: 42.0% → Actual: 0.0% (n=2, error=42.0%)
-- Predicted: 70.0% → Actual: 0.0% (n=2, error=70.0%)
+- Predicted: 34.4% → Actual: 0.0% (n=5, error=34.4%)
 
 ## Performance by Edge Type
 
 
 ## Recommended Adjustments
 
-1. HIGH_PRIORITY: Calibration error is 51.2%. Consider adjusting probability model or isotonic regression parameters.
+1. HIGH_PRIORITY: Calibration error is 34.4%. Consider adjusting probability model or isotonic regression parameters.
 
-2. MEDIUM_PRIORITY: Win rate 0.0% is significantly below expected 51.2%. Consider tightening overlay threshold or increasing min_back price filter.
+2. MEDIUM_PRIORITY: Win rate 0.0% is significantly below expected 34.4%. Consider tightening overlay threshold or increasing min_back price filter.

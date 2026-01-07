@@ -17,7 +17,7 @@ except ImportError as e:
 
 # Learning data
 def get_latest_performance():
-    """Get latest learning insights to adjust strategy"""
+    """Get latest learning insights and training adjustments to improve strategy"""
     try:
         learning_table_name = os.environ.get('LEARNING_TABLE', 'BettingPerformance')
         dynamodb = boto3.resource('dynamodb')
@@ -35,13 +35,20 @@ def get_latest_performance():
             item = items[0]
             insights_data = json.loads(item.get('insights', '{}'))
             analysis_data = json.loads(item.get('analysis', '{}'))
+            quality_data = json.loads(item.get('quality_metrics', '{}'))
+            training_data = json.loads(item.get('training_adjustments', '{}'))
+            
             return {
                 'roi': float(item.get('overall_roi', 0)),
                 'win_rate': float(item.get('overall_win_rate', 0)),
                 'insights': insights_data,
                 'analysis': analysis_data,
                 'loss_patterns': insights_data.get('loss_patterns', []),
-                'recommendations': insights_data.get('recommendations', [])
+                'recommendations': insights_data.get('recommendations', []),
+                'quality_metrics': quality_data,  # NEW: Quality distribution
+                'training_adjustments': training_data,  # NEW: Training phase and adjustments
+                'green_count': int(item.get('green_count', 0)),  # NEW: Track GREEN picks
+                'training_phase': item.get('training_phase', 'foundation')  # NEW: Current phase
             }
     except Exception as e:
         print(f"Could not fetch learning data: {e}")
@@ -170,7 +177,7 @@ def call_claude_4_5(prompt, races, performance_data=None):
     """
     Calls AWS Bedrock Claude Sonnet 4.5 to select value bets from races/odds.
     Uses boto3 with your AWS credentials (no API key needed).
-    Incorporates learning insights if available.
+    Incorporates learning insights AND training adjustments for progressive improvement.
     """
     import json
     bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
@@ -182,19 +189,55 @@ def call_claude_4_5(prompt, races, performance_data=None):
         for r in races
     ])
     
-    # Add performance insights if available with ACTIONABLE ADJUSTMENTS
+    # Add performance insights AND training adjustments if available
     learning_context = ""
     confidence_adjustment = 0  # Will reduce if overconfident
     roi_threshold_adjustment = 0  # Will increase if too many losses
+    training_phase = "foundation"
+    green_count = 0
     
     if performance_data:
         insights = performance_data.get('insights', {})
         loss_patterns = performance_data.get('loss_patterns', [])
         recommendations = performance_data.get('recommendations', [])
         roi = performance_data.get('roi', 0)
+        green_count = performance_data.get('green_count', 0)
+        training_phase = performance_data.get('training_phase', 'foundation')
+        training_adjustments = performance_data.get('training_adjustments', {})
+        quality_metrics = performance_data.get('quality_metrics', {})
         
-        learning_context = f"\n\n=== LEARNING FROM RECENT PERFORMANCE ===\n"
+        learning_context = f"\n\n=== DAILY TRAINING SYSTEM ===\n"
+        learning_context += f"🎯 GOAL: Achieve GREEN status picks (75%+ confidence, 20%+ ROI, 'DO IT' rating)\n"
+        learning_context += f"Training Phase: {training_phase.upper()}\n"
+        learning_context += f"GREEN picks achieved: {green_count}\n"
         learning_context += f"Last 7 days ROI: {roi:.1f}%\n"
+        
+        # Show quality progress
+        if quality_metrics:
+            learning_context += f"\nQuality Distribution:\n"
+            learning_context += f"  🟢 GREEN (75%+ conf, 20%+ ROI): {quality_metrics.get('green_count', 0)}\n"
+            learning_context += f"  🟡 HIGH (60%+ conf): {quality_metrics.get('high_count', 0)}\n"
+            learning_context += f"  🟠 MODERATE (45%+ conf): {quality_metrics.get('moderate_count', 0)}\n"
+            learning_context += f"  Daily Quality Score: {quality_metrics.get('daily_quality_score', 0):.1f}/100\n"
+        
+        # Apply training adjustments
+        if training_adjustments:
+            conf_cal = training_adjustments.get('confidence_calibration', 1.0)
+            if conf_cal != 1.0:
+                confidence_adjustment = int((conf_cal - 1.0) * 100)
+                learning_context += f"\n⚙️ Auto-Calibration: Confidence {confidence_adjustment:+d}%\n"
+            
+            roi_adj = training_adjustments.get('roi_threshold_change', 0)
+            if roi_adj != 0:
+                roi_threshold_adjustment = roi_adj
+                learning_context += f"⚙️ Auto-Calibration: ROI threshold {roi_adj:+d}%\n"
+            
+            # Show odds focus areas
+            odds_focus = training_adjustments.get('odds_range_focus', [])
+            if odds_focus:
+                learning_context += "\n🎯 PRIORITIZE THESE ODDS RANGES (proven profitable):\n"
+                for focus in odds_focus[:3]:
+                    learning_context += f"  {focus['range']}: ROI {focus['roi']:.1f}% → Boost confidence\n"
         
         # Critical loss patterns (teach Claude what went wrong)
         if loss_patterns:
@@ -219,20 +262,45 @@ def call_claude_4_5(prompt, races, performance_data=None):
                 
                 # Auto-adjust based on recommendations
                 if 'Reduce ALL confidence' in rec or 'overconfident' in rec:
-                    confidence_adjustment = -15  # Reduce confidence by 15%
+                    if confidence_adjustment == 0:  # Don't double-apply
+                        confidence_adjustment = -15  # Reduce confidence by 15%
                 elif 'Reduce confidence on favorites' in rec:
                     learning_context += "     (For odds <3.0, reduce confidence by 20%)\n"
                 
                 if 'require 20%+ ROI' in rec or 'Tighten' in rec:
-                    roi_threshold_adjustment = 5  # Increase ROI requirement by 5%
+                    if roi_threshold_adjustment == 0:  # Don't double-apply
+                        roi_threshold_adjustment = 5  # Increase ROI requirement by 5%
         
-        learning_context += f"\n💡 CALIBRATION ADJUSTMENTS THIS RUN:\n"
+        learning_context += f"\n💡 APPLIED ADJUSTMENTS THIS RUN:\n"
         if confidence_adjustment != 0:
             learning_context += f"  • All confidence scores adjusted by {confidence_adjustment:+d}%\n"
         if roi_threshold_adjustment != 0:
             learning_context += f"  • ROI threshold increased by {roi_threshold_adjustment:+d}%\n"
         
+        # Training phase specific guidance
+        if training_phase == 'foundation':
+            learning_context += "\n📚 FOUNDATION PHASE: Focus on identifying what works\n"
+            learning_context += "  • Test different odds ranges to find sweet spot\n"
+            learning_context += "  • Build confidence in course-specific patterns\n"
+            learning_context += "  • Aim for 30% of picks at MODERATE+ confidence (45%+)\n"
+        elif training_phase == 'quality_refinement':
+            learning_context += "\n🔧 REFINEMENT PHASE: Improving prediction accuracy\n"
+            learning_context += "  • Calibrate confidence based on actual results\n"
+            learning_context += "  • Focus on HIGH confidence picks (60%+)\n"
+            learning_context += "  • Target 50% of picks at HIGH confidence\n"
+        elif training_phase == 'green_push':
+            learning_context += "\n🚀 GREEN PUSH PHASE: Aiming for excellence\n"
+            learning_context += "  • Only back horses with strong recent form\n"
+            learning_context += "  • Require multiple positive indicators\n"
+            learning_context += "  • Target 30% of picks at GREEN status (75%+ conf, 20%+ ROI)\n"
+        elif training_phase == 'mastery':
+            learning_context += "\n🏆 MASTERY PHASE: Consistent excellence\n"
+            learning_context += "  • TOP PICK must be GREEN status\n"
+            learning_context += "  • Strict criteria: 80%+ confidence, 25%+ ROI\n"
+            learning_context += "  • Eliminate all RISKY picks from output\n"
+        
         learning_context += "\nUse these lessons to make BETTER selections than last time.\n"
+        learning_context += f"🎯 TODAY'S GOAL: Generate picks closer to GREEN status (75%+conf, 20%+ROI)\n"
     
     full_prompt = prompt + learning_context + "\n\n" + context_str + "\n\nReturn a JSON array of bet objects."
     
