@@ -361,7 +361,7 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None) -> dict:
     
     return bet_item
 
-def save_to_dynamodb(bets: list[dict], table_name: str = None, region: str = 'us-east-1') -> tuple[int, int]:
+def save_to_dynamodb(bets: list[dict], table_name: str = None, region: str = 'eu-west-1') -> tuple[int, int]:
     """Save bet items to DynamoDB"""
     
     if not HAS_BOTO3:
@@ -506,7 +506,7 @@ def main():
     parser = argparse.ArgumentParser(description="Save selections to DynamoDB SureBetBets table")
     parser.add_argument("--selections", type=str, required=True, help="Path to selections CSV")
     parser.add_argument("--table", type=str, default="", help="DynamoDB table name (default: SureBetBets)")
-    parser.add_argument("--region", type=str, default="us-east-1", help="AWS region")
+    parser.add_argument("--region", type=str, default="eu-west-1", help="AWS region")
     parser.add_argument("--backup", type=str, default="", help="JSON backup path (optional)")
     parser.add_argument("--dry_run", action="store_true", help="Don't actually save to DynamoDB")
     parser.add_argument("--min_roi", type=float, default=0.0, help="Minimum ROI threshold in percentage (default: 0.0 - breakeven)")

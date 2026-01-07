@@ -15,7 +15,7 @@ from decimal import Decimal
 # Initialize AWS clients
 dynamodb = boto3.resource('dynamodb')
 bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
-secretsmanager = boto3.client('secretsmanager', region_name='us-east-1')
+secretsmanager = boto3.client('secretsmanager', region_name='eu-west-1')
 
 # Import learning layer functions
 try:
@@ -316,7 +316,7 @@ def call_claude_bedrock(prompt_text, race_data):
         })
         
         response = bedrock.invoke_model(
-            modelId="us.anthropic.claude-sonnet-4-20250514-v1:0",
+            modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
             body=body
         )
         

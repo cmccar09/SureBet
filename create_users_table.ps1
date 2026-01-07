@@ -14,7 +14,7 @@ aws dynamodb create-table `
     "IndexName=EmailIndex,KeySchema=[{AttributeName=email,KeyType=HASH}],Projection={ProjectionType=ALL},ProvisionedThroughput={ReadCapacityUnits=5,WriteCapacityUnits=5}" `
   --provisioned-throughput `
     ReadCapacityUnits=5,WriteCapacityUnits=5 `
-  --region us-east-1
+  --region eu-west-1
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n✅ Table created successfully!" -ForegroundColor Green

@@ -8,7 +8,7 @@ import sys
 def clear_todays_picks():
     """Delete all picks from today's date"""
     
-    region = 'us-east-1'
+    region = 'eu-west-1'
     table_name = 'SureBetBets'
     today = datetime.utcnow().strftime("%Y-%m-%d")
     

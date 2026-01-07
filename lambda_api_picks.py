@@ -8,7 +8,7 @@ from datetime import datetime
 from decimal import Decimal
 
 # Initialize DynamoDB
-dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
 table = dynamodb.Table('SureBetBets')
 
 def decimal_to_float(obj):
@@ -365,7 +365,7 @@ def trigger_workflow(headers):
     """Trigger the betting workflow Lambda to generate new picks"""
     import boto3
     
-    lambda_client = boto3.client('lambda', region_name='us-east-1')
+    lambda_client = boto3.client('lambda', region_name='eu-west-1')
     
     try:
         # Invoke the workflow Lambda asynchronously

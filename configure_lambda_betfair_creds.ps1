@@ -33,7 +33,7 @@ Write-Host "`nSetting Lambda environment variables..." -ForegroundColor Yellow
 aws lambda update-function-configuration `
     --function-name betting `
     --environment "Variables={BETFAIR_SESSION_TOKEN=$sessionToken,BETFAIR_APP_KEY=$appKey}" `
-    --region us-east-1
+    --region eu-west-1
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n✓ Credentials configured successfully!" -ForegroundColor Green

@@ -20,7 +20,7 @@ class EnhancedAnalyzer:
     def __init__(self, bedrock_client=None):
         """Initialize with AWS Bedrock client"""
         self.bedrock = bedrock_client or boto3.client('bedrock-runtime', region_name='us-east-1')
-        self.model_id = "us.anthropic.claude-sonnet-4-20250514-v1:0"
+        self.model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
     
     def _call_claude(self, prompt: str, max_tokens: int = 4096) -> str:
         """Call Claude via AWS Bedrock with retry logic"""

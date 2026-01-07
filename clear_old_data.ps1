@@ -8,7 +8,7 @@ $today = Get-Date -Format "yyyy-MM-dd"
 Write-Host "Today's date: $today" -ForegroundColor Cyan
 
 # Get all items
-$allItems = aws dynamodb scan --table-name SureBetBets --region us-east-1 | ConvertFrom-Json
+$allItems = aws dynamodb scan --table-name SureBetBets --region eu-west-1 | ConvertFrom-Json
 
 $deleteCount = 0
 $keepCount = 0
@@ -25,7 +25,7 @@ foreach ($item in $allItems.Items) {
     
     if ($date -lt $today -or $isTestData) {
         Write-Host "  Deleting: $horse ($betId) - Date: $date" -ForegroundColor Red
-        aws dynamodb delete-item --table-name SureBetBets --region us-east-1 --key "{`"bet_id`": {`"S`": `"$betId`"}}" | Out-Null
+        aws dynamodb delete-item --table-name SureBetBets --region eu-west-1 --key "{`"bet_id`": {`"S`": `"$betId`"}}" | Out-Null
         $deleteCount++
     } else {
         Write-Host "  Keeping: $horse ($betId) - Date: $date" -ForegroundColor Green

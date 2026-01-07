@@ -118,7 +118,7 @@ $pythonCode = @'
 import boto3
 from datetime import datetime
 
-dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
 table = dynamodb.Table('SureBetBets')
 
 # Get today's picks

@@ -39,7 +39,7 @@ Write-Host "4. Deploying to AWS Lambda..." -ForegroundColor Yellow
 aws lambda update-function-code `
     --function-name betting `
     --zip-file fileb://lambda-results.zip `
-    --region us-east-1
+    --region eu-west-1
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n✓ Lambda deployed successfully!" -ForegroundColor Green

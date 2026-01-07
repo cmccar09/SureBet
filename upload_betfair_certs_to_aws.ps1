@@ -54,7 +54,7 @@ $secret = @{
 
 # Check if secret already exists
 Write-Host "Checking if secret already exists..." -ForegroundColor Cyan
-$existingSecret = aws secretsmanager describe-secret --secret-id betfair-ssl-certificate --region us-east-1 2>$null
+$existingSecret = aws secretsmanager describe-secret --secret-id betfair-ssl-certificate --region eu-west-1 2>$null
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Secret already exists, updating..." -ForegroundColor Yellow
@@ -62,7 +62,7 @@ if ($LASTEXITCODE -eq 0) {
     aws secretsmanager update-secret `
         --secret-id betfair-ssl-certificate `
         --secret-string $secret `
-        --region us-east-1
+        --region eu-west-1
     
     Write-Host "`n✅ Secret updated successfully!" -ForegroundColor Green
 } else {
@@ -72,7 +72,7 @@ if ($LASTEXITCODE -eq 0) {
         --name betfair-ssl-certificate `
         --description "Betfair SSL certificates for API authentication" `
         --secret-string $secret `
-        --region us-east-1
+        --region eu-west-1
     
     Write-Host "`n✅ Secret created successfully!" -ForegroundColor Green
 }
@@ -85,7 +85,7 @@ $roleArn = aws lambda get-function-configuration `
     --function-name BettingWorkflowScheduled `
     --query 'Role' `
     --output text `
-    --region us-east-1
+    --region eu-west-1
 
 $roleName = ($roleArn -split '/')[-1]
 
@@ -102,7 +102,7 @@ $policyDocument = @"
                 "secretsmanager:GetSecretValue",
                 "secretsmanager:DescribeSecret"
             ],
-            "Resource": "arn:aws:secretsmanager:us-east-1:*:secret:betfair-ssl-certificate-*"
+            "Resource": "arn:aws:secretsmanager:eu-west-1:*:secret:betfair-ssl-certificate-*"
         }
     ]
 }

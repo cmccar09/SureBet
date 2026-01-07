@@ -68,7 +68,7 @@ Write-Host "   - dynamodb:GetItem" -ForegroundColor Gray
 Write-Host "   - dynamodb:PutItem" -ForegroundColor Gray
 Write-Host "   - dynamodb:UpdateItem" -ForegroundColor Gray
 Write-Host "   - dynamodb:Scan" -ForegroundColor Gray
-Write-Host "   - Resource: arn:aws:dynamodb:us-east-1:*:table/SureBetUsers`n" -ForegroundColor Gray
+Write-Host "   - Resource: arn:aws:dynamodb:eu-west-1:*:table/SureBetUsers`n" -ForegroundColor Gray
 
 Write-Host "5. Create Function URLs for API access:`n" -ForegroundColor White
 Write-Host "   - lambda_stripe_create_customer → POST /api/auth/register" -ForegroundColor Gray

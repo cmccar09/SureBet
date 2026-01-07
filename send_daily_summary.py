@@ -71,7 +71,7 @@ def load_yesterday_performance():
 def get_bets_from_dynamodb():
     """Retrieve today's bets from DynamoDB"""
     try:
-        dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+        dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
         table = dynamodb.Table('SureBetBets')
         
         today = datetime.now().strftime("%Y-%m-%d")
@@ -89,7 +89,7 @@ def get_bets_from_dynamodb():
 
 def send_email_via_ses(subject, html_body, text_body, to_email):
     """Send email using AWS SES"""
-    ses = boto3.client('ses', region_name='us-east-1')
+    ses = boto3.client('ses', region_name='eu-west-1')
     
     try:
         response = ses.send_email(

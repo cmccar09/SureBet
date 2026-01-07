@@ -11,7 +11,7 @@
 #>
 
 param(
-    [string]$Region = "us-east-1",
+    [string]$Region = "eu-west-1",
     [switch]$UpdateSchedule
 )
 

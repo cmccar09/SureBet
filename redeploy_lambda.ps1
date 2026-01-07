@@ -20,7 +20,7 @@ Write-Host "`nUploading to AWS Lambda..." -ForegroundColor Yellow
 $result = aws lambda update-function-code `
     --function-name BettingWorkflowScheduled `
     --zip-file fileb://lambda-deployment.zip `
-    --region us-east-1 `
+    --region eu-west-1 `
     --output json | ConvertFrom-Json
 
 Write-Host "✓ Lambda updated: $($result.FunctionName)" -ForegroundColor Green
@@ -35,7 +35,7 @@ Start-Sleep -Seconds 10
 Write-Host "`n=== TESTING LAMBDA ===" -ForegroundColor Cyan
 aws lambda invoke `
     --function-name BettingWorkflowScheduled `
-    --region us-east-1 `
+    --region eu-west-1 `
     test-result.json | Out-Null
 
 Start-Sleep -Seconds 15

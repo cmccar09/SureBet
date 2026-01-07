@@ -217,7 +217,7 @@ IMPORTANT: Always output 3-5 selections showing best relative value, even if Por
             for attempt in range(max_retries):
                 try:
                     response = bedrock.invoke_model(
-                        modelId="us.anthropic.claude-sonnet-4-20250514-v1:0",
+                        modelId="anthropic.claude-3-5-sonnet-20240620-v1:0",
                         body=body
                     )
                     

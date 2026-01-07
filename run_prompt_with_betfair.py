@@ -98,7 +98,7 @@ def build_argparser():
                     help="Save selections to DynamoDB SureBetBets table")
     ap.add_argument("--dynamodb_table", type=str, default="SureBetBets",
                     help="DynamoDB table name")
-    ap.add_argument("--dynamodb_region", type=str, default="us-east-1",
+    ap.add_argument("--dynamodb_region", type=str, default="eu-west-1",
                     help="AWS region for DynamoDB")
     return ap
 

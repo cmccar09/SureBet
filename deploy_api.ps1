@@ -13,7 +13,7 @@ Write-Host ""
 
 $functionName = "BettingPicksAPI"
 $roleName = "BettingPicksAPIRole"
-$region = "us-east-1"
+$region = "eu-west-1"
 
 # Step 1: Create Lambda execution role (if it doesn't exist)
 Write-Host "Step 1: Checking IAM role..." -ForegroundColor Yellow
