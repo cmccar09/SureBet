@@ -100,6 +100,20 @@ def analyze_performance(results):
             # Value opportunities when favorite fails
             'favorite_failure_opportunities': 0,  # Times we backed non-fav and it won
             'favorite_failure_capture_rate': 0,  # % of non-fav wins we captured
+        },
+        'strategic_behavior': {
+            # Detect trainers/jockeys "hiding form" in small races to boost odds for bigger events
+            'trainer_patterns': defaultdict(lambda: {
+                'small_race_performance': [],  # Track performance in low-value races
+                'big_race_performance': [],    # Track performance in high-value races
+                'improvement_after_poor': 0,   # Count dramatic improvements
+                'suspicious_patterns': 0       # Flag potential form hiding
+            }),
+            'class_drops_won': 0,      # Won after moving down in class
+            'class_rises_won': 0,      # Won after moving up in class
+            'prep_race_losses': 0,     # Lost in small races before big target
+            'follow_up_wins': 0,       # Won big race after "prep" loss
+            'hiding_form_flags': []    # List of suspicious patterns detected
         }
     }
     
@@ -114,6 +128,14 @@ def analyze_performance(results):
         decision_rating = result.get('decision_rating', 'UNKNOWN')
         confidence = float(result.get('confidence', 0))
         actual_position = result.get('actual_position', 'Unknown')
+        trainer = result.get('trainer', 'Unknown')
+        jockey = result.get('jockey', 'Unknown')
+        race_class = result.get('race_class', 'Unknown')
+        prize_money = float(result.get('prize_money', 0))
+        
+        # Classify race importance (prep vs target race)
+        is_small_race = prize_money < 5000 or 'SELLING' in race_class.upper() or 'CLAIMING' in race_class.upper()
+        is_big_race = prize_money > 15000 or 'LISTED' in race_class.upper() or 'STAKES' in race_class.upper()
         
         # Overall stats
         analysis['overall']['total_stake'] += stake
@@ -161,6 +183,54 @@ def analyze_performance(results):
                 analysis['favorite_analysis']['non_favorites_won'] += 1
                 # VALUE CAPTURE: We backed a non-favorite and it won!
                 analysis['favorite_analysis']['favorite_failure_opportunities'] += 1
+        
+        # STRATEGIC BEHAVIOR TRACKING (detect form hiding)
+        strat = analysis['strategic_behavior']
+        
+        # Track trainer performance in small vs big races
+        if trainer != 'Unknown':
+            if is_small_race:
+                strat['trainer_patterns'][trainer]['small_race_performance'].append({
+                    'won': is_winner,
+                    'odds': odds,
+                    'position': actual_position,
+                    'confidence': confidence
+                })
+                if not is_winner and confidence > 50:
+                    # High confidence but lost in small race - potential prep run
+                    strat['prep_race_losses'] += 1
+            elif is_big_race:
+                strat['trainer_patterns'][trainer]['big_race_performance'].append({
+                    'won': is_winner,
+                    'odds': odds,
+                    'position': actual_position,
+                    'confidence': confidence
+                })
+                if is_winner:
+                    # Check if previous race was a poor run (hiding form)
+                    small_races = strat['trainer_patterns'][trainer]['small_race_performance']
+                    if small_races and not small_races[-1].get('won', False):
+                        # Won big race after losing small race - FLAG
+                        strat['trainer_patterns'][trainer]['improvement_after_poor'] += 1
+                        strat['follow_up_wins'] += 1
+                        if odds > 4.0:  # Good odds after "poor" form
+                            strat['trainer_patterns'][trainer]['suspicious_patterns'] += 1
+                            strat['hiding_form_flags'].append({
+                                'trainer': trainer,
+                                'pattern': f"Won at {odds:.1f} after recent poor run - possible form hiding",
+                                'horse': result.get('horse', 'Unknown'),
+                                'date': result.get('bet_date', 'Unknown')
+                            })
+        
+        # Track class movements
+        prev_class = result.get('previous_class', None)
+        if prev_class:
+            if 'HIGHER' in prev_class.upper():
+                if is_winner:
+                    strat['class_rises_won'] += 1
+            elif 'LOWER' in prev_class.upper():
+                if is_winner:
+                    strat['class_drops_won'] += 1
         
         # By odds range
         if odds <= 3.0:
@@ -331,6 +401,53 @@ def generate_insights(analysis):
             insights['recommendations'].append("CRITICAL: STOP backing favorites (negative ROI) - ALL focus on non-favorites where value lies")
         elif fav_roi < 5:
             insights['recommendations'].append("TIGHTEN: Only back favorites when exceptional value (20%+ ROI, strong form, odds >2.5)")
+    
+    # STRATEGIC BEHAVIOR ANALYSIS (form hiding detection)
+    strat = analysis['strategic_behavior']
+    
+    if len(strat['hiding_form_flags']) > 0:
+        insights['weaknesses'].append(f"🚨 FORM HIDING DETECTED: {len(strat['hiding_form_flags'])} suspicious patterns - trainers may be sandbagging small races")
+        insights['recommendations'].append("CAUTION: Reduce confidence on horses in small/claiming races by 15% - trainers may not be trying hard")
+        
+        # List specific trainers with suspicious patterns
+        for flag in strat['hiding_form_flags'][:3]:  # Show top 3
+            insights['loss_patterns'].append(
+                f"⚠️ {flag['trainer']}: {flag['pattern']} - {flag['horse']}"
+            )
+        
+        insights['recommendations'].append("OPPORTUNITY: When these trainers step up in class, BOOST confidence by 10% - they may have been hiding form")
+    
+    # Class movement analysis
+    if strat['class_rises_won'] > 2:
+        win_rate_up = strat['class_rises_won'] / max(1, analysis['overall']['total_bets']) * 100
+        insights['strengths'].append(f"✅ Class Risers: {strat['class_rises_won']} wins when stepping up - horses are competitive at higher levels")
+        if win_rate_up > 15:
+            insights['recommendations'].append("BOOST: Increase confidence by 10% on horses stepping up in class - they're beating better horses")
+    
+    if strat['class_drops_won'] > strat['class_rises_won'] * 2:
+        insights['weaknesses'].append(f"⚠️ Class Droppers: Winning more at lower class ({strat['class_drops_won']}) - may be overestimating quality")
+        insights['recommendations'].append("RECALIBRATE: Don't overbet class droppers - they should win at lower levels, demand 18%+ ROI")
+    
+    # Prep race detection
+    if strat['prep_race_losses'] > 3 and strat['follow_up_wins'] > 1:
+        prep_to_win_ratio = strat['follow_up_wins'] / max(1, strat['prep_race_losses'])
+        if prep_to_win_ratio > 0.3:  # >30% of prep losses led to follow-up wins
+            insights['recommendations'].append(
+                f"🎯 PATTERN DETECTED: {strat['follow_up_wins']}/{strat['prep_race_losses']} 'prep race' losses led to follow-up wins - "
+                "track horses improving after recent runs in small races"
+            )
+    
+    # Trainer-specific patterns
+    suspicious_trainers = []
+    for trainer, data in strat['trainer_patterns'].items():
+        if data['suspicious_patterns'] > 1:
+            suspicious_trainers.append(trainer)
+    
+    if suspicious_trainers:
+        insights['recommendations'].append(
+            f"🔍 WATCH LIST: {len(suspicious_trainers)} trainers with form-hiding patterns - "
+            f"be CAUTIOUS in small races, AGGRESSIVE when they target big races"
+        )
     
     # Analyze odds ranges
     best_odds_roi = -999
@@ -686,6 +803,19 @@ def lambda_handler(event, context):
     print(f"'DO IT' rating losses: {loss_data['do_it_losses']}")
     if loss_data['by_position']:
         print(f"Finish positions: {dict(loss_data['by_position'])}")
+    
+    print("\n=== STRATEGIC BEHAVIOR ANALYSIS (Form Hiding Detection) ===")
+    strat = analysis['strategic_behavior']
+    if len(strat['hiding_form_flags']) > 0:
+        print(f"🚨 SUSPICIOUS PATTERNS: {len(strat['hiding_form_flags'])} potential form-hiding detected")
+        for flag in strat['hiding_form_flags'][:3]:
+            print(f"   ⚠️  {flag['trainer']}: {flag['pattern']}")
+    if strat['class_rises_won'] > 0:
+        print(f"✅ Class rises won: {strat['class_rises_won']} (horses competitive at higher levels)")
+    if strat['class_drops_won'] > 0:
+        print(f"⚠️  Class drops won: {strat['class_drops_won']} (winning at easier levels)")
+    if strat['prep_race_losses'] > 0 and strat['follow_up_wins'] > 0:
+        print(f"🎯 Prep race pattern: {strat['follow_up_wins']}/{strat['prep_race_losses']} small race losses led to big race wins")
     
     print("\n=== INSIGHTS ===")
     for pattern in insights['loss_patterns']:
