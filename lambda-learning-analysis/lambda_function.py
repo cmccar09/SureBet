@@ -106,6 +106,7 @@ def analyze_performance(results):
             'trainer_patterns': defaultdict(lambda: {
                 'small_race_performance': [],  # Track performance in low-value races
                 'big_race_performance': [],    # Track performance in high-value races
+                'elite_race_performance': [],  # Track performance in Group 1/2/3, major meetings
                 'improvement_after_poor': 0,   # Count dramatic improvements
                 'suspicious_patterns': 0       # Flag potential form hiding
             }),
@@ -113,7 +114,15 @@ def analyze_performance(results):
             'class_rises_won': 0,      # Won after moving up in class
             'prep_race_losses': 0,     # Lost in small races before big target
             'follow_up_wins': 0,       # Won big race after "prep" loss
-            'hiding_form_flags': []    # List of suspicious patterns detected
+            'hiding_form_flags': [],   # List of suspicious patterns detected
+            'elite_races': {           # Group 1/2/3 and major meetings (everyone trying!)
+                'total': 0,
+                'won': 0,
+                'win_rate': 0,
+                'roi': 0,
+                'total_stake': 0,
+                'total_pnl': 0
+            }
         }
     }
     
@@ -132,10 +141,29 @@ def analyze_performance(results):
         jockey = result.get('jockey', 'Unknown')
         race_class = result.get('race_class', 'Unknown')
         prize_money = float(result.get('prize_money', 0))
+        course = result.get('course', 'Unknown').upper()
         
-        # Classify race importance (prep vs target race)
+        # Major meetings where EVERYONE tries hard (no form hiding)
+        major_meetings = [
+            'CHELTENHAM', 'ASCOT', 'AINTREE', 'GOODWOOD', 'EPSOM', 'YORK',
+            'NEWMARKET', 'DONCASTER', 'CURRAGH', 'LEOPARDSTOWN', 'PUNCHESTOWN'
+        ]
+        is_major_meeting = any(meeting in course for meeting in major_meetings)
+        
+        # Classify race importance (3 tiers)
+        # ELITE: Group 1/2/3, major meetings - EVERYONE trying to win!
+        is_elite_race = (
+            'GROUP 1' in race_class.upper() or 'GRADE 1' in race_class.upper() or
+            'GROUP 2' in race_class.upper() or 'GRADE 2' in race_class.upper() or
+            'GROUP 3' in race_class.upper() or 'GRADE 3' in race_class.upper() or
+            is_major_meeting and prize_money > 30000
+        )
+        
+        # SMALL: Prep races, form hiding likely
         is_small_race = prize_money < 5000 or 'SELLING' in race_class.upper() or 'CLAIMING' in race_class.upper()
-        is_big_race = prize_money > 15000 or 'LISTED' in race_class.upper() or 'STAKES' in race_class.upper()
+        
+        # BIG: Competitive but not elite
+        is_big_race = not is_elite_race and (prize_money > 15000 or 'LISTED' in race_class.upper() or 'STAKES' in race_class.upper())
         
         # Overall stats
         analysis['overall']['total_stake'] += stake
@@ -187,9 +215,26 @@ def analyze_performance(results):
         # STRATEGIC BEHAVIOR TRACKING (detect form hiding)
         strat = analysis['strategic_behavior']
         
-        # Track trainer performance in small vs big races
+        # Track ELITE races separately (Group 1/2/3, major meetings)
+        if is_elite_race:
+            strat['elite_races']['total'] += 1
+            strat['elite_races']['total_stake'] += stake
+            strat['elite_races']['total_pnl'] += pnl
+            if is_winner:
+                strat['elite_races']['won'] += 1
+        
+        # Track trainer performance across race tiers
         if trainer != 'Unknown':
-            if is_small_race:
+            if is_elite_race:
+                # ELITE races - everyone trying hard, trust the form!
+                strat['trainer_patterns'][trainer]['elite_race_performance'].append({
+                    'won': is_winner,
+                    'odds': odds,
+                    'position': actual_position,
+                    'confidence': confidence,
+                    'race_type': race_class
+                })
+            elif is_small_race:
                 strat['trainer_patterns'][trainer]['small_race_performance'].append({
                     'won': is_winner,
                     'odds': odds,
@@ -405,6 +450,30 @@ def generate_insights(analysis):
     # STRATEGIC BEHAVIOR ANALYSIS (form hiding detection)
     strat = analysis['strategic_behavior']
     
+    # ELITE RACE ANALYSIS (Group 1/2/3, major meetings - everyone trying!)
+    elite_data = strat['elite_races']
+    if elite_data['total'] > 0:
+        elite_data['win_rate'] = elite_data['won'] / elite_data['total']
+        elite_data['roi'] = (elite_data['total_pnl'] / elite_data['total_stake'] * 100) if elite_data['total_stake'] > 0 else 0
+        
+        insights['strengths'].append(
+            f"🏆 ELITE RACES (Group 1/2/3, Major Meetings): {elite_data['total']} backed, "
+            f"{elite_data['win_rate']*100:.1f}% win rate, {elite_data['roi']:.1f}% ROI - EVERYONE trying to win!"
+        )
+        
+        if elite_data['roi'] > 10:
+            insights['recommendations'].append(
+                f"✨ ELITE RACE EDGE: {elite_data['roi']:.1f}% ROI on Group races - "
+                "BOOST confidence by 20% on Group 1/2/3 and major meetings (no form hiding!)"
+            )
+        elif elite_data['roi'] < 0:
+            insights['weaknesses'].append(
+                f"⚠️ Elite race struggles: {elite_data['roi']:.1f}% ROI - competition is fierce, may be overestimating chances"
+            )
+            insights['recommendations'].append(
+                "RECALIBRATE: Elite races have best horses - require 25%+ ROI and stronger form indicators"
+            )
+    
     if len(strat['hiding_form_flags']) > 0:
         insights['weaknesses'].append(f"🚨 FORM HIDING DETECTED: {len(strat['hiding_form_flags'])} suspicious patterns - trainers may be sandbagging small races")
         insights['recommendations'].append("CAUTION: Reduce confidence on horses in small/claiming races by 15% - trainers may not be trying hard")
@@ -415,7 +484,7 @@ def generate_insights(analysis):
                 f"⚠️ {flag['trainer']}: {flag['pattern']} - {flag['horse']}"
             )
         
-        insights['recommendations'].append("OPPORTUNITY: When these trainers step up in class, BOOST confidence by 10% - they may have been hiding form")
+        insights['recommendations'].append("OPPORTUNITY: When these trainers step up to ELITE races (Group 1/2/3), BOOST confidence by 15% - no sandbagging at top level!")
     
     # Class movement analysis
     if strat['class_rises_won'] > 2:
@@ -806,6 +875,18 @@ def lambda_handler(event, context):
     
     print("\n=== STRATEGIC BEHAVIOR ANALYSIS (Form Hiding Detection) ===")
     strat = analysis['strategic_behavior']
+    
+    # ELITE RACES (Group 1/2/3, Major Meetings)
+    elite_data = strat['elite_races']
+    if elite_data['total'] > 0:
+        print(f"🏆 ELITE RACES (Group 1/2/3, Major Meetings):")
+        print(f"   Total backed: {elite_data['total']}")
+        print(f"   Win rate: {elite_data['win_rate']*100:.1f}%")
+        print(f"   ROI: {elite_data['roi']:.1f}%")
+        print(f"   ✨ Everyone trying to win - NO form hiding at this level!")
+        if elite_data['roi'] > 10:
+            print(f"   ✅ EXCELLENT performance at elite level - keep targeting these!")
+    
     if len(strat['hiding_form_flags']) > 0:
         print(f"🚨 SUSPICIOUS PATTERNS: {len(strat['hiding_form_flags'])} potential form-hiding detected")
         for flag in strat['hiding_form_flags'][:3]:
