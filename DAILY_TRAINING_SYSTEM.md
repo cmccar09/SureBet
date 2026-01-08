@@ -3,6 +3,15 @@
 ## Objective
 Train the system daily to progressively improve betting quality until **top cards consistently turn GREEN** (high confidence, high ROI bets).
 
+## Ultimate ROI Targets (Valuation Milestones)
+These are the performance targets that create business value:
+
+- **Month 1: 50% ROI** - Worth £0 (could be luck, not sellable)
+- **Month 12: 20% ROI sustained** - Worth £500k - £2M (proven edge, sellable)
+- **Month 36: 25% ROI sustained** - Worth £5M - £25M (gold standard exit)
+
+**The system is designed to reach these targets through progressive daily training.**
+
 ## Green Status Definition
 A bet achieves **GREEN** status when:
 - ✅ **Combined Confidence ≥ 75%** (HIGH confidence)
@@ -67,7 +76,8 @@ A bet achieves **GREEN** status when:
 ---
 
 ### Week 7+: Mastery & Consistency
-**Goal:** Achieve TOP CARD GREEN - First pick of the day is GREEN status
+**Goal:** Achieve TOP CARD GREEN - First pick of the day is GREEN status  
+**Long-term Target:** Sustained 20%+ ROI for 12 months (creates £500k-£2M value)
 
 **Focus Areas:**
 - Rank picks by quality score (confidence × ROI × form consistency)
@@ -81,6 +91,34 @@ A bet achieves **GREEN** status when:
 - Celebrate wins → Reinforce successful pattern recognition
 
 **Success Metric:** First card GREEN 4+ days per week, 25%+ ROI, 65%+ win rate on top picks
+
+---
+
+### Month 12+: Proven Edge (Exit Preparation)
+**Goal:** Sustained 20% ROI for 12 consecutive months  
+**Valuation Impact:** £500k - £2M business value
+
+**Focus Areas:**
+- Consistency over spectacular wins
+- Track record verification (timestamps, third-party validation)
+- Zero tolerance for losing months
+- Build bulletproof audit trail
+
+**Success Metric:** 12-month rolling average ROI ≥ 20%
+
+---
+
+### Month 36+: Gold Standard Exit
+**Goal:** Sustained 25% ROI for 36 consecutive months  
+**Valuation Impact:** £5M - £25M business value
+
+**Focus Areas:**
+- Maintain edge as market conditions change
+- Continuously adapt strategies
+- Perfect execution on elite races
+- Ultimate mastery of all 4 core strategies
+
+**Success Metric:** 36-month rolling average ROI ≥ 25%
 
 ---
 
