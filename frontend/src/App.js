@@ -5,6 +5,10 @@ import './App.css';
 const API_BASE_URL = process.env.REACT_APP_API_URL || 
                      'https://mnybvagd5m.execute-api.eu-west-1.amazonaws.com';
 
+// Budget configuration - £500 monthly budget
+const MONTHLY_BUDGET = 500;
+const DAILY_BUDGET = MONTHLY_BUDGET / 30;
+
 function App() {
   const [picks, setPicks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -295,11 +299,11 @@ function App() {
               <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', fontSize: '14px'}}>
                 <div>
                   <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Monthly Budget</div>
-                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>£500</div>
+                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>£{MONTHLY_BUDGET}</div>
                 </div>
                 <div>
                   <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Daily Allocation</div>
-                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>£{(500/30).toFixed(2)}</div>
+                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>£{DAILY_BUDGET.toFixed(2)}</div>
                 </div>
                 <div>
                   <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Total Picks</div>
@@ -307,7 +311,7 @@ function App() {
                 </div>
                 <div>
                   <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Base per Pick</div>
-                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>£{((500/30) / picks.length).toFixed(2)}</div>
+                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>£{(DAILY_BUDGET / picks.length).toFixed(2)}</div>
                 </div>
               </div>
               <div style={{marginTop: '12px', fontSize: '12px', opacity: 0.9, lineHeight: '1.5'}}>
@@ -335,10 +339,7 @@ function App() {
               const courseName = typeof pick.course === 'string' ? pick.course : 'Unknown';
               
               // BUDGET-BASED STAKE CALCULATION
-              // Monthly budget: £500, Daily average: £500/30 = £16.67
-              // Distribute across picks based on confidence and number of bets
-              const MONTHLY_BUDGET = 500;
-              const DAILY_BUDGET = MONTHLY_BUDGET / 30; // £16.67 per day
+              // Use global budget constants defined at top of file
               const totalPicks = picks.length;
               const baseBudgetPerPick = DAILY_BUDGET / Math.max(totalPicks, 1);
               
