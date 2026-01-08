@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-01-07T17:15:07.003396",
-  "sample_size": 33,
-  "date_range": "20251229 to 20260104",
+  "generated_at": "2026-01-08T03:28:56.962618",
+  "sample_size": 43,
+  "date_range": "20251229 to 20260107",
   "overall_stats": {
-    "total_bets": 33,
-    "wins": 7,
-    "win_rate": 0.21212121212121213,
-    "places": 7,
-    "place_rate": 0.21212121212121213,
-    "avg_p_win": 0.33681818181818185
+    "total_bets": 43,
+    "wins": 8,
+    "win_rate": 0.18604651162790697,
+    "places": 8,
+    "place_rate": 0.18604651162790697,
+    "avg_p_win": 0.3129069767441861
   },
   "winning_patterns": [
     {
@@ -21,8 +21,8 @@
   ],
   "failing_patterns": [],
   "recommendations": [
-    "CRITICAL: Win rate (21.2%) is significantly below predictions (33.7%). AI is overconfident. Consider increasing selectivity or adjusting probability estimates.",
-    "EW bets: 27 bets, 25.9% place rate"
+    "CRITICAL: Win rate (18.6%) is significantly below predictions (31.3%). AI is overconfident. Consider increasing selectivity or adjusting probability estimates.",
+    "EW bets: 37 bets, 21.6% place rate"
   ],
-  "prompt_guidance": "\nHISTORICAL PERFORMANCE INSIGHTS (Last 33 bets):\n\nWHAT'S WORKING:\n- BELOW_THRESHOLD: 27.3% win rate (expected 28.0%)\n\nRECOMMENDATIONS:\n- CRITICAL: Win rate (21.2%) is significantly below predictions (33.7%). AI is overconfident. Consider increasing selectivity or adjusting probability estimates.\n- EW bets: 27 bets, 25.9% place rate\n"
+  "prompt_guidance": "\nHISTORICAL PERFORMANCE INSIGHTS (Last 43 bets):\n\nWHAT'S WORKING:\n- BELOW_THRESHOLD: 27.3% win rate (expected 28.0%)\n\nRECOMMENDATIONS:\n- CRITICAL: Win rate (18.6%) is significantly below predictions (31.3%). AI is overconfident. Consider increasing selectivity or adjusting probability estimates.\n- EW bets: 37 bets, 21.6% place rate\n"
 }
