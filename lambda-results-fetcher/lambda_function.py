@@ -276,9 +276,15 @@ def lambda_handler(event, context):
         market_id = market.get('marketId')
         status = market.get('status')
         
-        if status not in ['CLOSED', 'SETTLED']:
-            print(f"  Market {market_id}: {status} (not settled)")
+        # Check if any runner has WINNER status (race is settled)
+        has_winner = any(r.get('status') == 'WINNER' for r in market.get('runners', []))
+        
+        if not has_winner and status not in ['CLOSED', 'SETTLED']:
+            print(f"  Market {market_id}: {status} (not settled, no winner yet)")
             continue
+        
+        if has_winner:
+            print(f"  Market {market_id}: {status} (HAS WINNER - processing results)")
         
         # Extract winner information
         winners_map[market_id] = get_race_winner(market)

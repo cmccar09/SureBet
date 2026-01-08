@@ -52,63 +52,62 @@ def authenticate_with_certificate(username, password, app_key):
     Returns session token if successful
     """
     
-    # Try interactive login first (more reliable)
-    print("Attempting interactive login (username/password)...")
-    session_token = authenticate_without_certificate(username, password, app_key)
-    if session_token:
-        return session_token
-    
-    # Fallback to certificate if interactive fails
-    print("Interactive login failed, trying certificate authentication...")
+    # Try certificate authentication FIRST (password has pending change issue)
+    print("Attempting certificate authentication...")
     
     # Get certificates from Secrets Manager
     cert_path, key_path = get_betfair_cert_from_secrets()
     
-    if not cert_path or not key_path:
-        print("WARNING: SSL certificates not found in Secrets Manager")
-        return None
-    
-    # Interactive (cert) login endpoint
-    url = "https://identitysso-cert.betfair.com/api/certlogin"
-    
-    headers = {
-        'X-Application': app_key,
-        'Content-Type': 'application/x-www-form-urlencoded'
-    }
-    
-    data = {
-        'username': username,
-        'password': password
-    }
-    
-    try:
-        response = requests.post(
-            url,
-            headers=headers,
-            data=data,
-            cert=(cert_path, key_path),
-            timeout=30
-        )
+    if cert_path and key_path:
+        # Interactive (cert) login endpoint
+        url = "https://identitysso-cert.betfair.com/api/certlogin"
         
-        if response.status_code == 200:
-            result = response.json()
+        headers = {
+            'X-Application': app_key,
+            'Content-Type': 'application/x-www-form-urlencoded'
+        }
+        
+        data = {
+            'username': username,
+            'password': password
+        }
+        
+        try:
+            response = requests.post(
+                url,
+                headers=headers,
+                data=data,
+                cert=(cert_path, key_path),
+                timeout=30
+            )
             
-            if result.get('loginStatus') == 'SUCCESS':
-                session_token = result.get('sessionToken')
-                print(f"✓ Certificate authentication successful")
-                print(f"  Session token: {session_token[:20]}...")
-                return session_token
+            if response.status_code == 200:
+                result = response.json()
+                
+                if result.get('loginStatus') == 'SUCCESS':
+                    session_token = result.get('sessionToken')
+                    print(f"✓ Certificate authentication successful")
+                    print(f"  Session token: {session_token[:20]}...")
+                    return session_token
+                else:
+                    print(f"❌ Certificate login failed: {result.get('loginStatus')}")
             else:
-                print(f"❌ Login failed: {result.get('loginStatus')}")
-                return None
-        else:
-            print(f"❌ Certificate auth failed: HTTP {response.status_code}")
-            print(f"   Response: {response.text}")
-            return None
-            
-    except Exception as e:
-        print(f"❌ Error during certificate authentication: {e}")
-        return None
+                print(f"❌ Certificate auth failed: HTTP {response.status_code}")
+                print(f"   Response: {response.text}")
+                
+        except Exception as e:
+            print(f"❌ Error during certificate authentication: {e}")
+    else:
+        print("WARNING: SSL certificates not found in Secrets Manager")
+    
+    # Fallback to interactive login (will fail if password needs change)
+    print("Certificate failed, trying interactive login (username/password)...")
+    session_token = authenticate_without_certificate(username, password, app_key)
+    if session_token:
+        return session_token
+    
+    print("ERROR: All authentication methods failed")
+    return None
 
 def authenticate_without_certificate(username, password, app_key):
     """

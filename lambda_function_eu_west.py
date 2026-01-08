@@ -306,6 +306,9 @@ def store_bets_in_dynamodb(bets, prompt, model_response):
             "confidence": convert_floats(bet.get("confidence", 50)),
             "roi": convert_floats(bet.get("roi", bet.get("ev", 0))),
             "recommendation": bet.get("recommendation", "CONSIDER"),
+            # Betfair IDs for results fetching
+            "market_id": str(bet.get("market_id", "")),
+            "selection_id": str(bet.get("selection_id", "")),
             "audit": {
                 "created_by": "lambda",
                 "created_at": datetime.datetime.utcnow().isoformat(),

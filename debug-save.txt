@@ -1,0 +1,60 @@
+START RequestId: 1892d7ed-1a88-4ba8-aed1-9dd7965179e1 Version: $LATEST
+Lambda execution started
+Loading learning insights...
+S3 insights not available: An error occurred (AccessDenied) when calling the GetObject operation: User: arn:aws:sts::813281204422:assumed-role/betting-eu-role/betting is not authorized to perform: s3:ListBucket on resource: "arn:aws:s3:::betting-insights" because no identity-based policy allows the s3:ListBucket action
+DynamoDB insights not available: An error occurred (ValidationException) when calling the GetItem operation: The provided key element does not match the schema
+ℹ️ No learning insights yet (system still building track record)
+Fetching Betfair odds...
+Fetching live Betfair odds (UK/IRE horse racing)...
+Fetching Betfair session from Secrets Manager...
+Fetching UK/IRE horse racing markets...
+Error fetching Betfair markets: 400 Client Error: Bad Request for url: https://api.betfair.com/exchange/betting/rest/v1.0/listMarketCatalogue/
+Betfair fetch failed: 400 Client Error: Bad Request for url: https://api.betfair.com/exchange/betting/rest/v1.0/listMarketCatalogue/, using mock data as fallback...
+Using realistic mock data (Betfair geo-restricted from AWS)
+Found 3 races
+Calling Claude AI...
+Initial parse failed, extracting JSON from text: Expecting value: line 1 column 1 (char 0)
+Extracted JSON successfully: 5 bets
+Claude returned 5 predictions
+Storing bets in DynamoDB...
+=== STORING 5 BETS ===
+Races data available: 3 races
+Processing bet: Royal Strike at Newmarket
+=== MATCHING: Royal Strike at Newmarket ===
+Looking for race_time: 2026-01-08T17:45:47Z
+Total races to search: 3
+Normalized race_time: 2026-01-08T17:45:47
+Horse name (lower): 'royal strike'
+Race 1: Cheltenham @ 2026-01-08T17:30:47Z (market: 1.234567)
+Course match: False ('Cheltenham' vs 'Newmarket')
+Time match: False ('2026-01-08T17:30' vs '2026-01-08T17:45')
+Race 2: Newmarket @ 2026-01-08T17:45:47Z (market: 1.234568)
+Course match: True ('Newmarket' vs 'Newmarket')
+Time match: True ('2026-01-08T17:45' vs '2026-01-08T17:45')
+✓ Race matched! Searching 7 runners...
+✓✓ MATCHED! Royal Strike -> selection_id: 10100
+Result: market_id=1.234568, selection_id=10100
+ERROR: An error occurred (ValidationException) when calling the PutItem operation: One or more parameter values were invalid: Missing the key bet_date in the item
+Traceback (most recent call last):
+File "/var/task/lambda_function.py", line 477, in lambda_handler
+store_bets_in_dynamodb(bets, prompt, bets, races)
+File "/var/task/lambda_function.py", line 390, in store_bets_in_dynamodb
+table.put_item(Item=item)
+File "/var/task/boto3/resources/factory.py", line 581, in do_action
+response = action(self, *args, **kwargs)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/var/task/boto3/resources/action.py", line 88, in __call__
+response = getattr(parent.meta.client, operation_name)(*args, **params)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/var/task/botocore/client.py", line 602, in _api_call
+return self._make_api_call(operation_name, kwargs)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+File "/var/task/botocore/context.py", line 123, in wrapper
+return func(*args, **kwargs)
+^^^^^^^^^^^^^^^^^^^^^
+File "/var/task/botocore/client.py", line 1078, in _make_api_call
+raise error_class(parsed_response, operation_name)
+botocore.exceptions.ClientError: An error occurred (ValidationException) when calling the PutItem operation: One or more parameter values were invalid: Missing the key bet_date in the item
+END RequestId: 1892d7ed-1a88-4ba8-aed1-9dd7965179e1
+REPORT RequestId: 1892d7ed-1a88-4ba8-aed1-9dd7965179e1	Duration: 12992.52 ms	Billed Duration: 12993 ms	Memory Size: 512 MB	Max Memory Used: 97 MB	
+

@@ -1,0 +1,13 @@
+START RequestId: 2c063ffc-31d1-497d-bfec-2bd67ece1ee5 Version: $LATEST
+=== RACE RESULTS FETCHER ===
+Time: 2026-01-08T17:45:45.833446
+Authenticating with Betfair...
+Attempting interactive login (username/password)...
+Interactive auth failed: 200 - {"token":"","product":"XDDM8EHzaw8tokvQ","status":"FAIL","error":"ACCOUNT_PENDING_PASSWORD_CHANGE"}
+Interactive login failed, trying certificate authentication...
+Error retrieving certificates from Secrets Manager: An error occurred (AccessDeniedException) when calling the GetSecretValue operation: User: arn:aws:sts::813281204422:assumed-role/BettingPicksAPIRole/BettingResultsFetcher is not authorized to perform: secretsmanager:GetSecretValue on resource: betfair-ssl-certificate because no identity-based policy allows the secretsmanager:GetSecretValue action
+WARNING: SSL certificates not found in Secrets Manager
+ERROR: Authentication failed
+END RequestId: 2c063ffc-31d1-497d-bfec-2bd67ece1ee5
+REPORT RequestId: 2c063ffc-31d1-497d-bfec-2bd67ece1ee5	Duration: 724.14 ms	Billed Duration: 1351 ms	Memory Size: 512 MB	Max Memory Used: 100 MB	Init Duration: 626.75 ms	
+
