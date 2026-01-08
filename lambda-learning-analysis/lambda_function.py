@@ -82,6 +82,24 @@ def analyze_performance(results):
             'high_confidence_losses': 0,  # Lost despite >70% confidence
             'do_it_losses': 0,  # Lost despite 'DO IT' rating
             'by_position': defaultdict(int),  # Track finishing positions
+        },
+        'favorite_analysis': {
+            # Track favorite (odds <3.0) vs non-favorite performance separately
+            'favorites_backed': 0,
+            'favorites_won': 0,
+            'favorites_win_rate': 0,
+            'favorites_roi': 0,
+            'favorites_total_stake': 0,
+            'favorites_total_pnl': 0,
+            'non_favorites_backed': 0,
+            'non_favorites_won': 0,
+            'non_favorites_win_rate': 0,
+            'non_favorites_roi': 0,
+            'non_favorites_total_stake': 0,
+            'non_favorites_total_pnl': 0,
+            # Value opportunities when favorite fails
+            'favorite_failure_opportunities': 0,  # Times we backed non-fav and it won
+            'favorite_failure_capture_rate': 0,  # % of non-fav wins we captured
         }
     }
     
@@ -125,6 +143,25 @@ def analyze_performance(results):
             
             if decision_rating == 'DO IT':
                 analysis['loss_analysis']['do_it_losses'] += 1        
+        
+        # FAVORITE vs NON-FAVORITE TRACKING (Key profitability insight!)
+        is_favorite = (odds < 3.0)  # Favorites typically have odds under 3.0
+        
+        if is_favorite:
+            analysis['favorite_analysis']['favorites_backed'] += 1
+            analysis['favorite_analysis']['favorites_total_stake'] += stake
+            analysis['favorite_analysis']['favorites_total_pnl'] += pnl
+            if is_winner:
+                analysis['favorite_analysis']['favorites_won'] += 1
+        else:
+            analysis['favorite_analysis']['non_favorites_backed'] += 1
+            analysis['favorite_analysis']['non_favorites_total_stake'] += stake
+            analysis['favorite_analysis']['non_favorites_total_pnl'] += pnl
+            if is_winner:
+                analysis['favorite_analysis']['non_favorites_won'] += 1
+                # VALUE CAPTURE: We backed a non-favorite and it won!
+                analysis['favorite_analysis']['favorite_failure_opportunities'] += 1
+        
         # By odds range
         if odds <= 3.0:
             odds_range = 'favorite'
@@ -171,6 +208,22 @@ def analyze_performance(results):
     total_stake = analysis['overall']['total_stake']
     if total_stake > 0:
         analysis['overall']['roi'] = (analysis['overall']['total_pnl'] / total_stake) * 100
+    
+    # Calculate favorite vs non-favorite rates
+    fav_analysis = analysis['favorite_analysis']
+    if fav_analysis['favorites_backed'] > 0:
+        fav_analysis['favorites_win_rate'] = fav_analysis['favorites_won'] / fav_analysis['favorites_backed']
+        if fav_analysis['favorites_total_stake'] > 0:
+            fav_analysis['favorites_roi'] = (fav_analysis['favorites_total_pnl'] / fav_analysis['favorites_total_stake']) * 100
+    
+    if fav_analysis['non_favorites_backed'] > 0:
+        fav_analysis['non_favorites_win_rate'] = fav_analysis['non_favorites_won'] / fav_analysis['non_favorites_backed']
+        if fav_analysis['non_favorites_total_stake'] > 0:
+            fav_analysis['non_favorites_roi'] = (fav_analysis['non_favorites_total_pnl'] / fav_analysis['non_favorites_total_stake']) * 100
+        # Capture rate: How well are we picking the winners when favorites fail?
+        # Ideal: If ~67% of races won by non-favorites, we want to capture as many as possible
+        if fav_analysis['non_favorites_backed'] > 0:
+            fav_analysis['favorite_failure_capture_rate'] = (fav_analysis['favorite_failure_opportunities'] / fav_analysis['non_favorites_backed']) * 100
     
     # Calculate ROI for each category
     for category in ['by_odds_range', 'by_course', 'by_bet_type', 'by_decision_rating']:
@@ -244,6 +297,40 @@ def generate_insights(analysis):
                     f"{nowhere} losses finished 5th or worse (not competitive) - poor selection"
                 )
                 insights['recommendations'].append("SELECTION: Review horse form analysis - too many uncompetitive picks, need stricter filters")
+    
+    # FAVORITE vs NON-FAVORITE ANALYSIS (67% rule exploitation!)
+    fav_analysis = analysis['favorite_analysis']
+    
+    if fav_analysis['favorites_backed'] > 0 and fav_analysis['non_favorites_backed'] > 0:
+        fav_win_rate = fav_analysis['favorites_win_rate'] * 100
+        non_fav_win_rate = fav_analysis['non_favorites_win_rate'] * 100
+        fav_roi = fav_analysis['favorites_roi']
+        non_fav_roi = fav_analysis['non_favorites_roi']
+        capture_rate = fav_analysis['favorite_failure_capture_rate']
+        
+        insights['strengths'].append(f"Favorite Strategy: {fav_analysis['favorites_backed']} backed, {fav_win_rate:.0f}% win rate, {fav_roi:.1f}% ROI")
+        insights['strengths'].append(f"Non-Favorite Strategy: {fav_analysis['non_favorites_backed']} backed, {non_fav_win_rate:.0f}% win rate, {non_fav_roi:.1f}% ROI")
+        
+        # Key insight: Are we exploiting the 67% rule?
+        if non_fav_roi > fav_roi:
+            insights['strengths'].append(f"✅ EXCELLENT: Non-favorites ({non_fav_roi:.1f}% ROI) outperforming favorites ({fav_roi:.1f}% ROI) - exploiting 67% rule!")
+            insights['recommendations'].append(f"DOUBLE DOWN: Increase stake on non-favorites with {capture_rate:.0f}% capture rate - this is where the value is")
+        elif fav_roi > 10 and fav_win_rate > 40:
+            insights['weaknesses'].append(f"⚠️ DANGER: Backing too many favorites ({fav_roi:.1f}% ROI at {fav_win_rate:.0f}% win) - low odds, low value")
+            insights['recommendations'].append("SHIFT STRATEGY: Favorites win ~33% but at poor odds - focus on non-favorites (67% of winners) for better ROI")
+        
+        # Capture rate analysis
+        if capture_rate < 20:
+            insights['weaknesses'].append(f"⚠️ MISSING VALUE: Only capturing {capture_rate:.0f}% of non-favorite wins - missing 67% rule opportunities")
+            insights['recommendations'].append("IMPROVE SELECTION: Need better non-favorite identification - study form, pace, track conditions to find the 67%")
+        elif capture_rate > 35:
+            insights['strengths'].append(f"🎯 VALUE CAPTURE: Excellent {capture_rate:.0f}% capture rate on non-favorite wins - finding value in the 67%!")
+        
+        # ROI-based recommendations
+        if fav_roi < 0 and non_fav_roi > 5:
+            insights['recommendations'].append("CRITICAL: STOP backing favorites (negative ROI) - ALL focus on non-favorites where value lies")
+        elif fav_roi < 5:
+            insights['recommendations'].append("TIGHTEN: Only back favorites when exceptional value (20%+ ROI, strong form, odds >2.5)")
     
     # Analyze odds ranges
     best_odds_roi = -999
@@ -557,6 +644,20 @@ def lambda_handler(event, context):
     print("\n=== IMPROVEMENT AREAS ===")
     for improvement in quality_metrics['improvement_needed']:
         print(f"🎯 {improvement}")
+    
+    print("\n=== FAVORITE vs NON-FAVORITE ANALYSIS (67% Rule) ===")
+    fav_analysis = analysis['favorite_analysis']
+    if fav_analysis['favorites_backed'] > 0:
+        print(f"Favorites backed: {fav_analysis['favorites_backed']}")
+        print(f"  Win rate: {fav_analysis['favorites_win_rate']*100:.1f}% (typical: 33%)")
+        print(f"  ROI: {fav_analysis['favorites_roi']:.1f}%")
+    if fav_analysis['non_favorites_backed'] > 0:
+        print(f"Non-favorites backed: {fav_analysis['non_favorites_backed']}")
+        print(f"  Win rate: {fav_analysis['non_favorites_win_rate']*100:.1f}% (67% of races)")
+        print(f"  ROI: {fav_analysis['non_favorites_roi']:.1f}%")
+        print(f"  Value capture: {fav_analysis['favorite_failure_capture_rate']:.1f}% of non-fav wins")
+        if fav_analysis['non_favorites_roi'] > fav_analysis['favorites_roi']:
+            print(f"  ✅ NON-FAVORITES OUTPERFORMING - exploiting 67% rule!")
     
     print("\n=== TRAINING ADJUSTMENTS (Auto-applied) ===")
     if adjustments['confidence_calibration'] != 1.0:
