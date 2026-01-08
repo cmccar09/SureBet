@@ -14,6 +14,42 @@ except ImportError as e:
     print(f"Betting modules not available: {e}")
     BETTING_MODULES_AVAILABLE = False
 
+# Learning insights
+s3 = boto3.client('s3')
+dynamodb = boto3.resource('dynamodb')
+
+def load_learning_insights():
+    """Load latest learning insights from winner analysis"""
+    
+    insights_bucket = os.environ.get('INSIGHTS_BUCKET', 'betting-insights')
+    insights_key = 'winner_analysis.json'
+    
+    try:
+        # Try S3 first
+        response = s3.get_object(Bucket=insights_bucket, Key=insights_key)
+        insights = json.loads(response['Body'].read())
+        print(f"✓ Loaded learning insights from S3 (generated: {insights.get('generated_at')})")
+        return insights.get('prompt_enhancements', '')
+    except Exception as e:
+        print(f"S3 insights not available: {e}")
+        # Try DynamoDB fallback
+        try:
+            table = dynamodb.Table('BettingPerformance')
+            response = table.get_item(
+                Key={
+                    'analysis_date': datetime.datetime.utcnow().strftime('%Y-%m-%d'),
+                    'analysis_id': 'winner_analysis'
+                }
+            )
+            if 'Item' in response:
+                insights = json.loads(response['Item']['insights'])
+                print(f"✓ Loaded learning insights from DynamoDB")
+                return insights.get('prompt_enhancements', '')
+        except Exception as db_error:
+            print(f"DynamoDB insights not available: {db_error}")
+    
+    return ""
+
 # --- Free Odds API integration ---
 def fetch_betfair_odds():
     """
@@ -288,20 +324,32 @@ def lambda_handler(event, context):
     try:
         print("Lambda execution started")
         
-        # 1. Fetch latest odds
+        # 1. Load learning insights from winner analysis
+        print("Loading learning insights...")
+        learning_enhancements = load_learning_insights()
+        if learning_enhancements:
+            print("✓ Learning insights loaded - applying to prompt")
+        else:
+            print("ℹ️ No learning insights yet (system still building track record)")
+        
+        # 2. Fetch latest odds
         print("Fetching Betfair odds...")
         races = fetch_betfair_odds()
         print(f"Found {len(races)} races")
 
-        # 2. Build prompt with timing strategy context
-        prompt = (
+        # 3. Build prompt with timing strategy context + learning insights
+        base_prompt = (
             "Horse Racing Value Betting Analysis (UK & IRE, 24h Window):\n\n"
             "TIMING STRATEGY: Optimal betting window is 30-90 minutes before race start.\n"
             "- Races >2 hours away: Odds too volatile, reduce confidence by 30%\n"
             "- Races 30-90 mins away: OPTIMAL - full confidence\n"
             "- Races 15-30 mins away: Good window - slight confidence reduction (10%)\n"
             "- Races <15 mins away: Too late - market efficient, minimal value\n\n"
-            "Evaluate all provided races and ALWAYS return your Top 5 best opportunities.\n\n"
+        )
+        
+        # Add learning insights if available
+        prompt = base_prompt + learning_enhancements + (
+            "\n\nEvaluate all provided races and ALWAYS return your Top 5 best opportunities.\n\n"
             "For each prediction, include:\n"
             "- race_time, course, horse, bet_type, odds\n"
             "- p_win: probability of winning (0-1 decimal)\n"
@@ -311,15 +359,15 @@ def lambda_handler(event, context):
             "- why_now: brief explanation including timing factor\n"
             "- recommendation: 'BET' if ROI ≥ 15% and confidence ≥ 70 and in optimal window, 'CONSIDER' if ROI ≥ 10% or confidence ≥ 60, otherwise 'AVOID'\n\n"
             "Return a JSON array with exactly 5 objects sorted by adjusted confidence.\n"
-            "Consider race timing in your confidence scores and recommendations.\n"
+            "Consider race timing AND recent learnings in your confidence scores and recommendations.\n"
         )
 
-        # 3. Call Claude 4.5 with prompt and context
+        # 4. Call Claude 4.5 with prompt and context
         print("Calling Claude AI...")
         all_predictions = call_claude_4_5(prompt, races)
         print(f"Claude returned {len(all_predictions)} predictions")
         
-        # 4. Enhance predictions with timing analysis
+        # 5. Enhance predictions with timing analysis
         for pred in all_predictions:
             # Find matching race for timing data
             race_timing = None

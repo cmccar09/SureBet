@@ -111,8 +111,35 @@ def fetch_market_results(market_ids, session_token, app_key):
     
     return results
 
-def update_bet_results(bet, result_data):
-    """Update bet in DynamoDB with actual result"""
+def get_race_winner(market_data):
+    """Extract winner details from market data"""
+    winner_info = {
+        'winner_name': None,
+        'winner_selection_id': None,
+        'winner_odds': None,
+        'placed_horses': []
+    }
+    
+    for runner in market_data.get('runners', []):
+        runner_status = runner.get('status', '')
+        
+        if runner_status == 'WINNER':
+            winner_info['winner_name'] = runner.get('runnerName', 'Unknown')
+            winner_info['winner_selection_id'] = str(runner.get('selectionId'))
+            winner_info['winner_odds'] = runner.get('lastPriceTraded', 0)
+        
+        if runner_status in ['WINNER', 'PLACED']:
+            winner_info['placed_horses'].append({
+                'name': runner.get('runnerName', 'Unknown'),
+                'selection_id': str(runner.get('selectionId')),
+                'odds': runner.get('lastPriceTraded', 0),
+                'status': runner_status
+            })
+    
+    return winner_info
+
+def update_bet_results(bet, result_data, race_winner_info):
+    """Update bet in DynamoDB with actual result and race winner"""
     table = dynamodb.Table(table_name)
     
     bet_id = bet['bet_id']
@@ -123,7 +150,10 @@ def update_bet_results(bet, result_data):
         'is_winner': result_data['is_winner'],
         'is_placed': result_data['is_placed'],
         'final_odds': result_data.get('last_price_traded', 0),
-        'result_fetched_at': datetime.utcnow().isoformat()
+        'result_fetched_at': datetime.utcnow().isoformat(),
+        'race_winner': race_winner_info.get('winner_name', 'Unknown'),
+        'race_winner_odds': convert_floats(race_winner_info.get('winner_odds', 0)),
+        'placed_horses': race_winner_info.get('placed_horses', [])
     }
     
     # Calculate P&L
@@ -161,17 +191,24 @@ def update_bet_results(bet, result_data):
         table.update_item(
             Key={'bet_date': bet_date, 'bet_id': bet_id},
             UpdateExpression='SET actual_result = :result, is_winner = :winner, is_placed = :placed, '
-                           'final_odds = :final_odds, result_fetched_at = :fetched, pnl = :pnl',
+                           'final_odds = :final_odds, result_fetched_at = :fetched, pnl = :pnl, '
+                           'race_winner = :race_winner, race_winner_odds = :race_winner_odds, '
+                           'placed_horses = :placed_horses',
             ExpressionAttributeValues={
                 ':result': update_data['actual_result'],
                 ':winner': update_data['is_winner'],
                 ':placed': update_data['is_placed'],
                 ':final_odds': convert_floats(update_data['final_odds']),
                 ':fetched': update_data['result_fetched_at'],
-                ':pnl': update_data['pnl']
+                ':pnl': update_data['pnl'],
+                ':race_winner': update_data['race_winner'],
+                ':race_winner_odds': update_data['race_winner_odds'],
+                ':placed_horses': convert_floats(update_data['placed_horses'])
             }
         )
-        print(f"✓ Updated {bet_id}: {update_data['actual_result']} (P&L: €{pnl:.2f})")
+        winner_name = race_winner_info.get('winner_name', 'Unknown')
+        our_horse = bet.get('horse', 'Unknown')
+        print(f"✓ Updated {bet_id}: {update_data['actual_result']} (P&L: €{pnl:.2f}) | Winner: {winner_name} | Our pick: {our_horse}")
         return True
     except Exception as e:
         print(f"ERROR updating {bet_id}: {e}")
@@ -231,7 +268,10 @@ def lambda_handler(event, context):
     market_results = fetch_market_results(market_ids, session_token, app_key)
     
     # Build lookup map: market_id -> selection_id -> result
+    # Also extract race winners
     results_map = {}
+    winners_map = {}  # market_id -> winner_info
+    
     for market in market_results:
         market_id = market.get('marketId')
         status = market.get('status')
@@ -239,6 +279,9 @@ def lambda_handler(event, context):
         if status not in ['CLOSED', 'SETTLED']:
             print(f"  Market {market_id}: {status} (not settled)")
             continue
+        
+        # Extract winner information
+        winners_map[market_id] = get_race_winner(market)
         
         results_map[market_id] = {}
         
@@ -269,8 +312,9 @@ def lambda_handler(event, context):
             continue
         
         result_data = results_map[market_id][selection_id]
+        winner_info = winners_map.get(market_id, {})
         
-        if update_bet_results(bet, result_data):
+        if update_bet_results(bet, result_data, winner_info):
             updated_count += 1
     
     print(f"\n=== COMPLETE ===")
