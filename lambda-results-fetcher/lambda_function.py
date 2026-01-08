@@ -48,8 +48,7 @@ def get_pending_results():
             response = table.query(
                 KeyConditionExpression='bet_date = :date',
                 FilterExpression='attribute_not_exists(actual_result) AND track_performance = :track',
-                ExpressionAttributeValues={':date': date, ':track': True},
-                FilterExpression='attribute_not_exists(actual_result)'
+                ExpressionAttributeValues={':date': date, ':track': True}
             )
             pending_bets.extend(response.get('Items', []))
         except Exception as e:
