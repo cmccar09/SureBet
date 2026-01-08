@@ -8,7 +8,6 @@ import requests
 
 # Import automated betting modules
 try:
-    from paddy_power_betting import auto_place_bets, determine_bet_type, calculate_stake
     from betfair_odds_fetcher import get_live_betfair_races
     BETTING_MODULES_AVAILABLE = True
 except ImportError as e:
