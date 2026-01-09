@@ -3,7 +3,7 @@ import './App.css';
 
 // Use API Gateway in eu-west-1
 const API_BASE_URL = process.env.REACT_APP_API_URL || 
-                     'https://mnybvagd5m.execute-api.eu-west-1.amazonaws.com';
+                     'https://e5na6ldp35.execute-api.eu-west-1.amazonaws.com/prod';
 
 // Budget configuration - £500 monthly budget
 const MONTHLY_BUDGET = 500;
