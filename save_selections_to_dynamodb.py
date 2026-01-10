@@ -289,6 +289,7 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None) -> dict:
     # Build bet item matching your Lambda schema
     bet_item = {
         'bet_id': bet_id,
+        'bet_date': datetime.utcnow().strftime("%Y-%m-%d"),  # Primary key
         'timestamp': datetime.utcnow().isoformat(),
         'date': datetime.utcnow().strftime("%Y-%m-%d"),
         
@@ -361,7 +362,7 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None) -> dict:
     
     return bet_item
 
-def save_to_dynamodb(bets: list[dict], table_name: str = None, region: str = 'eu-west-1') -> tuple[int, int]:
+def save_to_dynamodb(bets: list[dict], table_name: str = None, region: str = 'us-east-1') -> tuple[int, int]:
     """Save bet items to DynamoDB"""
     
     if not HAS_BOTO3:
@@ -434,8 +435,13 @@ def filter_picks_per_race(bets: list) -> tuple:
     # Group bets by race
     races = defaultdict(list)
     for bet in bets:
-        # Create race key from course + race_time
-        race_key = f"{bet.get('course', 'Unknown')}_{bet.get('race_time', '')}"
+        # Normalize race_time by removing timezone suffix and milliseconds for grouping
+        race_time = bet.get('race_time', '')
+        # Remove .000Z, Z, +00:00 etc to normalize times
+        normalized_time = race_time.replace('.000Z', '').replace('Z', '').split('+')[0].split('.')[0]
+        
+        # Create race key from course + normalized race_time
+        race_key = f"{bet.get('course', 'Unknown')}_{normalized_time}"
         races[race_key].append(bet)
     
     filtered_bets = []
@@ -506,7 +512,7 @@ def main():
     parser = argparse.ArgumentParser(description="Save selections to DynamoDB SureBetBets table")
     parser.add_argument("--selections", type=str, required=True, help="Path to selections CSV")
     parser.add_argument("--table", type=str, default="", help="DynamoDB table name (default: SureBetBets)")
-    parser.add_argument("--region", type=str, default="eu-west-1", help="AWS region")
+    parser.add_argument("--region", type=str, default="us-east-1", help="AWS region")
     parser.add_argument("--backup", type=str, default="", help="JSON backup path (optional)")
     parser.add_argument("--dry_run", action="store_true", help="Don't actually save to DynamoDB")
     parser.add_argument("--min_roi", type=float, default=0.0, help="Minimum ROI threshold in percentage (default: 0.0 - breakeven)")
