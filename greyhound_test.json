@@ -1,0 +1,304 @@
+{
+  "timestamp": "2026-01-10T15:47:37.482960Z",
+  "races": [
+    {
+      "market_id": "1.252540112",
+      "market_name": "HC 480m",
+      "venue": "Newcastle",
+      "course": "Newcastle",
+      "competition": "Unknown",
+      "start_time": "2026-01-10T16:08:00.000Z",
+      "runners": [
+        {
+          "name": "1. Carneys Emma",
+          "selectionId": 42338612,
+          "odds": 1.65
+        },
+        {
+          "name": "2. Ranchers Lucy (res)",
+          "selectionId": 93671177,
+          "odds": 1.61
+        },
+        {
+          "name": "3. Brickkiln Matty",
+          "selectionId": 61679669,
+          "odds": 1.62
+        },
+        {
+          "name": "4. Ellies Lady",
+          "selectionId": 47620698,
+          "odds": 1.6
+        },
+        {
+          "name": "5. Jayque Tank",
+          "selectionId": 55302016,
+          "odds": 1.65
+        },
+        {
+          "name": "6. Thats Us Now",
+          "selectionId": 93624310,
+          "odds": 1.69
+        }
+      ],
+      "total_runners": 6
+    },
+    {
+      "market_id": "1.252541149",
+      "market_name": "A2 462m",
+      "venue": "Yarmouth",
+      "course": "Yarmouth",
+      "competition": "Unknown",
+      "start_time": "2026-01-10T16:18:00.000Z",
+      "runners": [
+        {
+          "name": "1. Wee Mac Kate",
+          "selectionId": 88553473,
+          "odds": 2.16
+        },
+        {
+          "name": "2. Kilara Trojan",
+          "selectionId": 74786371,
+          "odds": 1.5
+        },
+        {
+          "name": "3. Headford Rose",
+          "selectionId": 67024280,
+          "odds": 2.02
+        },
+        {
+          "name": "6. Beaming Ollie",
+          "selectionId": 87878770,
+          "odds": 2.02
+        }
+      ],
+      "total_runners": 4
+    },
+    {
+      "market_id": "1.252540114",
+      "market_name": "A6 480m",
+      "venue": "Newcastle",
+      "course": "Newcastle",
+      "competition": "Unknown",
+      "start_time": "2026-01-10T16:28:00.000Z",
+      "runners": [
+        {
+          "name": "1. Bould",
+          "selectionId": 93624311,
+          "odds": 2.5
+        },
+        {
+          "name": "2. Power Station",
+          "selectionId": 46459229,
+          "odds": 8.6
+        },
+        {
+          "name": "3. Maizys Bandit",
+          "selectionId": 92796468,
+          "odds": 3.45
+        },
+        {
+          "name": "4. Logibear",
+          "selectionId": 80953340,
+          "odds": 3.4
+        },
+        {
+          "name": "5. Swift Kylie",
+          "selectionId": 93269056,
+          "odds": 2.34
+        },
+        {
+          "name": "6. Wraysbury Rhyme",
+          "selectionId": 93624312,
+          "odds": 3.25
+        }
+      ],
+      "total_runners": 6
+    },
+    {
+      "market_id": "1.252541151",
+      "market_name": "A3 462m",
+      "venue": "Yarmouth",
+      "course": "Yarmouth",
+      "competition": "Unknown",
+      "start_time": "2026-01-10T16:38:00.000Z",
+      "runners": [
+        {
+          "name": "1. Rathcoole Flight",
+          "selectionId": 85484158,
+          "odds": 2.12
+        },
+        {
+          "name": "2. Explosive Queen",
+          "selectionId": 69685038,
+          "odds": 1.74
+        },
+        {
+          "name": "3. Bright Layla (res)",
+          "selectionId": 93670781,
+          "odds": 2.32
+        },
+        {
+          "name": "4. Kilcash Happy",
+          "selectionId": 93405601,
+          "odds": 1.99
+        },
+        {
+          "name": "5. Bouncy Jet",
+          "selectionId": 87309719,
+          "odds": 2.32
+        }
+      ],
+      "total_runners": 5
+    },
+    {
+      "market_id": "1.252540116",
+      "market_name": "A3 480m",
+      "venue": "Newcastle",
+      "course": "Newcastle",
+      "competition": "Unknown",
+      "start_time": "2026-01-10T16:48:00.000Z",
+      "runners": [
+        {
+          "name": "1. Marisol",
+          "selectionId": 80695555,
+          "odds": 2.36
+        },
+        {
+          "name": "2. Zenith Wonder",
+          "selectionId": 84671508,
+          "odds": 1.85
+        },
+        {
+          "name": "3. Solway Splash",
+          "selectionId": 84159342,
+          "odds": 5.0
+        },
+        {
+          "name": "4. Solway Aussie",
+          "selectionId": 85830278,
+          "odds": 2.98
+        },
+        {
+          "name": "5. Midas Miguel",
+          "selectionId": 82060375,
+          "odds": 2.68
+        }
+      ],
+      "total_runners": 5
+    },
+    {
+      "market_id": "1.252541153",
+      "market_name": "OR 462m",
+      "venue": "Yarmouth",
+      "course": "Yarmouth",
+      "competition": "Unknown",
+      "start_time": "2026-01-10T16:58:00.000Z",
+      "runners": [
+        {
+          "name": "1. Starshine Babe",
+          "selectionId": 79508363,
+          "odds": 2.68
+        },
+        {
+          "name": "2. Knockduff Dancer",
+          "selectionId": 67275228,
+          "odds": 3.1
+        },
+        {
+          "name": "3. Thunder Dance",
+          "selectionId": 93623365,
+          "odds": 1.35
+        },
+        {
+          "name": "4. Harlequin Topgee",
+          "selectionId": 92974051,
+          "odds": 3.65
+        },
+        {
+          "name": "5. Tommys Cha",
+          "selectionId": 86510439,
+          "odds": 3.3
+        },
+        {
+          "name": "6. Romantic Jack",
+          "selectionId": 87141786,
+          "odds": 5.1
+        }
+      ],
+      "total_runners": 6
+    },
+    {
+      "market_id": "1.252540118",
+      "market_name": "A4 480m",
+      "venue": "Newcastle",
+      "course": "Newcastle",
+      "competition": "Unknown",
+      "start_time": "2026-01-10T17:08:00.000Z",
+      "runners": [
+        {
+          "name": "1. Alnwick Alisha",
+          "selectionId": 74055571,
+          "odds": 2.32
+        },
+        {
+          "name": "2. A Bit Of Noah",
+          "selectionId": 56617304,
+          "odds": 2.6
+        },
+        {
+          "name": "3. Fabulous Kira",
+          "selectionId": 82025746,
+          "odds": 1.77
+        },
+        {
+          "name": "4. Alnwick Castle",
+          "selectionId": 70681289,
+          "odds": 3.45
+        },
+        {
+          "name": "6. Swift Omerta",
+          "selectionId": 84115848,
+          "odds": 3.05
+        }
+      ],
+      "total_runners": 5
+    },
+    {
+      "market_id": "1.252541155",
+      "market_name": "A1 462m",
+      "venue": "Yarmouth",
+      "course": "Yarmouth",
+      "competition": "Unknown",
+      "start_time": "2026-01-10T17:18:00.000Z",
+      "runners": [
+        {
+          "name": "1. Who Dares Wins",
+          "selectionId": 80914799,
+          "odds": 2.34
+        },
+        {
+          "name": "2. Outdoor Cracker",
+          "selectionId": 71848136,
+          "odds": 2.34
+        },
+        {
+          "name": "3. Laugh Alot",
+          "selectionId": 64779865,
+          "odds": 2.18
+        },
+        {
+          "name": "4. Flashing Fender",
+          "selectionId": 83421542,
+          "odds": 1.73
+        },
+        {
+          "name": "6. Kereight Fraud",
+          "selectionId": 68526216,
+          "odds": 2.02
+        }
+      ],
+      "total_runners": 5
+    }
+  ],
+  "total_races": 8
+}
