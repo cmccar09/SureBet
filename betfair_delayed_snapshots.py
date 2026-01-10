@@ -24,16 +24,22 @@ def load_credentials():
     
     return creds['app_key'], creds['session_token']
 
-def fetch_markets(app_key, session_token, hours_ahead=24):
-    """Fetch UK/IRE horse racing markets from Betfair"""
+def fetch_markets(app_key, session_token, hours_ahead=24, event_type="7"):
+    """Fetch UK/IRE racing markets from Betfair
+    
+    Args:
+        event_type: '7' for Horse Racing, '4339' for Greyhound Racing
+    """
     url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketCatalogue/"
     
     now = datetime.utcnow()
     to_time = now + timedelta(hours=hours_ahead)
     
+    sport_name = "Horse Racing" if event_type == "7" else "Greyhound Racing"
+    
     payload = {
         "filter": {
-            "eventTypeIds": ["7"],  # Horse Racing
+            "eventTypeIds": [event_type],  # 7=Horses, 4339=Greyhounds
             "marketCountries": ["GB", "IE"],
             "marketTypeCodes": ["WIN"],
             "marketStartTime": {
@@ -172,14 +178,20 @@ def main():
                         help='Hours ahead to fetch (default: 24)')
     parser.add_argument('--max_races', type=int, default=100,
                         help='Maximum races to fetch (default: 100)')
+    parser.add_argument('--sport', type=str, choices=['horses', 'greyhounds'], default='horses',
+                        help='Sport type: horses or greyhounds (default: horses)')
     
     args = parser.parse_args()
+    
+    # Map sport to event type ID
+    event_type = "7" if args.sport == "horses" else "4339"
+    sport_name = "Horse Racing" if args.sport == "horses" else "Greyhound Racing"
     
     print("Loading Betfair credentials...")
     app_key, session_token = load_credentials()
     
-    print(f"Fetching markets (next {args.hours} hours)...")
-    markets = fetch_markets(app_key, session_token, args.hours)
+    print(f"Fetching {sport_name} markets (next {args.hours} hours)...")
+    markets = fetch_markets(app_key, session_token, args.hours, event_type)
     
     if not markets:
         print("WARNING: No markets found", file=sys.stderr)

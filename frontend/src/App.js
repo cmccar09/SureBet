@@ -239,7 +239,7 @@ function App() {
             All Picks
           </button>
           <button onClick={triggerWorkflow} className="refresh-btn" disabled={refreshing}>
-            {refreshing ? '⏳ Generating...' : '🔄 Generate New Picks'}
+            {refreshing ? '⏳ Generating...' : '� Greyhounds'}
           </button>
           <button onClick={checkResults} className="results-btn" disabled={resultsLoading}>
             {resultsLoading ? '⏳ Checking...' : '📊 Check Results'}

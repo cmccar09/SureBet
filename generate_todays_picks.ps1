@@ -1,8 +1,14 @@
 #!/usr/bin/env pwsh
 # Quick script to generate today's picks and save to DynamoDB
 
+param(
+    [string]$Sport = "greyhounds"  # Default to greyhounds now
+)
+
+$sportDisplay = if ($Sport -eq "horses") { "Horse Racing" } else { "Greyhound Racing 🐕" }
+
 Write-Host "="*60
-Write-Host "Generate Today's Betting Picks"
+Write-Host "Generate $sportDisplay Picks"
 Write-Host "="*60
 
 # Step 0: Validate existing picks (remove invalid ones)
@@ -61,14 +67,14 @@ if ($awsConfigured) {
 
 # Step 2: Generate selections with prompt logic
 Write-Host ""
-Write-Host "Step 1: Fetching live Betfair odds..." -ForegroundColor Cyan
+Write-Host "Step 1: Fetching live Betfair odds ($sportDisplay)..." -ForegroundColor Cyan
 Write-Host ""
 
 $pythonExe = "C:/Users/charl/OneDrive/futuregenAI/Betting/.venv/Scripts/python.exe"
 $snapshotFile = "./response_live.json"
 
 # Fetch live data from Betfair API
-& $pythonExe betfair_delayed_snapshots.py --out $snapshotFile --hours 24 --max_races 50
+& $pythonExe betfair_delayed_snapshots.py --out $snapshotFile --hours 24 --max_races 50 --sport $Sport
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""
