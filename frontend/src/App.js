@@ -54,38 +54,15 @@ function App() {
   };
 
   const triggerWorkflow = async () => {
-    setRefreshing(true);
-    setError(null);
+    // Show instructions for running greyhound picks locally
+    setError('🐕 To generate Greyhound picks, run on your local machine: .\\generate_todays_picks.ps1 -Sport greyhounds');
     
-    try {
-      // Call cloud API to trigger workflow Lambda
-      const response = await fetch(`${API_BASE_URL}/api/workflow/run`, {
-        method: 'POST'
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setError('✓ Generating new picks... Refreshing in 90 seconds...');
-        
-        // Auto-refresh after 90 seconds
-        setTimeout(() => {
-          fetchPicks();
-          setError(null);
-        }, 90000);
-      } else {
-        setError(data.error || data.message || 'Failed to trigger workflow');
-      }
-    } catch (err) {
-      console.error('Error triggering workflow:', err);
-      setError(`Cannot trigger workflow: ${err.message}`);
-    } finally {
-      setRefreshing(false);
-    }
+    // Auto-refresh after user has time to run it
+    setTimeout(() => {
+      setError('Refreshing picks...');
+      fetchPicks();
+      setTimeout(() => setError(null), 2000);
+    }, 30000); // 30 seconds
   };
 
   const checkResults = async () => {
