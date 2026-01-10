@@ -305,12 +305,12 @@ def analyze_all_races_with_picks():
     try:
         s3 = boto3.client('s3', region_name='us-east-1')
         s3.put_object(
-            Bucket='betting-insights',
-            Key='winner_comparison_learnings.json',
+            Bucket='surebet-betting-data',
+            Key='betting-insights/winner_comparison_learnings.json',
             Body=json.dumps(insights, indent=2, default=str),
             ContentType='application/json'
         )
-        print(f"\n[OK] Saved insights to S3: betting-insights/winner_comparison_learnings.json")
+        print(f"\n[OK] Saved insights to S3: surebet-betting-data/betting-insights/winner_comparison_learnings.json")
     except Exception as e:
         print(f"\n[X] Error saving to S3: {e}")
     
