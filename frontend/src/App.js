@@ -93,8 +93,9 @@ function App() {
     setError(null);
 
     try {
-      const endpoint = `${API_BASE_URL}/results/today`;
-      console.log('Checking results from:', endpoint);
+      // Fetch yesterday's results
+      const endpoint = `${API_BASE_URL}/picks/yesterday`;
+      console.log('Checking yesterday results from:', endpoint);
       const response = await fetch(endpoint);
       
       if (!response.ok) {
@@ -103,8 +104,38 @@ function App() {
       
       const data = await response.json();
 
-      if (data.success) {
-        setResults(data);
+      if (data.success && data.picks) {
+        // Calculate summary from picks
+        const picks = data.picks;
+        const wins = picks.filter(p => p.outcome === 'WON').length;
+        const places = picks.filter(p => p.outcome === 'PLACED').length;
+        const losses = picks.filter(p => p.outcome === 'LOST').length;
+        const pending = picks.filter(p => !p.outcome || p.outcome === 'PENDING').length;
+        
+        const totalPL = picks.reduce((sum, p) => sum + (parseFloat(p.profit_loss) || 0), 0);
+        const totalStake = picks.length; // £1 per pick
+        const totalReturn = totalStake + totalPL;
+        const roi = totalStake > 0 ? ((totalPL / totalStake) * 100) : 0;
+        const strikeRate = (wins + places) > 0 && picks.length > 0 ? 
+          (((wins + places) / picks.length) * 100) : 0;
+
+        setResults({
+          success: true,
+          date: data.date || 'Yesterday',
+          picks: picks,
+          summary: {
+            total_picks: picks.length,
+            wins: wins,
+            places: places,
+            losses: losses,
+            pending: pending,
+            total_stake: totalStake.toFixed(2),
+            total_return: totalReturn.toFixed(2),
+            profit: totalPL.toFixed(2),
+            roi: roi.toFixed(1),
+            strike_rate: strikeRate.toFixed(1)
+          }
+        });
       } else {
         setError(data.error || 'Failed to load results');
       }
@@ -213,7 +244,7 @@ function App() {
         {/* Results Summary */}
         {results && results.summary && (
           <div className="results-summary">
-            <h2>📊 Today's Performance</h2>
+            <h2>📊 Yesterday's Results {results.date && `(${results.date})`}</h2>
             <div className="results-grid">
               <div className="result-stat">
                 <div className="stat-label">Total Picks</div>
@@ -258,6 +289,69 @@ function App() {
                 <div className="stat-value">{results.summary.roi}%</div>
               </div>
             </div>
+
+            {/* Detailed picks list */}
+            {results.picks && results.picks.length > 0 && (
+              <div style={{ marginTop: '24px' }}>
+                <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#333' }}>Detailed Results</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {results.picks.map((pick, index) => {
+                    const outcome = pick.outcome || 'PENDING';
+                    const pl = parseFloat(pick.profit_loss) || 0;
+                    const outcomeColor = 
+                      outcome === 'WON' ? '#10b981' : 
+                      outcome === 'PLACED' ? '#f59e0b' : 
+                      outcome === 'LOST' ? '#ef4444' : '#6b7280';
+                    const outcomeIcon = 
+                      outcome === 'WON' ? '🏆' : 
+                      outcome === 'PLACED' ? '📍' : 
+                      outcome === 'LOST' ? '❌' : '⏳';
+
+                    return (
+                      <div key={index} style={{
+                        background: 'white',
+                        padding: '16px',
+                        borderRadius: '8px',
+                        border: `2px solid ${outcomeColor}`,
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>
+                              {outcomeIcon} {pick.horse || 'Unknown Horse'}
+                            </div>
+                            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
+                              {pick.course} • {formatTime(pick.race_time)} • {pick.bet_type}
+                            </div>
+                            <div style={{ fontSize: '14px', color: '#6b7280' }}>
+                              Odds: {pick.odds}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ 
+                              fontSize: '18px', 
+                              fontWeight: 'bold', 
+                              color: outcomeColor,
+                              marginBottom: '4px'
+                            }}>
+                              {outcome}
+                            </div>
+                            <div style={{ 
+                              fontSize: '16px', 
+                              fontWeight: 'bold',
+                              color: pl >= 0 ? '#10b981' : '#ef4444'
+                            }}>
+                              {pl >= 0 ? '+' : ''}€{pl.toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <button onClick={() => setResults(null)} className="close-results">
               ✕ Close Results
             </button>
