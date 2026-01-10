@@ -52,6 +52,8 @@ def lambda_handler(event, context):
         # Route requests - check more specific paths first
         if 'results/today' in path:
             return check_today_results(headers)
+        elif 'picks/greyhounds' in path:
+            return get_greyhound_picks(headers)
         elif 'picks/yesterday' in path:
             return get_yesterday_picks(headers)
         elif 'picks/today' in path:
@@ -122,14 +124,18 @@ def get_all_picks(headers):
     }
 
 def get_today_picks(headers):
-    """Get today's picks only - filter to show only upcoming races"""
+    """Get today's picks only - filter to show only upcoming horse races"""
     today = datetime.now().strftime('%Y-%m-%d')
     
     # Check both 'date' and 'bet_date' fields (schema evolved)
+    # Filter out greyhounds to only show horses
     response = table.scan(
-        FilterExpression='#d = :today OR bet_date = :today',
+        FilterExpression='(#d = :today OR bet_date = :today) AND (attribute_not_exists(sport) OR sport = :sport)',
         ExpressionAttributeNames={'#d': 'date'},
-        ExpressionAttributeValues={':today': today}
+        ExpressionAttributeValues={
+            ':today': today,
+            ':sport': 'horses'
+        }
     )
     
     items = response.get('Items', [])
@@ -168,6 +174,61 @@ def get_today_picks(headers):
             'picks': future_picks,
             'count': len(future_picks),
             'date': today
+        })
+    }
+
+def get_greyhound_picks(headers):
+    """Get today's greyhound picks only - filter to show only upcoming races"""
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    # Get today's picks and filter for greyhounds
+    response = table.scan(
+        FilterExpression='(#d = :today OR bet_date = :today) AND sport = :sport',
+        ExpressionAttributeNames={'#d': 'date'},
+        ExpressionAttributeValues={
+            ':today': today,
+            ':sport': 'greyhounds'
+        }
+    )
+    
+    items = response.get('Items', [])
+    items = [decimal_to_float(item) for item in items]
+    
+    # Filter out races that have already started
+    now = datetime.utcnow()
+    future_picks = []
+    
+    for item in items:
+        race_time_str = item.get('race_time', '')
+        if race_time_str:
+            try:
+                # Parse race time (ISO format)
+                race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
+                # Only include if race is in the future
+                if race_time.replace(tzinfo=None) > now:
+                    future_picks.append(item)
+            except Exception as e:
+                print(f"Error parsing race time {race_time_str}: {e}")
+                # Include if we can't parse (safer than excluding)
+                future_picks.append(item)
+        else:
+            # Include if no race time (safer than excluding)
+            future_picks.append(item)
+    
+    # Sort by race time (soonest first)
+    future_picks.sort(key=lambda x: x.get('race_time', ''))
+    
+    print(f"Greyhound picks today: {len(items)}, Future greyhound picks: {len(future_picks)}")
+    
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'success': True,
+            'picks': future_picks,
+            'count': len(future_picks),
+            'date': today,
+            'sport': 'greyhounds'
         })
     }
 

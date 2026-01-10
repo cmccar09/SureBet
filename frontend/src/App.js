@@ -13,14 +13,13 @@ function App() {
   const [picks, setPicks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [info, setInfo] = useState(null);
   const [filter, setFilter] = useState('today');
   const [results, setResults] = useState(null);
   const [resultsLoading, setResultsLoading] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     fetchPicks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
   const fetchPicks = async () => {
@@ -28,9 +27,14 @@ function App() {
     setError(null);
 
     try {
-      const endpoint = filter === 'today' 
-        ? `${API_BASE_URL}/picks/today`
-        : `${API_BASE_URL}/picks`;
+      let endpoint;
+      if (filter === 'today') {
+        endpoint = `${API_BASE_URL}/picks/today`;
+      } else if (filter === 'greyhounds') {
+        endpoint = `${API_BASE_URL}/picks/greyhounds`;
+      } else {
+        endpoint = `${API_BASE_URL}/picks`;
+      }
       
       console.log('Fetching from:', endpoint);
       const response = await fetch(endpoint);
@@ -52,18 +56,6 @@ function App() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const triggerWorkflow = async () => {
-    // Show instructions for running greyhound picks locally
-    setInfo('🐕 To generate Greyhound picks, run on your local machine: .\\generate_todays_picks.ps1 -Sport greyhounds');
-    
-    // Auto-refresh after user has time to run it
-    setTimeout(() => {
-      setInfo('Refreshing picks...');
-      fetchPicks();
-      setTimeout(() => setInfo(null), 2000);
-    }, 30000); // 30 seconds
   };
 
   const checkResults = async () => {
@@ -190,13 +182,6 @@ function App() {
     );
   };
 
-  const getConfidenceColor = (confidence) => {
-    const conf = parseFloat(confidence) || 0;
-    if (conf >= 70) return '#10b981';
-    if (conf >= 50) return '#f59e0b';
-    return '#ef4444';
-  };
-
   return (
     <div className="App">
       <header className="App-header">
@@ -208,16 +193,19 @@ function App() {
             className={filter === 'today' ? 'active' : ''} 
             onClick={() => setFilter('today')}
           >
-            Today Only
+            🏇 Horses
+          </button>
+          <button 
+            className={filter === 'greyhounds' ? 'active' : ''} 
+            onClick={() => setFilter('greyhounds')}
+          >
+            🐕 Greyhounds
           </button>
           <button 
             className={filter === 'all' ? 'active' : ''} 
             onClick={() => setFilter('all')}
           >
             All Picks
-          </button>
-          <button onClick={triggerWorkflow} className="refresh-btn" disabled={refreshing}>
-            {refreshing ? '⏳ Generating...' : '� Greyhounds'}
           </button>
           <button onClick={checkResults} className="results-btn" disabled={resultsLoading}>
             {resultsLoading ? '⏳ Checking...' : '📊 Check Results'}
@@ -344,12 +332,6 @@ function App() {
         )}
         
         {loading && <div className="loading">Loading picks...</div>}
-        
-        {info && (
-          <div className="info">
-            <p>{info}</p>
-          </div>
-        )}
         
         {error && (
           <div className="error">

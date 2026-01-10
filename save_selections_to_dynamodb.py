@@ -262,8 +262,14 @@ def calculate_combined_confidence(row: pd.Series) -> tuple:
     return (round(combined_confidence, 1), confidence_grade, grade_color, explanation, breakdown)
 
 
-def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None) -> dict:
-    """Convert CSV row to DynamoDB bet item"""
+def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None, sport: str = 'horses') -> dict:
+    """Convert CSV row to DynamoDB bet item
+    
+    Args:
+        row: DataFrame row with selection data
+        market_odds: Dictionary of odds by selection_id
+        sport: 'horses' or 'greyhounds' (default: horses)
+    """
     
     if market_odds is None:
         market_odds = {}
@@ -408,6 +414,7 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None) -> dict:
         # Source tracking
         'source': 'learning_workflow',
         'prompt_version': 'prompt.txt',
+        'sport': sport,  # 'horses' or 'greyhounds'
         
         # Audit fields
         'audit': {
@@ -438,8 +445,231 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None) -> dict:
     
     return bet_item
 
-def save_to_dynamodb(bets: list[dict], table_name: str = None, region: str = 'us-east-1') -> tuple[int, int]:
-    """Save bet items to DynamoDB"""
+def deduplicate_against_database(new_bets: list, table_name: str = None, region: str = 'us-east-1') -> tuple:
+    """
+    Check for existing picks in database and apply deduplication logic
+    across both existing and new picks for the same race.
+    
+    Returns: (filtered_new_bets, bet_ids_to_delete, stats_dict)
+    """
+    from collections import defaultdict
+    
+    if not HAS_BOTO3:
+        return new_bets, [], {}
+    
+    table_name = table_name or os.environ.get("SUREBET_DDB_TABLE", "SureBetBets")
+    
+    try:
+        dynamodb = boto3.resource("dynamodb", region_name=region)
+        table = dynamodb.Table(table_name)
+        
+        # Get today's date
+        today = datetime.now().strftime('%Y-%m-%d')
+        
+        # Scan for existing picks from today
+        response = table.scan(
+            FilterExpression='begins_with(bet_date, :d)',
+            ExpressionAttributeValues={':d': today}
+        )
+        existing_picks = response.get('Items', [])
+        
+        print(f"\nFound {len(existing_picks)} existing picks from today in database")
+        
+        # Group existing picks by race
+        existing_by_race = defaultdict(list)
+        for pick in existing_picks:
+            race_time = pick.get('race_time', '')
+            normalized_time = race_time.replace('.000Z', '').replace('Z', '').split('+')[0].split('.')[0]
+            race_key = f"{pick.get('course', 'Unknown')}_{normalized_time}"
+            
+            # Convert Decimal to float for consistent comparison
+            pick_dict = {
+                'horse': pick.get('horse'),
+                'course': pick.get('course'),
+                'race_time': pick.get('race_time'),
+                'bet_type': pick.get('bet_type', 'WIN'),
+                'decision_score': float(pick.get('decision_score', 0)),
+                'bet_id': pick.get('bet_id'),
+                'is_existing': True
+            }
+            existing_by_race[race_key].append(pick_dict)
+        
+        # Group new bets by race
+        new_by_race = defaultdict(list)
+        for bet in new_bets:
+            race_time = bet.get('race_time', '')
+            normalized_time = race_time.replace('.000Z', '').replace('Z', '').split('+')[0].split('.')[0]
+            race_key = f"{bet.get('course', 'Unknown')}_{normalized_time}"
+            
+            bet_dict = bet.copy()
+            bet_dict['is_existing'] = False
+            new_by_race[race_key].append(bet_dict)
+        
+        # Find races that have conflicts (both existing and new picks)
+        conflicting_races = set(existing_by_race.keys()) & set(new_by_race.keys())
+        
+        if not conflicting_races:
+            print("No race conflicts with existing database picks")
+            return new_bets, [], {}
+        
+        print(f"\nFound {len(conflicting_races)} races with potential conflicts:")
+        
+        bet_ids_to_delete = []
+        filtered_new_bets = []
+        stats = {
+            'races_checked': len(conflicting_races),
+            'new_picks_kept': 0,
+            'new_picks_filtered': 0,
+            'existing_picks_kept': 0,
+            'existing_picks_deleted': 0
+        }
+        
+        # Process each conflicting race
+        for race_key in conflicting_races:
+            all_picks = existing_by_race[race_key] + new_by_race[race_key]
+            
+            # Apply same filtering logic as filter_picks_per_race
+            if len(all_picks) <= 2:
+                if len(all_picks) == 2:
+                    bet_types = [pick['bet_type'] for pick in all_picks]
+                    
+                    if bet_types[0] == bet_types[1]:
+                        # Both same type - keep only higher scoring one
+                        sorted_picks = sorted(all_picks, key=lambda x: x['decision_score'], reverse=True)
+                        kept_pick = sorted_picks[0]
+                        removed_pick = sorted_picks[1]
+                        
+                        venue = all_picks[0]['course']
+                        print(f"  {venue}: Both {bet_types[0]} - keeping {kept_pick['horse']} (score: {kept_pick['decision_score']:.1f})")
+                        
+                        if kept_pick['is_existing']:
+                            stats['existing_picks_kept'] += 1
+                        else:
+                            stats['new_picks_kept'] += 1
+                        
+                        if removed_pick['is_existing']:
+                            bet_ids_to_delete.append(removed_pick['bet_id'])
+                            stats['existing_picks_deleted'] += 1
+                            print(f"    DELETE existing: {removed_pick['horse']}")
+                        else:
+                            stats['new_picks_filtered'] += 1
+                            print(f"    FILTER new: {removed_pick['horse']}")
+                    else:
+                        # Different types - keep both
+                        stats['existing_picks_kept'] += sum(1 for p in all_picks if p['is_existing'])
+                        stats['new_picks_kept'] += sum(1 for p in all_picks if not p['is_existing'])
+                else:
+                    # Only 1 pick - keep it
+                    if all_picks[0]['is_existing']:
+                        stats['existing_picks_kept'] += 1
+                    else:
+                        stats['new_picks_kept'] += 1
+            else:
+                # More than 2 picks - keep top 2 with different types
+                sorted_picks = sorted(all_picks, key=lambda x: x['decision_score'], reverse=True)
+                top_two = sorted_picks[:2]
+                bet_types = [pick['bet_type'] for pick in top_two]
+                
+                venue = all_picks[0]['course']
+                print(f"  {venue}: {len(all_picks)} picks - applying 2-pick limit")
+                
+                if bet_types[0] != bet_types[1]:
+                    # Different types - keep top 2
+                    kept_picks = top_two
+                else:
+                    # Both same type - keep highest + find different type
+                    kept_picks = [top_two[0]]
+                    different_type = next(
+                        (p for p in sorted_picks[1:] if p['bet_type'] != bet_types[0]),
+                        None
+                    )
+                    if different_type:
+                        kept_picks.append(different_type)
+                
+                # Mark picks for keeping/deletion
+                for pick in all_picks:
+                    if pick in kept_picks:
+                        if pick['is_existing']:
+                            stats['existing_picks_kept'] += 1
+                        else:
+                            stats['new_picks_kept'] += 1
+                            print(f"    KEEP new: {pick['horse']} ({pick['bet_type']})")
+                    else:
+                        if pick['is_existing']:
+                            bet_ids_to_delete.append(pick['bet_id'])
+                            stats['existing_picks_deleted'] += 1
+                            print(f"    DELETE existing: {pick['horse']} ({pick['bet_type']})")
+                        else:
+                            stats['new_picks_filtered'] += 1
+                            print(f"    FILTER new: {pick['horse']} ({pick['bet_type']})")
+        
+        # Filter new_bets to only include those we want to keep
+        # For non-conflicting races, keep all new picks
+        for race_key in set(new_by_race.keys()) - conflicting_races:
+            filtered_new_bets.extend([bet for bet in new_bets if f"{bet.get('course', 'Unknown')}_{bet.get('race_time', '').replace('.000Z', '').replace('Z', '').split('+')[0].split('.')[0]}" == race_key])
+        
+        # For conflicting races, only keep new picks that weren't filtered
+        for race_key in conflicting_races:
+            all_picks = existing_by_race[race_key] + new_by_race[race_key]
+            
+            # Re-apply filtering logic to determine which new picks to keep
+            if len(all_picks) <= 2:
+                if len(all_picks) == 2:
+                    bet_types = [pick['bet_type'] for pick in all_picks]
+                    if bet_types[0] == bet_types[1]:
+                        sorted_picks = sorted(all_picks, key=lambda x: x['decision_score'], reverse=True)
+                        kept_pick = sorted_picks[0]
+                        if not kept_pick['is_existing']:
+                            # Find original bet object
+                            original_bet = next((bet for bet in new_bets if bet.get('horse') == kept_pick['horse'] and bet.get('course') == kept_pick['course']), None)
+                            if original_bet:
+                                filtered_new_bets.append(original_bet)
+                    else:
+                        # Keep all new picks (different types)
+                        for pick in all_picks:
+                            if not pick['is_existing']:
+                                original_bet = next((bet for bet in new_bets if bet.get('horse') == pick['horse'] and bet.get('course') == pick['course']), None)
+                                if original_bet:
+                                    filtered_new_bets.append(original_bet)
+                else:
+                    # Only 1 pick - keep if it's new
+                    if not all_picks[0]['is_existing']:
+                        original_bet = next((bet for bet in new_bets if bet.get('horse') == all_picks[0]['horse'] and bet.get('course') == all_picks[0]['course']), None)
+                        if original_bet:
+                            filtered_new_bets.append(original_bet)
+            else:
+                # More than 2 picks - complex logic
+                sorted_picks = sorted(all_picks, key=lambda x: x['decision_score'], reverse=True)
+                top_two = sorted_picks[:2]
+                bet_types = [pick['bet_type'] for pick in top_two]
+                
+                kept_picks = top_two if bet_types[0] != bet_types[1] else [top_two[0]]
+                if bet_types[0] == bet_types[1]:
+                    different_type = next((p for p in sorted_picks[1:] if p['bet_type'] != bet_types[0]), None)
+                    if different_type:
+                        kept_picks.append(different_type)
+                
+                for pick in kept_picks:
+                    if not pick['is_existing']:
+                        original_bet = next((bet for bet in new_bets if bet.get('horse') == pick['horse'] and bet.get('course') == pick['course']), None)
+                        if original_bet:
+                            filtered_new_bets.append(original_bet)
+        
+        print(f"\nDeduplication summary:")
+        print(f"  New picks to save: {stats['new_picks_kept']}")
+        print(f"  New picks filtered: {stats['new_picks_filtered']}")
+        print(f"  Existing picks to delete: {stats['existing_picks_deleted']}")
+        print(f"  Existing picks kept: {stats['existing_picks_kept']}")
+        
+        return filtered_new_bets, bet_ids_to_delete, stats
+        
+    except Exception as e:
+        print(f"WARNING: Database deduplication failed: {e}")
+        print("Proceeding with standard filtering only...")
+        return new_bets, [], {}
+
+def save_to_dynamodb(bets: list[dict], table_name: str = None, region: str = 'us-east-1', bet_ids_to_delete: list = None) -> tuple[int, int]:
+    """Save bet items to DynamoDB and optionally delete old bet_ids"""
     
     if not HAS_BOTO3:
         print("ERROR: boto3 not installed. Run: pip install boto3", file=sys.stderr)
@@ -452,6 +682,19 @@ def save_to_dynamodb(bets: list[dict], table_name: str = None, region: str = 'us
     try:
         dynamodb = boto3.resource("dynamodb", region_name=region)
         table = dynamodb.Table(table_name)
+        
+        # Delete old picks first
+        if bet_ids_to_delete:
+            print(f"\nDeleting {len(bet_ids_to_delete)} superseded picks...")
+            deleted_count = 0
+            for bet_id in bet_ids_to_delete:
+                try:
+                    table.delete_item(Key={'bet_id': bet_id})
+                    deleted_count += 1
+                    print(f"  [DELETED] {bet_id}")
+                except Exception as e:
+                    print(f"  [ERROR] Failed to delete {bet_id}: {e}")
+            print(f"Deleted {deleted_count} old picks\n")
         
         success_count = 0
         error_count = 0
@@ -592,6 +835,7 @@ def main():
     parser.add_argument("--backup", type=str, default="", help="JSON backup path (optional)")
     parser.add_argument("--dry_run", action="store_true", help="Don't actually save to DynamoDB")
     parser.add_argument("--min_roi", type=float, default=0.0, help="Minimum ROI threshold in percentage (default: 0.0 - breakeven)")
+    parser.add_argument("--sport", type=str, choices=['horses', 'greyhounds'], default='horses', help="Sport type: horses or greyhounds (default: horses)")
     
     args = parser.parse_args()
     
@@ -614,12 +858,12 @@ def main():
     print(f"Loaded odds for {len(market_odds)} runners")
     
     # Convert to bet items
-    print(f"\nFormatting for DynamoDB (minimum ROI: {args.min_roi}%)...")
+    print(f"\nFormatting for DynamoDB (sport: {args.sport}, minimum ROI: {args.min_roi}%)...")
     bets = []
     filtered_out = 0
     for idx, row in df.iterrows():
         try:
-            bet_item = format_bet_for_dynamodb(row, market_odds)
+            bet_item = format_bet_for_dynamodb(row, market_odds, args.sport)
             
             # Filter by minimum ROI threshold
             roi = float(bet_item.get('roi', 0))
@@ -649,18 +893,29 @@ def main():
     print(f"Removed {race_filtered} picks due to race-level rules")
     print(f"Final pick count: {len(bets)} bets")
     
+    # Deduplicate against existing database picks
+    print(f"\nChecking for conflicts with existing database picks...")
+    bets, bet_ids_to_delete, dedup_stats = deduplicate_against_database(bets, args.table, args.region)
+    print(f"After database deduplication: {len(bets)} bets to save")
+    
     # Save to DynamoDB
     if not args.dry_run:
         print(f"\nSaving to DynamoDB...")
-        success, errors = save_to_dynamodb(bets, args.table, args.region)
+        success, errors = save_to_dynamodb(bets, args.table, args.region, bet_ids_to_delete)
         
         print(f"\n{'='*60}")
         print(f"Results: {success} saved, {errors} errors")
+        if bet_ids_to_delete:
+            print(f"Deleted: {len(bet_ids_to_delete)} superseded picks")
         print(f"{'='*60}")
     else:
-        print("\n🔍 DRY RUN - Would save these bets:")
+        print("\nDRY RUN - Would save these bets:")
         for bet in bets:
             print(f"  - {bet['horse']} at {bet['course']} ({bet['bet_type']}) - p_win: {bet['p_win']:.1%}")
+        if bet_ids_to_delete:
+            print(f"\nDRY RUN - Would delete these bet_ids:")
+            for bet_id in bet_ids_to_delete:
+                print(f"  - {bet_id}")
         print("\nRun without --dry_run to actually save to DynamoDB")
     
     # Save backup if requested
