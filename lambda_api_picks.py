@@ -8,7 +8,7 @@ from datetime import datetime
 from decimal import Decimal
 
 # Initialize DynamoDB
-dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
 table = dynamodb.Table('SureBetBets')
 
 def decimal_to_float(obj):
@@ -122,8 +122,9 @@ def get_today_picks(headers):
     """Get today's picks only - filter to show only upcoming races"""
     today = datetime.now().strftime('%Y-%m-%d')
     
+    # Check both 'date' and 'bet_date' fields (schema evolved)
     response = table.scan(
-        FilterExpression='#d = :today',
+        FilterExpression='#d = :today OR bet_date = :today',
         ExpressionAttributeNames={'#d': 'date'},
         ExpressionAttributeValues={':today': today}
     )
