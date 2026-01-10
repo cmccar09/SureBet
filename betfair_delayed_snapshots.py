@@ -24,11 +24,12 @@ def load_credentials():
     
     return creds['app_key'], creds['session_token']
 
-def fetch_markets(app_key, session_token, hours_ahead=24, event_type="7"):
+def fetch_markets(app_key, session_token, hours_ahead=24, event_type="7", countries=None):
     """Fetch UK/IRE racing markets from Betfair
     
     Args:
         event_type: '7' for Horse Racing, '4339' for Greyhound Racing
+        countries: List of country codes or None for default ["GB", "IE"]
     """
     url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketCatalogue/"
     
@@ -37,10 +38,14 @@ def fetch_markets(app_key, session_token, hours_ahead=24, event_type="7"):
     
     sport_name = "Horse Racing" if event_type == "7" else "Greyhound Racing"
     
+    # Use provided countries or default to GB and IE
+    if countries is None:
+        countries = ["GB", "IE"]
+    
     payload = {
         "filter": {
             "eventTypeIds": [event_type],  # 7=Horses, 4339=Greyhounds
-            "marketCountries": ["GB", "IE"],
+            "marketCountries": countries,
             "marketTypeCodes": ["WIN"],
             "marketStartTime": {
                 "from": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -180,6 +185,8 @@ def main():
                         help='Maximum races to fetch (default: 100)')
     parser.add_argument('--sport', type=str, choices=['horses', 'greyhounds'], default='horses',
                         help='Sport type: horses or greyhounds (default: horses)')
+    parser.add_argument('--country', type=str, default=None,
+                        help='Specific country code (IE, GB) or None for both (default: None)')
     
     args = parser.parse_args()
     
@@ -187,11 +194,17 @@ def main():
     event_type = "7" if args.sport == "horses" else "4339"
     sport_name = "Horse Racing" if args.sport == "horses" else "Greyhound Racing"
     
+    # Handle country filter
+    countries = None
+    if args.country:
+        countries = [args.country.upper()]
+        print(f"Filtering to {args.country.upper()} only")
+    
     print("Loading Betfair credentials...")
     app_key, session_token = load_credentials()
     
     print(f"Fetching {sport_name} markets (next {args.hours} hours)...")
-    markets = fetch_markets(app_key, session_token, args.hours, event_type)
+    markets = fetch_markets(app_key, session_token, args.hours, event_type, countries)
     
     if not markets:
         print("WARNING: No markets found", file=sys.stderr)

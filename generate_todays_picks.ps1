@@ -2,7 +2,7 @@
 # Quick script to generate today's picks and save to DynamoDB
 
 param(
-    [string]$Sport = "greyhounds"  # Default to greyhounds now
+    [string]$Sport = "horses"  # Default to horses - greyhounds disabled
 )
 
 $sportDisplay = if ($Sport -eq "horses") { "Horse Racing" } else { "Greyhound Racing 🐕" }

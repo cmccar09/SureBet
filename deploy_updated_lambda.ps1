@@ -28,7 +28,7 @@ Write-Host "`n1. Installing dependencies..." -ForegroundColor Yellow
 pip install --target lambda-package-results requests boto3 -q
 
 Write-Host "2. Copying Lambda function..." -ForegroundColor Yellow
-Copy-Item "lambda_api_picks.py" "lambda-package-results/"
+Copy-Item "lambda_api_picks.py" "lambda-package-results/lambda_function.py"
 
 Write-Host "3. Creating deployment package..." -ForegroundColor Yellow
 Push-Location "lambda-package-results"

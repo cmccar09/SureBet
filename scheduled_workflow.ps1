@@ -161,11 +161,11 @@ $outputCsv = "$PSScriptRoot\today_picks.csv"
 # Create history directory
 New-Item -ItemType Directory -Force -Path "$PSScriptRoot\history" | Out-Null
 
-Write-Log "  Fetching live Betfair odds..." "Yellow"
+Write-Log "  Fetching live Betfair odds (Horse Racing only)..." "Yellow"
 
-# Fetch live data from Betfair API
+# Fetch live data from Betfair API - HORSES ONLY (greyhounds disabled)
 $snapshotFile = "$PSScriptRoot\response_live.json"
-& $pythonExe "$PSScriptRoot\betfair_delayed_snapshots.py" --out $snapshotFile --hours 24 --max_races 50 2>&1 | Tee-Object -Append -FilePath $logFile
+& $pythonExe "$PSScriptRoot\betfair_delayed_snapshots.py" --out $snapshotFile --hours 24 --max_races 50 --sport horses 2>&1 | Tee-Object -Append -FilePath $logFile
 
 if ($LASTEXITCODE -ne 0) {
     Write-Log "ERROR: Failed to fetch Betfair data" "Red"

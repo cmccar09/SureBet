@@ -201,12 +201,6 @@ function App() {
           >
             🐕 Greyhounds
           </button>
-          <button 
-            className={filter === 'all' ? 'active' : ''} 
-            onClick={() => setFilter('all')}
-          >
-            All Picks
-          </button>
           <button onClick={checkResults} className="results-btn" disabled={resultsLoading}>
             {resultsLoading ? '⏳ Checking...' : '📊 Check Results'}
           </button>
