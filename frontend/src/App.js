@@ -215,8 +215,8 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>🏇 Today's Betting Picks</h1>
-        <p>Value opportunities from AI analysis</p>
+        <h1>🏇 SureBet Betting</h1>
+        <p>The most advanced super Intelligence AI Betting Platform</p>
         
         <div className="filter-buttons">
           <button 
