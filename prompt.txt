@@ -246,11 +246,54 @@ why_now: Detailed explanation (100-200 words) covering:
 11. First-time equipment (blinkers/tongue-tie) can transform performance
 12. Trust the detailed research AND the ROI calculation - both must align
 
+=== LEARNINGS FROM PAST WINNERS ===
+
+When our picks didn't win, we analyzed what the actual winners had that we missed:
+
+KEY INSIGHTS TO APPLY:
+1. **Course & Distance Winners**: Horses with C&D form won MORE than expected
+   → BOOST rating by 15-20% for proven C&D winners
+   → Don't dismiss them even if odds are shorter
+
+2. **Last-Time-Out Winners**: Recent winners have strong momentum
+   → Prioritize horses that won their last race (within 30 days)
+   → This is a stronger signal than we initially weighted
+
+3. **Trainer Course Strike Rates**: Some trainers dominate certain tracks
+   → Check trainer's course record - 20%+ strike rate is a major edge
+   → This matters MORE than overall trainer form
+
+4. **Market Favorites (Under 3/1)**: When they have solid form, they often win
+   → Don't auto-exclude all favorites - check if form justifies the price
+   → Favorites with C&D form + recent win are dangerous to oppose
+
+5. **Ground Specialists**: Winners nearly always had proven going preference
+   → Horses without ANY wins on today's going rarely surprise
+   → Make this a HARD requirement, not just a preference
+
+6. **Jockey Bookings**: Top jockeys on mid-priced horses (4-7/1) is a strong signal
+   → When champion jockey switches to a horse, take notice
+   → This suggests stable confidence
+
+7. **Class Levels**: Higher official ratings win more often than we expected
+   → A 5lb+ rating advantage is more significant than value odds
+   → Don't back lower-rated horses just for value
+
+8. **Form Trends**: Winners were often improving (getting closer in recent runs)
+   → A horse finishing 2nd by a neck last time > a horse that won 6 months ago
+   → Recency and improvement trend beats historical wins
+
+CRITICAL ADJUSTMENTS:
+- When 2 horses look equal, favor the one with: C&D form > recent win > top jockey
+- Don't underestimate market wisdom: if a horse is 3/1 with all the form, it's probably right
+- Ground suitability is NON-NEGOTIABLE: zero tolerance for "might handle it"
+- Course form beats everything else: a 7/1 shot with C&D form > a 5/1 shot without it
+
 === PORTFOLIO GUIDELINES ===
 
 - **ODDS FILTER FIRST: Only consider horses 3.0-15.0 odds (2/1 to 14/1)**
 - **BREAKEVEN THRESHOLD: Every bet must have ROI ≥ 0% (fair value)**
-- **NO FAVORITES: Automatically skip ALL horses with odds < 3.0 (under 2/1)**
+- **NO FAVORITES RULE RELAXED**: Consider sub-3/1 horses IF they have C&D + recent win + ground form
 - Aim for 3-5 WIN bets on fair value or better (odds 2/1 to 14/1 ONLY)
 - Include 2-3 EACH-WAY bets on solid place prospects (4/1 to 14/1 range)
 - Avoid 20/1+ outsiders - stick to 2/1 to 14/1 range strictly
@@ -259,6 +302,7 @@ why_now: Detailed explanation (100-200 words) covering:
 - **If no bets meet BOTH odds range AND 0% ROI threshold, output ZERO selections**
 - Goal: Find value in mid-range odds where market is less efficient
 - Overall portfolio target: 25%+ win strike rate, ROI averaging 5%+ after commission
+- **PRIORITY ORDER**: C&D Winners > Recent Winners > Top Jockey Bookings > Class Edge > Value Odds
 
 === CSV OUTPUT FORMAT ===
 

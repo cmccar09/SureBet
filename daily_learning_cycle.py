@@ -144,18 +144,35 @@ def main():
     print(" "*10 + datetime.now().strftime("%A, %d %B %Y %H:%M"))
     print("="*70)
     
+    # Step 0: Winner comparison analysis (NEW)
+    print("\n[0/6] Analyzing actual winners vs our picks...")
+    try:
+        import subprocess
+        result = subprocess.run(
+            [sys.executable, 'winner_comparison_learning.py'],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+        if result.returncode == 0:
+            print("  ✓ Winner comparison complete")
+        else:
+            print(f"  ⚠️ Winner comparison had issues: {result.stderr[:200]}")
+    except Exception as e:
+        print(f"  ⚠️ Could not run winner comparison: {e}")
+    
     # Load results from DynamoDB
-    print("\n[1/5] Loading historical results from DynamoDB...")
+    print("\n[1/6] Loading historical results from DynamoDB...")
     results = load_results_from_dynamodb(days_back=30)
     
     if len(results) < 10:
         print(f"\n⚠️  Only {len(results)} completed bets found")
         print("Need at least 10 results for meaningful analysis")
-        print("Skipping learning cycle for now")
+        print("Skipping traditional analysis, but winner comparison still ran")
         return
     
     # Calculate current bankroll
-    print("\n[2/5] Calculating current bankroll...")
+    print("\n[2/6] Calculating current bankroll...")
     current_bankroll = calculate_current_bankroll(results, initial=1000.0)
     profit = current_bankroll - 1000.0
     roi_pct = (profit / 1000.0) * 100
@@ -166,16 +183,30 @@ def main():
     print(f"  ROI:               {roi_pct:+.1f}%")
     
     # Update Lambda env var with new bankroll
-    print("\n[3/5] Updating Lambda bankroll...")
+    print("\n[3/6] Updating Lambda bankroll...")
     update_bankroll_env_var(current_bankroll)
     
     # Analyze performance
-    print("\n[4/5] Analyzing performance patterns...")
+    print("\n[4/6] Analyzing performance patterns...")
     analysis = analyze_performance_patterns(results)
     
     # Generate insights
-    print("\n[5/5] Generating and applying insights...")
+    print("\n[5/6] Generating and applying insights...")
     insights = generate_learning_insights(analysis)
+    
+    # Load winner comparison insights
+    print("\n[6/6] Integrating winner comparison learnings...")
+    try:
+        s3 = boto3.client('s3', region_name='us-east-1')
+        obj = s3.get_object(Bucket='betting-insights', Key='winner_comparison_learnings.json')
+        winner_insights = json.loads(obj['Body'].read())
+        print(f"  ✓ Loaded {winner_insights.get('total_learnings', 0)} winner comparisons")
+        
+        # Add to insights
+        insights['winner_analysis'] = winner_insights
+    except Exception as e:
+        print(f"  ⚠️ Could not load winner comparisons: {e}")
+        insights = insights or {}
     
     # Update prompt with learnings
     if insights:

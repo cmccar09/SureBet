@@ -1,550 +1,499 @@
-# SureBet Lambda: fetch odds, call Claude 4.5, store bets in DynamoDB
-
-import os
+"""
+AWS Lambda function to serve betting picks from DynamoDB
+Provides REST API for frontend hosted on Amplify
+"""
 import json
 import boto3
-import datetime
-import requests
+from datetime import datetime
+from decimal import Decimal
 
-# Import automated betting modules
-try:
-    from betfair_odds_fetcher import get_live_betfair_races
-    BETTING_MODULES_AVAILABLE = True
-except ImportError as e:
-    print(f"Betting modules not available: {e}")
-    BETTING_MODULES_AVAILABLE = False
+# Initialize DynamoDB
+dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+table = dynamodb.Table('SureBetBets')
 
-# Learning insights
-s3 = boto3.client('s3')
-dynamodb = boto3.resource('dynamodb')
-
-def load_learning_insights():
-    """Load latest learning insights from winner analysis"""
-    
-    insights_bucket = os.environ.get('INSIGHTS_BUCKET', 'betting-insights')
-    insights_key = 'winner_analysis.json'
-    
-    try:
-        # Try S3 first
-        response = s3.get_object(Bucket=insights_bucket, Key=insights_key)
-        insights = json.loads(response['Body'].read())
-        print(f"✓ Loaded learning insights from S3 (generated: {insights.get('generated_at')})")
-        return insights.get('prompt_enhancements', '')
-    except Exception as e:
-        print(f"S3 insights not available: {e}")
-        # Try DynamoDB fallback
-        try:
-            table = dynamodb.Table('BettingPerformance')
-            response = table.get_item(
-                Key={
-                    'analysis_date': datetime.datetime.utcnow().strftime('%Y-%m-%d'),
-                    'analysis_id': 'winner_analysis'
-                }
-            )
-            if 'Item' in response:
-                insights = json.loads(response['Item']['insights'])
-                print(f"✓ Loaded learning insights from DynamoDB")
-                return insights.get('prompt_enhancements', '')
-        except Exception as db_error:
-            print(f"DynamoDB insights not available: {db_error}")
-    
-    return ""
-
-# --- Free Odds API integration ---
-def fetch_betfair_odds():
-    """
-    Fetch live horse racing odds from free sources
-    Filters races to optimal betting window (15 mins - 24 hours)
-    Priority: Free sources with timing analysis > Mock Data
-    """
-    # Try Betfair API with automated session refresh
-    if BETTING_MODULES_AVAILABLE:
-        try:
-            print("Fetching live Betfair odds (UK/IRE horse racing)...")
-            races = get_live_betfair_races()
-            if races:
-                print(f"Successfully fetched {len(races)} Betfair races in betting window")
-                return races
-        except Exception as e:
-            print(f"Betfair fetch failed: {e}, using mock data as fallback...")
-    
-    # Realistic mock data - simulates actual UK/IRE horse racing
-    print("Using realistic mock data (Betfair geo-restricted from AWS)")
-    now = datetime.datetime.utcnow()
-    import random
-    
-    # Realistic UK racecourses and horses
-    courses = ["Cheltenham", "Ascot", "Newmarket", "Kempton Park", "Leopardstown", "The Curragh"]
-    horse_prefixes = ["Royal", "Golden", "Thunder", "Speed", "Lucky", "Silver", "Dark", "Noble", "Mighty", "Swift"]
-    horse_suffixes = ["Flash", "Arrow", "Bolt", "Demon", "Strike", "Star", "King", "Spirit", "Dream", "Runner"]
-    
-    races = []
-    race_times = [35, 50, 75, 105, 145]  # Mix of optimal and early timings
-    
-    for i, mins in enumerate(race_times[:3]):  # Generate 3 races
-        num_runners = random.randint(5, 8)
-        runners = []
-        
-        for j in range(num_runners):
-            horse_name = f"{random.choice(horse_prefixes)} {random.choice(horse_suffixes)}"
-            odds = round(random.uniform(2.5, 12.0), 1)
-            runners.append({
-                "name": horse_name,
-                "selectionId": 10000 + (i * 100) + j,
-                "odds": odds
-            })
-        
-        # Calculate timing
-        if mins > 120:
-            timing_quality = "TOO_EARLY"
-            confidence_adj = 0.7
-            advice = "Race is >2 hours away, reducing confidence by 30%"
-        elif mins >= 90:
-            timing_quality = "EARLY"
-            confidence_adj = 0.85
-            advice = "Slightly early - odds may still fluctuate"
-        elif mins >= 30:
-            timing_quality = "OPTIMAL"
-            confidence_adj = 1.0
-            advice = "Optimal betting window (30-90 mins before race)"
-        else:
-            timing_quality = "GOOD"
-            confidence_adj = 0.9
-            advice = "Good timing - odds are settling"
-        
-        races.append({
-            "market_id": f"1.{234567 + i}",
-            "race_time": (now + datetime.timedelta(minutes=mins)).strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "course": random.choice(courses),
-            "runners": runners,
-            "timing": {
-                "minutes_to_race": mins,
-                "timing_quality": timing_quality,
-                "confidence_adjustment": confidence_adj,
-                "timing_advice": advice
-            }
-        })
-    
-    return races
-
-    # List UK/IRE horse racing markets in next 24 hours
-    now = datetime.datetime.utcnow()
-    to_time = now + datetime.timedelta(hours=24)
-    market_filter = {
-        "filter": {
-            "eventTypeIds": ["7"],  # Horse Racing
-            "marketCountries": ["GB", "IE"],
-            "marketTypeCodes": ["WIN"],
-            "marketStartTime": {
-                "from": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-                "to": to_time.strftime("%Y-%m-%dT%H:%M:%SZ")
-            }
-        },
-        "maxResults": "100",
-        "marketProjection": ["RUNNER_METADATA", "MARKET_START_TIME", "EVENT"]
-    }
-    headers = {
-        "X-Application": BETFAIR_APP_KEY,
-        "X-Authentication": BETFAIR_SESSION,
-        "Content-Type": "application/json"
-    }
-    url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketCatalogue/"
-    resp = requests.post(url, headers=headers, data=json.dumps(market_filter))
-    if resp.status_code != 200:
-        raise Exception(f"Betfair API error: {resp.status_code} {resp.text}")
-    markets = resp.json()
-    # For each market, get odds (listMarketBook)
-    market_ids = [m["marketId"] for m in markets]
-    if not market_ids:
-        return []
-    book_req = {
-        "marketIds": market_ids,
-        "priceProjection": {"priceData": ["EX_BEST_OFFERS"]}
-    }
-    book_url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketBook/"
-    book_resp = requests.post(book_url, headers=headers, data=json.dumps(book_req))
-    if book_resp.status_code != 200:
-        raise Exception(f"Betfair API error: {book_resp.status_code} {book_resp.text}")
-    books = {b["marketId"]: b for b in book_resp.json()}
-    # Structure output
-    races = []
-    for m in markets:
-        market_id = m["marketId"]
-        event = m.get("event", {})
-        course = event.get("venue", "")
-        race_time = m.get("marketStartTime", "")
-        runners = []
-        book = books.get(market_id, {})
-        for r in m.get("runners", []):
-            sel_id = r["selectionId"]
-            name = r["runnerName"]
-            # Find best back price
-            best_back = None
-            if book and "runners" in book:
-                for br in book["runners"]:
-                    if br["selectionId"] == sel_id:
-                        offers = br.get("ex", {}).get("availableToBack", [])
-                        if offers:
-                            best_back = offers[0]["price"]
-                        break
-            runners.append({"name": name, "selectionId": sel_id, "odds": best_back})
-        races.append({
-            "market_id": market_id,
-            "race_time": race_time,
-            "course": course,
-            "runners": runners
-        })
-    return races
-
-def call_claude_4_5(prompt, races):
-    """
-    Calls AWS Bedrock Claude Sonnet 4.5 to select value bets from races/odds.
-    Uses boto3 with your AWS credentials (no API key needed).
-    """
-    import json
-    bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
-    
-    # Build context string for prompt
-    context_str = "\n".join([
-        f"Race: {r['race_time']} {r['course']}\n" +
-        "\n".join([f"  {runner['name']} (odds: {runner['odds']})" for runner in r['runners']])
-        for r in races
-    ])
-    full_prompt = prompt + "\n\n" + context_str + "\n\nReturn a JSON array of bet objects."
-    
-    # Prepare request for Claude 3.5 Sonnet via Bedrock
-    body = json.dumps({
-        "anthropic_version": "bedrock-2023-05-31",
-        "max_tokens": 2048,
-        "temperature": 0.2,
-        "system": "You are a meticulous racing quant generating calibrated per-runner probabilities. Always return valid JSON array.",
-        "messages": [
-            {
-                "role": "user",
-                "content": full_prompt
-            }
-        ]
-    })
-    
-    try:
-        response = bedrock.invoke_model(
-            modelId='anthropic.claude-3-5-sonnet-20240620-v1:0',  # Claude 3.5 Sonnet
-            body=body
-        )
-        
-        response_body = json.loads(response['body'].read())
-        content = response_body['content'][0]['text']
-        
-        # Parse Claude's response - handle text before JSON
-        try:
-            # Try direct parsing first
-            bets = json.loads(content)
-            if not isinstance(bets, list):
-                bets = [bets]
-        except Exception as e:
-            # Claude may have added explanation text - extract JSON array
-            print(f"Initial parse failed, extracting JSON from text: {e}")
-            try:
-                # Find JSON array in content
-                start = content.find('[')
-                end = content.rfind(']') + 1
-                if start >= 0 and end > start:
-                    json_str = content[start:end]
-                    bets = json.loads(json_str)
-                    print(f"Extracted JSON successfully: {len(bets)} bets")
-                else:
-                    print(f"No JSON array found in content")
-                    bets = []
-            except Exception as e2:
-                print(f"Failed to extract JSON: {e2}")
-                print(f"Raw content: {content}")
-                bets = []
-        
-        return bets
-        
-    except Exception as e:
-        print(f"Bedrock API error: {str(e)}")
-        raise Exception(f"Bedrock API error: {str(e)}")
-
-def store_bets_in_dynamodb(bets, prompt, model_response, races):
-    from decimal import Decimal
-    
-    def convert_floats(obj):
-        """Convert float values to Decimal for DynamoDB"""
-        if isinstance(obj, float):
-            return Decimal(str(obj))
-        elif isinstance(obj, dict):
-            return {k: convert_floats(v) for k, v in obj.items()}
-        elif isinstance(obj, list):
-            return [convert_floats(item) for item in obj]
-        return obj
-    
-    def find_selection_id(horse_name, course, race_time, races):
-        """Match bet to race data to find market_id and selection_id"""
-        print(f"\n=== MATCHING: {horse_name} at {course} ===")
-        print(f"  Looking for race_time: {race_time}")
-        print(f"  Total races to search: {len(races) if races else 0}")
-        
-        if not races:
-            print("  ERROR: No races data provided!")
-            return None, None
-        
-        # Normalize race_time for comparison (remove timezone)
-        race_time_normalized = race_time.replace('Z', '').replace('+00:00', '').replace('.000', '') if race_time else None
-        horse_name_lower = horse_name.lower().strip() if horse_name else ""
-        
-        print(f"  Normalized race_time: {race_time_normalized}")
-        print(f"  Horse name (lower): '{horse_name_lower}'")
-        
-        for idx, race in enumerate(races):
-            race_course = race.get('course', '')
-            race_time_raw = race.get('race_time', '')
-            market_id = race.get('market_id', '')
-            
-            print(f"\n  Race {idx+1}: {race_course} @ {race_time_raw} (market: {market_id})")
-            
-            # Try to match by course and time
-            race_time_match = race_time_raw.replace('Z', '').replace('+00:00', '').replace('.000', '')
-            course_match = race_course == course
-            time_match = race_time_match.startswith(race_time_normalized[:16]) if race_time_normalized and len(race_time_normalized) >= 16 else False
-            
-            print(f"    Course match: {course_match} ('{race_course}' vs '{course}')")
-            print(f"    Time match: {time_match} ('{race_time_match[:16]}' vs '{race_time_normalized[:16] if race_time_normalized and len(race_time_normalized) >= 16 else 'N/A'}')")
-            
-            if course_match or time_match:
-                print(f"    ✓ Race matched! Searching {len(race.get('runners', []))} runners...")
-                # Found the race, now find the horse (case-insensitive)
-                for runner in race.get('runners', []):
-                    runner_name = runner.get('name', '')
-                    runner_name_lower = runner_name.lower().strip()
-                    selection_id = runner.get('selectionId')
-                    
-                    if runner_name_lower == horse_name_lower:
-                        print(f"    ✓✓ MATCHED! {horse_name} -> selection_id: {selection_id}")
-                        return market_id, str(selection_id)
-                
-                # If exact match failed, log all available horses
-                available_horses = [r.get('name') for r in race.get('runners', [])]
-                print(f"    ❌ Horse '{horse_name}' not found in runners.")
-                print(f"    Available: {available_horses[:5]}...")  # Show first 5
-                return market_id, None
-        
-        print(f"  ❌ No race matched for {course} / {race_time}")
-        return None, None
-    
-    table_name = os.environ.get("SUREBET_DDB_TABLE", "SureBetBets")
-    dynamodb = boto3.resource("dynamodb")
-    table = dynamodb.Table(table_name)
-    
-    print(f"\n=== STORING {len(bets)} BETS ===")
-    print(f"Races data available: {len(races) if races else 0} races")
-    
-    for bet in bets:
-        horse = bet.get('horse')
-        course = bet.get('course')
-        race_time = bet.get('race_time')
-        
-        print(f"\nProcessing bet: {horse} at {course}")
-        
-        # Match bet to race data to get Betfair IDs
-        market_id, selection_id = find_selection_id(horse, course, race_time, races)
-        
-        print(f"  Result: market_id={market_id}, selection_id={selection_id}")
-        
-        bet_id = f"{bet.get('race_time','')}_{bet.get('horse','')}"
-        # Convert all floats to Decimals
-        bet_converted = convert_floats(bet)
-        
-        bet_date = datetime.datetime.utcnow().strftime("%Y-%m-%d")
-        
-        item = {
-            # DynamoDB key attributes (MUST be first)
-            "bet_date": bet_date,
-            "bet_id": bet_id,
-            # Timestamps
-            "timestamp": datetime.datetime.utcnow().isoformat(),
-            "date": bet_date,  # Keep for backwards compatibility
-            # Betfair IDs for results fetching (matched from races data)
-            "market_id": market_id or "",
-            "selection_id": selection_id or "",
-            # Bet data
-            "bet": bet_converted,
-            "prompt": prompt,
-            "model_response": convert_floats(model_response),
-            # Expanded schema for audit/review:
-            "race_time": bet.get("race_time"),
-            "course": bet.get("course"),
-            "horse": bet.get("horse"),
-            "bet_type": bet.get("bet_type"),
-            "odds": convert_floats(bet.get("odds")),
-            "p_win": convert_floats(bet.get("p_win")),
-            "ev": convert_floats(bet.get("ev")),
-            "why_now": bet.get("why_now"),
-            "confidence": convert_floats(bet.get("confidence", 50)),
-            "roi": convert_floats(bet.get("roi", bet.get("ev", 0))),
-            "recommendation": bet.get("recommendation", "CONSIDER"),
-            "audit": {
-                "created_by": "lambda",
-                "created_at": datetime.datetime.utcnow().isoformat(),
-                "status": "pending_outcome"
-            },
-            # Learning fields (to be updated after race)
-            "outcome": None,  # Will be: "won", "lost", "placed", "did_not_run"
-            "actual_position": None,
-            "learning_notes": None,
-            "feedback_processed": False
-        }
-        
-        print(f"  About to save: market_id='{item['market_id']}', selection_id='{item['selection_id']}'")
-        table.put_item(Item=item)
-        print(f"  ✓ Stored bet: {bet_id}")
+def decimal_to_float(obj):
+    """Convert Decimal objects to float for JSON serialization"""
+    if isinstance(obj, Decimal):
+        return float(obj)
+    elif isinstance(obj, dict):
+        return {k: decimal_to_float(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [decimal_to_float(item) for item in obj]
+    return obj
 
 def lambda_handler(event, context):
+    """Handle API Gateway requests"""
+    
+    # CORS headers
+    headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key',
+        'Access-Control-Allow-Methods': 'GET,OPTIONS',
+        'Content-Type': 'application/json'
+    }
+    
+    # Handle OPTIONS preflight
+    if event.get('httpMethod') == 'OPTIONS':
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': ''
+        }
+    
+    # Get path - handle both API Gateway and Lambda URL formats
+    path = event.get('rawPath', event.get('path', ''))
+    method = event.get('requestContext', {}).get('http', {}).get('method', event.get('httpMethod', 'GET'))
+    
+    print(f"Request: {method} {path}")
+    print(f"Event keys: {event.keys()}")
+    print(f"Path check - 'workflow/run' in path: {'workflow/run' in path}")
+    
     try:
-        print("Lambda execution started")
-        
-        # 1. Load learning insights from winner analysis
-        print("Loading learning insights...")
-        learning_enhancements = load_learning_insights()
-        if learning_enhancements:
-            print("✓ Learning insights loaded - applying to prompt")
+        # Route requests - check more specific paths first
+        if 'results/today' in path:
+            return check_today_results(headers)
+        elif 'picks/yesterday' in path:
+            return get_yesterday_picks(headers)
+        elif 'picks/today' in path:
+            return get_today_picks(headers)
+        elif 'workflow/run' in path or 'workflow' in path:
+            return trigger_workflow(headers)
+        elif 'picks' in path:
+            return get_all_picks(headers)
+        elif 'health' in path:
+            return get_health(headers)
+        elif path == '/':
+            # Root path - return API info
+            return {
+                'statusCode': 200,
+                'headers': headers,
+                'body': json.dumps({
+                    'service': 'Betting Picks API',
+                    'endpoints': [
+                        '/api/picks/today',
+                        '/api/picks/yesterday',
+                        '/api/picks',
+                        '/api/results/today',
+                        '/api/workflow/run',
+                        '/api/health'
+                    ]
+                })
+            }
         else:
-            print("ℹ️ No learning insights yet (system still building track record)")
-        
-        # 2. Fetch latest odds
-        print("Fetching Betfair odds...")
-        races = fetch_betfair_odds()
-        print(f"Found {len(races)} races")
+            return {
+                'statusCode': 404,
+                'headers': headers,
+                'body': json.dumps({
+                    'success': False,
+                    'error': f'Endpoint not found: {path}'
+                })
+            }
+    
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        return {
+            'statusCode': 500,
+            'headers': headers,
+            'body': json.dumps({
+                'success': False,
+                'error': str(e)
+            })
+        }
 
-        # 3. Build prompt with timing strategy context + learning insights
-        base_prompt = (
-            "Horse Racing Value Betting Analysis (UK & IRE, 24h Window):\n\n"
-            "TIMING STRATEGY: Optimal betting window is 30-90 minutes before race start.\n"
-            "- Races >2 hours away: Odds too volatile, reduce confidence by 30%\n"
-            "- Races 30-90 mins away: OPTIMAL - full confidence\n"
-            "- Races 15-30 mins away: Good window - slight confidence reduction (10%)\n"
-            "- Races <15 mins away: Too late - market efficient, minimal value\n\n"
-        )
-        
-        # Add learning insights if available
-        prompt = base_prompt + learning_enhancements + (
-            "\n\nEvaluate all provided races and ALWAYS return your Top 5 best opportunities.\n\n"
-            "For each prediction, include:\n"
-            "- race_time, course, horse, bet_type, odds\n"
-            "- p_win: probability of winning (0-1 decimal)\n"
-            "- ev: expected value as decimal (e.g., 0.15 for 15% ROI)\n"
-            "- roi: expected return on investment percentage\n"
-            "- confidence: score 0-100 (adjusted for race timing as above)\n"
-            "- why_now: brief explanation including timing factor\n"
-            "- recommendation: 'BET' if ROI ≥ 15% and confidence ≥ 70 and in optimal window, 'CONSIDER' if ROI ≥ 10% or confidence ≥ 60, otherwise 'AVOID'\n\n"
-            "Return a JSON array with exactly 5 objects sorted by adjusted confidence.\n"
-            "Consider race timing AND recent learnings in your confidence scores and recommendations.\n"
-        )
+def get_all_picks(headers):
+    """Get all picks from DynamoDB"""
+    response = table.scan()
+    items = response.get('Items', [])
+    
+    # Convert Decimals to floats
+    items = [decimal_to_float(item) for item in items]
+    
+    # Sort by timestamp descending
+    items.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+    
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'success': True,
+            'picks': items,
+            'count': len(items)
+        })
+    }
 
-        # 4. Call Claude 4.5 with prompt and context
-        print("Calling Claude AI...")
-        all_predictions = call_claude_4_5(prompt, races)
-        print(f"Claude returned {len(all_predictions)} predictions")
-        
-        # 5. Enhance predictions with timing analysis
-        for pred in all_predictions:
-            # Find matching race for timing data
-            race_timing = None
-            for race in races:
-                if race.get('venue') == pred.get('course'):
-                    race_timing = race.get('timing', {})
-                    break
-            
-            if race_timing:
-                pred['timing'] = race_timing
-                pred['minutes_to_race'] = race_timing.get('minutes_to_race', 0)
-                pred['timing_advice'] = race_timing.get('timing_advice', '')
-                pred['should_bet_now'] = race_timing.get('should_bet_now', False)
-                
-                # Adjust recommendation based on timing
-                if not race_timing.get('should_bet_now', False):
-                    pred['recommendation'] = 'AVOID'
-                    pred['why_now'] = f"TIMING: {race_timing.get('timing_advice')}. {pred.get('why_now', '')}"
-            
-            # Ensure recommendation field exists
-            if 'recommendation' not in pred:
-                roi = pred.get('roi', pred.get('ev', 0))
-                confidence = pred.get('confidence', 0)
-                timing_ok = pred.get('should_bet_now', True)
-                
-                if roi >= 15 and confidence >= 70 and timing_ok:
-                    pred['recommendation'] = 'BET'
-                elif (roi >= 10 or confidence >= 60) and timing_ok:
-                    pred['recommendation'] = 'CONSIDER'
-                else:
-                    pred['recommendation'] = 'AVOID'
-        
-        bets = all_predictions
-
-        # 5. Store bets in DynamoDB
-        print("Storing bets in DynamoDB...")
-        store_bets_in_dynamodb(bets, prompt, bets, races)
-
-        # 5. Automated betting (if enabled)
-        betting_results = None
-        auto_betting_enabled = os.environ.get('ENABLE_AUTO_BETTING', 'false').lower() == 'true'
-        
-        if auto_betting_enabled and BETTING_MODULES_AVAILABLE:
-            print("🎰 Auto-betting enabled - placing bets...")
+def get_today_picks(headers):
+    """Get today's picks only - filter to show only upcoming races"""
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    # Check both 'date' and 'bet_date' fields (schema evolved)
+    response = table.scan(
+        FilterExpression='#d = :today OR bet_date = :today',
+        ExpressionAttributeNames={'#d': 'date'},
+        ExpressionAttributeValues={':today': today}
+    )
+    
+    items = response.get('Items', [])
+    items = [decimal_to_float(item) for item in items]
+    
+    # Filter out races that have already started
+    now = datetime.utcnow()
+    future_picks = []
+    
+    for item in items:
+        race_time_str = item.get('race_time', '')
+        if race_time_str:
             try:
-                betting_results = auto_place_bets(bets)
-                print(f"Betting results: {json.dumps(betting_results, default=str)}")
+                # Parse race time (ISO format)
+                race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
+                # Only include if race is in the future
+                if race_time.replace(tzinfo=None) > now:
+                    future_picks.append(item)
             except Exception as e:
-                print(f"Auto-betting error: {e}")
-                betting_results = {'error': str(e)}
-        elif auto_betting_enabled:
-            print("⚠️ Auto-betting enabled but modules not available")
-            betting_results = {'error': 'Betting modules not installed'}
+                print(f"Error parsing race time {race_time_str}: {e}")
+                # Include if we can't parse (safer than excluding)
+                future_picks.append(item)
         else:
-            print("ℹ️ Auto-betting disabled (dry-run mode)")
-            # Show what WOULD be placed
-            if BETTING_MODULES_AVAILABLE:
-                dry_run_bets = []
-                for bet in bets:
-                    bet_type, reason = determine_bet_type(bet)
-                    stake = calculate_stake(bet.get('confidence', 0), bet.get('odds', 0))
-                    dry_run_bets.append({
-                        'horse': bet.get('horse'),
-                        'bet_type': bet_type,
-                        'stake': stake,
-                        'reason': reason
-                    })
-                betting_results = {
-                    'dry_run': True,
-                    'would_place': dry_run_bets,
-                    'message': 'Set ENABLE_AUTO_BETTING=true to place real bets'
-                }
+            # Include if no race time (safer than excluding)
+            future_picks.append(item)
+    
+    future_picks.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+    
+    print(f"Total picks: {len(items)}, Future picks: {len(future_picks)}")
+    
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'success': True,
+            'picks': future_picks,
+            'count': len(future_picks),
+            'date': today
+        })
+    }
 
-        # 6. Return bets to frontend
-        print("Returning response")
-        response_body = {"bets": bets, "race_count": len(races)}
-        if betting_results:
-            response_body['betting_results'] = betting_results
+def get_yesterday_picks(headers):
+    """Get yesterday's picks with results"""
+    from datetime import timedelta
+    yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    # Check both 'date' and 'bet_date' fields (schema evolved)
+    response = table.scan(
+        FilterExpression='#d = :yesterday OR bet_date = :yesterday',
+        ExpressionAttributeNames={'#d': 'date'},
+        ExpressionAttributeValues={':yesterday': yesterday}
+    )
+    
+    items = response.get('Items', [])
+    items = [decimal_to_float(item) for item in items]
+    
+    # Sort by race time
+    items.sort(key=lambda x: x.get('race_time', ''))
+    
+    print(f"Yesterday's picks: {len(items)}")
+    
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'success': True,
+            'picks': items,
+            'count': len(items),
+            'date': yesterday
+        })
+    }
+
+
+def get_health(headers):
+    """Health check endpoint"""
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'status': 'ok',
+            'service': 'betting-picks-api',
+            'timestamp': datetime.now().isoformat()
+        })
+    }
+
+def check_today_results(headers):
+    """Check results for today's picks - ONLY MODERATE RISK or better (tracked performance)"""
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    # Get today's picks that are tracked for performance
+    response = table.scan(
+        FilterExpression='#d = :today AND track_performance = :track',
+        ExpressionAttributeNames={'#d': 'date'},
+        ExpressionAttributeValues={':today': today, ':track': True}
+    )
+    
+    picks = response.get('Items', [])
+    picks = [decimal_to_float(item) for item in picks]
+    
+    # Debug logging
+    print(f"Total TRACKED picks retrieved: {len(picks)} (MODERATE RISK or better)")
+    print(f"Sample ROIs: {[float(p.get('roi', 0)) for p in picks[:5]]}")
+    
+    if not picks:
+        print("NO TRACKED PICKS - returning empty")
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'message': f'No tracked picks for today (only MODERATE RISK or better)',
+                'picks': [],
+                'results': [],
+                'total_picks_today': 0
+            })
+        }
+    
+    # Use only tracked picks for results checking
+    picks = positive_roi_picks
+    print(f"AFTER filter - picks variable length: {len(picks)}")
+    print(f"Proceeding with {len(picks)} positive ROI picks")
+    
+    # Load Betfair credentials from environment or Secrets Manager
+    import os
+    session_token = os.environ.get('BETFAIR_SESSION_TOKEN', '')
+    app_key = os.environ.get('BETFAIR_APP_KEY', '')
+    
+    if not session_token or not app_key:
+        # Return picks with summary showing all as pending (only tracked picks)
+        summary = {
+            'total_picks': len(picks),
+            'tracked_only': True,
+            'note': 'Only MODERATE RISK or better selections',
+            'wins': 0,
+            'places': 0,
+            'losses': 0,
+            'pending': len(picks),
+            'total_stake': round(sum([float(p.get('stake', 2.0)) for p in picks]), 2),
+            'total_return': 0.0,
+            'profit': 0.0,
+            'roi': 0.0,
+            'strike_rate': 0.0
+        }
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'message': 'Betfair credentials not configured - showing pending picks',
+                'date': today,
+                'summary': summary,
+                'picks': picks,
+                'note': 'Configure BETFAIR_SESSION_TOKEN and BETFAIR_APP_KEY to fetch live results'
+            })
+        }
+    
+    # Extract unique market IDs
+    market_ids = list(set([str(pick.get('market_id', '')) for pick in picks if pick.get('market_id')]))
+    
+    if not market_ids:
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'message': 'No market IDs found in picks',
+                'picks': picks,
+                'results': []
+            })
+        }
+    
+    # Import requests only if we need it
+    try:
+        import requests
+    except ImportError:
+        # Return summary without live results if requests is not available
+        summary = {
+            'total_picks': len(picks),
+            'wins': 0,
+            'places': 0,
+            'losses': 0,
+            'pending': len(picks),
+            'total_stake': round(sum([float(p.get('stake', 2.0)) for p in picks]), 2),
+            'total_return': 0.0,
+            'profit': 0.0,
+            'roi': 0.0,
+            'strike_rate': 0.0
+        }
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'message': 'Results library not available - showing pending picks',
+                'date': today,
+                'summary': summary,
+                'picks': picks,
+                'note': 'Install requests library in Lambda layer to fetch live results'
+            })
+        }
+    
+    # Fetch market results from Betfair
+    url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketBook/"
+    betfair_headers = {
+        "X-Application": app_key,
+        "X-Authentication": session_token,
+        "Content-Type": "application/json"
+    }
+    
+    all_results = []
+    
+    # Process in batches of 10
+    for i in range(0, len(market_ids), 10):
+        batch = market_ids[i:i+10]
+        payload = {
+            "marketIds": batch,
+            "priceProjection": {"priceData": ["EX_BEST_OFFERS"]},
+        }
+        
+        try:
+            resp = requests.post(url, headers=betfair_headers, json=payload, timeout=10)
+            resp.raise_for_status()
+            market_data = resp.json()
+            
+            # Parse results
+            for market in market_data:
+                market_id = market.get('marketId')
+                status = market.get('status')
+                
+                for runner in market.get('runners', []):
+                    selection_id = str(runner.get('selectionId'))
+                    runner_status = runner.get('status', '')
+                    
+                    all_results.append({
+                        'market_id': market_id,
+                        'selection_id': selection_id,
+                        'market_status': status,
+                        'runner_status': runner_status,
+                        'is_winner': runner_status == 'WINNER',
+                        'is_placed': runner_status in ['WINNER', 'PLACED'],
+                        'last_price': runner.get('lastPriceTraded', 0)
+                    })
+        except Exception as e:
+            print(f"Error fetching batch: {e}")
+            continue
+    
+    # Match picks with results
+    picks_with_results = []
+    wins = 0
+    places = 0
+    losses = 0
+    pending = 0
+    total_stake = 0
+    total_return = 0
+    
+    for pick in picks:
+        pick_market_id = str(pick.get('market_id', ''))
+        pick_selection_id = str(pick.get('selection_id', ''))
+        stake = float(pick.get('stake', 2.0))
+        odds = float(pick.get('odds', 0))
+        bet_type = pick.get('bet_type', 'WIN').upper()
+        
+        # Find matching result
+        result = next((r for r in all_results 
+                      if r['market_id'] == pick_market_id 
+                      and r['selection_id'] == pick_selection_id), None)
+        
+        pick_result = pick.copy()
+        
+        if result:
+            pick_result['result'] = result
+            market_status = result['market_status']
+            
+            if market_status in ['CLOSED', 'SETTLED']:
+                if result['is_winner']:
+                    wins += 1
+                    pick_result['outcome'] = 'WON'
+                    if bet_type == 'WIN':
+                        total_return += stake * odds
+                    else:  # EW
+                        ew_fraction = float(pick.get('ew_fraction', 0.2))
+                        total_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
+                elif result['is_placed'] and bet_type == 'EW':
+                    places += 1
+                    pick_result['outcome'] = 'PLACED'
+                    ew_fraction = float(pick.get('ew_fraction', 0.2))
+                    total_return += (stake/2) * (1 + (odds-1) * ew_fraction)
+                else:
+                    losses += 1
+                    pick_result['outcome'] = 'LOST'
+            else:
+                pending += 1
+                pick_result['outcome'] = 'PENDING'
+        else:
+            pending += 1
+            pick_result['outcome'] = 'NO_RESULT'
+        
+        total_stake += stake
+        picks_with_results.append(pick_result)
+    
+    profit = total_return - total_stake
+    roi = (profit / total_stake * 100) if total_stake > 0 else 0
+    
+    summary = {
+        'total_picks': len(picks),
+        'wins': wins,
+        'places': places,
+        'losses': losses,
+        'pending': pending,
+        'total_stake': round(total_stake, 2),
+        'total_return': round(total_return, 2),
+        'profit': round(profit, 2),
+        'roi': round(roi, 1),
+        'strike_rate': round((wins / (wins + losses) * 100) if (wins + losses) > 0 else 0, 1)
+    }
+    
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'success': True,
+            'date': today,
+            'summary': summary,
+            'picks': picks_with_results,
+            'debug_timestamp': datetime.now().isoformat(),
+            'total_picks_today': len(positive_roi_picks)
+        })
+    }
+
+def trigger_workflow(headers):
+    """Trigger the betting workflow Lambda to generate new picks"""
+    import boto3
+    
+    lambda_client = boto3.client('lambda', region_name='eu-west-1')
+    
+    try:
+        # Invoke the workflow Lambda asynchronously
+        response = lambda_client.invoke(
+            FunctionName='betting-workflow',
+            InvocationType='Event',  # Async invocation
+            Payload=json.dumps({
+                'source': 'api-trigger',
+                'trigger': 'manual-refresh'
+            })
+        )
         
         return {
-            "statusCode": 200,
-            "headers": {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-                "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
-            },
-            "body": json.dumps(response_body)
+            'statusCode': 202,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'message': 'Workflow triggered successfully',
+                'status': 'processing',
+                'info': 'New picks will be generated in ~60-90 seconds. Refresh picks to see updates.'
+            })
         }
     except Exception as e:
-        print(f"ERROR: {str(e)}")
-        import traceback
-        traceback.print_exc()
         return {
-            "statusCode": 500,
-            "headers": {
-                "Access-Control-Allow-Origin": "*",
-                "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token",
-                "Access-Control-Allow-Methods": "GET,POST,OPTIONS"
-            },
-            "body": json.dumps({"error": str(e)})
+            'statusCode': 500,
+            'headers': headers,
+            'body': json.dumps({
+                'success': False,
+                'error': str(e),
+                'message': 'Failed to trigger workflow. Make sure betting-workflow Lambda exists and API has invoke permissions.'
+            })
         }
+
