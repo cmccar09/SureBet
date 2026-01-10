@@ -11,6 +11,7 @@ import argparse
 from datetime import datetime
 from decimal import Decimal
 import pandas as pd
+import requests
 
 try:
     import boto3
@@ -50,6 +51,81 @@ def load_market_odds(snapshot_path: str = 'response_live.json') -> dict:
         print(f"WARNING: Failed to load market odds: {e}")
     
     return odds_map
+
+def get_betfair_session():
+    """Get Betfair session credentials"""
+    try:
+        with open('./betfair-creds.json', 'r') as f:
+            creds = json.load(f)
+        return creds.get('session_token'), creds.get('app_key')
+    except Exception as e:
+        print(f"WARNING: Could not load Betfair credentials: {e}")
+        return None, None
+
+def filter_non_runners(bets: list, session_token: str = None, app_key: str = None) -> tuple:
+    """
+    Filter out non-runners (REMOVED status) from Betfair
+    Returns: (filtered_bets, removed_count)
+    """
+    if not session_token or not app_key:
+        print("Skipping non-runner check (no Betfair credentials)")
+        return bets, 0
+    
+    filtered_bets = []
+    removed_count = 0
+    
+    # Group by market to minimize API calls
+    from collections import defaultdict
+    by_market = defaultdict(list)
+    for bet in bets:
+        market_id = bet.get('market_id')
+        if market_id:
+            by_market[market_id].append(bet)
+        else:
+            # No market_id, keep it
+            filtered_bets.append(bet)
+    
+    # Check each market
+    for market_id, market_bets in by_market.items():
+        try:
+            url = 'https://api.betfair.com/exchange/betting/rest/v1.0/listMarketBook/'
+            headers = {
+                'X-Application': app_key,
+                'X-Authentication': session_token,
+                'Content-Type': 'application/json'
+            }
+            payload = {
+                'marketIds': [market_id],
+                'priceProjection': {'priceData': ['EX_BEST_OFFERS']}
+            }
+            
+            response = requests.post(url, json=payload, headers=headers, timeout=10)
+            if response.status_code == 200:
+                markets = response.json()
+                if markets and len(markets) > 0:
+                    runner_statuses = {}
+                    for runner in markets[0].get('runners', []):
+                        runner_statuses[str(runner.get('selectionId'))] = runner.get('status', 'ACTIVE')
+                    
+                    # Filter bets based on status
+                    for bet in market_bets:
+                        selection_id = str(bet.get('selection_id', ''))
+                        status = runner_statuses.get(selection_id, 'ACTIVE')
+                        
+                        if status == 'REMOVED':
+                            removed_count += 1
+                            print(f"  NON-RUNNER: {bet.get('horse', 'Unknown')} - REMOVED from market")
+                        else:
+                            filtered_bets.append(bet)
+                else:
+                    filtered_bets.extend(market_bets)
+            else:
+                filtered_bets.extend(market_bets)
+        except Exception as e:
+            print(f"WARNING: Failed to check market {market_id}: {e}")
+            filtered_bets.extend(market_bets)
+    
+    return filtered_bets, removed_count
 
 def load_market_odds(snapshot_path: str = 'response_live.json') -> dict:
     """Load actual market odds from Betfair snapshot"""
@@ -558,6 +634,14 @@ def main():
             print(f"WARNING: Failed to format row {idx}: {e}")
     
     print(f"\nFormatted {len(bets)} bet items (filtered out {filtered_out} low ROI bets)")
+    
+    # Check for non-runners via Betfair API
+    print(f"\nChecking for non-runners...")
+    session_token, app_key = get_betfair_session()
+    bets, non_runners = filter_non_runners(bets, session_token, app_key)
+    if non_runners > 0:
+        print(f"Removed {non_runners} non-runners")
+    print(f"Remaining picks: {len(bets)}")
     
     # Apply race-level filtering rules
     print(f"\nApplying race-level filtering (max 2 picks/race, mixed types)...")
