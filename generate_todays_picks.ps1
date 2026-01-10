@@ -5,6 +5,11 @@ Write-Host "="*60
 Write-Host "Generate Today's Betting Picks"
 Write-Host "="*60
 
+# Step 0: Validate existing picks (remove invalid ones)
+Write-Host ""
+Write-Host "Step 0: Validating existing picks..." -ForegroundColor Cyan
+& C:/Users/charl/OneDrive/futuregenAI/Betting/.venv/Scripts/python.exe validate_existing_picks.py
+
 # Load Betfair credentials and set environment variables
 if (Test-Path "./betfair-creds.json") {
     $creds = Get-Content "./betfair-creds.json" | ConvertFrom-Json
