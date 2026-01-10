@@ -176,13 +176,20 @@ function App() {
     try {
       const date = new Date(timeStr);
       if (isNaN(date.getTime())) return timeStr;
-      // Dublin/Ireland time (Europe/Dublin timezone)
-      return date.toLocaleTimeString('en-IE', { 
+      // UK/Ireland time (Europe/Dublin timezone = GMT/IST)
+      const time = date.toLocaleTimeString('en-IE', { 
         hour: '2-digit', 
         minute: '2-digit',
         hour12: false,
         timeZone: 'Europe/Dublin'
       });
+      
+      // Determine if GMT or IST (Irish Summer Time)
+      const month = date.getMonth();
+      const isWinter = month < 2 || month > 9; // Jan, Feb, Nov, Dec = GMT
+      const timezone = isWinter ? 'GMT' : 'IST';
+      
+      return `${time} ${timezone}`;
     } catch (e) {
       return timeStr;
     }
@@ -571,7 +578,7 @@ function App() {
                 <div className="pick-venue" style={{padding: '0 16px'}}>
                   <span className="venue-icon">📍</span>
                   <span>{courseName}</span>
-                  <span className="time">{formatTime(pick.race_time)} (Dublin)</span>
+                  <span className="time">{formatTime(pick.race_time)}</span>
                 </div>
                 
                 {/* RECOMMENDED STAKE - Clear and Prominent */}
