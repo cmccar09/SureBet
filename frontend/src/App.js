@@ -702,9 +702,18 @@ function App() {
                   </div>
                 )}
 
-                <div className="pick-footer" style={{padding: '0 16px'}}>
+                <div className="pick-footer" style={{padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
                   <span className="timestamp">
-                    {new Date(pick.timestamp).toLocaleString('en-GB')}
+                    Last updated: {new Date(pick.timestamp).toLocaleString('en-GB', { 
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    })}
+                  </span>
+                  <span style={{fontSize: '11px', color: '#10b981', fontWeight: 'bold'}}>
+                    ✓ ACTIVE
                   </span>
                 </div>
               </div>
