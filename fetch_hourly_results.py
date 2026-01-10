@@ -13,8 +13,28 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 def get_betfair_session():
-    """Get Betfair session token using username/password"""
-    # Try to load from creds file first
+    """Get Betfair session token - use stored token first, then login if needed"""
+    # Try to load stored session token from creds file first
+    try:
+        with open('./betfair-creds.json', 'r') as f:
+            creds = json.load(f)
+            stored_token = creds.get('session_token')
+            if stored_token:
+                # Test if stored token is still valid
+                test_url = "https://api.betfair.com/exchange/betting/rest/v1.0/listEventTypes/"
+                test_headers = {
+                    'X-Application': creds.get('app_key', 'XDDM8EHzaw8tokvQ'),
+                    'X-Authentication': stored_token,
+                    'Content-Type': 'application/json'
+                }
+                test_response = requests.post(test_url, json={'filter': {}}, headers=test_headers, timeout=5)
+                if test_response.status_code == 200:
+                    return stored_token
+                # Token expired, need to login
+    except Exception as e:
+        pass  # Fall through to login
+    
+    # Login to get new token
     try:
         with open('./betfair-creds.json', 'r') as f:
             creds = json.load(f)
@@ -26,6 +46,32 @@ def get_betfair_session():
         username = os.environ.get('BETFAIR_USERNAME', 'cmccar02')
         password = os.environ.get('BETFAIR_PASSWORD', 'Liv!23456')
     
+    # Try certificate login first
+    url = "https://identitysso-cert.betfair.com/api/certlogin"
+    headers = {
+        'X-Application': app_key,
+        'Content-Type': 'application/x-www-form-urlencoded'
+    }
+    data = {
+        'username': username,
+        'password': password
+    }
+    
+    try:
+        response = requests.post(url, headers=headers, data=data, cert=('betfair-client.crt', 'betfair-client.key'), timeout=30)
+        if response.status_code == 200:
+            result = response.json()
+            session_token = result.get('sessionToken')
+            if session_token and result.get('loginStatus') == 'SUCCESS':
+                # Save new token to creds file
+                creds['session_token'] = session_token
+                with open('./betfair-creds.json', 'w') as f:
+                    json.dump(creds, f, indent=2)
+                return session_token
+    except Exception as e:
+        pass  # Fall through to regular login
+    
+    # Fallback to regular login
     url = "https://identitysso.betfair.com/api/login"
     headers = {
         'X-Application': app_key,
@@ -149,7 +195,7 @@ def main():
     print("="*70)
     
     # Connect to DynamoDB
-    dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
+    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
     table = dynamodb.Table('SureBetBets')
     
     # Get picks from today and yesterday without outcomes
@@ -173,7 +219,7 @@ def main():
     print(f"  Found {len(pending_picks)} picks without results")
     
     if not pending_picks:
-        print("\n✓ All recent picks already have results!")
+        print("\nAll recent picks already have results!")
         return
     
     # Get unique market IDs
@@ -183,10 +229,10 @@ def main():
     # Get Betfair session
     session_token = get_betfair_session()
     if not session_token:
-        print("  ❌ Failed to get Betfair session")
+        print("  [X] Failed to get Betfair session")
         print("  Will retry on next hourly run")
         return
-    print("  ✓ Betfair session obtained")
+    print("  [OK] Betfair session obtained")
     
     # Fetch results
     print(f"\n[3/5] Fetching market data...")
@@ -217,8 +263,8 @@ def main():
             if success:
                 updated += 1
                 total_profit += profit
-                emoji = "🏆" if outcome == 'WON' else "📍" if outcome == 'PLACED' else "❌"
-                print(f"  {emoji} {horse}: {outcome} ({profit:+.2f})")
+                symbol = "[WIN]" if outcome == 'WON' else "[PLACE]" if outcome == 'PLACED' else "[LOST]"
+                print(f"  {symbol} {horse}: {outcome} ({profit:+.2f})")
     
     # Summary
     print(f"\n[5/5] Summary:")
