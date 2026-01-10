@@ -273,6 +273,22 @@
   margin-top: 10px;
 }
 
+.info {
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 20px;
+  border-radius: 8px;
+  margin: 20px 0;
+  border: 1px solid #7dd3fc;
+  text-align: center;
+}
+
+.info p {
+  margin: 0;
+  font-size: 1.1em;
+  font-weight: 500;
+}
+
 .picks-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));

@@ -13,6 +13,7 @@ function App() {
   const [picks, setPicks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [info, setInfo] = useState(null);
   const [filter, setFilter] = useState('today');
   const [results, setResults] = useState(null);
   const [resultsLoading, setResultsLoading] = useState(false);
@@ -55,13 +56,13 @@ function App() {
 
   const triggerWorkflow = async () => {
     // Show instructions for running greyhound picks locally
-    setError('🐕 To generate Greyhound picks, run on your local machine: .\\generate_todays_picks.ps1 -Sport greyhounds');
+    setInfo('🐕 To generate Greyhound picks, run on your local machine: .\\generate_todays_picks.ps1 -Sport greyhounds');
     
     // Auto-refresh after user has time to run it
     setTimeout(() => {
-      setError('Refreshing picks...');
+      setInfo('Refreshing picks...');
       fetchPicks();
-      setTimeout(() => setError(null), 2000);
+      setTimeout(() => setInfo(null), 2000);
     }, 30000); // 30 seconds
   };
 
@@ -343,6 +344,12 @@ function App() {
         )}
         
         {loading && <div className="loading">Loading picks...</div>}
+        
+        {info && (
+          <div className="info">
+            <p>{info}</p>
+          </div>
+        )}
         
         {error && (
           <div className="error">
