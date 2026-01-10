@@ -52,6 +52,8 @@ def lambda_handler(event, context):
         # Route requests - check more specific paths first
         if 'results/today' in path:
             return check_today_results(headers)
+        elif 'picks/yesterday' in path:
+            return get_yesterday_picks(headers)
         elif 'picks/today' in path:
             return get_today_picks(headers)
         elif 'workflow/run' in path or 'workflow' in path:
@@ -69,6 +71,7 @@ def lambda_handler(event, context):
                     'service': 'Betting Picks API',
                     'endpoints': [
                         '/api/picks/today',
+                        '/api/picks/yesterday',
                         '/api/picks',
                         '/api/results/today',
                         '/api/workflow/run',
@@ -167,6 +170,38 @@ def get_today_picks(headers):
             'date': today
         })
     }
+
+def get_yesterday_picks(headers):
+    """Get yesterday's picks with results"""
+    from datetime import timedelta
+    yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    # Check both 'date' and 'bet_date' fields (schema evolved)
+    response = table.scan(
+        FilterExpression='#d = :yesterday OR bet_date = :yesterday',
+        ExpressionAttributeNames={'#d': 'date'},
+        ExpressionAttributeValues={':yesterday': yesterday}
+    )
+    
+    items = response.get('Items', [])
+    items = [decimal_to_float(item) for item in items]
+    
+    # Sort by race time
+    items.sort(key=lambda x: x.get('race_time', ''))
+    
+    print(f"Yesterday's picks: {len(items)}")
+    
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'success': True,
+            'picks': items,
+            'count': len(items),
+            'date': yesterday
+        })
+    }
+
 
 def get_health(headers):
     """Health check endpoint"""
