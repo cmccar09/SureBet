@@ -109,6 +109,9 @@ def fetch_market_results(market_ids, session_token):
     
     results = {}
     
+    # Debug: show what we're searching for
+    print(f"  Querying markets: {market_ids[:3]}{'...' if len(market_ids) > 3 else ''}")
+    
     # Process in batches of 10
     for i in range(0, len(market_ids), 10):
         batch = market_ids[i:i+10]
@@ -124,12 +127,27 @@ def fetch_market_results(market_ids, session_token):
             response = requests.post(url, headers=headers, json=payload)
             if response.status_code == 200:
                 markets = response.json()
+                print(f"  Batch {i//10 + 1}: Received {len(markets)} markets")
                 
                 for market in markets:
                     market_status = market.get('status')
+                    market_id = market.get('marketId', 'unknown')
+                    
+                    # Debug output
+                    if market_status in ['CLOSED', 'SETTLED']:
+                        runners_with_status = sum(1 for r in market.get('runners', []) if r.get('status') in ['WINNER', 'LOSER', 'PLACED'])
+                        print(f"  Market {market_id}: {market_status}, {runners_with_status} runners with results")
                     
                     # Only process closed/settled markets
                     if market_status not in ['CLOSED', 'SETTLED']:
+                        continue
+                    
+                    # Check if market has results (winners/losers)
+                    has_results = any(r.get('status') in ['WINNER', 'LOSER', 'PLACED'] for r in market.get('runners', []))
+                    
+                    if not has_results:
+                        # Market closed but no results yet (or cancelled/void)
+                        print(f"  Market {market_id}: CLOSED but no runner results available")
                         continue
                     
                     for runner in market.get('runners', []):
@@ -144,7 +162,8 @@ def fetch_market_results(market_ids, session_token):
                         elif status in ['PLACED']:
                             results[selection_id] = 'PLACED'
                         else:
-                            results[selection_id] = 'LOST'
+                            # Unknown status - skip this runner
+                            pass
             else:
                 print(f"  API response: {response.status_code}")
                 
@@ -214,7 +233,7 @@ def main():
         all_picks.extend(response.get('Items', []))
     
     # Filter to only picks without outcomes
-    pending_picks = [p for p in all_picks if not p.get('outcome') or p.get('outcome') == 'Pending']
+    pending_picks = [p for p in all_picks if p.get('outcome') is None or p.get('outcome') == 'Pending']
     
     print(f"  Found {len(pending_picks)} picks without results")
     

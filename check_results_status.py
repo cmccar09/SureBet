@@ -15,9 +15,9 @@ print(f"\n{'='*70}")
 print(f"TODAY'S PICKS: {len(items)} total")
 print(f"{'='*70}\n")
 
-wins = [p for p in items if p.get('actual_result') == 'WIN']
-losses = [p for p in items if p.get('actual_result') == 'LOSS']
-pending = [p for p in items if 'actual_result' not in p]
+wins = [p for p in items if p.get('outcome') == 'WON']
+losses = [p for p in items if p.get('outcome') in ['LOST', 'PLACED']]
+pending = [p for p in items if p.get('outcome') is None]
 
 print(f"Results Status:")
 print(f"  WIN: {len(wins)}")
@@ -26,9 +26,11 @@ print(f"  PENDING: {len(pending)}")
 print()
 
 if losses:
-    print(f"\nLosses (for learning):")
+    print(f"\nResults:")
     for p in losses:
-        print(f"  • {p['horse']} @ {p['course']} - Winner: {p.get('race_winner', 'Unknown')}")
+        outcome_display = "PLACED" if p['outcome'] == 'PLACED' else "LOST"
+        pnl = p.get('profit_loss', 0)
+        print(f"  • {p['horse']} @ {p['course']} - {outcome_display} ({float(pnl):+.2f} units)")
 
 if pending:
     print(f"\nPending Results ({len(pending)} picks):")
