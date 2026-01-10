@@ -53,7 +53,7 @@ def fetch_markets(app_key, session_token, hours_ahead=24, event_type="7", countr
             }
         },
         "maxResults": 100,
-        "marketProjection": ["RUNNER_METADATA", "EVENT", "MARKET_START_TIME", "COMPETITION", "RUNNER_DESCRIPTION"]
+        "marketProjection": ["RUNNER_METADATA", "EVENT", "MARKET_START_TIME", "COMPETITION", "RUNNER_DESCRIPTION", "MARKET_DESCRIPTION"]
     }
     
     headers = {
@@ -129,6 +129,11 @@ def format_snapshot(markets, odds_by_market):
         venue = event.get('venue', event.get('name', 'Unknown'))
         competition = market.get('competition', {}).get('name', 'Unknown')
         
+        # Get race distance from market description
+        market_desc = market.get('description', {})
+        distance = market_desc.get('marketType', '')
+        race_type = market_desc.get('raceType', '')
+        
         # Get odds data for this market
         odds_data = odds_by_market.get(market_id, {})
         runners_odds = odds_data.get('runners', [])
@@ -139,26 +144,50 @@ def format_snapshot(markets, odds_by_market):
             selection_id = runner_meta['selectionId']
             runner_name = runner_meta['runnerName']
             
+            # Extract metadata (trap, form, trainer)
+            metadata = runner_meta.get('metadata', {})
+            trap = metadata.get('CLOTH_NUMBER') or metadata.get('STALL_DRAW')
+            form = metadata.get('FORM', '')
+            trainer = metadata.get('TRAINER_NAME', '')
+            
             # Find matching odds
             runner_odds = next((r for r in runners_odds if r['selectionId'] == selection_id), None)
             
-            # Extract best back odds
+            # Extract best back odds and market depth
             best_back = None
+            market_depth = []
+            total_matched = 0
+            
             if runner_odds and runner_odds.get('status') == 'ACTIVE':
                 back_offers = runner_odds.get('ex', {}).get('availableToBack', [])
                 if back_offers:
                     best_back = back_offers[0]['price']
+                    # Get top 3 prices for depth analysis
+                    market_depth = [{'price': offer['price'], 'size': offer['size']} 
+                                   for offer in back_offers[:3]]
+                
+                total_matched = runner_odds.get('totalMatched', 0)
             
             if best_back:
-                runners.append({
+                runner_data = {
                     "name": runner_name,
                     "selectionId": selection_id,
-                    "odds": best_back
-                })
+                    "odds": best_back,
+                    "trap": trap,
+                    "form": form,
+                    "trainer": trainer,
+                    "total_matched": total_matched
+                }
+                
+                # Add market depth if available
+                if len(market_depth) > 1:
+                    runner_data["market_depth"] = market_depth
+                
+                runners.append(runner_data)
         
         # Only include races with odds available
         if runners:
-            races.append({
+            race_data = {
                 "market_id": market_id,
                 "market_name": market_name,
                 "venue": venue,
@@ -167,7 +196,15 @@ def format_snapshot(markets, odds_by_market):
                 "start_time": market['marketStartTime'],
                 "runners": runners,
                 "total_runners": len(runners)
-            })
+            }
+            
+            # Add distance if available
+            if distance:
+                race_data["distance"] = distance
+            if race_type:
+                race_data["race_type"] = race_type
+            
+            races.append(race_data)
     
     return {
         "timestamp": now.isoformat() + "Z",

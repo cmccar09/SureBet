@@ -27,7 +27,7 @@ function Write-Log {
 }
 
 Write-Log "========================================" "Cyan"
-Write-Log "GREYHOUND WORKFLOW (Ireland Only)" "Cyan"
+Write-Log "GREYHOUND WORKFLOW (UK & Ireland)" "Cyan"
 Write-Log "========================================" "Cyan"
 
 # Load Betfair credentials
@@ -99,17 +99,17 @@ if ($enableLearning) {
     }
 }
 
-# STEP 2: Generate today's greyhound picks (Ireland only)
-Write-Log "`nSTEP 2: Generating greyhound picks (Ireland only)..." "Cyan"
+# STEP 2: Generate today's greyhound picks (UK & Ireland)
+Write-Log "\nSTEP 2: Generating greyhound picks (UK & Ireland)..." "Cyan"
 
 # Create history directory
 New-Item -ItemType Directory -Force -Path "$PSScriptRoot\history" | Out-Null
 
-Write-Log "  Fetching live Betfair greyhound odds (Ireland only)..." "Yellow"
+Write-Log "  Fetching live Betfair greyhound odds (UK & Ireland)..." "Yellow"
 
-# Fetch greyhound data from Betfair API - Ireland only
+# Fetch greyhound data from Betfair API - UK & Ireland
 $snapshotFile = "$PSScriptRoot\response_greyhound_live.json"
-& $pythonExe "$PSScriptRoot\betfair_delayed_snapshots.py" --out $snapshotFile --hours 6 --max_races 30 --sport greyhounds --country IE 2>&1 | Tee-Object -Append -FilePath $logFile
+& $pythonExe "$PSScriptRoot\betfair_delayed_snapshots.py" --out $snapshotFile --hours 6 --max_races 30 --sport greyhounds 2>&1 | Tee-Object -Append -FilePath $logFile
 
 if ($LASTEXITCODE -ne 0) {
     Write-Log "ERROR: Failed to fetch Betfair greyhound data" "Red"

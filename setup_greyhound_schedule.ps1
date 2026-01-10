@@ -30,7 +30,7 @@ Write-Host ""
 Write-Host "Configuration:" -ForegroundColor Yellow
 Write-Host "  Schedule: 4:00 PM - 10:00 PM daily" -ForegroundColor Gray
 Write-Host "  Frequency: Every 30 minutes" -ForegroundColor Gray
-Write-Host "  Region: Ireland (IE) only" -ForegroundColor Gray
+Write-Host "  Region: UK & Ireland" -ForegroundColor Gray
 Write-Host "  Self-Learning: Enabled" -ForegroundColor Gray
 Write-Host ""
 
@@ -71,7 +71,7 @@ try {
         -Trigger $trigger `
         -Settings $settings `
         -Principal $principal `
-        -Description "Greyhound picks (Ireland only) - runs every 10 minutes from 4pm-10pm with self-learning" `
+        -Description "Greyhound picks (UK & Ireland) - runs every 30 minutes from 4pm-10pm with self-learning" `
         -Force | Out-Null
     
     Write-Host "Task created successfully!" -ForegroundColor Green
@@ -99,7 +99,7 @@ Write-Host "="*70 -ForegroundColor Cyan
 Write-Host ""
 Write-Host "Greyhound picks will now generate:" -ForegroundColor Cyan
 Write-Host "  - Every 30 minutes from 4:00 PM to 10:00 PM" -ForegroundColor White
-Write-Host "  - Ireland (IE) races only" -ForegroundColor White
+Write-Host "  - UK & Ireland races" -ForegroundColor White
 Write-Host "  - Self-learning enabled" -ForegroundColor White
 Write-Host ""
 Write-Host "Horse racing schedules remain UNCHANGED" -ForegroundColor Green
