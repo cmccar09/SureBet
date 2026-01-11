@@ -97,18 +97,18 @@ def enrich_snapshot(snapshot_path: str, output_path: str, max_dogs: int = 50) ->
                         }
                         
                         enriched_count += 1
-                        print(f"    ✓ Win: {stats.get('win_percentage', 0):.1f}%, "
+                        print(f"    [OK] Win: {stats.get('win_percentage', 0):.1f}%, "
                               f"Place: {stats.get('place_percentage', 0):.1f}%, "
                               f"Pref Trap: {stats.get('preferred_trap', 'N/A')}")
                     else:
-                        print(f"    ⚠ No form data found")
+                        print(f"    [NO DATA] No form data found")
                         runner['form_data'] = None
                     
                     # Rate limit - be respectful to Racing Post
                     time.sleep(2)
                     
                 except Exception as e:
-                    print(f"    ⚠ Error fetching form: {e}", file=sys.stderr)
+                    print(f"    [ERROR] Error fetching form: {e}", file=sys.stderr)
                     runner['form_data'] = None
             
             if total_dogs > max_dogs:
@@ -118,8 +118,8 @@ def enrich_snapshot(snapshot_path: str, output_path: str, max_dogs: int = 50) ->
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(snapshot, f, indent=2)
         
-        print(f"\n✓ Enriched {enriched_count}/{total_dogs} dogs with form data")
-        print(f"✓ Saved to: {output_path}")
+        print(f"\n[OK] Enriched {enriched_count}/{total_dogs} dogs with form data")
+        print(f"[OK] Saved to: {output_path}")
         
         return True
         
