@@ -116,6 +116,18 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# ENRICHMENT: Add Racing Post form data to each dog
+Write-Log "  Enriching with Racing Post form data..." "Yellow"
+$enrichedFile = "$PSScriptRoot\response_greyhound_enriched.json"
+& $pythonExe "$PSScriptRoot\enrich_greyhound_snapshot.py" --snapshot $snapshotFile --out $enrichedFile --max_dogs 50 2>&1 | Tee-Object -Append -FilePath $logFile
+
+if ($LASTEXITCODE -eq 0 -and (Test-Path $enrichedFile)) {
+    Write-Log "  Form data enrichment successful" "Green"
+    $snapshotFile = $enrichedFile  # Use enriched snapshot for AI analysis
+} else {
+    Write-Log "  WARNING: Form enrichment failed, using basic snapshot" "Yellow"
+}
+
 Write-Log "  Applying AI analysis to greyhound markets..." "Yellow"
 $outputCsv = "$PSScriptRoot\today_greyhound_picks.csv"
 
@@ -139,9 +151,9 @@ if (Test-Path $outputCsv) {
         $historyFile = "$PSScriptRoot\history\greyhound_selections_$todaySlug.csv"
         Copy-Item $outputCsv $historyFile
         
-        # STEP 3: Save to DynamoDB with sport=greyhounds
-        Write-Log "`nSTEP 3: Saving greyhound picks to DynamoDB..." "Cyan"
-        & $pythonExe "$PSScriptRoot\save_selections_to_dynamodb.py" --selections $outputCsv --min_roi 0.0 --sport greyhounds 2>&1 | Tee-Object -Append -FilePath $logFile
+        # STEP 3: Save to DynamoDB with sport=greyhounds (EU-WEST-1)
+        Write-Log "`nSTEP 3: Saving greyhound picks to DynamoDB (EU-WEST-1)..." "Cyan"
+        & $pythonExe "$PSScriptRoot\save_selections_to_dynamodb.py" --selections $outputCsv --min_roi 0.0 --sport greyhounds --region eu-west-1 2>&1 | Tee-Object -Append -FilePath $logFile
         
         if ($LASTEXITCODE -eq 0) {
             Write-Log "  Successfully saved greyhound picks to database" "Green"

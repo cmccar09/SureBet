@@ -109,7 +109,7 @@ def load_market_data(snapshot_path: str) -> pd.DataFrame:
                 if not odds:  # Try Betfair Exchange format
                     odds = runner.get('ex', {}).get('availableToBack', [{}])[0].get('price', '')
                 
-                rows.append({
+                row_data = {
                     'market_id': market_id,
                     'market_name': market_name,
                     'venue': venue,
@@ -118,7 +118,13 @@ def load_market_data(snapshot_path: str) -> pd.DataFrame:
                     'selection_id': runner.get('selectionId', runner.get('selection_id', '')),
                     'best_back': odds,
                     'best_lay': runner.get('ex', {}).get('availableToLay', [{}])[0].get('price', ''),
-                })
+                }
+                
+                # Preserve form_data if available (greyhound enrichment)
+                if 'form_data' in runner and runner['form_data']:
+                    row_data['form_data'] = json.dumps(runner['form_data'])
+                
+                rows.append(row_data)
         df = pd.DataFrame(rows)
     else:
         # CSV format
@@ -149,6 +155,21 @@ Runners:
         race_info += f"- {runner_name} (ID: {selection_id}), Back: {best_back}"
         if best_lay:
             race_info += f", Lay: {best_lay}"
+        
+        # Add greyhound form data if available
+        if 'form_data' in row and pd.notna(row.get('form_data')):
+            try:
+                form_data = json.loads(row['form_data']) if isinstance(row['form_data'], str) else row['form_data']
+                if form_data:
+                    race_info += f"\n  Form: Win {form_data.get('win_percentage', 0):.1f}%, "
+                    race_info += f"Place {form_data.get('place_percentage', 0):.1f}%, "
+                    race_info += f"Pref Trap {form_data.get('preferred_trap', 'N/A')}, "
+                    race_info += f"Avg Time {form_data.get('avg_time', 'N/A')}"
+                    if form_data.get('last_5_form'):
+                        race_info += f", Last 5: {form_data['last_5_form']}"
+            except:
+                pass  # Ignore form data parsing errors
+        
         race_info += "\n"
     
     return race_info
