@@ -18,7 +18,7 @@ Write-Host "`n1. Installing dependencies..." -ForegroundColor Yellow
 npm install
 
 Write-Host "`n2. Building production bundle..." -ForegroundColor Yellow
-$env:REACT_APP_API_URL = "https://lk2iyjgzwxhks4lq35bfxziylq0xwcfv.lambda-url.eu-west-1.on.aws/api"
+# Use API Gateway URL (default in App.js)
 npm run build
 
 if ($LASTEXITCODE -ne 0) {

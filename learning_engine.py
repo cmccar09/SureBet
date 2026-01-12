@@ -190,9 +190,10 @@ def generate_learning_insights(analysis):
         print(f"   Tags: {mistake['tags']}")
         
         # Identify common patterns in mistakes
-        if 'BELOW_THRESHOLD' in mistake['tags']:
+        tags_list = mistake['tags'] if isinstance(mistake['tags'], list) else [mistake['tags']]
+        if 'BELOW_THRESHOLD' in tags_list or 'BELOW_THRESHOLD' in str(mistake['tags']):
             insights.append("Too many BELOW_THRESHOLD selections failing - raise minimum ROI requirement")
-        if 'MULTI_RUNNER_STABLE' in mistake['tags']:
+        if 'MULTI_RUNNER_STABLE' in tags_list or 'MULTI_RUNNER_STABLE' in str(mistake['tags']):
             insights.append("Multi-runner stable picks underperforming - avoid unless clear signals")
     
     # Success patterns
@@ -203,7 +204,8 @@ def generate_learning_insights(analysis):
         print(f"   Tags: {success['tags']}")
         
         # Count successful tag combinations
-        for tag in success['tags'].split(','):
+        tags_list = success['tags'] if isinstance(success['tags'], list) else success['tags'].split(',')
+        for tag in tags_list:
             tag = tag.strip()
             if tag:
                 success_tags[tag] += 1
@@ -222,7 +224,7 @@ def update_prompt_with_learnings(insights):
     prompt_file = Path("./prompt.txt")
     
     # Read current prompt
-    with open(prompt_file, 'r') as f:
+    with open(prompt_file, 'r', encoding='utf-8', errors='ignore') as f:
         prompt = f.read()
     
     # Create learning section
@@ -258,7 +260,7 @@ Apply these learnings when making selections. Continuously adapt strategy based 
         prompt += learning_section
     
     # Write updated prompt
-    with open(prompt_file, 'w') as f:
+    with open(prompt_file, 'w', encoding='utf-8') as f:
         f.write(prompt)
     
     print(f"\n✓ Updated prompt.txt with {len(insights)} new insights")

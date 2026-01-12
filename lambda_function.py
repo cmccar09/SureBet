@@ -8,7 +8,7 @@ from datetime import datetime
 from decimal import Decimal
 
 # Initialize DynamoDB
-dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
 table = dynamodb.Table('SureBetBets')
 
 def decimal_to_float(obj):
@@ -277,7 +277,7 @@ def get_health(headers):
     }
 
 def check_today_results(headers):
-    """Check results for today's picks - ONLY MODERATE RISK or better (tracked performance)"""
+    """Check results for today's picks - ONLY combined confidence >= 21"""
     today = datetime.now().strftime('%Y-%m-%d')
     
     # Get today's picks that are tracked for performance
@@ -287,31 +287,37 @@ def check_today_results(headers):
         ExpressionAttributeValues={':today': today, ':track': True}
     )
     
-    picks = response.get('Items', [])
-    picks = [decimal_to_float(item) for item in picks]
+    all_picks = response.get('Items', [])
+    all_picks = [decimal_to_float(item) for item in all_picks]
+    
+    # Filter for combined confidence >= 21 AND WIN bet type
+    picks = [
+        p for p in all_picks 
+        if float(p.get('combined_confidence', 0)) >= 21 
+        and p.get('bet_type', '').upper() == 'WIN'
+    ]
     
     # Debug logging
-    print(f"Total TRACKED picks retrieved: {len(picks)} (MODERATE RISK or better)")
-    print(f"Sample ROIs: {[float(p.get('roi', 0)) for p in picks[:5]]}")
+    print(f"Total TRACKED picks retrieved: {len(all_picks)} (MODERATE RISK or better)")
+    print(f"After combined_confidence >= 21 + WIN filter: {len(picks)} picks")
+    print(f"Sample: {[(p.get('horse'), p.get('bet_type'), float(p.get('combined_confidence', 0))) for p in picks[:3]]}")
     
     if not picks:
-        print("NO TRACKED PICKS - returning empty")
+        print("NO PICKS with combined_confidence >= 21 AND WIN bet type - returning empty")
         return {
             'statusCode': 200,
             'headers': headers,
             'body': json.dumps({
                 'success': True,
-                'message': f'No tracked picks for today (only MODERATE RISK or better)',
+                'message': f'No WIN bets with combined confidence >= 21',
                 'picks': [],
                 'results': [],
                 'total_picks_today': 0
             })
         }
     
-    # Use only tracked picks for results checking
-    picks = positive_roi_picks
-    print(f"AFTER filter - picks variable length: {len(picks)}")
-    print(f"Proceeding with {len(picks)} positive ROI picks")
+    # Use filtered picks for results checking
+    print(f"Proceeding with {len(picks)} WIN picks (combined_confidence >= 21)")
     
     # Load Betfair credentials from environment or Secrets Manager
     import os
@@ -319,11 +325,11 @@ def check_today_results(headers):
     app_key = os.environ.get('BETFAIR_APP_KEY', '')
     
     if not session_token or not app_key:
-        # Return picks with summary showing all as pending (only tracked picks)
+        # Return picks with summary showing all as pending (WIN bets with combined_confidence >= 21)
         summary = {
             'total_picks': len(picks),
             'tracked_only': True,
-            'note': 'Only MODERATE RISK or better selections',
+            'note': 'Only WIN bets with combined confidence >= 21',
             'wins': 0,
             'places': 0,
             'losses': 0,

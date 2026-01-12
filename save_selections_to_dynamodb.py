@@ -160,7 +160,7 @@ def load_selections(csv_path: str) -> pd.DataFrame:
     df.columns = [c.strip().lower() for c in df.columns]
     return df
 
-def calculate_combined_confidence(row: pd.Series) -> tuple:
+def calculate_combined_confidence(row: pd.Series, race_type: str = 'horse') -> tuple:
     """
     Calculate Combined Confidence Rating (0-100)
     Consolidates multiple confidence signals into one unified metric
@@ -171,6 +171,10 @@ def calculate_combined_confidence(row: pd.Series) -> tuple:
     3. Value Edge (20%) - How much better than market odds
     4. Consistency Score (20%) - Internal signal agreement
     
+    IMPROVED RULES (Based on Winner Analysis):
+    - Greyhounds without enrichment data: Max 50% combined confidence
+    - Missing external validation heavily penalized
+    
     Returns: (combined_confidence, confidence_grade, confidence_explanation)
     """
     # Extract raw signals
@@ -180,10 +184,16 @@ def calculate_combined_confidence(row: pd.Series) -> tuple:
     
     # Optional signals if available
     research_confidence = float(row.get('confidence', 0)) / 100 if 'confidence' in row else None
+    has_enrichment = bool(row.get('enrichment_data')) or bool(row.get('has_form_data'))
     
     # 1. WIN PROBABILITY COMPONENT (40% weight)
     # Direct measure of how likely we think the horse will win
     win_component = p_win * 40
+    
+    # PENALTY: Greyhounds without enrichment data
+    if race_type == 'greyhound' and not has_enrichment:
+        # Reduce win component by 50% if no external data
+        win_component = win_component * 0.5
     
     # 2. PLACE PROBABILITY COMPONENT (20% weight)
     # Safety net - even if doesn't win, likely to place
@@ -228,22 +238,22 @@ def calculate_combined_confidence(row: pd.Series) -> tuple:
     combined_confidence = max(0, min(100, combined_confidence))  # Clamp to 0-100
     
     # Grade the confidence
-    if combined_confidence >= 70:
-        confidence_grade = "VERY HIGH"
+    if combined_confidence >= 60:
+        confidence_grade = "EXCELLENT"
         grade_color = "green"
-        explanation = "Multiple strong signals align - high conviction bet"
-    elif combined_confidence >= 50:
-        confidence_grade = "HIGH"
-        grade_color = "lightgreen"
-        explanation = "Good signals with reasonable consistency"
-    elif combined_confidence >= 35:
-        confidence_grade = "MODERATE"
-        grade_color = "orange"
-        explanation = "Mixed signals - proceed with caution"
+        explanation = "Strong conviction bet - multiple signals align"
+    elif combined_confidence >= 40:
+        confidence_grade = "GOOD"
+        grade_color = "#FFB84D"  # Light amber
+        explanation = "Solid bet - good value with reasonable confidence"
+    elif combined_confidence >= 25:
+        confidence_grade = "FAIR"
+        grade_color = "#FF8C00"  # Dark amber
+        explanation = "Acceptable bet - proceed with caution"
     else:
-        confidence_grade = "LOW"
+        confidence_grade = "POOR"
         grade_color = "red"
-        explanation = "Weak or conflicting signals - avoid or minimal stake"
+        explanation = "Weak signals - minimal stake or avoid"
     
     # Detailed breakdown for transparency
     breakdown = {
@@ -338,7 +348,7 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None, sport: str
         ev = total_return - 1  # Subtract the full stake
     
     # Calculate Combined Confidence Rating (NEW - unified confidence metric)
-    combined_conf, conf_grade, conf_color, conf_explanation, conf_breakdown = calculate_combined_confidence(row)
+    combined_conf, conf_grade, conf_color, conf_explanation, conf_breakdown = calculate_combined_confidence(row, race_type=sport)
     
     # Calculate Decision Rating (combined score for easy decision making)
     roi_pct = ev * 100
@@ -378,7 +388,8 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None, sport: str
         # Core bet info
         'race_time': race_time,
         'course': venue,
-        'horse': horse,
+        'horse': horse,  # For horses
+        'dog': horse if sport == 'greyhounds' else None,  # For greyhounds (same field)
         'bet_type': bet_type,
         'market_id': market_id,
         'selection_id': selection_id,
@@ -445,7 +456,7 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None, sport: str
     
     return bet_item
 
-def deduplicate_against_database(new_bets: list, table_name: str = None, region: str = 'us-east-1') -> tuple:
+def deduplicate_against_database(new_bets: list, table_name: str = None, region: str = 'eu-west-1') -> tuple:
     """
     Check for existing picks in database and apply deduplication logic
     across both existing and new picks for the same race.
@@ -668,7 +679,7 @@ def deduplicate_against_database(new_bets: list, table_name: str = None, region:
         print("Proceeding with standard filtering only...")
         return new_bets, [], {}
 
-def save_to_dynamodb(bets: list[dict], table_name: str = None, region: str = 'us-east-1', bet_ids_to_delete: list = None) -> tuple[int, int]:
+def save_to_dynamodb(bets: list[dict], table_name: str = None, region: str = 'eu-west-1', bet_ids_to_delete: list = None) -> tuple[int, int]:
     """Save bet items to DynamoDB and optionally delete old bet_ids"""
     
     if not HAS_BOTO3:
@@ -878,6 +889,60 @@ def main():
             print(f"WARNING: Failed to format row {idx}: {e}")
     
     print(f"\nFormatted {len(bets)} bet items (filtered out {filtered_out} low ROI bets)")
+    
+    # VALIDATE PICK QUALITY (Improved rules from winner analysis)
+    print(f"\nValidating pick quality...")
+    validated_bets = []
+    validation_rejected = 0
+    
+    for bet in bets:
+        confidence = float(bet.get('confidence', 0))
+        combined_confidence = float(bet.get('combined_confidence', confidence))
+        has_enrichment = bool(bet.get('enrichment_data'))
+        reasoning = bet.get('why_now', '').lower()
+        horse = bet.get('horse', 'Unknown')
+        
+        # Rule 1: Greyhounds with high confidence MUST have enrichment data
+        if args.sport == 'greyhounds' and confidence >= 60 and not has_enrichment:
+            print(f"REJECTED: {horse} - {confidence}% confidence but NO form data")
+            validation_rejected += 1
+            continue
+        
+        # Rule 2: Greyhounds without enrichment capped at 50%
+        if args.sport == 'greyhounds' and not has_enrichment and confidence > 50:
+            print(f"REJECTED: {horse} - {confidence}% without form data (max 50%)")
+            validation_rejected += 1
+            continue
+        
+        # Rule 3: Combined confidence threshold for greyhounds
+        if args.sport == 'greyhounds' and combined_confidence < 50:
+            print(f"REJECTED: {horse} - Combined confidence {combined_confidence}% < 50%")
+            validation_rejected += 1
+            continue
+        
+        # Rule 4: Shallow reasoning check
+        shallow_indicators = ['lowest odds', 'shortest odds', 'best odds']
+        performance_indicators = ['form', 'win rate', 'recent performance', 'track record', 'trainer']
+        
+        has_shallow = any(indicator in reasoning for indicator in shallow_indicators)
+        has_performance = any(indicator in reasoning for indicator in performance_indicators)
+        
+        if has_shallow and not has_performance and confidence >= 60:
+            print(f"REJECTED: {horse} - Shallow reasoning for {confidence}% confidence")
+            validation_rejected += 1
+            continue
+        
+        # Rule 5: Minimum combined confidence
+        if combined_confidence < 35:
+            print(f"REJECTED: {horse} - Combined confidence {combined_confidence}% < 35%")
+            validation_rejected += 1
+            continue
+        
+        # Passed all validation rules
+        validated_bets.append(bet)
+    
+    print(f"Quality validation: {len(validated_bets)} passed, {validation_rejected} rejected")
+    bets = validated_bets
     
     # Check for non-runners via Betfair API
     print(f"\nChecking for non-runners...")

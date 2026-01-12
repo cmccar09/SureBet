@@ -116,10 +116,10 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# ENRICHMENT: Add Racing Post form data to each dog
-Write-Log "  Enriching with Racing Post form data..." "Yellow"
+# ENRICHMENT: Add GBGB form data to each dog
+Write-Log "  Enriching with GBGB form data..." "Yellow"
 $enrichedFile = "$PSScriptRoot\response_greyhound_enriched.json"
-& $pythonExe "$PSScriptRoot\enrich_greyhound_snapshot.py" --snapshot $snapshotFile --out $enrichedFile --max_dogs 50 2>&1 | Tee-Object -Append -FilePath $logFile
+& $pythonExe "$PSScriptRoot\enrich_greyhound_snapshot.py" --snapshot $snapshotFile --out $enrichedFile --max-dogs 50 2>&1 | Tee-Object -Append -FilePath $logFile
 
 if ($LASTEXITCODE -eq 0 -and (Test-Path $enrichedFile)) {
     Write-Log "  Form data enrichment successful" "Green"

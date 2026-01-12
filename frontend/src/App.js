@@ -5,9 +5,9 @@ import './App.css';
 const API_BASE_URL = process.env.REACT_APP_API_URL || 
                      'https://e5na6ldp35.execute-api.eu-west-1.amazonaws.com/prod';
 
-// Budget configuration - £500 monthly budget
-const MONTHLY_BUDGET = 500;
-const DAILY_BUDGET = MONTHLY_BUDGET / 30;
+// Budget configuration - €100 daily budget on top 5 picks only
+const DAILY_BUDGET = 100;
+const MAX_PICKS_PER_DAY = 5;
 
 function App() {
   const [picks, setPicks] = useState([]);
@@ -83,7 +83,7 @@ function App() {
         const pending = picks.filter(p => !p.outcome || p.outcome === 'PENDING').length;
         
         const totalPL = picks.reduce((sum, p) => sum + (parseFloat(p.profit_loss) || 0), 0);
-        const totalStake = picks.length; // £1 per pick
+        const totalStake = picks.length; // €1 per pick
         const totalReturn = totalStake + totalPL;
         const roi = totalStake > 0 ? ((totalPL / totalStake) * 100) : 0;
         const strikeRate = (wins + places) > 0 && picks.length > 0 ? 
@@ -359,24 +359,24 @@ function App() {
               </div>
               <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', fontSize: '14px'}}>
                 <div>
-                  <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Monthly Budget</div>
-                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>£{MONTHLY_BUDGET}</div>
+                  <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Daily Budget</div>
+                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>€{DAILY_BUDGET}</div>
                 </div>
                 <div>
-                  <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Daily Allocation</div>
-                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>£{DAILY_BUDGET.toFixed(2)}</div>
+                  <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Max Picks/Day</div>
+                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>{MAX_PICKS_PER_DAY}</div>
                 </div>
                 <div>
-                  <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Total Picks</div>
-                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>{picks.length}</div>
+                  <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Today's Picks</div>
+                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>{Math.min(picks.length, MAX_PICKS_PER_DAY)}</div>
                 </div>
                 <div>
                   <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Base per Pick</div>
-                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>£{(DAILY_BUDGET / picks.length).toFixed(2)}</div>
+                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>€{(DAILY_BUDGET / MAX_PICKS_PER_DAY).toFixed(0)}</div>
                 </div>
               </div>
               <div style={{marginTop: '12px', fontSize: '12px', opacity: 0.9, lineHeight: '1.5'}}>
-                ℹ️ Stakes are adjusted by confidence (0.5x-2.0x) and ROI (0.75x-1.5x). GREEN picks (75%+ confidence, 20%+ ROI) get 2x stake!
+                Stakes adjusted by confidence: EXCELLENT (60%+) = 2.0x, GOOD (40-60%) = 1.3x, FAIR (25-40%) = 0.8x, POOR under 25% = 0.4x. ROI bonus: 20%+ = 1.5x, 15-20% = 1.25x
               </div>
             </div>
 
@@ -400,9 +400,8 @@ function App() {
               const courseName = typeof pick.course === 'string' ? pick.course : 'Unknown';
               
               // BUDGET-BASED STAKE CALCULATION
-              // Use global budget constants defined at top of file
-              const totalPicks = picks.length;
-              const baseBudgetPerPick = DAILY_BUDGET / Math.max(totalPicks, 1);
+              // Use global budget constants - only top 5 picks get budget allocation
+              const baseBudgetPerPick = DAILY_BUDGET / MAX_PICKS_PER_DAY;
               
               const odds = parseFloat(pick.odds || 0);
               const pWin = parseFloat(pick.p_win || 0);
@@ -412,17 +411,30 @@ function App() {
               const decisionRating = pick.decision_rating || 'RISKY';
               
               // Confidence multiplier: Higher confidence = bigger stake
-              // GREEN (DO IT, 75%+ conf): 2.0x
-              // HIGH (60-74% conf): 1.5x
-              // MODERATE (45-59% conf): 1.0x
-              // LOW (<45% conf): 0.5x
+              // EXCELLENT (60%+ conf): 2.0x - GREEN
+              // GOOD (40-59% conf): 1.3x - LIGHT AMBER
+              // FAIR (25-39% conf): 0.8x - DARK AMBER
+              // POOR (<25% conf): 0.4x - RED
               let confidenceMultiplier = 1.0;
-              if (decisionRating === 'DO IT' && confidence >= 75) {
-                confidenceMultiplier = 2.0; // Double stake for GREEN picks
-              } else if (confidence >= 60) {
-                confidenceMultiplier = 1.5; // 50% more for HIGH confidence
-              } else if (confidence < 45) {
-                confidenceMultiplier = 0.5; // Half stake for LOW confidence
+              let confColor = '#FF8C00'; // Default dark amber
+              let confLabel = 'FAIR';
+              
+              if (confidence >= 60) {
+                confidenceMultiplier = 2.0;
+                confColor = '#10b981'; // Green
+                confLabel = 'EXCELLENT';
+              } else if (confidence >= 40) {
+                confidenceMultiplier = 1.3;
+                confColor = '#FFB84D'; // Light amber
+                confLabel = 'GOOD';
+              } else if (confidence >= 25) {
+                confidenceMultiplier = 0.8;
+                confColor = '#FF8C00'; // Dark amber
+                confLabel = 'FAIR';
+              } else {
+                confidenceMultiplier = 0.4;
+                confColor = '#ef4444'; // Red
+                confLabel = 'POOR';
               }
               
               // ROI multiplier: Better value = bigger stake
@@ -447,14 +459,14 @@ function App() {
                 stake = stake * 2;
               }
               
-              // Round to nearest £1
+              // Round to nearest €1
               stake = Math.round(stake);
               
               // Apply sensible min/max limits
               if (betType === 'EW') {
-                stake = Math.max(4, Math.min(stake, 100)); // £2-50 each way (£4-100 total)
+                stake = Math.max(4, Math.min(stake, 100)); // €2-50 each way (€4-100 total)
               } else {
-                stake = Math.max(2, Math.min(stake, 50)); // £2-50 win
+                stake = Math.max(2, Math.min(stake, 50)); // €2-50 win
               }
               
               // Calculate potential returns
@@ -497,9 +509,9 @@ function App() {
               
               return (
               <div key={pick.bet_id || index} className={`pick-card ${belowThreshold ? 'below-threshold' : ''}`}>
-                {/* DECISION RATING - Top Prominent Display */}
+                {/* COMBINED CONFIDENCE RATING - Top Prominent Display */}
                 <div style={{
-                  background: decisionBg,
+                  background: confColor,
                   color: 'white',
                   padding: '16px',
                   borderRadius: '8px 8px 0 0',
@@ -508,15 +520,20 @@ function App() {
                   boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                 }}>
                   <div style={{fontSize: '18px', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '1px'}}>
-                    {decisionIcon} {decisionRating} - {decisionScore.toFixed(0)}/100
+                    {confLabel} - {confidence.toFixed(0)}/100
                   </div>
                   <div style={{fontSize: '13px', opacity: 0.95}}>
-                    {decisionText}
+                    {confidence >= 60 ? 'Strong confidence - 2.0x stake' :
+                     confidence >= 40 ? 'Good bet - 1.3x stake' :
+                     confidence >= 25 ? 'Proceed with caution - 0.8x stake' :
+                     'Weak signals - 0.4x stake'}
                   </div>
                 </div>
                 
                 <div className="pick-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', padding: '0 16px'}}>
-                  <h2 style={{margin: 0}}>{horseName}</h2>
+                  <div>
+                    <h2 style={{margin: 0}}>{horseName}</h2>
+                  </div>
                   <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
                     {getBetTypeBadge(pick.bet_type)}
                     {/* ROI INDICATOR BADGE */}
@@ -554,24 +571,21 @@ function App() {
                   boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
                 }}>
                   <div style={{fontSize: '14px', opacity: 0.95, marginBottom: '8px', fontWeight: '600', letterSpacing: '0.5px'}}>
-                    💰 RECOMMENDED STAKE (from £500/month budget)
+                    💰 RECOMMENDED STAKE (from €100/day budget)
                   </div>
                   <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px'}}>
                     <div style={{flex: 1}}>
                       <div style={{fontSize: '36px', fontWeight: 'bold', marginBottom: '8px'}}>
-                        £{stake.toFixed(0)}
+                        €{stake.toFixed(0)}
                       </div>
                       <div style={{fontSize: '13px', opacity: 0.9, lineHeight: '1.4'}}>
                         {betType === 'EW' 
-                          ? `£${(stake/2).toFixed(0)} Win + £${(stake/2).toFixed(0)} Place (Each Way)` 
+                          ? `€${(stake/2).toFixed(0)} Win + €${(stake/2).toFixed(0)} Place (Each Way)` 
                           : `Win bet (confidence: ${confidence.toFixed(0)}%)`
                         }
                       </div>
                       <div style={{fontSize: '12px', opacity: 0.85, marginTop: '6px', fontStyle: 'italic'}}>
-                        {totalPicks} picks today • {confidenceMultiplier === 2.0 ? '🟢 GREEN - Double stake!' : 
-                         confidenceMultiplier === 1.5 ? '🟡 HIGH confidence' : 
-                         confidenceMultiplier === 0.5 ? '🔴 LOW confidence - reduced' : 
-                         '🟠 MODERATE confidence'}
+                        Top {MAX_PICKS_PER_DAY} picks selected • <span style={{color: confColor, fontWeight: 'bold'}}>{confLabel}</span> confidence ({confidence.toFixed(0)}%)
                       </div>
                     </div>
                     <div style={{textAlign: 'right', borderLeft: '2px solid rgba(255,255,255,0.3)', paddingLeft: '20px'}}>
@@ -579,10 +593,10 @@ function App() {
                         Potential Win:
                       </div>
                       <div style={{fontSize: '24px', fontWeight: 'bold', color: '#a7f3d0'}}>
-                        £{profit.toFixed(0)}
+                        €{profit.toFixed(0)}
                       </div>
                       <div style={{fontSize: '12px', opacity: 0.85, marginTop: '6px'}}>
-                        Expected Value: {expectedProfit > 0 ? '+' : ''}£{expectedProfit.toFixed(0)}
+                        Expected Value: {expectedProfit > 0 ? '+' : ''}€{expectedProfit.toFixed(0)}
                       </div>
                       <div style={{fontSize: '11px', opacity: 0.75, marginTop: '4px'}}>
                         ({roi.toFixed(1)}% ROI × {roiMultiplier.toFixed(2)}x)

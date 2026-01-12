@@ -107,10 +107,10 @@ if (-not (Test-Path "./today_picks.csv")) {
 
 # Step 3: Save to DynamoDB
 Write-Host ""
-Write-Host "Step 2: Saving to DynamoDB..." -ForegroundColor Cyan
+Write-Host "Step 2: Saving to DynamoDB (EU-WEST-1)..." -ForegroundColor Cyan
 Write-Host ""
 
-& "C:/Users/charl/OneDrive/futuregenAI/Betting/.venv/Scripts/python.exe" save_selections_to_dynamodb.py --selections ./today_picks.csv
+& "C:/Users/charl/OneDrive/futuregenAI/Betting/.venv/Scripts/python.exe" save_selections_to_dynamodb.py --selections ./today_picks.csv --region eu-west-1
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host ""

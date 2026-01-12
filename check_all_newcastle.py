@@ -4,7 +4,7 @@
 import boto3
 from datetime import datetime
 
-db = boto3.resource('dynamodb', region_name='us-east-1')
+db = boto3.resource('dynamodb', region_name='eu-west-1')
 table = db.Table('SureBetBets')
 
 # Get all items

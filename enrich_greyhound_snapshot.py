@@ -13,14 +13,11 @@ from pathlib import Path
 from typing import Dict, List, Optional
 import time
 
-# Import existing scrapers
+# Import GBGB API scraper
 try:
-    from fetch_greyhound_stats import (
-        fetch_racing_post_dog_form,
-        calculate_dog_statistics
-    )
+    from fetch_gbgb_form import fetch_gbgb_dog_form
 except ImportError:
-    print("ERROR: Cannot import fetch_greyhound_stats.py", file=sys.stderr)
+    print("ERROR: Cannot import fetch_gbgb_form.py", file=sys.stderr)
     sys.exit(1)
 
 
@@ -77,35 +74,34 @@ def enrich_snapshot(snapshot_path: str, output_path: str, max_dogs: int = 50) ->
                 print(f"  Fetching form for: {dog_name} @ {track}...")
                 
                 try:
-                    # Fetch Racing Post form data
-                    form_data = fetch_racing_post_dog_form(dog_name, track)
+                    # Fetch GBGB API form data
+                    form_data = fetch_gbgb_dog_form(dog_name, track)
                     
-                    if form_data and form_data.get('last_races'):
-                        # Calculate statistics
-                        stats = calculate_dog_statistics(form_data)
-                        
+                    if form_data and form_data.get('total_races', 0) > 0:
                         # Add to runner
                         runner['form_data'] = {
-                            'source': 'Racing Post',
-                            'win_percentage': stats.get('win_percentage', 0),
-                            'place_percentage': stats.get('place_percentage', 0),
-                            'preferred_trap': stats.get('preferred_trap'),
-                            'avg_time': stats.get('avg_time'),
-                            'best_time': stats.get('best_time'),
+                            'source': 'GBGB API',
+                            'greyhound_id': form_data.get('greyhound_id'),
+                            'trainer': form_data.get('trainer'),
+                            'win_percentage': form_data.get('win_percentage', 0),
+                            'place_percentage': form_data.get('place_percentage', 0),
+                            'preferred_trap': form_data.get('preferred_trap'),
                             'last_5_form': form_data.get('last_5_form', ''),
-                            'races_analyzed': len(form_data.get('last_races', []))
+                            'total_races': form_data.get('total_races', 0),
+                            'wins': form_data.get('wins', 0),
+                            'places': form_data.get('places', 0)
                         }
                         
                         enriched_count += 1
-                        print(f"    [OK] Win: {stats.get('win_percentage', 0):.1f}%, "
-                              f"Place: {stats.get('place_percentage', 0):.1f}%, "
-                              f"Pref Trap: {stats.get('preferred_trap', 'N/A')}")
+                        print(f"    [OK] Win: {form_data.get('win_percentage', 0):.1f}%, "
+                              f"Place: {form_data.get('place_percentage', 0):.1f}%, "
+                              f"Form: {form_data.get('last_5_form', 'N/A')}")
                     else:
                         print(f"    [NO DATA] No form data found")
                         runner['form_data'] = None
                     
-                    # Rate limit - be respectful to Racing Post
-                    time.sleep(2)
+                    # Rate limit - GBGB API is public but be respectful
+                    time.sleep(0.5)
                     
                 except Exception as e:
                     print(f"    [ERROR] Error fetching form: {e}", file=sys.stderr)
@@ -151,7 +147,7 @@ def main():
         help="Path to save enriched snapshot"
     )
     parser.add_argument(
-        '--max_dogs',
+        '--max-dogs',
         type=int,
         default=50,
         help="Maximum dogs to enrich (default: 50)"
@@ -162,7 +158,7 @@ def main():
     success = enrich_snapshot(
         snapshot_path=args.snapshot,
         output_path=args.out,
-        max_dogs=args.max_dogs
+        max_dogs=getattr(args, 'max_dogs', 50)
     )
     
     sys.exit(0 if success else 1)

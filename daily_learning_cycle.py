@@ -26,17 +26,17 @@ from learning_engine import (
 def load_results_from_dynamodb(days_back=30):
     """Load bet results from DynamoDB"""
     
-    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+    dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
     table = dynamodb.Table('SureBetBets')
     
     cutoff = datetime.now() - timedelta(days=days_back)
     
     try:
         response = table.scan(
-            FilterExpression='#ts > :threshold AND attribute_exists(#result)',
+            FilterExpression='#ts > :threshold AND attribute_exists(#outcome)',
             ExpressionAttributeNames={
                 '#ts': 'timestamp',
-                '#result': 'result'
+                '#outcome': 'outcome'
             },
             ExpressionAttributeValues={
                 ':threshold': cutoff.isoformat()
@@ -50,9 +50,10 @@ def load_results_from_dynamodb(days_back=30):
         for item in items:
             result_entry = {
                 'date': item.get('date', ''),
+                'sport': item.get('sport', 'horses'),  # Track sport type
                 'selection': {
                     'selection_id': item.get('selection_id', ''),
-                    'runner_name': item.get('horse', ''),
+                    'runner_name': item.get('horse', item.get('dog', '')),  # Support horses and dogs
                     'venue': item.get('course', ''),
                     'odds': float(item.get('odds', 0)),
                     'bet_type': item.get('bet_type', 'WIN'),
@@ -63,24 +64,26 @@ def load_results_from_dynamodb(days_back=30):
                 },
                 'result': {
                     'selection_id': item.get('selection_id', ''),
-                    'is_winner': item.get('result') == 'won',
-                    'is_placed': item.get('result') in ['won', 'placed'],
-                    'final_odds': float(item.get('odds', 0))
+                    'is_winner': item.get('outcome') == 'WON',
+                    'is_placed': item.get('outcome') in ['WON', 'PLACED'],
+                    'final_odds': float(item.get('odds', 0)),
+                    'actual_position': item.get('actual_position'),
+                    'profit_loss': float(item.get('profit_loss', 0))
                 }
             }
             results.append(result_entry)
         
         print(f"Loaded {len(results)} completed bets from DynamoDB")
-        return results
+        return results, items  # Return both for processing later
         
     except Exception as e:
         print(f"Error loading from DynamoDB: {e}")
-        return []
+        return [], []
 
 def update_bankroll_env_var(new_bankroll):
     """Update the BANKROLL environment variable in Lambda"""
     
-    client = boto3.client('lambda', region_name='us-east-1')
+    client = boto3.client('lambda', region_name='eu-west-1')
     
     try:
         # Get current function configuration
@@ -163,7 +166,11 @@ def main():
     
     # Load results from DynamoDB
     print("\n[1/6] Loading historical results from DynamoDB...")
-    results = load_results_from_dynamodb(days_back=30)
+    results, raw_items = load_results_from_dynamodb(days_back=30)
+    
+    # Get table for later updates
+    dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
+    table = dynamodb.Table('SureBetBets')
     
     if len(results) < 10:
         print(f"\n⚠️  Only {len(results)} completed bets found")
@@ -197,7 +204,7 @@ def main():
     # Load winner comparison insights
     print("\n[6/6] Integrating winner comparison learnings...")
     try:
-        s3 = boto3.client('s3', region_name='us-east-1')
+        s3 = boto3.client('s3', region_name='eu-west-1')
         obj = s3.get_object(Bucket='betting-insights', Key='winner_comparison_learnings.json')
         winner_insights = json.loads(obj['Body'].read())
         print(f"  ✓ Loaded {winner_insights.get('total_learnings', 0)} winner comparisons")
@@ -214,6 +221,22 @@ def main():
         print(f"\n✓ Applied {len(insights)} insights to prompt.txt")
     else:
         print("\n⚠️  No significant insights yet - need more varied data")
+    
+    # Mark all processed bets as feedback_processed
+    print("\n[7/7] Marking bets as processed...")
+    try:
+        processed_count = 0
+        for item in raw_items:
+            if item.get('outcome') and not item.get('feedback_processed'):
+                table.update_item(
+                    Key={'bet_id': item['bet_id']},
+                    UpdateExpression='SET feedback_processed = :val',
+                    ExpressionAttributeValues={':val': True}
+                )
+                processed_count += 1
+        print(f"  ✓ Marked {processed_count} bets as processed")
+    except Exception as e:
+        print(f"  ⚠️ Error marking bets: {e}")
     
     # Summary
     print("\n" + "="*70)

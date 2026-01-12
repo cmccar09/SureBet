@@ -146,9 +146,19 @@ def format_snapshot(markets, odds_by_market):
             
             # Extract metadata (trap, form, trainer)
             metadata = runner_meta.get('metadata', {})
-            trap = metadata.get('CLOTH_NUMBER') or metadata.get('STALL_DRAW')
-            form = metadata.get('FORM', '')
-            trainer = metadata.get('TRAINER_NAME', '')
+            # For greyhounds: try TRAP or cloth number, for horses: stall draw
+            trap = metadata.get('TRAP') or metadata.get('CLOTH_NUMBER') or metadata.get('STALL_DRAW')
+            # Extract form - may be in different fields for dogs vs horses
+            form = metadata.get('FORM', '') or metadata.get('DAYS_SINCE_LAST_RUN', '')
+            trainer = metadata.get('TRAINER_NAME', '') or metadata.get('COLOURS_DESCRIPTION', '')
+            
+            # For greyhounds, try to extract additional info from runner name if metadata is empty
+            if not form and 'greyhound' in market_name.lower():
+                # Greyhound names sometimes have form embedded (e.g., "1. Dog Name (123)")
+                import re
+                form_match = re.search(r'\(([^)]+)\)', runner_name)
+                if form_match:
+                    form = form_match.group(1)
             
             # Find matching odds
             runner_odds = next((r for r in runners_odds if r['selectionId'] == selection_id), None)
@@ -169,13 +179,20 @@ def format_snapshot(markets, odds_by_market):
                 total_matched = runner_odds.get('totalMatched', 0)
             
             if best_back:
+                # Parse trap number from runner name if not in metadata (common for greyhounds)
+                if not trap and runner_name:
+                    import re
+                    trap_match = re.match(r'^(\d+)\.', runner_name)
+                    if trap_match:
+                        trap = trap_match.group(1)
+                
                 runner_data = {
                     "name": runner_name,
                     "selectionId": selection_id,
                     "odds": best_back,
                     "trap": trap,
-                    "form": form,
-                    "trainer": trainer,
+                    "form": form or "Unknown",  # Provide default if empty
+                    "trainer": trainer or "Unknown",  # Provide default if empty
                     "total_matched": total_matched
                 }
                 

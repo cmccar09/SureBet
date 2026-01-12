@@ -200,7 +200,7 @@ def analyze_all_races_with_picks():
         return
     
     # Load picks without results
-    dynamodb = boto3.resource('dynamodb', region_name='us-east-1')
+    dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
     table = dynamodb.Table('SureBetBets')
     
     # Scan for picks from last 2 days without winner_analysis
@@ -303,7 +303,7 @@ def analyze_all_races_with_picks():
     
     # Save to S3
     try:
-        s3 = boto3.client('s3', region_name='us-east-1')
+        s3 = boto3.client('s3', region_name='eu-west-1')
         s3.put_object(
             Bucket='surebet-betting-data',
             Key='betting-insights/winner_comparison_learnings.json',

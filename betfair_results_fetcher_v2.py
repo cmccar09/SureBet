@@ -43,9 +43,16 @@ def get_betfair_cert_from_secrets():
         response = secretsmanager.get_secret_value(SecretId='betfair-ssl-certificate')
         secret = json.loads(response['SecretString'])
         
-        # Write cert and key to /tmp
-        cert_path = '/tmp/betfair-client.crt'
-        key_path = '/tmp/betfair-client.key'
+        # Write cert and key - use current directory for Windows, /tmp for Lambda
+        import tempfile
+        import platform
+        
+        if platform.system() == 'Windows':
+            cert_path = os.path.join(os.getcwd(), 'betfair-client.crt')
+            key_path = os.path.join(os.getcwd(), 'betfair-client.key')
+        else:
+            cert_path = '/tmp/betfair-client.crt'
+            key_path = '/tmp/betfair-client.key'
         
         with open(cert_path, 'w') as f:
             f.write(secret['certificate'])
@@ -53,10 +60,10 @@ def get_betfair_cert_from_secrets():
         with open(key_path, 'w') as f:
             f.write(secret['private_key'])
         
-        print(f"✓ Certificates written to {cert_path} and {key_path}")
+        print(f"[OK] Certificates written to {cert_path} and {key_path}")
         return cert_path, key_path
     except Exception as e:
-        print(f"✗ Error getting certificates: {e}")
+        print(f"[ERROR] Error getting certificates: {e}")
         return None, None
 
 def betfair_login(username, password, app_key):
@@ -65,7 +72,7 @@ def betfair_login(username, password, app_key):
     # Get certificates
     cert_path, key_path = get_betfair_cert_from_secrets()
     if not cert_path:
-        print("✗ No certificates available")
+        print("[ERROR] No certificates available")
         return None
     
     # Certificate login endpoint
@@ -99,19 +106,19 @@ def betfair_login(username, password, app_key):
         
         if result.get('sessionToken') or result.get('token'):
             session_token = result.get('sessionToken') or result.get('token')
-            print(f"✓ Betfair certificate login successful")
+            print(f"[OK] Betfair certificate login successful")
             return session_token
         else:
-            print(f"✗ Login failed: {result}")
+            print(f"[ERROR] Login failed: {result}")
             return None
     except Exception as e:
-        print(f"✗ Login error: {e}")
+        print(f"[ERROR] Login error: {e}")
         if hasattr(e, 'response') and e.response:
             print(f"Response text: {e.response.text}")
         return None
 
 def get_pending_bets():
-    """Get bets without results from last 2 days"""
+    """Get bets without results from last 2 days (both horses and greyhounds)"""
     today = datetime.utcnow().strftime('%Y-%m-%d')
     yesterday = (datetime.utcnow() - timedelta(days=1)).strftime('%Y-%m-%d')
     
