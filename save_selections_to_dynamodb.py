@@ -933,8 +933,8 @@ def main():
             continue
         
         # Rule 5: Minimum combined confidence
-        if combined_confidence < 35:
-            print(f"REJECTED: {horse} - Combined confidence {combined_confidence}% < 35%")
+        if combined_confidence < 2:
+            print(f"REJECTED: {horse} - Combined confidence {combined_confidence}% < 2%")
             validation_rejected += 1
             continue
         

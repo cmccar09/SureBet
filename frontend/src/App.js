@@ -63,9 +63,9 @@ function App() {
     setError(null);
 
     try {
-      // Fetch yesterday's results
-      const endpoint = `${API_BASE_URL}/picks/yesterday`;
-      console.log('Checking yesterday results from:', endpoint);
+      // Fetch today's results (updated live)
+      const endpoint = `${API_BASE_URL}/results`;
+      console.log('Checking results from:', endpoint);
       const response = await fetch(endpoint);
       
       if (!response.ok) {
@@ -211,8 +211,89 @@ function App() {
         {/* Results Summary */}
         {results && results.summary && (
           <div className="results-summary">
-            <h2>📊 Yesterday's Results {results.date && `(${results.date})`}</h2>
-            <div className="results-grid">
+            <h2>📊 Today's Results {results.date && `(${results.date})`}</h2>
+            
+            {/* Separate sections for Horses and Greyhounds */}
+            {results.horses && results.horses.summary && (
+              <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '20px', marginBottom: '16px', color: '#333' }}>🏇 Horse Racing</h3>
+                <div className="results-grid">
+                  <div className="result-stat">
+                    <div className="stat-label">Total Picks</div>
+                    <div className="stat-value">{results.horses.summary.total_picks}</div>
+                  </div>
+                  <div className="result-stat win">
+                    <div className="stat-label">Wins</div>
+                    <div className="stat-value">{results.horses.summary.wins}</div>
+                  </div>
+                  <div className="result-stat loss">
+                    <div className="stat-label">Losses</div>
+                    <div className="stat-value">{results.horses.summary.losses}</div>
+                  </div>
+                  <div className="result-stat pending">
+                    <div className="stat-label">Pending</div>
+                    <div className="stat-value">{results.horses.summary.pending}</div>
+                  </div>
+                  <div className="result-stat">
+                    <div className="stat-label">Win Rate</div>
+                    <div className="stat-value">{results.horses.summary.strike_rate}%</div>
+                  </div>
+                  <div className={`result-stat ${results.horses.summary.profit >= 0 ? 'profit' : 'loss'}`}>
+                    <div className="stat-label">P/L</div>
+                    <div className="stat-value">
+                      {results.horses.summary.profit >= 0 ? '+' : ''}€{results.horses.summary.profit}
+                    </div>
+                  </div>
+                  <div className={`result-stat ${results.horses.summary.roi >= 0 ? 'profit' : 'loss'}`}>
+                    <div className="stat-label">ROI</div>
+                    <div className="stat-value">{results.horses.summary.roi}%</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {results.greyhounds && results.greyhounds.summary && (
+              <div style={{ marginBottom: '32px' }}>
+                <h3 style={{ fontSize: '20px', marginBottom: '16px', color: '#333' }}>🐕 Greyhound Racing</h3>
+                <div className="results-grid">
+                  <div className="result-stat">
+                    <div className="stat-label">Total Picks</div>
+                    <div className="stat-value">{results.greyhounds.summary.total_picks}</div>
+                  </div>
+                  <div className="result-stat win">
+                    <div className="stat-label">Wins</div>
+                    <div className="stat-value">{results.greyhounds.summary.wins}</div>
+                  </div>
+                  <div className="result-stat loss">
+                    <div className="stat-label">Losses</div>
+                    <div className="stat-value">{results.greyhounds.summary.losses}</div>
+                  </div>
+                  <div className="result-stat pending">
+                    <div className="stat-label">Pending</div>
+                    <div className="stat-value">{results.greyhounds.summary.pending}</div>
+                  </div>
+                  <div className="result-stat">
+                    <div className="stat-label">Win Rate</div>
+                    <div className="stat-value">{results.greyhounds.summary.strike_rate}%</div>
+                  </div>
+                  <div className={`result-stat ${results.greyhounds.summary.profit >= 0 ? 'profit' : 'loss'}`}>
+                    <div className="stat-label">P/L</div>
+                    <div className="stat-value">
+                      {results.greyhounds.summary.profit >= 0 ? '+' : ''}€{results.greyhounds.summary.profit}
+                    </div>
+                  </div>
+                  <div className={`result-stat ${results.greyhounds.summary.roi >= 0 ? 'profit' : 'loss'}`}>
+                    <div className="stat-label">ROI</div>
+                    <div className="stat-value">{results.greyhounds.summary.roi}%</div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Combined Summary */}
+            <div style={{ marginBottom: '24px' }}>
+              <h3 style={{ fontSize: '20px', marginBottom: '16px', color: '#333' }}>📈 Overall</h3>
+              <div className="results-grid">
               <div className="result-stat">
                 <div className="stat-label">Total Picks</div>
                 <div className="stat-value">{results.summary.total_picks}</div>

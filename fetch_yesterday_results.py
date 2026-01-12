@@ -117,19 +117,31 @@ for i, (market_id, market_bets) in enumerate(markets.items(), 1):
                 # Update each bet
                 for bet in market_bets:
                     selection_id = str(bet.get('selection_id', ''))
+                    bet_type = bet.get('bet_type', 'WIN')
+                    race_type = bet.get('sport', 'horses')
                     
                     for runner in market_data.get('runners', []):
                         if str(runner.get('selectionId')) == selection_id:
                             runner_status = runner.get('status')
                             
-                            if runner_status == 'WINNER':
-                                result = 'WON'
-                            elif runner_status == 'LOSER':
-                                result = 'LOST'
-                            elif runner_status == 'PLACED':
-                                result = 'PLACED'
+                            # For Each Way bets on horses, PLACED counts as WON
+                            if bet_type == 'EW' and race_type == 'horses':
+                                if runner_status == 'WINNER':
+                                    result = 'WON'
+                                elif runner_status == 'PLACED':
+                                    result = 'WON'  # EW bet placed = win
+                                elif runner_status == 'LOSER':
+                                    result = 'LOST'
+                                else:
+                                    continue
                             else:
-                                continue
+                                # For WIN bets or greyhounds, only WINNER counts
+                                if runner_status == 'WINNER':
+                                    result = 'WON'
+                                elif runner_status == 'LOSER' or runner_status == 'PLACED':
+                                    result = 'LOST'
+                                else:
+                                    continue
                             
                             # Update database
                             table.update_item(

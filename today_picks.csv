@@ -1,6 +1,6 @@
-runner_name,selection_id,market_id,market_name,venue,start_time_dublin,p_win,p_place,bet_type,ew_places,ew_fraction,tags,why_now
-Trebizond,37808896,1.252586556,2m Hcap Hrd,Punchestown,2026-01-12T13:18:00.000Z,0.32,0.6,Win,3,0.2,"enhanced_analysis,Consistent recent form with two wins and a 4th in last 3 runs. Likely class drop based on strong performances.",Strong form and potential class advantage make Trebizond a solid contender in this field.
-Be Fierce,26027400,1.252586556,2m Hcap Hrd,Punchestown,2026-01-12T13:18:00.000Z,0.28,0.55,EW,3,0.2,"enhanced_analysis,Course winner. Recent win two starts back shows ability.","Course form and proven ability make Be Fierce interesting, but recent inconsistency warrants caution."
-Zuzukel,57266867,1.252586556,2m Hcap Hrd,Punchestown,2026-01-12T13:18:00.000Z,0.25,0.5,EW,3,0.2,"enhanced_analysis,Dropping in class. Recent 2nd place finish shows improvement.","Class drop and recent improvement make Zuzukel interesting, but overall form raises questions."
-Couldntmakeitup,71153381,1.252586556,2m Hcap Hrd,Punchestown,2026-01-12T13:18:00.000Z,0.2,0.45,EW,3,0.2,"enhanced_analysis,Recent 3rd place finish suggests improvement. Consistent recent runs.","Showing consistency and improvement, but may need more to win against stronger contenders."
-Eco Pete,39862570,1.252586556,2m Hcap Hrd,Punchestown,2026-01-12T13:18:00.000Z,0.15,0.4,EW,3,0.2,"enhanced_analysis,Recent 3rd place finish shows some ability.","Recent placed effort gives some hope, but overall form is questionable."
+runner_name,selection_id,market_id,market_name,venue,start_time_dublin,p_win,p_place,ew_places,ew_fraction,tags,why_now
+Lakota Chief,93729835,1.252619702,7f Mdn Stks,Newcastle,2026-01-13T14:38:00.000Z,0.40,0.70,3,0.2,favorite,shortest odds but avoid per insights
+Digital,55342,1.252619713,5f Hcap,Newcastle,2026-01-13T15:08:00.000Z,0.33,0.66,3,0.2,favorite,Top-rated but avoiding favorites per insights
+The Green Man,886325,1.252619719,1m Hcap,Newcastle,2026-01-13T15:40:00.000Z,0.33,0.66,3,0.2,favorite,Shortest price in race but avoid favorites insight
+Profit Street,13395021,1.252619707,6f Hcap,Newcastle,2026-01-13T14:08:00.000Z,0.27,0.54,3,0.2,relative_value;top_rated,Shortest priced runner offers best relative value despite caution on favorites
+Tupero,83942399,1.252619695,2m Hcap,Newcastle,2026-01-13T13:38:00.000Z,0.25,0.55,3,0.2,value favorite,Strongest contender based on odds but caution advised on favorites

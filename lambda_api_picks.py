@@ -50,7 +50,7 @@ def lambda_handler(event, context):
     
     try:
         # Route requests - check more specific paths first
-        if 'results/today' in path:
+        if 'results/today' in path or path.endswith('/results'):
             return check_today_results(headers)
         elif 'picks/greyhounds' in path:
             return get_greyhound_picks(headers)
@@ -75,6 +75,7 @@ def lambda_handler(event, context):
                         '/api/picks/today',
                         '/api/picks/yesterday',
                         '/api/picks',
+                        '/api/results',
                         '/api/results/today',
                         '/api/workflow/run',
                         '/api/health'
@@ -277,228 +278,126 @@ def get_health(headers):
     }
 
 def check_today_results(headers):
-    """Check results for today's picks - ONLY combined confidence >= 21"""
+    """Check results for today's picks - ALL picks separated by sport"""
     today = datetime.now().strftime('%Y-%m-%d')
     
-    # Get today's picks that are tracked for performance
+    # Get ALL today's picks
     response = table.scan(
-        FilterExpression='#d = :today AND track_performance = :track',
+        FilterExpression='#d = :today',
         ExpressionAttributeNames={'#d': 'date'},
-        ExpressionAttributeValues={':today': today, ':track': True}
+        ExpressionAttributeValues={':today': today}
     )
     
     all_picks = response.get('Items', [])
     all_picks = [decimal_to_float(item) for item in all_picks]
     
-    # Filter for combined confidence >= 21 AND WIN bet type
-    picks = [
-        p for p in all_picks 
-        if float(p.get('combined_confidence', 0)) >= 21 
-        and p.get('bet_type', '').upper() == 'WIN'
-    ]
+    # No filtering - use ALL picks
+    picks = all_picks
     
     # Debug logging
-    print(f"Total TRACKED picks retrieved: {len(all_picks)} (MODERATE RISK or better)")
-    print(f"After combined_confidence >= 21 + WIN filter: {len(picks)} picks")
-    print(f"Sample: {[(p.get('horse'), p.get('bet_type'), float(p.get('combined_confidence', 0))) for p in picks[:3]]}")
+    print(f"Total picks retrieved: {len(picks)}")
     
     if not picks:
-        print("NO PICKS with combined_confidence >= 21 AND WIN bet type - returning empty")
+        print("NO PICKS for today - returning empty")
         return {
             'statusCode': 200,
             'headers': headers,
             'body': json.dumps({
                 'success': True,
-                'message': f'No WIN bets with combined confidence >= 21',
-                'picks': [],
-                'results': [],
-                'total_picks_today': 0
-            })
-        }
-    
-    # Use filtered picks for results checking
-    print(f"Proceeding with {len(picks)} WIN picks (combined_confidence >= 21)")
-    
-    # Load Betfair credentials from environment or Secrets Manager
-    import os
-    session_token = os.environ.get('BETFAIR_SESSION_TOKEN', '')
-    app_key = os.environ.get('BETFAIR_APP_KEY', '')
-    
-    if not session_token or not app_key:
-        # Return picks with summary showing all as pending (WIN bets with combined_confidence >= 21)
-        summary = {
-            'total_picks': len(picks),
-            'tracked_only': True,
-            'note': 'Only WIN bets with combined confidence >= 21',
-            'wins': 0,
-            'places': 0,
-            'losses': 0,
-            'pending': len(picks),
-            'total_stake': round(sum([float(p.get('stake', 2.0)) for p in picks]), 2),
-            'total_return': 0.0,
-            'profit': 0.0,
-            'roi': 0.0,
-            'strike_rate': 0.0
-        }
-        return {
-            'statusCode': 200,
-            'headers': headers,
-            'body': json.dumps({
-                'success': True,
-                'message': 'Betfair credentials not configured - showing pending picks',
+                'message': f'No picks for today',
                 'date': today,
-                'summary': summary,
-                'picks': picks,
-                'note': 'Configure BETFAIR_SESSION_TOKEN and BETFAIR_APP_KEY to fetch live results'
+                'summary': {'total_picks': 0, 'wins': 0, 'losses': 0, 'pending': 0},
+                'horses': {'summary': None, 'picks': []},
+                'greyhounds': {'summary': None, 'picks': []},
+                'picks': []
             })
         }
     
-    # Extract unique market IDs
-    market_ids = list(set([str(pick.get('market_id', '')) for pick in picks if pick.get('market_id')]))
+    # Use all picks for results checking
+    print(f"Proceeding with {len(picks)} picks from today")
     
-    if not market_ids:
-        return {
-            'statusCode': 200,
-            'headers': headers,
-            'body': json.dumps({
-                'success': True,
-                'message': 'No market IDs found in picks',
-                'picks': picks,
-                'results': []
-            })
-        }
+    # Use existing outcomes from database (already fetched by fetch_today_results.py)
+    # No need to call Betfair API - outcomes are already in the picks
+    picks_with_results = picks
     
-    # Import requests only if we need it
-    try:
-        import requests
-    except ImportError:
-        # Return summary without live results if requests is not available
-        summary = {
-            'total_picks': len(picks),
-            'wins': 0,
-            'places': 0,
-            'losses': 0,
-            'pending': len(picks),
-            'total_stake': round(sum([float(p.get('stake', 2.0)) for p in picks]), 2),
-            'total_return': 0.0,
-            'profit': 0.0,
-            'roi': 0.0,
-            'strike_rate': 0.0
-        }
-        return {
-            'statusCode': 200,
-            'headers': headers,
-            'body': json.dumps({
-                'success': True,
-                'message': 'Results library not available - showing pending picks',
-                'date': today,
-                'summary': summary,
-                'picks': picks,
-                'note': 'Install requests library in Lambda layer to fetch live results'
-            })
-        }
+    # Calculate overall stats from existing outcomes
+    wins = sum(1 for p in picks if p.get('outcome') == 'WON')
+    places = sum(1 for p in picks if p.get('outcome') == 'PLACED')
+    losses = sum(1 for p in picks if p.get('outcome') == 'LOST')
+    pending = sum(1 for p in picks if p.get('outcome') in ['PENDING', 'NO_RESULT', None])
     
-    # Fetch market results from Betfair
-    url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketBook/"
-    betfair_headers = {
-        "X-Application": app_key,
-        "X-Authentication": session_token,
-        "Content-Type": "application/json"
-    }
+    total_stake = sum(float(p.get('stake', 2.0)) for p in picks)
     
-    all_results = []
-    
-    # Process in batches of 10
-    for i in range(0, len(market_ids), 10):
-        batch = market_ids[i:i+10]
-        payload = {
-            "marketIds": batch,
-            "priceProjection": {"priceData": ["EX_BEST_OFFERS"]},
-        }
-        
-        try:
-            resp = requests.post(url, headers=betfair_headers, json=payload, timeout=10)
-            resp.raise_for_status()
-            market_data = resp.json()
-            
-            # Parse results
-            for market in market_data:
-                market_id = market.get('marketId')
-                status = market.get('status')
-                
-                for runner in market.get('runners', []):
-                    selection_id = str(runner.get('selectionId'))
-                    runner_status = runner.get('status', '')
-                    
-                    all_results.append({
-                        'market_id': market_id,
-                        'selection_id': selection_id,
-                        'market_status': status,
-                        'runner_status': runner_status,
-                        'is_winner': runner_status == 'WINNER',
-                        'is_placed': runner_status in ['WINNER', 'PLACED'],
-                        'last_price': runner.get('lastPriceTraded', 0)
-                    })
-        except Exception as e:
-            print(f"Error fetching batch: {e}")
-            continue
-    
-    # Match picks with results
-    picks_with_results = []
-    wins = 0
-    places = 0
-    losses = 0
-    pending = 0
-    total_stake = 0
+    # Calculate returns based on outcomes
     total_return = 0
-    
-    for pick in picks:
-        pick_market_id = str(pick.get('market_id', ''))
-        pick_selection_id = str(pick.get('selection_id', ''))
-        stake = float(pick.get('stake', 2.0))
-        odds = float(pick.get('odds', 0))
-        bet_type = pick.get('bet_type', 'WIN').upper()
-        
-        # Find matching result
-        result = next((r for r in all_results 
-                      if r['market_id'] == pick_market_id 
-                      and r['selection_id'] == pick_selection_id), None)
-        
-        pick_result = pick.copy()
-        
-        if result:
-            pick_result['result'] = result
-            market_status = result['market_status']
-            
-            if market_status in ['CLOSED', 'SETTLED']:
-                if result['is_winner']:
-                    wins += 1
-                    pick_result['outcome'] = 'WON'
-                    if bet_type == 'WIN':
-                        total_return += stake * odds
-                    else:  # EW
-                        ew_fraction = float(pick.get('ew_fraction', 0.2))
-                        total_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
-                elif result['is_placed'] and bet_type == 'EW':
-                    places += 1
-                    pick_result['outcome'] = 'PLACED'
-                    ew_fraction = float(pick.get('ew_fraction', 0.2))
-                    total_return += (stake/2) * (1 + (odds-1) * ew_fraction)
-                else:
-                    losses += 1
-                    pick_result['outcome'] = 'LOST'
-            else:
-                pending += 1
-                pick_result['outcome'] = 'PENDING'
-        else:
-            pending += 1
-            pick_result['outcome'] = 'NO_RESULT'
-        
-        total_stake += stake
-        picks_with_results.append(pick_result)
+    for p in picks:
+        outcome = p.get('outcome')
+        if outcome == 'WON':
+            stake = float(p.get('stake', 2.0))
+            odds = float(p.get('odds', 0))
+            bet_type = p.get('bet_type', 'WIN').upper()
+            if bet_type == 'WIN':
+                total_return += stake * odds
+            else:  # EW
+                ew_fraction = float(p.get('ew_fraction', 0.2))
+                total_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
+        elif outcome == 'PLACED':
+            stake = float(p.get('stake', 2.0))
+            odds = float(p.get('odds', 0))
+            ew_fraction = float(p.get('ew_fraction', 0.2))
+            total_return += (stake/2) * (1 + (odds-1) * ew_fraction)
     
     profit = total_return - total_stake
     roi = (profit / total_stake * 100) if total_stake > 0 else 0
+    
+    # Separate picks by sport
+    horse_picks = [p for p in picks_with_results if p.get('sport') == 'horses']
+    greyhound_picks = [p for p in picks_with_results if p.get('sport') == 'greyhounds']
+    
+    # Calculate sport-specific summaries
+    def calculate_sport_summary(sport_picks):
+        if not sport_picks:
+            return None
+        
+        sport_wins = sum(1 for p in sport_picks if p.get('outcome') == 'WON')
+        sport_places = sum(1 for p in sport_picks if p.get('outcome') == 'PLACED')
+        sport_losses = sum(1 for p in sport_picks if p.get('outcome') == 'LOST')
+        sport_pending = sum(1 for p in sport_picks if p.get('outcome') in ['PENDING', 'NO_RESULT'])
+        sport_stake = sum(float(p.get('stake', 2.0)) for p in sport_picks)
+        
+        # Calculate returns for this sport
+        sport_return = 0
+        for p in sport_picks:
+            if p.get('outcome') == 'WON':
+                stake = float(p.get('stake', 2.0))
+                odds = float(p.get('odds', 0))
+                bet_type = p.get('bet_type', 'WIN').upper()
+                if bet_type == 'WIN':
+                    sport_return += stake * odds
+                else:  # EW
+                    ew_fraction = float(p.get('ew_fraction', 0.2))
+                    sport_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
+            elif p.get('outcome') == 'PLACED':
+                stake = float(p.get('stake', 2.0))
+                odds = float(p.get('odds', 0))
+                ew_fraction = float(p.get('ew_fraction', 0.2))
+                sport_return += (stake/2) * (1 + (odds-1) * ew_fraction)
+        
+        sport_profit = sport_return - sport_stake
+        sport_roi = (sport_profit / sport_stake * 100) if sport_stake > 0 else 0
+        
+        return {
+            'total_picks': len(sport_picks),
+            'wins': sport_wins,
+            'places': sport_places,
+            'losses': sport_losses,
+            'pending': sport_pending,
+            'total_stake': round(sport_stake, 2),
+            'total_return': round(sport_return, 2),
+            'profit': round(sport_profit, 2),
+            'roi': round(sport_roi, 1),
+            'strike_rate': round((sport_wins / (sport_wins + sport_losses) * 100) if (sport_wins + sport_losses) > 0 else 0, 1)
+        }
     
     summary = {
         'total_picks': len(picks),
@@ -520,9 +419,16 @@ def check_today_results(headers):
             'success': True,
             'date': today,
             'summary': summary,
+            'horses': {
+                'summary': calculate_sport_summary(horse_picks),
+                'picks': horse_picks
+            },
+            'greyhounds': {
+                'summary': calculate_sport_summary(greyhound_picks),
+                'picks': greyhound_picks
+            },
             'picks': picks_with_results,
-            'debug_timestamp': datetime.now().isoformat(),
-            'total_picks_today': len(positive_roi_picks)
+            'debug_timestamp': datetime.now().isoformat()
         })
     }
 
