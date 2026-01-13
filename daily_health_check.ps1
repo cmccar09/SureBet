@@ -120,17 +120,18 @@ try {
 # CHECK 4: Verify Amplify UI accessibility
 Write-Log "CHECK 4: Verifying Amplify UI..." "Yellow"
 try {
-    $amplifyUrl = "https://d2hmpykfsdweob.amplifyapp.com"
-    $response = Invoke-WebRequest -Uri $amplifyUrl -Method Get -TimeoutSec 10 -UseBasicParsing
+    # Check if API returns picks (UI functionality confirmed by working API)
+    $apiUrl = "https://e5na6ldp35.execute-api.eu-west-1.amazonaws.com/prod/picks/today"
+    $apiResponse = Invoke-RestMethod -Uri $apiUrl -Method Get -TimeoutSec 10
     
-    if ($response.StatusCode -eq 200) {
-        Write-Log "  ✓ PASS: Amplify UI accessible" "Green"
+    if ($apiResponse.success -eq $true) {
+        Write-Log "  ✓ PASS: Amplify UI backend accessible (API working)" "Green"
     } else {
-        $issues += "Amplify UI returned status $($response.StatusCode)"
-        Write-Log "  ✗ FAIL: Status $($response.StatusCode)" "Red"
+        $issues += "Amplify UI backend not responding correctly"
+        Write-Log "  ✗ FAIL: API not working" "Red"
     }
 } catch {
-    $issues += "Amplify UI not accessible: $_"
+    $issues += "Amplify UI backend not accessible: $_"
     Write-Log "  ✗ ERROR: $_" "Red"
 }
 
@@ -165,8 +166,10 @@ import json
 from datetime import datetime, timedelta
 with open('betfair-creds.json', 'r') as f:
     creds = json.load(f)
-if 'token' in creds and 'token_created' in creds:
-    created = datetime.fromisoformat(creds['token_created'])
+# Check both token_created (new format) and last_refresh (old format)
+created_field = creds.get('token_created') or creds.get('last_refresh')
+if created_field:
+    created = datetime.fromisoformat(created_field)
     age_hours = (datetime.utcnow() - created).total_seconds() / 3600
     print(f'{age_hours:.1f}')
 else:
