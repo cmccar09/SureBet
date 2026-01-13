@@ -256,12 +256,12 @@ def update_prompt_file(adjustments: List[str], prompt_path: str = "./prompt.txt"
         backup_path = f"{prompt_path}.backup.{timestamp}"
         with open(backup_path, 'w', encoding='utf-8') as f:
             f.write(prompt)
-        print(f"✓ Backed up original to: {backup_path}")
+        print(f"[OK] Backed up original to: {backup_path}")
         
         # Write updated
         with open(prompt_path, 'w', encoding='utf-8') as f:
             f.write(updated_prompt)
-        print(f"✓ Updated: {prompt_path}")
+        print(f"[OK] Updated: {prompt_path}")
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate prediction performance and suggest improvements")
