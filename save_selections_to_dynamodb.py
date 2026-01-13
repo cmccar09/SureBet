@@ -882,7 +882,14 @@ def main():
     greyhound_venues = ['Monmore', 'Central Park', 'Perry Barr', 'Romford', 'Crayford', 'Belle Vue', 
                         'Sheffield', 'Newcastle (Greyhounds)', 'Sunderland', 'Harlow', 'Henlow', 'Oxford']
     
-    print(f"\nFormatting for DynamoDB (minimum ROI: {args.min_roi}%)...")
+    # Sport-specific ROI thresholds (greyhounds have lower odds, so lower ROI threshold)
+    horse_min_roi = args.min_roi  # Default 0% for horses
+    greyhound_min_roi = -15.0      # -15% for greyhounds (lower odds = lower ROI expected)
+    
+    print(f"\nFormatting for DynamoDB...")
+    print(f"  Horse minimum ROI: {horse_min_roi}%")
+    print(f"  Greyhound minimum ROI: {greyhound_min_roi}%")
+    
     bets = []
     filtered_out = 0
     for idx, row in df.iterrows():
@@ -893,12 +900,15 @@ def main():
             
             bet_item = format_bet_for_dynamodb(row, market_odds, detected_sport)
             
-            # Filter by minimum ROI threshold
+            # Filter by minimum ROI threshold (sport-specific)
             roi = float(bet_item.get('roi', 0))
-            if roi < args.min_roi:
+            min_roi_threshold = greyhound_min_roi if detected_sport == 'greyhounds' else horse_min_roi
+            
+            if roi < min_roi_threshold:
                 filtered_out += 1
                 horse = bet_item.get('horse', 'Unknown')
-                print(f"FILTERED: {horse} (ROI: {roi:.1f}% < {args.min_roi}% minimum)")
+                sport_label = detected_sport.upper()
+                print(f"FILTERED [{sport_label}]: {horse} (ROI: {roi:.1f}% < {min_roi_threshold}% minimum)")
                 continue
             
             bets.append(bet_item)
