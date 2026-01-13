@@ -106,7 +106,7 @@ if ($enableLearning) {
         
         if (Test-Path $resultsFile) {
             Write-Log "  Results already fetched, evaluating performance for $yesterday..." "Yellow"
-            & $pythonExe "$PSScriptRoot\evaluate_performance.py" --selections $selectionsPath --results $resultsFile --apply 2>&1 | Tee-Object -Append -FilePath $logFile
+            & $pythonExe "$PSScriptRoot\evaluate_performance.py" --selections $selectionsPath --results $resultsFile --apply --analyze-losers 2>&1 | Tee-Object -Append -FilePath $logFile
             
             Write-Log "  Regenerating learning insights from all historical data..." "Yellow"
             & $pythonExe "$PSScriptRoot\generate_learning_insights.py" 2>&1 | Tee-Object -Append -FilePath $logFile
@@ -116,7 +116,7 @@ if ($enableLearning) {
             
             if (Test-Path $resultsFile) {
                 Write-Log "  Evaluating performance..." "Yellow"
-                & $pythonExe "$PSScriptRoot\evaluate_performance.py" --selections $selectionsPath --results $resultsFile --apply 2>&1 | Tee-Object -Append -FilePath $logFile
+                & $pythonExe "$PSScriptRoot\evaluate_performance.py" --selections $selectionsPath --results $resultsFile --apply --analyze-losers 2>&1 | Tee-Object -Append -FilePath $logFile
                 
                 Write-Log "  Regenerating learning insights from all historical data..." "Yellow"
                 & $pythonExe "$PSScriptRoot\generate_learning_insights.py" 2>&1 | Tee-Object -Append -FilePath $logFile

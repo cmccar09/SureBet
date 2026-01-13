@@ -62,8 +62,15 @@ def calculate_metrics(data: pd.DataFrame) -> Dict:
     if total == 0:
         return {}
     
-    # Win/Place rates
-    wins = data["is_winner"].sum() if "is_winner" in data.columns else 0
+    # Win/Place rates - COUNT EW PLACED BETS AS WINS
+    # For EW bets, both winners AND placed count as wins
+    data['effective_win'] = data.apply(lambda row: 
+        row.get('is_winner', False) or 
+        (row.get('is_placed', False) and row.get('bet_type', 'WIN') == 'EW'),
+        axis=1
+    )
+    
+    wins = data["effective_win"].sum()
     places = data["is_placed"].sum() if "is_placed" in data.columns else 0
     
     win_rate = wins / total
@@ -81,7 +88,8 @@ def calculate_metrics(data: pd.DataFrame) -> Dict:
     for bin_label, group in data.groupby("p_win_bin"):
         if len(group) > 0:
             predicted_prob = group["p_win"].mean()
-            actual_rate = group["is_winner"].mean() if "is_winner" in group.columns else 0
+            # Use effective_win for calibration (includes EW places as wins)
+            actual_rate = group["effective_win"].mean()
             count = len(group)
             
             calibration.append({
@@ -263,6 +271,44 @@ def update_prompt_file(adjustments: List[str], prompt_path: str = "./prompt.txt"
             f.write(updated_prompt)
         print(f"[OK] Updated: {prompt_path}")
 
+def analyze_losing_bets(data: pd.DataFrame, results: pd.DataFrame) -> List[Dict]:
+    """For each losing bet, analyze what the actual winner had that we missed"""
+    
+    learnings = []
+    
+    # Get losing bets (where effective_win is False)
+    losers = data[data['effective_win'] == False].copy()
+    
+    for _, loser in losers.iterrows():
+        market_id = loser.get('market_id')
+        our_selection_id = loser.get('selection_id')
+        
+        # Find the actual winner in this race
+        market_results = results[results['market_id'] == market_id]
+        actual_winner = market_results[market_results.get('is_winner', False) == True]
+        
+        if actual_winner.empty:
+            continue
+        
+        winner_row = actual_winner.iloc[0]
+        
+        # Compare our pick vs the winner
+        learning = {
+            'our_pick': loser.get('runner_name', 'Unknown'),
+            'our_odds': loser.get('odds', 0),
+            'our_p_win': loser.get('p_win', 0),
+            'actual_winner': winner_row.get('runner_name', 'Unknown'),
+            'winner_selection_id': winner_row.get('selection_id'),
+            'market_id': market_id,
+            'venue': loser.get('venue', 'Unknown'),
+            'race_time': loser.get('start_time_dublin', 'Unknown'),
+            'lesson': f"Picked {loser.get('runner_name')} but {winner_row.get('runner_name')} won - need to analyze winner's characteristics"
+        }
+        
+        learnings.append(learning)
+    
+    return learnings
+
 def main():
     parser = argparse.ArgumentParser(description="Evaluate prediction performance and suggest improvements")
     parser.add_argument("--selections", type=str, required=True, help="Path to selections CSV")
@@ -270,6 +316,7 @@ def main():
     parser.add_argument("--report", type=str, default="./performance_report.md", help="Output report path")
     parser.add_argument("--prompt", type=str, default="./prompt.txt", help="Prompt file to update")
     parser.add_argument("--apply", action="store_true", help="Actually update prompt.txt (default: dry run)")
+    parser.add_argument("--analyze-losers", action="store_true", help="Analyze what actual winners had vs our picks")
     
     args = parser.parse_args()
     
@@ -281,6 +328,27 @@ def main():
     # Merge
     data = merge_selections_with_results(selections, results)
     print(f"Matched {len(data)} selections with results")
+    
+    # Analyze losing bets if requested
+    if args.analyze_losers:
+        print("\nAnalyzing losing bets vs actual winners...")
+        loser_learnings = analyze_losing_bets(data, results)
+        print(f"Found {len(loser_learnings)} losing bets to learn from")
+        
+        if loser_learnings:
+            print("\n" + "="*60)
+            print("LOSING BET ANALYSIS")
+            print("="*60)
+            for learning in loser_learnings[:10]:  # Show first 10
+                print(f"\nRace: {learning['venue']} @ {learning['race_time']}")
+                print(f"  Our pick: {learning['our_pick']} (odds: {learning['our_odds']:.2f}, p_win: {learning['our_p_win']:.1%})")
+                print(f"  Actual winner: {learning['actual_winner']}")
+                print(f"  Lesson: {learning['lesson']}")
+            
+            # Save learnings to JSON for further analysis
+            with open('./loser_learnings.json', 'w') as f:
+                json.dump(loser_learnings, f, indent=2, default=str)
+            print(f"\n[OK] Saved {len(loser_learnings)} learnings to loser_learnings.json")
     
     # Calculate metrics
     print("\nCalculating performance metrics...")

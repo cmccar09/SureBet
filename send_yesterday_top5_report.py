@@ -135,15 +135,17 @@ def generate_html_report(top5_picks, yesterday_date):
             outcome_class = 'pending'
             outcome_text = pick['outcome']
             
+            # EW PLACED BETS COUNT AS WINS
             if pick['outcome'] == 'WON':
                 outcome_class = 'won'
                 outcome_text = f"WON (+{pick['profit_loss']:.2f} units)" if pick['profit_loss'] else "WON"
+            elif pick['outcome'] in ['PLACED_2ND', 'PLACED_3RD', 'PLACED_4TH', 'PLACED'] and pick.get('bet_type') == 'EW':
+                # EW bets that placed count as wins
+                outcome_class = 'won'
+                outcome_text = f"EW PLACED (+{pick['profit_loss']:.2f} units)" if pick['profit_loss'] else f"{pick['outcome']} (EW WIN)"
             elif pick['outcome'] == 'LOST':
                 outcome_class = 'lost'
                 outcome_text = f"LOST ({pick['profit_loss']:.2f} units)" if pick['profit_loss'] else "LOST"
-            elif pick['outcome'] in ['PLACED_2ND', 'PLACED_3RD', 'PLACED_4TH']:
-                outcome_class = 'won'
-                outcome_text = f"PLACED (+{pick['profit_loss']:.2f} units)" if pick['profit_loss'] else pick['outcome']
             
             html += f"""
             <div class="pick">
@@ -195,8 +197,10 @@ def generate_html_report(top5_picks, yesterday_date):
         
         # Summary section
         total_picks = len(top5_picks)
+        # COUNT EW PLACED BETS AS WINS
         won = sum(1 for p in top5_picks if p['outcome'] == 'WON')
-        placed = sum(1 for p in top5_picks if p['outcome'] in ['PLACED_2ND', 'PLACED_3RD', 'PLACED_4TH'])
+        ew_placed = sum(1 for p in top5_picks if p['outcome'] in ['PLACED_2ND', 'PLACED_3RD', 'PLACED_4TH', 'PLACED'] and p.get('bet_type') == 'EW')
+        total_wins = won + ew_placed  # EW places count as wins
         lost = sum(1 for p in top5_picks if p['outcome'] == 'LOST')
         pending = sum(1 for p in top5_picks if p['outcome'] == 'Pending')
         
@@ -208,12 +212,13 @@ def generate_html_report(top5_picks, yesterday_date):
                 <h2 style="margin-top: 0; color: #2c3e50;">📊 Summary</h2>
                 <div class="stats">
                     <div class="stat-box">
-                        <div class="stat-label">Won</div>
-                        <div class="stat-value" style="color: #27ae60;">{won}</div>
+                        <div class="stat-label">Total Wins</div>
+                        <div class="stat-value" style="color: #27ae60;">{total_wins}</div>
+                        <div class="stat-label" style="font-size: 10px; margin-top: 5px;">({won} won + {ew_placed} EW placed)</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-label">Placed</div>
-                        <div class="stat-value" style="color: #3498db;">{placed}</div>
+                        <div class="stat-label">Lost</div>
+                        <div class="stat-value" style="color: #e74c3c;">{lost}</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-label">Lost</div>
