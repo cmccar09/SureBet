@@ -139,14 +139,14 @@ try {
 # CHECK 6: API Gateway
 Write-Status "Checking API Gateway..." "Info"
 try {
-    $apiUrl = "https://e5na6ldp35.execute-api.eu-west-1.amazonaws.com/prod/health"
+    $apiUrl = "https://e5na6ldp35.execute-api.eu-west-1.amazonaws.com/prod/picks/today"
     $response = Invoke-RestMethod -Uri $apiUrl -Method Get -TimeoutSec 10
     
-    if ($response.status -eq "healthy") {
-        Write-Status "✓ API Gateway responding" "Success"
+    if ($response.success -eq $true) {
+        Write-Status "✓ API Gateway responding (picks: $($response.count))" "Success"
         $checks.passed++
     } else {
-        Write-Status "⚠ API Gateway response: $($response.status)" "Warning"
+        Write-Status "⚠ API Gateway response unexpected" "Warning"
         $checks.warnings++
     }
 } catch {
