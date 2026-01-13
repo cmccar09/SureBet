@@ -1,10 +1,10 @@
-# Setup Continuous Betting Workflow - Runs every 30 minutes from 12:00-18:45
+# Setup Continuous Betting Workflow - Runs every 30 minutes from 12:00-20:00 (8 PM)
 # This replaces all the individual BettingWorkflow_* tasks with a single repeating task
 
 $ErrorActionPreference = "Continue"
 
 Write-Host "`n=== Betting Workflow Task Setup ===" -ForegroundColor Cyan
-Write-Host "This will create a single task that runs every 30 minutes from 12:00-18:45`n" -ForegroundColor Yellow
+Write-Host "This will create a single task that runs every 30 minutes from 12:00-20:00 (8 PM)`n" -ForegroundColor Yellow
 Write-Host "NOTE: Removing old tasks requires administrator privileges" -ForegroundColor Yellow
 
 # Task configuration
@@ -46,9 +46,9 @@ $action = New-ScheduledTaskAction `
     -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`"" `
     -WorkingDirectory $workingDir
 
-# Trigger: Daily at 12:00 PM, repeat every 30 minutes for 6 hours 45 minutes
+# Trigger: Daily at 12:00 PM, repeat every 30 minutes for 8 hours
 $trigger = New-ScheduledTaskTrigger -Daily -At 12:00PM
-$repetitionPattern = New-ScheduledTaskTrigger -Once -At 12:00PM -RepetitionInterval (New-TimeSpan -Minutes 30) -RepetitionDuration (New-TimeSpan -Hours 6 -Minutes 45)
+$repetitionPattern = New-ScheduledTaskTrigger -Once -At 12:00PM -RepetitionInterval (New-TimeSpan -Minutes 30) -RepetitionDuration (New-TimeSpan -Hours 8)
 $trigger.Repetition = $repetitionPattern.Repetition
 
 # Settings
@@ -72,7 +72,7 @@ Register-ScheduledTask `
     -Trigger $trigger `
     -Settings $settings `
     -Principal $principal `
-    -Description "Continuous horse racing betting workflow - Runs every 30 minutes from 12:00 PM to 6:45 PM daily" | Out-Null
+    -Description "Continuous horse racing betting workflow - Runs every 30 minutes from 12:00 PM to 8:00 PM daily" | Out-Null
 
 Write-Host "  Task created successfully!" -ForegroundColor Green
 
@@ -86,9 +86,9 @@ Write-Host "  Name: $($task.TaskName)"
 Write-Host "  State: $($task.State)"
 Write-Host "  Next Run: $($taskInfo.NextRunTime)"
 Write-Host "  Trigger: Daily at 12:00 PM"
-Write-Host "  Repetition: Every 30 minutes for 6 hours 45 minutes (12:00-18:45)"
+Write-Host "  Repetition: Every 30 minutes for 8 hours (12:00-20:00)"
 Write-Host "  Script: $scriptPath"
 
 Write-Host "`n=== Setup Complete ===" -ForegroundColor Green
-Write-Host "The workflow will now run automatically every 30 minutes from 12:00-18:45 daily" -ForegroundColor Green
+Write-Host "The workflow will now run automatically every 30 minutes from 12:00-20:00 daily" -ForegroundColor Green
 Write-Host "Next scheduled run: $($taskInfo.NextRunTime)`n" -ForegroundColor Cyan
