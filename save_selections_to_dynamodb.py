@@ -957,7 +957,7 @@ def main():
     
     if total_exposure > max_exposure:
         scale_factor = max_exposure / total_exposure
-        print(f"  ⚠️  SCALING DOWN: Reducing all stakes by {(1-scale_factor)*100:.1f}%")
+        print(f"  WARNING: SCALING DOWN: Reducing all stakes by {(1-scale_factor)*100:.1f}%")
         
         for bet in bets:
             original_stake = bet.get('stake', 0)
@@ -966,9 +966,9 @@ def main():
             bet['bankroll_pct'] = round((bet['stake'] / bankroll) * 100, 2)
             bet['risk_scaled'] = True  # Flag that this was scaled down
         
-        print(f"  ✓ New total exposure: {max_exposure:.2f}")
+        print(f"  OK: New total exposure: {max_exposure:.2f}")
     else:
-        print(f"  ✓ Within daily risk limit")
+        print(f"  OK: Within daily risk limit")
     
     # VALIDATE PICK QUALITY (Improved rules from winner analysis)
     print(f"\nValidating pick quality...")

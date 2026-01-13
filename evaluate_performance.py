@@ -276,6 +276,14 @@ def analyze_losing_bets(data: pd.DataFrame, results: pd.DataFrame) -> List[Dict]
     
     learnings = []
     
+    # Check if effective_win exists, if not create it
+    if 'effective_win' not in data.columns:
+        data['effective_win'] = data.apply(lambda row: 
+            row.get('is_winner', False) or 
+            (row.get('is_placed', False) and row.get('bet_type', 'WIN') == 'EW'),
+            axis=1
+        )
+    
     # Get losing bets (where effective_win is False)
     losers = data[data['effective_win'] == False].copy()
     
