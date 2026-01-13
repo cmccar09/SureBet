@@ -163,16 +163,44 @@ $outputCsv = "$PSScriptRoot\today_picks.csv"
 # Create history directory
 New-Item -ItemType Directory -Force -Path "$PSScriptRoot\history" | Out-Null
 
-Write-Log "  Fetching live Betfair odds (Horse Racing only)..." "Yellow"
+Write-Log "  Fetching live Betfair odds (Horses + Greyhounds)..." "Yellow"
 
-# Fetch live data from Betfair API - HORSES ONLY (greyhounds disabled)
+# Fetch live data from Betfair API - BOTH SPORTS
+$horseFile = "$PSScriptRoot\response_horses.json"
+$dogFile = "$PSScriptRoot\response_greyhounds.json"
 $snapshotFile = "$PSScriptRoot\response_live.json"
-& $pythonExe "$PSScriptRoot\betfair_delayed_snapshots.py" --out $snapshotFile --hours 24 --max_races 50 --sport horses 2>&1 | Tee-Object -Append -FilePath $logFile
+
+# Fetch horses
+Write-Log "    - Horse Racing..." "Gray"
+& $pythonExe "$PSScriptRoot\betfair_delayed_snapshots.py" --out $horseFile --hours 24 --max_races 50 --sport horses 2>&1 | Tee-Object -Append -FilePath $logFile
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Log "ERROR: Failed to fetch Betfair data" "Red"
+    Write-Log "ERROR: Failed to fetch horse racing data" "Red"
     exit 1
 }
+
+# Fetch greyhounds
+Write-Log "    - Greyhound Racing..." "Gray"
+& $pythonExe "$PSScriptRoot\betfair_delayed_snapshots.py" --out $dogFile --hours 24 --max_races 50 --sport greyhounds 2>&1 | Tee-Object -Append -FilePath $logFile
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Log "ERROR: Failed to fetch greyhound racing data" "Red"
+    exit 1
+}
+
+# Combine both sports into single snapshot
+Write-Log "    - Combining sports data..." "Gray"
+$horsesData = Get-Content $horseFile | ConvertFrom-Json
+$dogsData = Get-Content $dogFile | ConvertFrom-Json
+$horseRaces = $horsesData.races
+$dogRaces = $dogsData.races
+$combined = @{
+    timestamp = $horsesData.timestamp
+    races = $horseRaces + $dogRaces
+    total_races = $horseRaces.Count + $dogRaces.Count
+}
+$combined | ConvertTo-Json -Depth 10 | Set-Content $snapshotFile
+Write-Log "    - Total races: $($combined.total_races) ($($horseRaces.Count) horses + $($dogRaces.Count) greyhounds)" "Green"
 
 # STEP 2.1: Capture odds snapshot for movement tracking
 Write-Log "  Capturing odds snapshot for movement analysis..." "Yellow"
