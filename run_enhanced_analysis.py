@@ -92,9 +92,21 @@ def main():
     # Process with enhanced analysis
     # Limit to first 4-5 races to keep analysis time reasonable
     max_races = int(os.getenv('MAX_RACES', '5'))
-    races_to_process = races[:max_races]
     
-    print(f"Processing first {len(races_to_process)} races (max_races={max_races})")
+    # IMPORTANT: Mix both sports if available
+    # Group races by sport to ensure balanced selection
+    horse_races = [r for r in races if r.get('sport', 'horses') == 'horses']
+    greyhound_races = [r for r in races if r.get('sport', 'horses') == 'greyhounds']
+    
+    # Take mix of both sports (e.g., 3 horses + 2 greyhounds for max_races=5)
+    horses_to_take = min(len(horse_races), max(1, max_races // 2 + 1))  # Slightly favor horses
+    greyhounds_to_take = min(len(greyhound_races), max_races - horses_to_take)
+    
+    races_to_process = horse_races[:horses_to_take] + greyhound_races[:greyhounds_to_take]
+    
+    print(f"Processing {len(races_to_process)} races (max_races={max_races})")
+    print(f"  - {horses_to_take} horse races")
+    print(f"  - {greyhounds_to_take} greyhound races")
     
     analyzer = EnhancedAnalyzer()
     
