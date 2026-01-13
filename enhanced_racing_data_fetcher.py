@@ -73,11 +73,11 @@ class EnhancedRacingDataFetcher:
             response = self.session.get(url, timeout=30, allow_redirects=True)
             
             if response.status_code == 404:
-                print(f"  ⚠️ Race card not found for {course}")
+                print(f"  [WARNING] Race card not found for {course}")
                 return None
             
             if response.status_code == 406:
-                print(f"  ⚠️ Racing Post blocking request - trying alternative method")
+                print(f"  [WARNING] Racing Post blocking request - trying alternative method")
                 # Try with different headers
                 alt_headers = self.session.headers.copy()
                 alt_headers['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15'
@@ -93,11 +93,11 @@ class EnhancedRacingDataFetcher:
                 print(f"  ✓ Extracted data for {len(runners_data)} runners")
                 return runners_data
             else:
-                print(f"  ⚠️ No runner data found")
+                print(f"  [WARNING] No runner data found")
                 return None
         
         except Exception as e:
-            print(f"  ✗ Error fetching race card: {e}")
+            print(f"  [ERROR] Error fetching race card: {e}")
             return None
     
     def _parse_race_card(self, soup, target_time):

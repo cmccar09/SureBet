@@ -44,7 +44,7 @@ class OddsMovementTracker:
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(snapshot_data, f, indent=2)
         
-        print(f"✓ Snapshot saved: {filename}")
+        print(f"[OK] Snapshot saved: {filename}")
         
         # Store in DynamoDB for querying
         self._store_in_dynamodb(snapshot_data, timestamp)
@@ -212,7 +212,7 @@ class OddsMovementTracker:
         with open(output_file, 'w', encoding='utf-8') as f:
             json.dump(snapshot, f, indent=2)
         
-        print(f"\n✅ Added movement data to {enriched_count} runners")
+        print(f"\n[OK] Added movement data to {enriched_count} runners")
         print(f"   Saved to: {output_file}")
         
         return output_file

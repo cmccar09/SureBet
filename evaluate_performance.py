@@ -209,7 +209,7 @@ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 """
     
     for cal in metrics.get("calibration_by_bin", []):
-        report += f"\n- Predicted: {cal['predicted_prob']:.1%} → Actual: {cal['actual_rate']:.1%} (n={cal['count']}, error={cal['error']:.1%})"
+        report += f"\\n- Predicted: {cal['predicted_prob']:.1%} -> Actual: {cal['actual_rate']:.1%} (n={cal['count']}, error={cal['error']:.1%})"
     
     report += "\n\n## Performance by Edge Type\n"
     for tag, perf in tag_performance.items():
