@@ -276,3 +276,22 @@ Write-Log "========================================" "Cyan"
 Write-Log "Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
 Write-Log "Log file: $logFile"
 Write-Log "========================================" "Cyan"
+# Create execution marker for health checks
+$executionLog = "$PSScriptRoot\workflow_execution.log"
+$executionTime = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+"$executionTime - Workflow completed successfully" | Out-File -FilePath $executionLog
+
+# Run health check (if available)
+if (Test-Path "$PSScriptRoot\daily_health_check.ps1") {
+    Write-Log "`nRunning post-workflow health check..." "Cyan"
+    try {
+        & "$PSScriptRoot\daily_health_check.ps1"
+        if ($LASTEXITCODE -eq 0) {
+            Write-Log "✓ Health check passed" "Green"
+        } else {
+            Write-Log "⚠ Health check found issues - check logs" "Yellow"
+        }
+    } catch {
+        Write-Log "⚠ Health check failed to run: $_" "Yellow"
+    }
+}
