@@ -9,7 +9,7 @@ import json
 import sys
 import os
 import argparse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import requests
 
 def load_credentials():
@@ -33,7 +33,7 @@ def fetch_markets(app_key, session_token, hours_ahead=24, event_type="7", countr
     """
     url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketCatalogue/"
     
-    now = datetime.now(datetime.UTC)
+    now = datetime.now(timezone.utc)
     to_time = now + timedelta(hours=hours_ahead)
     
     sport_name = "Horse Racing" if event_type == "7" else "Greyhound Racing"
@@ -107,7 +107,7 @@ def fetch_odds(app_key, session_token, market_ids):
 def format_snapshot(markets, odds_by_market):
     """Format data into snapshot structure for run_saved_prompt.py"""
     races = []
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     
     for market in markets:
         market_id = market['marketId']

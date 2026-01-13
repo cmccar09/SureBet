@@ -12,7 +12,7 @@ Stores historical snapshots and calculates movement metrics.
 
 import json
 import os
-from datetime import datetime, timedelta, UTC
+from datetime import datetime, timedelta, timezone
 import boto3
 from decimal import Decimal
 
@@ -35,7 +35,7 @@ class OddsMovementTracker:
             snapshot_data: JSON data from betfair_delayed_snapshots.py
             label: Identifier for this snapshot run
         """
-        timestamp = datetime.now(UTC)
+        timestamp = datetime.now(timezone.utc)
         
         # Save local copy
         filename = timestamp.strftime(f'odds_{label}_%Y%m%d_%H%M%S.json')
@@ -91,7 +91,7 @@ class OddsMovementTracker:
         Returns list of (timestamp, odds) tuples
         """
         pk = f"{market_id}#{selection_id}"
-        cutoff_time = (datetime.now(UTC) - timedelta(hours=hours_back)).isoformat()
+        cutoff_time = (datetime.now(timezone.utc) - timedelta(hours=hours_back)).isoformat()
         
         try:
             response = odds_table.query(

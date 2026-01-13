@@ -199,7 +199,7 @@ $combined = @{
     races = $horseRaces + $dogRaces
     total_races = $horseRaces.Count + $dogRaces.Count
 }
-$combined | ConvertTo-Json -Depth 10 | Set-Content $snapshotFile
+$combined | ConvertTo-Json -Depth 100 | Set-Content $snapshotFile
 Write-Log "    - Total races: $($combined.total_races) ($($horseRaces.Count) horses + $($dogRaces.Count) greyhounds)" "Green"
 
 # STEP 2.1: Capture odds snapshot for movement tracking
