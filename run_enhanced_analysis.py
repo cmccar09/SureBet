@@ -94,9 +94,18 @@ def main():
     max_races = int(os.getenv('MAX_RACES', '5'))
     
     # IMPORTANT: Mix both sports if available
-    # Group races by sport to ensure balanced selection
-    horse_races = [r for r in races if r.get('sport', 'horses') == 'horses']
-    greyhound_races = [r for r in races if r.get('sport', 'horses') == 'greyhounds']
+    # Distinguish sports by distance format: greyhounds use "m" (meters), horses use "f/m" (furlongs/miles)
+    horse_races = []
+    greyhound_races = []
+    
+    for r in races:
+        market_name = r.get('market_name', '')
+        # Greyhounds typically have distances like "630m", "277m", "480m"
+        # Horses have distances like "5f", "1m2f", "7f"
+        if 'm' in market_name.lower() and any(c.isdigit() for c in market_name) and 'f' not in market_name.lower():
+            greyhound_races.append(r)
+        else:
+            horse_races.append(r)
     
     # Take mix of both sports (e.g., 3 horses + 2 greyhounds for max_races=5)
     horses_to_take = min(len(horse_races), max(1, max_races // 2 + 1))  # Slightly favor horses
