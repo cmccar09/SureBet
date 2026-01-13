@@ -559,7 +559,11 @@ def deduplicate_against_database(new_bets: list, table_name: str = None, region:
                             stats['new_picks_kept'] += 1
                         
                         if removed_pick['is_existing']:
-                            bet_ids_to_delete.append(removed_pick['bet_id'])
+                            # Store both keys needed for DynamoDB deletion (composite key: bet_date + bet_id)
+                            bet_ids_to_delete.append({
+                                'bet_date': removed_pick.get('bet_date', removed_pick.get('date')),
+                                'bet_id': removed_pick['bet_id']
+                            })
                             stats['existing_picks_deleted'] += 1
                             print(f"    DELETE existing: {removed_pick['horse']}")
                         else:
@@ -607,7 +611,11 @@ def deduplicate_against_database(new_bets: list, table_name: str = None, region:
                             print(f"    KEEP new: {pick['horse']} ({pick['bet_type']})")
                     else:
                         if pick['is_existing']:
-                            bet_ids_to_delete.append(pick['bet_id'])
+                            # Store both keys needed for DynamoDB deletion (composite key: bet_date + bet_id)
+                            bet_ids_to_delete.append({
+                                'bet_date': pick.get('bet_date', pick.get('date')),
+                                'bet_id': pick['bet_id']
+                            })
                             stats['existing_picks_deleted'] += 1
                             print(f"    DELETE existing: {pick['horse']} ({pick['bet_type']})")
                         else:
@@ -698,13 +706,14 @@ def save_to_dynamodb(bets: list[dict], table_name: str = None, region: str = 'eu
         if bet_ids_to_delete:
             print(f"\nDeleting {len(bet_ids_to_delete)} superseded picks...")
             deleted_count = 0
-            for bet_id in bet_ids_to_delete:
+            for key_dict in bet_ids_to_delete:
                 try:
-                    table.delete_item(Key={'bet_id': bet_id})
+                    # Use composite key (bet_date + bet_id)
+                    table.delete_item(Key=key_dict)
                     deleted_count += 1
-                    print(f"  [DELETED] {bet_id}")
+                    print(f"  [DELETED] {key_dict['bet_id']}")
                 except Exception as e:
-                    print(f"  [ERROR] Failed to delete {bet_id}: {e}")
+                    print(f"  [ERROR] Failed to delete {key_dict.get('bet_id', 'unknown')}: {e}")
             print(f"Deleted {deleted_count} old picks\n")
         
         success_count = 0
