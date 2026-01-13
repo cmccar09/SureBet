@@ -31,3 +31,45 @@ Based on analysis of last 30 days performance:
 
 Apply these learnings when making selections. Continuously adapt strategy based on what works.
 
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-13)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 35.0%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-13)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 35.0%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-13)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 44.0%. Consider adjusting probability model or isotonic regression parameters.
+
+2. MEDIUM_PRIORITY: Win rate 0.0% is significantly below expected 44.0%. Consider tightening overlay threshold or increasing min_back price filter.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-13)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 35.0%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-13)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 35.0%. Consider adjusting probability model or isotonic regression parameters.
+
