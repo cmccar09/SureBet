@@ -869,12 +869,20 @@ def main():
     print(f"Loaded odds for {len(market_odds)} runners")
     
     # Convert to bet items
-    print(f"\nFormatting for DynamoDB (sport: {args.sport}, minimum ROI: {args.min_roi}%)...")
+    # Auto-detect sport per-pick based on venue (for mixed horse/greyhound selections)
+    greyhound_venues = ['Monmore', 'Central Park', 'Perry Barr', 'Romford', 'Crayford', 'Belle Vue', 
+                        'Sheffield', 'Newcastle (Greyhounds)', 'Sunderland', 'Harlow', 'Henlow', 'Oxford']
+    
+    print(f"\nFormatting for DynamoDB (minimum ROI: {args.min_roi}%)...")
     bets = []
     filtered_out = 0
     for idx, row in df.iterrows():
         try:
-            bet_item = format_bet_for_dynamodb(row, market_odds, args.sport)
+            # Auto-detect sport from venue
+            venue = row.get('venue', '')
+            detected_sport = 'greyhounds' if venue in greyhound_venues else 'horses'
+            
+            bet_item = format_bet_for_dynamodb(row, market_odds, detected_sport)
             
             # Filter by minimum ROI threshold
             roi = float(bet_item.get('roi', 0))
