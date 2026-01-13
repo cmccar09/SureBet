@@ -115,9 +115,9 @@ def format_snapshot(markets, odds_by_market):
         
         # Parse market start time
         try:
-            market_start = datetime.strptime(market['marketStartTime'], "%Y-%m-%dT%H:%M:%S.%fZ")
+            market_start = datetime.strptime(market['marketStartTime'], "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=timezone.utc)
         except ValueError:
-            market_start = datetime.strptime(market['marketStartTime'], "%Y-%m-%dT%H:%M:%SZ")
+            market_start = datetime.strptime(market['marketStartTime'], "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
         
         # Filter: 15 mins ahead to 24 hours
         time_diff = (market_start - now).total_seconds()
