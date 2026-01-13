@@ -94,15 +94,24 @@ def main():
     max_races = int(os.getenv('MAX_RACES', '5'))
     
     # IMPORTANT: Mix both sports if available
-    # Distinguish sports by distance format: greyhounds use "m" (meters), horses use "f/m" (furlongs/miles)
+    # Distinguish sports: greyhounds have specific patterns like "S3 630m", "A6 400m", "D4 264m"
+    # Or can use known greyhound venues
+    greyhound_venues = ['Monmore', 'Central Park', 'Perry Barr', 'Romford', 'Crayford', 'Belle Vue', 
+                        'Sheffield', 'Newcastle (Greyhounds)', 'Sunderland', 'Harlow', 'Henlow']
+    
     horse_races = []
     greyhound_races = []
     
     for r in races:
+        venue = r.get('venue', '')
         market_name = r.get('market_name', '')
-        # Greyhounds typically have distances like "630m", "277m", "480m"
-        # Horses have distances like "5f", "1m2f", "7f"
-        if 'm' in market_name.lower() and any(c.isdigit() for c in market_name) and 'f' not in market_name.lower():
+        
+        # Check if it's a greyhound track or has greyhound distance pattern (e.g., "S3 630m", "A6 400m")
+        is_greyhound = (venue in greyhound_venues or 
+                       (len(market_name) > 0 and market_name[0].isalpha() and 
+                        any(f'{d}m' in market_name for d in range(200, 1000, 10))))
+        
+        if is_greyhound:
             greyhound_races.append(r)
         else:
             horse_races.append(r)
