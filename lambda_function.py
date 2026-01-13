@@ -149,10 +149,10 @@ def get_today_picks(headers):
         race_time_str = item.get('race_time', '')
         if race_time_str:
             try:
-                # Parse race time (ISO format)
-                race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
+                # Parse race time (ISO format) - strip 'Z' for naive datetime comparison
+                race_time = datetime.fromisoformat(race_time_str.replace('Z', ''))
                 # Only include if race is in the future
-                if race_time.replace(tzinfo=None) > now:
+                if race_time > now:
                     future_picks.append(item)
             except Exception as e:
                 print(f"Error parsing race time {race_time_str}: {e}")

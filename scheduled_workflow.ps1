@@ -5,9 +5,11 @@
 .DESCRIPTION
     1. Learns from yesterday's results (if available)
     2. Fetches live Betfair data
-    3. Applies prompt.txt logic via LLM
-    4. Generates and saves picks to DynamoDB
-    5. Logs everything for review
+    3. Enriches with Racing Post data (form, ratings, trainer stats)
+    4. Tracks odds movements (steam/drift signals)
+    5. Applies prompt.txt logic via LLM with enhanced data
+    6. Generates and saves picks to DynamoDB
+    7. Logs everything for review
 #>
 
 $ErrorActionPreference = "Continue"
@@ -172,8 +174,41 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-Write-Log "  Applying ENHANCED multi-pass AI analysis to live markets..." "Yellow"
-# Use enhanced analysis - saves to today_picks.csv and history folder
+# STEP 2.1: Capture odds snapshot for movement tracking
+Write-Log "  Capturing odds snapshot for movement analysis..." "Yellow"
+& $pythonExe "$PSScriptRoot\odds_movement_tracker.py" --snapshot $snapshotFile --capture 2>&1 | Tee-Object -Append -FilePath $logFile
+
+# STEP 2.2: Enrich with Racing Post data (form, ratings, trainer stats)
+Write-Log "  Enriching with Racing Post data (form, ratings, trainer stats)..." "Yellow"
+$enrichedFile = "$PSScriptRoot\response_live_enriched.json"
+& $pythonExe "$PSScriptRoot\enhanced_racing_data_fetcher.py" --snapshot $snapshotFile --output $enrichedFile 2>&1 | Tee-Object -Append -FilePath $logFile
+
+# Check if enrichment succeeded, fallback to original if failed
+if (-not (Test-Path $enrichedFile)) {
+    Write-Log "  WARNING: Racing Post enrichment failed - using Betfair data only" "Yellow"
+    $enrichedFile = $snapshotFile
+}
+
+# STEP 2.3: Add odds movement analysis
+Write-Log "  Analyzing odds movements for steam/drift signals..." "Yellow"
+$finalFile = "$PSScriptRoot\response_live_final.json"
+& $pythonExe "$PSScriptRoot\odds_movement_tracker.py" --snapshot $enrichedFile --analyze 2>&1 | Tee-Object -Append -FilePath $logFile
+
+# Check if movement analysis succeeded, fallback to enriched file
+if (Test-Path "$PSScriptRoot\response_live_enriched_with_movement.json") {
+    $finalFile = "$PSScriptRoot\response_live_enriched_with_movement.json"
+    Write-Log "  Odds movement data added successfully" "Green"
+} elseif (Test-Path $enrichedFile) {
+    $finalFile = $enrichedFile
+    Write-Log "  Using enriched data without movement analysis" "Yellow"
+} else {
+    $finalFile = $snapshotFile
+    Write-Log "  Using basic Betfair data only" "Yellow"
+}
+
+Write-Log "  Applying ENHANCED multi-pass AI analysis to enriched markets..." "Yellow"
+# Update snapshot env variable for enhanced analysis to use
+$env:SNAPSHOT_FILE = $finalFile
 & $pythonExe "$PSScriptRoot\run_enhanced_analysis.py" 2>&1 | Tee-Object -Append -FilePath $logFile
 
 if ($LASTEXITCODE -ne 0) {
