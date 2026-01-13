@@ -33,7 +33,7 @@ def fetch_markets(app_key, session_token, hours_ahead=24, event_type="7", countr
     """
     url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketCatalogue/"
     
-    now = datetime.utcnow()
+    now = datetime.now(datetime.UTC)
     to_time = now + timedelta(hours=hours_ahead)
     
     sport_name = "Horse Racing" if event_type == "7" else "Greyhound Racing"
