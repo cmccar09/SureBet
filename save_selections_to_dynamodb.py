@@ -351,7 +351,15 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None, sport: str
     combined_conf, conf_grade, conf_color, conf_explanation, conf_breakdown = calculate_combined_confidence(row, race_type=sport)
     
     # Calculate Decision Rating (combined score for easy decision making)
-    roi_pct = ev * 100
+    # Sport-specific ROI calculation (greyhounds adjusted for odds-on favorites)
+    if sport == 'greyhounds' and implied_odds < 2.5:
+        # For greyhounds with odds < 2.5 (typically favorites/second favorites in 6-runner fields)
+        # Apply a market compression adjustment since greyhound markets are tighter
+        # Adjust EV upward by 5% to account for lower overround in greyhound racing
+        adjusted_ev = ev * 1.05
+        roi_pct = adjusted_ev * 100
+    else:
+        roi_pct = ev * 100
     confidence_score = int(p_win * 100) if p_win > 0 else 50
     
     # Scoring system (0-100 scale):
