@@ -360,7 +360,22 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None, sport: str
         roi_pct = adjusted_ev * 100
     else:
         roi_pct = ev * 100
+    
     confidence_score = int(p_win * 100) if p_win > 0 else 50
+    
+    # KELLY CRITERION STAKE SIZING (Fractional Kelly for bankroll management)
+    # Calculate optimal stake using quarter Kelly
+    from learning_engine import calculate_bet_stake
+    
+    bankroll = 1000.0  # Default bankroll (make configurable via args in future)
+    optimal_stake = calculate_bet_stake(
+        odds=implied_odds,
+        p_win=p_win,
+        bankroll=bankroll,
+        bet_type=bet_type,
+        p_place=p_place,
+        ew_fraction=ew_fraction if ew_fraction > 0 else 0.2
+    )
     
     # Scoring system (0-100 scale):
     # - ROI weight: 40% (normalized to 0-40, capped at 50% ROI = max score)
@@ -406,6 +421,11 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None, sport: str
         'odds': implied_odds,
         'p_win': p_win,
         'p_place': p_place,
+        
+        # KELLY CRITERION STAKE SIZING
+        'stake': round(optimal_stake, 2),  # Stake in currency units
+        'stake_units': round(optimal_stake / 10, 2),  # Unit stakes (1 unit = 10 currency)
+        'bankroll_pct': round((optimal_stake / bankroll) * 100, 2),  # % of bankroll
         
         # EW terms
         'ew_places': ew_places,
@@ -890,9 +910,9 @@ def main():
     greyhound_venues = ['Monmore', 'Central Park', 'Perry Barr', 'Romford', 'Crayford', 'Belle Vue', 
                         'Sheffield', 'Newcastle (Greyhounds)', 'Sunderland', 'Harlow', 'Henlow', 'Oxford']
     
-    # Sport-specific ROI thresholds (greyhounds have lower odds, so lower ROI threshold)
-    horse_min_roi = args.min_roi  # Default 0% for horses
-    greyhound_min_roi = -15.0      # -15% for greyhounds (lower odds = lower ROI expected)
+    # Sport-specific ROI thresholds (QUANT FRAMEWORK: +5% minimum EV for quality)
+    horse_min_roi = 5.0  # +5% minimum EV for horses (was 0%)
+    greyhound_min_roi = 2.0  # +2% minimum EV for greyhounds (was -15%)
     
     print(f"\nFormatting for DynamoDB...")
     print(f"  Horse minimum ROI: {horse_min_roi}%")
@@ -924,6 +944,31 @@ def main():
             print(f"WARNING: Failed to format row {idx}: {e}")
     
     print(f"\nFormatted {len(bets)} bet items (filtered out {filtered_out} low ROI bets)")
+    
+    # DAILY RISK LIMIT ENFORCEMENT (Quant Framework: 5% max daily exposure)
+    bankroll = 1000.0  # Make configurable
+    max_daily_risk_pct = 0.05  # 5% maximum
+    total_exposure = sum(bet.get('stake', 0) for bet in bets)
+    max_exposure = bankroll * max_daily_risk_pct
+    
+    print(f"\nDaily Risk Management:")
+    print(f"  Total exposure: {total_exposure:.2f} ({(total_exposure/bankroll)*100:.1f}% of bankroll)")
+    print(f"  Maximum allowed: {max_exposure:.2f} (5% of bankroll)")
+    
+    if total_exposure > max_exposure:
+        scale_factor = max_exposure / total_exposure
+        print(f"  ⚠️  SCALING DOWN: Reducing all stakes by {(1-scale_factor)*100:.1f}%")
+        
+        for bet in bets:
+            original_stake = bet.get('stake', 0)
+            bet['stake'] = round(original_stake * scale_factor, 2)
+            bet['stake_units'] = round((original_stake * scale_factor) / 10, 2)
+            bet['bankroll_pct'] = round((bet['stake'] / bankroll) * 100, 2)
+            bet['risk_scaled'] = True  # Flag that this was scaled down
+        
+        print(f"  ✓ New total exposure: {max_exposure:.2f}")
+    else:
+        print(f"  ✓ Within daily risk limit")
     
     # VALIDATE PICK QUALITY (Improved rules from winner analysis)
     print(f"\nValidating pick quality...")
