@@ -1,5 +1,5 @@
 # setup_learning_scheduler.ps1
-# Setup Windows Task Scheduler to run learning cycle daily at 8pm
+# Setup Windows Task Scheduler to run learning cycle daily at 6pm and 10pm
 
 $ErrorActionPreference = "Stop"
 
@@ -33,8 +33,9 @@ if ($existingTask) {
 # Create the action
 $action = New-ScheduledTaskAction -Execute $pythonExe -Argument "`"$scriptPath`"" -WorkingDirectory $PSScriptRoot
 
-# Create the trigger - Daily at 8:00 PM
-$trigger = New-ScheduledTaskTrigger -Daily -At "20:00"
+# Create the triggers - Daily at 6:00 PM and 10:00 PM
+$trigger1 = New-ScheduledTaskTrigger -Daily -At "18:00"
+$trigger2 = New-ScheduledTaskTrigger -Daily -At "22:00"
 
 # Create settings
 $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable -RunOnlyIfNetworkAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 1)
@@ -44,11 +45,11 @@ $principal = New-ScheduledTaskPrincipal -UserId $env:USERNAME -LogonType S4U -Ru
 
 # Register the task
 try {
-    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Description "Daily learning cycle - analyzes completed bets and updates AI insights at 8pm" -ErrorAction Stop | Out-Null
+    Register-ScheduledTask -TaskName $taskName -Action $action -Trigger @($trigger1, $trigger2) -Settings $settings -Principal $principal -Description "Daily learning cycle - analyzes completed bets and updates AI insights at 6pm and 10pm" -ErrorAction Stop | Out-Null
     
     Write-Host "Created scheduled task: $taskName" -ForegroundColor Green
     Write-Host "`nTask Details:" -ForegroundColor Cyan
-    Write-Host "  Schedule: Daily at 8:00 PM" -ForegroundColor Gray
+    Write-Host "  Schedule: Daily at 6:00 PM and 10:00 PM" -ForegroundColor Gray
     Write-Host "  Script:   $scriptPath" -ForegroundColor Gray
     Write-Host "  Python:   $pythonExe" -ForegroundColor Gray
     Write-Host "  Logs:     $logPath" -ForegroundColor Gray
@@ -67,7 +68,7 @@ try {
     Write-Host "`n  Test run now:" -ForegroundColor Yellow
     Write-Host "    Start-ScheduledTask -TaskName '$taskName'" -ForegroundColor Gray
     
-    Write-Host "`nLearning cycle will run daily at 8:00 PM" -ForegroundColor Green
+    Write-Host "`nLearning cycle will run daily at 6:00 PM and 10:00 PM" -ForegroundColor Green
     Write-Host "System will analyze results and update AI insights automatically`n" -ForegroundColor Green
 } catch {
     Write-Host "`nFailed to create scheduled task: $_" -ForegroundColor Red

@@ -335,10 +335,7 @@ class EnhancedRacingDataFetcher:
             race_card_data = self.fetch_race_card(course, race_time)
             
             if not race_card_data:
-                print(f"  ⊘ No race card data for {course} {race_time}")
-                continue
-            
-            # Match runners
+                print(f"  [SKIP] No race card data for {course} {race_time}")
             for runner in race.get('runners', []):
                 total_runners += 1
                 horse_name = runner.get('name', '').lower().strip()

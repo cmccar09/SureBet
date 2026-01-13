@@ -1,6 +1,6 @@
-runner_name,selection_id,market_id,market_name,venue,start_time_dublin,p_win,p_place,ew_places,ew_fraction,tags,why_now
-Lakota Chief,93729835,1.252619702,7f Mdn Stks,Newcastle,2026-01-13T14:38:00.000Z,0.40,0.70,3,0.2,favorite,shortest odds but avoid per insights
-Digital,55342,1.252619713,5f Hcap,Newcastle,2026-01-13T15:08:00.000Z,0.33,0.66,3,0.2,favorite,Top-rated but avoiding favorites per insights
-The Green Man,886325,1.252619719,1m Hcap,Newcastle,2026-01-13T15:40:00.000Z,0.33,0.66,3,0.2,favorite,Shortest price in race but avoid favorites insight
-Profit Street,13395021,1.252619707,6f Hcap,Newcastle,2026-01-13T14:08:00.000Z,0.27,0.54,3,0.2,relative_value;top_rated,Shortest priced runner offers best relative value despite caution on favorites
-Tupero,83942399,1.252619695,2m Hcap,Newcastle,2026-01-13T13:38:00.000Z,0.25,0.55,3,0.2,value favorite,Strongest contender based on odds but caution advised on favorites
+runner_name,selection_id,market_id,market_name,venue,start_time_dublin,p_win,p_place,bet_type,ew_places,ew_fraction,tags,why_now
+This Guy,9992777,1.252622157,6f Stks,Dundalk,2026-01-13T15:30:00Z,0.4,0.75,Win,3,0.2,"enhanced_analysis,Consistent recent form, regularly placing. Short odds indicate market confidence.","Consistent form suggests he's due a win, but short price offers limited value."
+The Green Man,886325,1.252619719,1m Hcap,Newcastle,2026-01-13T15:40:00Z,0.28,0.6,EW,3,0.2,"enhanced_analysis,Consistent recent form with 3 wins in last 6 runs. Favorably priced by the market.","Strong recent form and favorable odds make this a solid EW option, though win probability falls just short of a straight win bet."
+Battleforsupremacy,88088356,1.252622162,6f Hcap,Dundalk,2026-01-13T16:00:00Z,0.32,0.65,Win,3,0.2,"enhanced_analysis,Clear favorite, decent recent form with a win","Best recent form in the field, but caution advised due to short price and inconsistency"
+Flying Fletcher,57926081,1.252619719,1m Hcap,Newcastle,2026-01-13T15:40:00Z,0.18,0.45,EW,3,0.2,"enhanced_analysis,Consistent placer with 2nd in last run. Odds suggest some value.","Consistent place finishes make this an interesting EW option at current odds, though win concerns persist."
+Oh Cecelia,81862485,1.252622162,6f Hcap,Dundalk,2026-01-13T16:00:00Z,0.15,0.4,EW,3,0.2,"enhanced_analysis,Consistent recent form, has been in the money",Consistent placer who could surprise at decent odds

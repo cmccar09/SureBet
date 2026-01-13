@@ -201,9 +201,9 @@ class OddsMovementTracker:
                         
                         # Flag significant movements
                         if analysis['movement_type'] in ['STRONG_STEAM', 'STEAM']:
-                            print(f"  🔥 STEAM: {runner['name']} - {analysis['drift_pct']}% move")
+                            print(f"  [STEAM] {runner['name']} - {analysis['drift_pct']}% move")
                         elif analysis['movement_type'] in ['STRONG_DRIFT', 'DRIFT']:
-                            print(f"  📉 DRIFT: {runner['name']} - {analysis['drift_pct']}% move")
+                            print(f"  [DRIFT] {runner['name']} - {analysis['drift_pct']}% move")
         
         # Save enriched snapshot
         if not output_file:
@@ -306,7 +306,7 @@ def main():
         output = tracker.enrich_with_movement_data(args.snapshot)
         
         # Show steam moves
-        print("\n🔥 STEAM MOVES (Strong Backing):")
+        print("\n[STEAM MOVES] Strong Backing:")
         steam = tracker.get_steam_moves(output, threshold=-10)
         
         for i, horse in enumerate(steam[:10], 1):
