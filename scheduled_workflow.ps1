@@ -163,11 +163,10 @@ $outputCsv = "$PSScriptRoot\today_picks.csv"
 # Create history directory
 New-Item -ItemType Directory -Force -Path "$PSScriptRoot\history" | Out-Null
 
-Write-Log "  Fetching live Betfair odds (Horses + Greyhounds)..." "Yellow"
+Write-Log "  Fetching live Betfair odds (Horses only - Greyhounds disabled)..." "Yellow"
 
-# Fetch live data from Betfair API - BOTH SPORTS
+# Fetch live data from Betfair API - HORSES ONLY
 $horseFile = "$PSScriptRoot\response_horses.json"
-$dogFile = "$PSScriptRoot\response_greyhounds.json"
 $snapshotFile = "$PSScriptRoot\response_live.json"
 
 # Fetch horses
@@ -179,28 +178,19 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
-# Fetch greyhounds
-Write-Log "    - Greyhound Racing..." "Gray"
-& $pythonExe "$PSScriptRoot\betfair_delayed_snapshots.py" --out $dogFile --hours 24 --max_races 50 --sport greyhounds 2>&1 | Tee-Object -Append -FilePath $logFile
+# Skip greyhounds completely (disabled for speed)
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Log "ERROR: Failed to fetch greyhound racing data" "Red"
-    exit 1
-}
-
-# Combine both sports into single snapshot
-Write-Log "    - Combining sports data..." "Gray"
+# Use horses only (greyhounds disabled for speed)
+Write-Log "    - Using horse racing only..." "Gray"
 $horsesData = Get-Content $horseFile | ConvertFrom-Json
-$dogsData = Get-Content $dogFile | ConvertFrom-Json
 $horseRaces = $horsesData.races
-$dogRaces = $dogsData.races
 $combined = @{
     timestamp = $horsesData.timestamp
-    races = $horseRaces + $dogRaces
-    total_races = $horseRaces.Count + $dogRaces.Count
+    races = $horseRaces
+    total_races = $horseRaces.Count
 }
 $combined | ConvertTo-Json -Depth 100 | Set-Content $snapshotFile
-Write-Log "    - Total races: $($combined.total_races) ($($horseRaces.Count) horses + $($dogRaces.Count) greyhounds)" "Green"
+Write-Log "    - Total races: $($combined.total_races) (horses only, greyhounds disabled)" "Green"
 
 # STEP 2.1: Skip enrichment steps temporarily - they keep crashing
 Write-Log "  Using Betfair data only (enrichment disabled)" "Yellow"
