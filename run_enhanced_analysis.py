@@ -89,42 +89,69 @@ def main():
     
     print(f"Found {len(races)} races")
     
-    # Process with enhanced analysis
-    # Limit to first 4-5 races to keep analysis time reasonable
-    max_races = int(os.getenv('MAX_RACES', '5'))
+    # Filter races to next 4 hours only
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    four_hours_ahead = now + timedelta(hours=4)
     
-    # IMPORTANT: Mix both sports if available
-    # Distinguish sports: greyhounds have specific patterns like "S3 630m", "A6 400m", "D4 264m"
-    # Or can use known greyhound venues
+    races_next_4h = []
+    for r in races:
+        start_time_str = r.get('start_time', '')
+        if start_time_str:
+            try:
+                # Parse ISO format timestamp
+                start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
+                if now <= start_time <= four_hours_ahead:
+                    races_next_4h.append(r)
+            except:
+                # If parsing fails, include the race to be safe
+                races_next_4h.append(r)
+        else:
+            # No timestamp, include it
+            races_next_4h.append(r)
+    
+    print(f"Filtered to {len(races_next_4h)} races in next 4 hours")
+    
+    # SMART SAMPLING: Process strategically to cover all venues but keep cost down
+    # Group by venue to ensure we analyze at least one race from each track
+    from datetime import datetime, timedelta, timezone
+    
     greyhound_venues = ['Monmore', 'Central Park', 'Perry Barr', 'Romford', 'Crayford', 'Belle Vue', 
                         'Sheffield', 'Newcastle (Greyhounds)', 'Sunderland', 'Harlow', 'Henlow']
     
-    horse_races = []
-    greyhound_races = []
-    
-    for r in races:
-        venue = r.get('venue', '')
+    # Organize races by venue and sport
+    venue_races = {}
+    for r in races_next_4h:
+        venue = r.get('venue', 'Unknown')
         market_name = r.get('market_name', '')
         
-        # Check if it's a greyhound track or has greyhound distance pattern (e.g., "S3 630m", "A6 400m")
+        # Determine sport
         is_greyhound = (venue in greyhound_venues or 
                        (len(market_name) > 0 and market_name[0].isalpha() and 
                         any(f'{d}m' in market_name for d in range(200, 1000, 10))))
         
-        if is_greyhound:
-            greyhound_races.append(r)
-        else:
-            horse_races.append(r)
+        sport = 'greyhound' if is_greyhound else 'horse'
+        key = f"{sport}_{venue}"
+        
+        if key not in venue_races:
+            venue_races[key] = []
+        venue_races[key].append(r)
     
-    # Take mix of both sports (e.g., 3 horses + 2 greyhounds for max_races=5)
-    horses_to_take = min(len(horse_races), max(1, max_races // 2 + 1))  # Slightly favor horses
-    greyhounds_to_take = min(len(greyhound_races), max_races - horses_to_take)
+    # Sample races: Take 2-3 races per venue (favoring earlier races)
+    races_to_process = []
+    for venue_key, venue_race_list in venue_races.items():
+        # Sort by start time
+        sorted_races = sorted(venue_race_list, key=lambda x: x.get('start_time', ''))
+        # Take first 2 races from each venue (or all if less than 2)
+        races_to_process.extend(sorted_races[:2])
     
-    races_to_process = horse_races[:horses_to_take] + greyhound_races[:greyhounds_to_take]
+    # Count by sport
+    horse_count = sum(1 for r in races_to_process if not any(gv in r.get('venue', '') for gv in greyhound_venues))
+    greyhound_count = len(races_to_process) - horse_count
     
-    print(f"Processing {len(races_to_process)} races (max_races={max_races})")
-    print(f"  - {horses_to_take} horse races")
-    print(f"  - {greyhounds_to_take} greyhound races")
+    print(f"Smart sampling: {len(races_to_process)} races from {len(venue_races)} venues")
+    print(f"  - {horse_count} horse races")
+    print(f"  - {greyhound_count} greyhound races")
     
     analyzer = EnhancedAnalyzer()
     
