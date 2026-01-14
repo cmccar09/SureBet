@@ -137,19 +137,19 @@ def main():
             venue_races[key] = []
         venue_races[key].append(r)
     
-    # Sample races: Take 2-3 races per venue (favoring earlier races)
+    # Process ALL races per venue (no sampling limit)
     races_to_process = []
     for venue_key, venue_race_list in venue_races.items():
         # Sort by start time
         sorted_races = sorted(venue_race_list, key=lambda x: x.get('start_time', ''))
-        # Take first 2 races from each venue (or all if less than 2)
-        races_to_process.extend(sorted_races[:2])
+        # Take ALL races from each venue
+        races_to_process.extend(sorted_races)
     
     # Count by sport
     horse_count = sum(1 for r in races_to_process if not any(gv in r.get('venue', '') for gv in greyhound_venues))
     greyhound_count = len(races_to_process) - horse_count
     
-    print(f"Smart sampling: {len(races_to_process)} races from {len(venue_races)} venues")
+    print(f"Processing ALL races: {len(races_to_process)} races from {len(venue_races)} venues")
     print(f"  - {horse_count} horse races")
     print(f"  - {greyhound_count} greyhound races")
     
