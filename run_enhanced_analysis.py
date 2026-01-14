@@ -73,8 +73,8 @@ def save_selections_csv(selections: list, output_path: str):
 def main():
     """Main execution"""
     
-    # Find latest snapshot
-    snapshot_path = os.path.join('.', 'response_live.json')
+    # Use SNAPSHOT_FILE env var if set, otherwise default to response_live.json
+    snapshot_path = os.environ.get('SNAPSHOT_FILE', os.path.join('.', 'response_live.json'))
     if not os.path.exists(snapshot_path):
         print(f"ERROR: Snapshot not found: {snapshot_path}", file=sys.stderr)
         sys.exit(1)
@@ -137,19 +137,20 @@ def main():
             venue_races[key] = []
         venue_races[key].append(r)
     
-    # Process ALL races per venue (no sampling limit)
+    # Process 3 races per venue for balanced coverage without excessive runtime
     races_to_process = []
+    MAX_RACES_PER_VENUE = 3
     for venue_key, venue_race_list in venue_races.items():
         # Sort by start time
         sorted_races = sorted(venue_race_list, key=lambda x: x.get('start_time', ''))
-        # Take ALL races from each venue
-        races_to_process.extend(sorted_races)
+        # Take first 3 races from each venue
+        races_to_process.extend(sorted_races[:MAX_RACES_PER_VENUE])
     
     # Count by sport
     horse_count = sum(1 for r in races_to_process if not any(gv in r.get('venue', '') for gv in greyhound_venues))
     greyhound_count = len(races_to_process) - horse_count
     
-    print(f"Processing ALL races: {len(races_to_process)} races from {len(venue_races)} venues")
+    print(f"Processing {MAX_RACES_PER_VENUE} races per venue: {len(races_to_process)} races from {len(venue_races)} venues")
     print(f"  - {horse_count} horse races")
     print(f"  - {greyhound_count} greyhound races")
     

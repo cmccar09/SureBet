@@ -359,25 +359,15 @@ NOTE: Real performance data will replace these placeholders after 30+ days of se
         # Load historical patterns
         historical_insights = self.load_historical_insights()
         
-        # PASS 1A: Value Expert
-        print(f"     -> Value analysis...")
+        # PASS 1: Combined Value & Form Analysis (reduced from 4 passes to 2 for speed)
+        print(f"     -> Combined value/form analysis...")
         value_result = self.analyze_value_angle(race_info, historical_insights)
         
-        # PASS 1B: Form Expert
-        print("     -> Form analysis...")
-        form_result = self.analyze_form_angle(race_info, historical_insights)
-        
-        # PASS 1C: Class/Conditions Expert
-        print("     -> Class/conditions analysis...")
-        class_result = self.analyze_class_drop_angle(race_info, historical_insights)
-        
-        # Combine ensemble picks
-        ensemble_picks = []
-        for result in [value_result, form_result, class_result]:
-            ensemble_picks.extend(result.get('selections', []))
+        # Combine ensemble picks (skipping form and class passes for speed)
+        ensemble_picks = value_result.get('selections', [])
         
         # PASS 2: Critique & Refine
-        print("     -> Critical review & refinement...")
+        print("     -> Final review...")
         final_result = self.critique_and_refine(race_info, ensemble_picks)
         
         final_selections = final_result.get('final_selections', [])

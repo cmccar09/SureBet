@@ -202,37 +202,9 @@ $combined = @{
 $combined | ConvertTo-Json -Depth 100 | Set-Content $snapshotFile
 Write-Log "    - Total races: $($combined.total_races) ($($horseRaces.Count) horses + $($dogRaces.Count) greyhounds)" "Green"
 
-# STEP 2.1: Capture odds snapshot for movement tracking
-Write-Log "  Capturing odds snapshot for movement analysis..." "Yellow"
-& $pythonExe "$PSScriptRoot\odds_movement_tracker.py" --snapshot $snapshotFile --capture 2>&1 | Tee-Object -Append -FilePath $logFile
-
-# STEP 2.2: Enrich with Racing Post data (form, ratings, trainer stats)
-Write-Log "  Enriching with Racing Post data (form, ratings, trainer stats)..." "Yellow"
-$enrichedFile = "$PSScriptRoot\response_live_enriched.json"
-& $pythonExe "$PSScriptRoot\enhanced_racing_data_fetcher.py" --snapshot $snapshotFile --output $enrichedFile 2>&1 | Tee-Object -Append -FilePath $logFile
-
-# Check if enrichment succeeded, fallback to original if failed
-if (-not (Test-Path $enrichedFile)) {
-    Write-Log "  WARNING: Racing Post enrichment failed - using Betfair data only" "Yellow"
-    $enrichedFile = $snapshotFile
-}
-
-# STEP 2.3: Add odds movement analysis
-Write-Log "  Analyzing odds movements for steam/drift signals..." "Yellow"
-$finalFile = "$PSScriptRoot\response_live_final.json"
-& $pythonExe "$PSScriptRoot\odds_movement_tracker.py" --snapshot $enrichedFile --analyze 2>&1 | Tee-Object -Append -FilePath $logFile
-
-# Check if movement analysis succeeded, fallback to enriched file
-if (Test-Path "$PSScriptRoot\response_live_enriched_with_movement.json") {
-    $finalFile = "$PSScriptRoot\response_live_enriched_with_movement.json"
-    Write-Log "  Odds movement data added successfully" "Green"
-} elseif (Test-Path $enrichedFile) {
-    $finalFile = $enrichedFile
-    Write-Log "  Using enriched data without movement analysis" "Yellow"
-} else {
-    $finalFile = $snapshotFile
-    Write-Log "  Using basic Betfair data only" "Yellow"
-}
+# STEP 2.1: Skip enrichment steps temporarily - they keep crashing
+Write-Log "  Using Betfair data only (enrichment disabled)" "Yellow"
+$finalFile = $snapshotFile
 
 Write-Log "  Applying ENHANCED multi-pass AI analysis to enriched markets..." "Yellow"
 # Update snapshot env variable for enhanced analysis to use
