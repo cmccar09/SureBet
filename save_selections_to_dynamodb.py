@@ -879,7 +879,7 @@ def main():
     parser = argparse.ArgumentParser(description="Save selections to DynamoDB SureBetBets table")
     parser.add_argument("--selections", type=str, required=True, help="Path to selections CSV")
     parser.add_argument("--table", type=str, default="", help="DynamoDB table name (default: SureBetBets)")
-    parser.add_argument("--region", type=str, default="us-east-1", help="AWS region")
+    parser.add_argument("--region", type=str, default="eu-west-1", help="AWS region (default: eu-west-1)")
     parser.add_argument("--backup", type=str, default="", help="JSON backup path (optional)")
     parser.add_argument("--dry_run", action="store_true", help="Don't actually save to DynamoDB")
     parser.add_argument("--min_roi", type=float, default=0.0, help="Minimum ROI threshold in percentage (default: 0.0 - breakeven)")
