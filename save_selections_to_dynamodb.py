@@ -910,9 +910,9 @@ def main():
     greyhound_venues = ['Monmore', 'Central Park', 'Perry Barr', 'Romford', 'Crayford', 'Belle Vue', 
                         'Sheffield', 'Newcastle (Greyhounds)', 'Sunderland', 'Harlow', 'Henlow', 'Oxford']
     
-    # Sport-specific ROI thresholds (QUANT FRAMEWORK: +5% minimum EV for quality)
-    horse_min_roi = 5.0  # +5% minimum EV for horses (was 0%)
-    greyhound_min_roi = 2.0  # +2% minimum EV for greyhounds (was -15%)
+    # Sport-specific ROI thresholds (Lower to allow more picks through)
+    horse_min_roi = 0.0  # Break-even for horses (was 5.0% - too strict)
+    greyhound_min_roi = 0.0  # Break-even for greyhounds (was 2.0%)
     
     print(f"\nFormatting for DynamoDB...")
     print(f"  Horse minimum ROI: {horse_min_roi}%")
