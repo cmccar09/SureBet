@@ -23,8 +23,8 @@ from learning_engine import (
     update_prompt_with_learnings
 )
 
-def load_results_from_dynamodb(days_back=30):
-    """Load bet results from DynamoDB"""
+def load_results_from_dynamodb(days_back=7):
+    """Load bet results from DynamoDB (default: last 7 days for weekly learning)"""
     
     dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
     table = dynamodb.Table('SureBetBets')

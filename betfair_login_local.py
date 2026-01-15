@@ -28,14 +28,14 @@ def login_with_cert():
     key_path = 'betfair-client.key'
     
     if not os.path.exists(cert_path):
-        print(f"❌ Certificate not found: {cert_path}")
+        print(f"ERROR: Certificate not found: {cert_path}")
         return None
     
     if not os.path.exists(key_path):
-        print(f"❌ Private key not found: {key_path}")
+        print(f"ERROR: Private key not found: {key_path}")
         return None
     
-    print(f"🔐 Logging in with certificate...")
+    print(f"Logging in with certificate...")
     print(f"   Username: {username}")
     print(f"   Cert: {cert_path}")
     
@@ -70,7 +70,7 @@ def login_with_cert():
             
             if result.get('loginStatus') == 'SUCCESS':
                 session_token = result.get('sessionToken')
-                print(f"\n✅ Login successful!")
+                print(f"\n[OK] Login successful!")
                 print(f"   Session token: {session_token[:40]}...")
                 
                 # Update betfair-creds.json with new token
@@ -78,20 +78,20 @@ def login_with_cert():
                 with open('betfair-creds.json', 'w') as f:
                     json.dump(creds, f, indent=2)
                 
-                print(f"   ✓ Updated betfair-creds.json")
+                print(f"   [OK] Updated betfair-creds.json")
                 
                 return session_token
             else:
-                print(f"\n❌ Login failed: {result.get('loginStatus')}")
+                print(f"\nERROR: Login failed: {result.get('loginStatus')}")
                 print(f"   Error: {result.get('error', 'Unknown')}")
                 return None
         else:
-            print(f"\n❌ HTTP Error: {response.status_code}")
+            print(f"\nERROR: HTTP Error: {response.status_code}")
             print(f"   Response: {response.text[:500]}")
             return None
             
     except Exception as e:
-        print(f"\n❌ Exception: {e}")
+        print(f"\nERROR: Exception: {e}")
         import traceback
         traceback.print_exc()
         return None

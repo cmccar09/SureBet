@@ -13,8 +13,8 @@ from collections import defaultdict
 import boto3
 from decimal import Decimal
 
-def load_historical_results(days_back=30):
-    """Load all results from last N days"""
+def load_historical_results(days_back=7):
+    """Load all results from last N days (default: 7 for weekly analysis)"""
     history_dir = Path("./history")
     results = []
     
@@ -131,12 +131,17 @@ def analyze_performance_patterns(results):
     
     return analysis
 
-def generate_learning_insights(analysis):
-    """Generate actionable insights from performance analysis"""
+def generate_learning_insights(analysis, min_sample_size=20):
+    """Generate actionable insights from performance analysis
+    
+    Args:
+        analysis: Performance data from analyze_performance_patterns
+        min_sample_size: Minimum number of bets required before making recommendations (default: 20)
+    """
     
     insights = []
     
-    # Odds range performance
+    # Odds range performance (only if sufficient sample size)
     print("\n=== ODDS RANGE ANALYSIS ===")
     for odds_range, stats in sorted(analysis['by_odds_range'].items()):
         if stats['total'] > 0:
@@ -144,12 +149,14 @@ def generate_learning_insights(analysis):
             roi = (stats['roi'] / stats['total']) * 100
             print(f"{odds_range}: {stats['wins']}/{stats['total']} wins ({win_rate:.1f}%) ROI: {roi:+.1f}%")
             
-            if roi < -10:
-                insights.append(f"AVOID {odds_range} selections - losing {-roi:.0f}% ROI")
-            elif roi > 15:
-                insights.append(f"FOCUS on {odds_range} selections - strong {roi:.0f}% ROI")
+            # Only generate insights if we have enough data (min 20 bets)
+            if stats['total'] >= min_sample_size:
+                if roi < -50:
+                    insights.append(f"AVOID {odds_range} selections - losing {-roi:.0f}% ROI (n={stats['total']})")
+                elif roi > 20:
+                    insights.append(f"FOCUS on {odds_range} selections - strong {roi:.0f}% ROI (n={stats['total']})")
     
-    # Bet type performance
+    # Bet type performance (only with sufficient sample)
     print("\n=== BET TYPE ANALYSIS ===")
     for bet_type, stats in analysis['by_bet_type'].items():
         if stats['total'] > 0:
@@ -158,30 +165,32 @@ def generate_learning_insights(analysis):
             print(f"{bet_type}: {stats['wins']} wins, {stats['places']} places from {stats['total']} bets")
             print(f"  Win rate: {win_rate:.1f}%, Place rate: {place_rate:.1f}%")
             
-            if bet_type == 'EW' and place_rate < 40:
-                insights.append(f"Each-way place rate too low ({place_rate:.0f}%) - tighten EW criteria")
-            elif bet_type == 'WIN' and win_rate < 20:
-                insights.append(f"WIN bet strike rate too low ({win_rate:.0f}%) - need stronger fancies")
+            # Only flag issues if we have minimum 15 bets of this type
+            if stats['total'] >= 15:
+                if bet_type == 'EW' and place_rate < 40:
+                    insights.append(f"Each-way place rate too low ({place_rate:.0f}%) - tighten EW criteria (n={stats['total']})")
+                elif bet_type == 'WIN' and win_rate < 20:
+                    insights.append(f"WIN bet strike rate too low ({win_rate:.0f}%) - need stronger fancies (n={stats['total']})")
     
-    # Course performance
+    # Course performance (need at least 5 bets at a venue)
     print("\n=== COURSE PERFORMANCE ===")
     best_courses = []
     worst_courses = []
     for course, stats in sorted(analysis['by_course'].items(), key=lambda x: x[1]['wins'], reverse=True):
-        if stats['total'] >= 3:  # Minimum sample
+        if stats['total'] >= 5:  # Require minimum 5 bets at venue before judging
             win_rate = (stats['wins'] / stats['total']) * 100
             if win_rate >= 40:
-                best_courses.append(course)
-            elif win_rate < 15:
-                worst_courses.append(course)
+                best_courses.append(f"{course} ({stats['total']} bets)")
+            elif win_rate < 15 and stats['total'] >= 8:  # Need 8+ bets to declare venue "bad"
+                worst_courses.append(f"{course} ({stats['total']} bets)")
     
     if best_courses:
         print(f"Best courses: {', '.join(best_courses[:5])}")
-        insights.append(f"Prioritize selections at: {', '.join(best_courses[:3])}")
+        insights.append(f"Prioritize selections at: {', '.join([c.split(' ')[0] for c in best_courses[:3]])}")
     
     if worst_courses:
         print(f"Worst courses: {', '.join(worst_courses[:5])}")
-        insights.append(f"Be cautious at: {', '.join(worst_courses[:3])}")
+        insights.append(f"Be cautious at: {', '.join([c.split(' ')[0] for c in worst_courses[:3]])}")
     
     # Common mistakes
     print("\n=== TOP MISTAKES (High confidence losers) ===")
@@ -232,7 +241,7 @@ def update_prompt_with_learnings(insights):
 
 === LEARNED INSIGHTS (Updated {datetime.now().strftime('%Y-%m-%d')}) ===
 
-Based on analysis of last 30 days performance:
+Based on analysis of last 7 days performance (weekly learning cycle):
 
 """
     

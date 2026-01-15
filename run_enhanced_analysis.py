@@ -89,10 +89,10 @@ def main():
     
     print(f"Found {len(races)} races")
     
-    # Filter races to next 4 hours only
+    # Filter races to next 1 hour only (FOCUSED ANALYSIS)
     from datetime import datetime, timedelta, timezone
     now = datetime.now(timezone.utc)
-    four_hours_ahead = now + timedelta(hours=4)
+    four_hours_ahead = now + timedelta(hours=1)
     
     races_next_4h = []
     for r in races:
@@ -110,49 +110,29 @@ def main():
             # No timestamp, include it
             races_next_4h.append(r)
     
-    print(f"Filtered to {len(races_next_4h)} races in next 4 hours")
+    print(f"Filtered to {len(races_next_4h)} races in next 1 hour")
     
-    # SMART SAMPLING: Process strategically to cover all venues but keep cost down
-    # Group by venue to ensure we analyze at least one race from each track
-    from datetime import datetime, timedelta, timezone
-    
+    # PROCESS ALL RACES - Detailed analysis for every race in the next hour
+    # Filter to horses only (skip greyhounds)
     greyhound_venues = ['Monmore', 'Central Park', 'Perry Barr', 'Romford', 'Crayford', 'Belle Vue', 
                         'Sheffield', 'Newcastle (Greyhounds)', 'Sunderland', 'Harlow', 'Henlow']
     
-    # Organize races by venue and sport
-    venue_races = {}
+    races_to_process = []
     for r in races_next_4h:
         venue = r.get('venue', 'Unknown')
-        market_name = r.get('market_name', '')
-        
-        # Determine sport
-        is_greyhound = (venue in greyhound_venues or 
-                       (len(market_name) > 0 and market_name[0].isalpha() and 
-                        any(f'{d}m' in market_name for d in range(200, 1000, 10))))
-        
-        sport = 'greyhound' if is_greyhound else 'horse'
-        key = f"{sport}_{venue}"
-        
-        if key not in venue_races:
-            venue_races[key] = []
-        venue_races[key].append(r)
+        # Skip greyhound races
+        if venue not in greyhound_venues:
+            races_to_process.append(r)
     
-    # Process 3 races per venue for balanced coverage without excessive runtime
-    races_to_process = []
-    MAX_RACES_PER_VENUE = 3
-    for venue_key, venue_race_list in venue_races.items():
-        # Sort by start time
-        sorted_races = sorted(venue_race_list, key=lambda x: x.get('start_time', ''))
-        # Take first 3 races from each venue
-        races_to_process.extend(sorted_races[:MAX_RACES_PER_VENUE])
+    # Sort by start time
+    races_to_process.sort(key=lambda x: x.get('start_time', ''))
     
-    # Count by sport
-    horse_count = sum(1 for r in races_to_process if not any(gv in r.get('venue', '') for gv in greyhound_venues))
-    greyhound_count = len(races_to_process) - horse_count
+    horse_count = len(races_to_process)
+    greyhound_count = 0
     
-    print(f"Processing {MAX_RACES_PER_VENUE} races per venue: {len(races_to_process)} races from {len(venue_races)} venues")
+    print(f"Processing ALL races in next hour: {len(races_to_process)} races (horses only)")
     print(f"  - {horse_count} horse races")
-    print(f"  - {greyhound_count} greyhound races")
+    print(f"  - {greyhound_count} greyhound races (skipped)")
     
     analyzer = EnhancedAnalyzer()
     
@@ -169,16 +149,16 @@ def main():
             traceback.print_exc()
             continue
     
-    # Rank all selections by confidence and take top 5
-    all_selections.sort(key=lambda x: x.get('confidence', 0), reverse=True)
-    top_selections = all_selections[:5]
+    # Use ALL selections from every race (no top 5 filtering)
+    top_selections = all_selections
     
     print(f"\n{'='*60}")
-    print(f"SUMMARY: {len(all_selections)} selections generated")
-    print(f"Ranking by confidence...")
-    print(f"[OK] Selected top 5 picks:")
-    for i, sel in enumerate(top_selections, 1):
-        print(f"  {i}. {sel.get('runner_name', 'Unknown')} @ {sel.get('venue', 'Unknown')} (p_win: {sel.get('p_win', 0):.2f})")
+    print(f"SUMMARY: {len(all_selections)} selections generated from {len(races_to_process)} races")
+    print(f"[OK] All picks:")
+    for i, sel in enumerate(top_selections[:10], 1):  # Show first 10 for preview
+        print(f"  {i}. {sel.get('runner_name', 'Unknown')} @ {sel.get('venue', 'Unknown')} (p_win: {sel.get('p_win', 0):.2f}, confidence: {sel.get('confidence', 0)})")
+    if len(top_selections) > 10:
+        print(f"  ... and {len(top_selections) - 10} more")
     
     # Save to history folder
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -193,7 +173,7 @@ def main():
     save_selections_csv(top_selections, 'today_picks.csv')
     
     print(f"\n{'='*60}")
-    print("SUMMARY: 5 selections generated")
+    print(f"SUMMARY: {len(top_selections)} selections generated (one per race)")
     print(f"Output: {output_path}")
     print(f"{'='*60}\n")
 

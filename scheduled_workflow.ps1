@@ -65,7 +65,7 @@ if (-not $awsConfigured -and -not $env:ANTHROPIC_API_KEY -and -not $env:OPENAI_A
 
 $pythonExe = "C:/Users/charl/OneDrive/futuregenAI/Betting/.venv/Scripts/python.exe"
 
-# STEP 0: Refresh Betfair session token (every 4 hours or if stale)
+# STEP 0: Refresh Betfair session token using CERTIFICATE authentication
 $credFile = "$PSScriptRoot\betfair-creds.json"
 if (Test-Path $credFile) {
     $credModTime = (Get-Item $credFile).LastWriteTime
@@ -75,16 +75,17 @@ if (Test-Path $credFile) {
         Write-Log "`nSTEP 0: Refreshing Betfair session token..." "Cyan"
         Write-Log "  Last refresh: $($hoursSinceRefresh.ToString('0.0')) hours ago" "Yellow"
         
-        & $pythonExe "$PSScriptRoot\refresh_token_simple.py" 2>&1 | Tee-Object -Append -FilePath $logFile
+        # Use certificate-based authentication (no password required)
+        & $pythonExe "$PSScriptRoot\betfair_login_local.py" 2>&1 | Tee-Object -Append -FilePath $logFile
         
         if ($LASTEXITCODE -eq 0) {
-            Write-Log "  Session token refreshed successfully" "Green"
+            Write-Log "  Session token refreshed successfully (certificate auth)" "Green"
             # Reload credentials
             $creds = Get-Content "$PSScriptRoot\betfair-creds.json" | ConvertFrom-Json
             $env:BETFAIR_APP_KEY = $creds.app_key
             $env:BETFAIR_SESSION = $creds.session_token
         } else {
-            Write-Log "  WARNING: Token refresh failed - continuing with existing token" "Yellow"
+            Write-Log "  WARNING: Certificate login failed - continuing with existing token" "Yellow"
         }
     } else {
         Write-Log "  Betfair token is fresh ($($hoursSinceRefresh.ToString('0.0')) hours old)" "Gray"

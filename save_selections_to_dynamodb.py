@@ -910,9 +910,9 @@ def main():
     greyhound_venues = ['Monmore', 'Central Park', 'Perry Barr', 'Romford', 'Crayford', 'Belle Vue', 
                         'Sheffield', 'Newcastle (Greyhounds)', 'Sunderland', 'Harlow', 'Henlow', 'Oxford']
     
-    # Sport-specific ROI thresholds (Lower to allow more picks through)
-    horse_min_roi = 0.0  # Break-even for horses (was 5.0% - too strict)
-    greyhound_min_roi = 0.0  # Break-even for greyhounds (was 2.0%)
+    # Sport-specific ROI thresholds (DISABLED - focus on confidence instead)
+    horse_min_roi = 0.0  # Accept all horses (ROI filtering disabled)
+    greyhound_min_roi = 0.0  # Accept all greyhounds (ROI filtering disabled)
     
     print(f"\nFormatting for DynamoDB...")
     print(f"  Horse minimum ROI: {horse_min_roi}%")
@@ -1012,9 +1012,9 @@ def main():
             validation_rejected += 1
             continue
         
-        # Rule 5: Minimum combined confidence
-        if combined_confidence < 2:
-            print(f"REJECTED: {horse} - Combined confidence {combined_confidence}% < 2%")
+        # Rule 5: Minimum combined confidence (RELAXED - allow all confidence levels)
+        if combined_confidence < 0:
+            print(f"REJECTED: {horse} - Invalid confidence {combined_confidence}%")
             validation_rejected += 1
             continue
         

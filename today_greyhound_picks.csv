@@ -1,6 +1,6 @@
 runner_name,selection_id,market_id,market_name,venue,start_time_dublin,p_win,p_place,ew_places,ew_fraction,tags,why_now
-Book Launch,85339997,1.252661986,A12 400m,Romford,2026-01-13T17:31:00.000Z,0.48,0.85,2,0.25,favorite;enhanced_analysis,Shortest odds and perfect recent form
-Gulf Breeze,85726012,1.252662485,A10 480m,Monmore,2026-01-13T17:01:00.000Z,0.47,0.85,2,0.25,favorite,Shortest odds and perfect recent form
-Drovers Romany,64437383,1.252661986,A12 400m,Romford,2026-01-13T17:31:00.000Z,0.46,0.82,2,0.25,favorite;enhanced_analysis,Second shortest odds and perfect recent form
-Airport Star,60159654,1.252661982,A8 400m,Romford,2026-01-13T16:53:00.000Z,0.44,0.75,2,0.25,favorite;enhanced_analysis,Consistent form with 5 consecutive wins; favorable odds compared to win probability
-Droopys Standby,66378815,1.252661984,S1 575m,Romford,2026-01-13T17:12:00.000Z,0.44,0.75,2,0.25,favorite,Shortest odds and perfect recent form
+Prestige Journey,90063200,1.252701922,A4 462m,Yarmouth,2026-01-14T21:23:00.000Z,0.58,0.85,2,0.25,favorite,Strong form with 5 consecutive wins
+Bluejig Tank,57196447,1.252701922,A4 462m,Yarmouth,2026-01-14T21:23:00.000Z,0.49,0.75,2,0.25,value,Consistent form with 5 consecutive wins
+Drumdoit Goldie,62600244,1.252701922,A4 462m,Yarmouth,2026-01-14T21:23:00.000Z,0.49,0.75,2,0.25,value,Perfect recent form with 5 wins
+Howsyerday Dolly,89321168,1.252702611,D5 238m,Harlow,2026-01-14T20:52:00.000Z,0.49,0.85,2,0.25,favorite;enhanced_analysis,Perfect form; lowest odds suggest strongest chance
+Footfield Magpie,68332286,1.252702611,D5 238m,Harlow,2026-01-14T20:52:00.000Z,0.46,0.82,2,0.25,mid_price;enhanced_analysis,Perfect form; joint second favorite

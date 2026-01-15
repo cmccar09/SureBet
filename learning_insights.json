@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-01-13T16:30:08.494926",
-  "sample_size": 58,
-  "date_range": "20251229 to 20260112",
+  "generated_at": "2026-01-15T13:54:04.522219",
+  "sample_size": 68,
+  "date_range": "20251229 to 20260114",
   "overall_stats": {
-    "total_bets": 58,
-    "wins": 12,
-    "win_rate": 0.20689655172413793,
-    "places": 12,
-    "place_rate": 0.20689655172413793,
-    "avg_p_win": 0.2818965517241379
+    "total_bets": 68,
+    "wins": 16,
+    "win_rate": 0.23529411764705882,
+    "places": 16,
+    "place_rate": 0.23529411764705882,
+    "avg_p_win": 0.2950000000000001
   },
   "winning_patterns": [
     {
@@ -21,8 +21,8 @@
   ],
   "failing_patterns": [],
   "recommendations": [
-    "CALIBRATED: Win rate (20.7%) matches predictions (28.2%). Probability model is well-calibrated.",
-    "EW bets: 49 bets, 18.4% place rate"
+    "CALIBRATED: Win rate (23.5%) matches predictions (29.5%). Probability model is well-calibrated.",
+    "EW bets: 52 bets, 23.1% place rate"
   ],
-  "prompt_guidance": "\nHISTORICAL PERFORMANCE INSIGHTS (Last 58 bets):\n\nWHAT'S WORKING:\n- BELOW_THRESHOLD: 27.3% win rate (expected 28.0%)\n\nRECOMMENDATIONS:\n- CALIBRATED: Win rate (20.7%) matches predictions (28.2%). Probability model is well-calibrated.\n- EW bets: 49 bets, 18.4% place rate\n"
+  "prompt_guidance": "\nHISTORICAL PERFORMANCE INSIGHTS (Last 68 bets):\n\nWHAT'S WORKING:\n- BELOW_THRESHOLD: 27.3% win rate (expected 28.0%)\n\nRECOMMENDATIONS:\n- CALIBRATED: Win rate (23.5%) matches predictions (29.5%). Probability model is well-calibrated.\n- EW bets: 52 bets, 23.1% place rate\n"
 }
