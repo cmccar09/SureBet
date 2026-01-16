@@ -8,6 +8,7 @@ import os
 import sys
 import json
 import csv
+import argparse
 from pathlib import Path
 from datetime import datetime
 
@@ -70,8 +71,12 @@ def save_selections_csv(selections: list, output_path: str):
     
     print(f"[OK] Saved {len(selections)} selections to: {output_path}")
 
-def main():
-    """Main execution"""
+def main(hours=1):
+    """Main execution
+    
+    Args:
+        hours: Time window in hours to analyze (default: 1)
+    """
     
     # Use SNAPSHOT_FILE env var if set, otherwise default to response_live.json
     snapshot_path = os.environ.get('SNAPSHOT_FILE', os.path.join('.', 'response_live.json'))
@@ -89,36 +94,36 @@ def main():
     
     print(f"Found {len(races)} races")
     
-    # Filter races to next 1 hour only (FOCUSED ANALYSIS)
+    # Filter races to next X hours
     from datetime import datetime, timedelta, timezone
     now = datetime.now(timezone.utc)
-    four_hours_ahead = now + timedelta(hours=1)
+    time_ahead = now + timedelta(hours=hours)
     
-    races_next_4h = []
+    races_in_window = []
     for r in races:
         start_time_str = r.get('start_time', '')
         if start_time_str:
             try:
                 # Parse ISO format timestamp
                 start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
-                if now <= start_time <= four_hours_ahead:
-                    races_next_4h.append(r)
+                if now <= start_time <= time_ahead:
+                    races_in_window.append(r)
             except:
                 # If parsing fails, include the race to be safe
-                races_next_4h.append(r)
+                races_in_window.append(r)
         else:
             # No timestamp, include it
-            races_next_4h.append(r)
+            races_in_window.append(r)
     
-    print(f"Filtered to {len(races_next_4h)} races in next 1 hour")
+    print(f"Filtered to {len(races_in_window)} races in next {hours} hour(s)")
     
-    # PROCESS ALL RACES - Detailed analysis for every race in the next hour
+    # PROCESS ALL RACES - Detailed analysis for every race in the time window
     # Filter to horses only (skip greyhounds)
     greyhound_venues = ['Monmore', 'Central Park', 'Perry Barr', 'Romford', 'Crayford', 'Belle Vue', 
                         'Sheffield', 'Newcastle (Greyhounds)', 'Sunderland', 'Harlow', 'Henlow']
     
     races_to_process = []
-    for r in races_next_4h:
+    for r in races_in_window:
         venue = r.get('venue', 'Unknown')
         # Skip greyhound races
         if venue not in greyhound_venues:
@@ -130,7 +135,7 @@ def main():
     horse_count = len(races_to_process)
     greyhound_count = 0
     
-    print(f"Processing ALL races in next hour: {len(races_to_process)} races (horses only)")
+    print(f"Processing ALL races in next {hours} hour(s): {len(races_to_process)} races (horses only)")
     print(f"  - {horse_count} horse races")
     print(f"  - {greyhound_count} greyhound races (skipped)")
     
@@ -178,4 +183,10 @@ def main():
     print(f"{'='*60}\n")
 
 if __name__ == "__main__":
-    main()
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Run enhanced betting analysis')
+    parser.add_argument('--hours', type=int, default=1, help='Time window in hours (default: 1)')
+    args = parser.parse_args()
+    
+    # Pass hours to main
+    main(hours=args.hours)

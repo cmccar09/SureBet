@@ -158,6 +158,20 @@ if ($currentHour -ge 22) {  # 10pm or later
 # STEP 2: Generate today's picks
 Write-Log "`nSTEP 2: Generating today's picks..." "Cyan"
 
+# Determine time window based on current time
+$currentTime = Get-Date -Format "HH:mm"
+$currentHour = (Get-Date).Hour
+$currentMinute = (Get-Date).Minute
+
+# Check if this is the 10:30am full analysis run
+$analysisHours = 1  # Default: 1-hour analysis
+if ($currentHour -eq 10 -and $currentMinute -ge 25 -and $currentMinute -le 35) {
+    $analysisHours = 4  # Full 4-hour analysis at 10:30am
+    Write-Log "  FULL MORNING ANALYSIS: Analyzing next $analysisHours hours" "Cyan"
+} else {
+    Write-Log "  Quick scan: Analyzing next $analysisHours hour" "Gray"
+}
+
 # Enhanced analysis saves directly to today_picks.csv
 $outputCsv = "$PSScriptRoot\today_picks.csv"
 
@@ -200,7 +214,7 @@ $finalFile = $snapshotFile
 Write-Log "  Applying ENHANCED multi-pass AI analysis to enriched markets..." "Yellow"
 # Update snapshot env variable for enhanced analysis to use
 $env:SNAPSHOT_FILE = $finalFile
-& $pythonExe "$PSScriptRoot\run_enhanced_analysis.py" 2>&1 | Tee-Object -Append -FilePath $logFile
+& $pythonExe "$PSScriptRoot\run_enhanced_analysis.py" --hours $analysisHours 2>&1 | Tee-Object -Append -FilePath $logFile
 
 if ($LASTEXITCODE -ne 0) {
     Write-Log "ERROR: Failed to generate selections" "Red"
@@ -264,8 +278,8 @@ if ($currentHour -eq 18) {
 Write-Log "`n========================================" "Cyan"
 Write-Log "WORKFLOW COMPLETE" "Green"
 Write-Log "========================================" "Cyan"
-Write-Log "Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')"
-Write-Log "Log file: $logFile"
+Write-Log "Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" "Cyan"
+Write-Log "Log file: $logFile" "Cyan"
 Write-Log "========================================" "Cyan"
 # Create execution marker for health checks
 $executionLog = "$PSScriptRoot\workflow_execution.log"
@@ -278,11 +292,11 @@ if (Test-Path "$PSScriptRoot\daily_health_check.ps1") {
     try {
         & "$PSScriptRoot\daily_health_check.ps1"
         if ($LASTEXITCODE -eq 0) {
-            Write-Log "✓ Health check passed" "Green"
+            Write-Log "[OK] Health check passed" "Green"
         } else {
-            Write-Log "⚠ Health check found issues - check logs" "Yellow"
+            Write-Log "[WARNING] Health check found issues - check logs" "Yellow"
         }
     } catch {
-        Write-Log "⚠ Health check failed to run: $_" "Yellow"
+        Write-Log "[WARNING] Health check failed to run: $_" "Yellow"
     }
 }
