@@ -792,8 +792,8 @@ def save_to_json_backup(bets: list[dict], output_path: str):
 def filter_picks_per_race(bets: list) -> tuple:
     """
     Filter picks to enforce race-level rules:
-    - Maximum 2 picks per race
-    - If 2 picks for same race, one must be WIN and one must be EW
+    - Maximum 1 pick per race (QUALITY OVER QUANTITY)
+    - Keep the pick with highest (combined_confidence * p_win) score
     
     Returns: (filtered_bets, removed_count)
     """
@@ -815,63 +815,28 @@ def filter_picks_per_race(bets: list) -> tuple:
     removed_count = 0
     
     for race_key, race_bets in races.items():
-        if len(race_bets) <= 2:
-            # Check if we have 2 picks with same bet type
-            if len(race_bets) == 2:
-                bet_types = [bet.get('bet_type', 'WIN') for bet in race_bets]
-                
-                # If both are same type, keep only the higher decision_score one
-                if bet_types[0] == bet_types[1]:
-                    # Sort by decision_score descending
-                    sorted_bets = sorted(race_bets, key=lambda x: float(x.get('decision_score', 0)), reverse=True)
-                    filtered_bets.append(sorted_bets[0])
-                    removed_count += 1
-                    print(f"  REMOVED: {sorted_bets[1]['horse']} - duplicate {bet_types[0]} type (kept higher scoring pick)")
-                else:
-                    # Different types (WIN and EW) - keep both
-                    filtered_bets.extend(race_bets)
-            else:
-                # Only 1 pick for this race - keep it
-                filtered_bets.extend(race_bets)
+        if len(race_bets) == 1:
+            # Only 1 pick for this race - keep it
+            filtered_bets.extend(race_bets)
         else:
-            # More than 2 picks for this race
-            # Sort by decision_score and keep top 2
-            sorted_bets = sorted(race_bets, key=lambda x: float(x.get('decision_score', 0)), reverse=True)
+            # Multiple picks for this race - keep ONLY the best one
+            # Calculate quality score: combined_confidence * p_win
+            for bet in race_bets:
+                conf = bet.get('combined_confidence', 0)
+                p_win = bet.get('p_win', 0)
+                bet['_quality_score'] = conf * p_win
             
-            # Check if top 2 have different bet types
-            top_two = sorted_bets[:2]
-            bet_types = [bet.get('bet_type', 'WIN') for bet in top_two]
+            # Sort by quality score descending
+            sorted_bets = sorted(race_bets, key=lambda x: float(x.get('_quality_score', 0)), reverse=True)
             
-            if bet_types[0] != bet_types[1]:
-                # Different types - perfect, keep both
-                filtered_bets.extend(top_two)
-                removed_count += len(sorted_bets) - 2
-                for removed_bet in sorted_bets[2:]:
-                    print(f"  REMOVED: {removed_bet['horse']} - exceeded 2 picks per race limit")
-            else:
-                # Both same type - need to find one with different type
-                kept_bets = [top_two[0]]  # Keep highest scoring
-                
-                # Look for best pick with different type
-                different_type_bet = None
-                for bet in sorted_bets[1:]:
-                    if bet.get('bet_type', 'WIN') != bet_types[0]:
-                        different_type_bet = bet
-                        break
-                
-                if different_type_bet:
-                    kept_bets.append(different_type_bet)
-                    print(f"  KEPT: {kept_bets[0]['horse']} ({bet_types[0]}) + {different_type_bet['horse']} ({different_type_bet.get('bet_type')})")
-                else:
-                    # No different type available, just keep the top one
-                    print(f"  KEPT: Only {kept_bets[0]['horse']} ({bet_types[0]}) - no different bet type available")
-                
-                filtered_bets.extend(kept_bets)
-                removed_count += len(sorted_bets) - len(kept_bets)
-                
-                for removed_bet in sorted_bets:
-                    if removed_bet not in kept_bets:
-                        print(f"  REMOVED: {removed_bet['horse']} - race limit + bet type rules")
+            # Keep only the top one
+            best_bet = sorted_bets[0]
+            filtered_bets.append(best_bet)
+            removed_count += len(sorted_bets) - 1
+            
+            print(f"  KEPT: {best_bet['horse']} ({best_bet.get('bet_type')}) - quality score: {best_bet['_quality_score']:.2f}")
+            for removed_bet in sorted_bets[1:]:
+                print(f"  REMOVED: {removed_bet['horse']} - lower quality score ({removed_bet['_quality_score']:.2f})")
     
     return filtered_bets, removed_count
 
@@ -910,9 +875,9 @@ def main():
     greyhound_venues = ['Monmore', 'Central Park', 'Perry Barr', 'Romford', 'Crayford', 'Belle Vue', 
                         'Sheffield', 'Newcastle (Greyhounds)', 'Sunderland', 'Harlow', 'Henlow', 'Oxford']
     
-    # Sport-specific ROI thresholds (DISABLED - focus on confidence instead)
-    horse_min_roi = 0.0  # Accept all horses (ROI filtering disabled)
-    greyhound_min_roi = 0.0  # Accept all greyhounds (ROI filtering disabled)
+    # Sport-specific ROI thresholds (ENABLED - quality control)
+    horse_min_roi = 5.0  # Minimum 5% ROI for horses
+    greyhound_min_roi = 5.0  # Minimum 5% ROI for greyhounds
     
     print(f"\nFormatting for DynamoDB...")
     print(f"  Horse minimum ROI: {horse_min_roi}%")
@@ -1012,9 +977,16 @@ def main():
             validation_rejected += 1
             continue
         
-        # Rule 5: Minimum combined confidence (RELAXED - allow all confidence levels)
-        if combined_confidence < 0:
-            print(f"REJECTED: {horse} - Invalid confidence {combined_confidence}%")
+        # Rule 5: Minimum combined confidence (quality threshold)
+        if combined_confidence < 30:
+            print(f"REJECTED: {horse} - Confidence {combined_confidence}% < 30% minimum")
+            validation_rejected += 1
+            continue
+        
+        # Rule 6: Minimum win probability (20%)
+        p_win = bet.get('p_win', 0)
+        if p_win < 0.20:
+            print(f"REJECTED: {horse} - Win probability {p_win:.1%} < 20% minimum")
             validation_rejected += 1
             continue
         
@@ -1033,10 +1005,10 @@ def main():
     print(f"Remaining picks: {len(bets)}")
     
     # Apply race-level filtering rules
-    print(f"\nApplying race-level filtering (max 2 picks/race, mixed types)...")
+    print(f"\nApplying race-level filtering (BEST 1 pick per race only)...")
     bets, race_filtered = filter_picks_per_race(bets)
-    print(f"Removed {race_filtered} picks due to race-level rules")
-    print(f"Final pick count: {len(bets)} bets")
+    print(f"Removed {race_filtered} lower-quality picks")
+    print(f"Final pick count: {len(bets)} bets (1 per race maximum)")
     
     # Deduplicate against existing database picks
     print(f"\nChecking for conflicts with existing database picks...")
