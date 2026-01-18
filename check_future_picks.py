@@ -4,7 +4,7 @@ from datetime import datetime
 dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
 table = dynamodb.Table('SureBetBets')
 
-today = '2026-01-13'
+today = datetime.utcnow().strftime('%Y-%m-%d')
 response = table.scan()
 picks = [p for p in response['Items'] if today in p.get('bet_date', '')]
 

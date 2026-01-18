@@ -1010,10 +1010,93 @@ def main():
     print(f"Removed {race_filtered} lower-quality picks")
     print(f"Final pick count: {len(bets)} bets (1 per race maximum)")
     
+    # FALLBACK: Always show at least 1 pick (best of worst)
+    if len(bets) == 0 and len(df) > 0:
+        print(f"\n⚠️ NO PICKS after filtering - selecting BEST OF WORST for UI display")
+        
+        # Re-process all selections without ROI/confidence filters
+        fallback_bets = []
+        for idx, row in df.iterrows():
+            try:
+                venue = row.get('venue', '')
+                detected_sport = 'greyhounds' if venue in greyhound_venues else 'horses'
+                bet_item = format_bet_for_dynamodb(row, market_odds, detected_sport)
+                
+                # Calculate quality score
+                confidence = float(bet_item.get('combined_confidence', 0))
+                p_win = float(bet_item.get('p_win', 0))
+                roi = float(bet_item.get('roi', -100))
+                quality_score = (confidence * p_win) + (roi * 0.5)  # Weighted quality
+                bet_item['quality_score'] = quality_score
+                
+                fallback_bets.append(bet_item)
+            except Exception as e:
+                continue
+        
+        if fallback_bets:
+            # Sort by quality score and take the best one
+            fallback_bets.sort(key=lambda x: x.get('quality_score', 0), reverse=True)
+            best_pick = fallback_bets[0]
+            
+            horse = best_pick.get('horse', 'Unknown')
+            venue = best_pick.get('course', 'Unknown')
+            roi = best_pick.get('roi', 0)
+            conf = best_pick.get('combined_confidence', 0)
+            p_win = best_pick.get('p_win', 0)
+            quality = best_pick.get('quality_score', 0)
+            
+            print(f"✓ SELECTED: {horse} @ {venue}")
+            print(f"  ROI: {roi:.1f}% | Confidence: {conf:.0f}% | P(Win): {p_win:.1%}")
+            print(f"  Quality Score: {quality:.2f}")
+            print(f"  ⚠️ NOTE: Does not meet quality thresholds but shown as best available")
+            
+            # Mark as fallback pick
+            best_pick['is_fallback'] = True
+            best_pick['fallback_reason'] = 'Best available pick (does not meet quality criteria)'
+            
+            bets = [best_pick]
+    
     # Deduplicate against existing database picks
     print(f"\nChecking for conflicts with existing database picks...")
+    has_fallback = any(bet.get('is_fallback', False) for bet in bets)
     bets, bet_ids_to_delete, dedup_stats = deduplicate_against_database(bets, args.table, args.region)
     print(f"After database deduplication: {len(bets)} bets to save")
+    
+    # GUARANTEE: If deduplication removed our fallback and we have nothing, force re-add it
+    if len(bets) == 0 and has_fallback and len(df) > 0:
+        print(f"\n⚠️ OVERRIDE: Database deduplication removed fallback pick - forcing re-add to show system is active")
+        
+        # Re-process to get best pick again
+        fallback_bets = []
+        for idx, row in df.iterrows():
+            try:
+                venue = row.get('venue', '')
+                detected_sport = 'greyhounds' if venue in greyhound_venues else 'horses'
+                bet_item = format_bet_for_dynamodb(row, market_odds, detected_sport)
+                
+                confidence = float(bet_item.get('combined_confidence', 0))
+                p_win = float(bet_item.get('p_win', 0))
+                roi = float(bet_item.get('roi', -100))
+                quality_score = (confidence * p_win) + (roi * 0.5)
+                bet_item['quality_score'] = quality_score
+                fallback_bets.append(bet_item)
+            except:
+                continue
+        
+        if fallback_bets:
+            fallback_bets.sort(key=lambda x: x.get('quality_score', 0), reverse=True)
+            best_pick = fallback_bets[0]
+            best_pick['is_fallback'] = True
+            best_pick['fallback_reason'] = 'System active indicator - best available pick'
+            best_pick['force_display'] = True
+            
+            horse = best_pick.get('horse', 'Unknown')
+            venue = best_pick.get('course', 'Unknown')
+            print(f"✓ FORCED: {horse} @ {venue} (showing system is running)")
+            
+            bets = [best_pick]
+            # Keep existing bet but mark for update rather than deletion
+            bet_ids_to_delete = []
     
     # Save to DynamoDB
     if not args.dry_run:
