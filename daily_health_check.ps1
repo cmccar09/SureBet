@@ -50,17 +50,7 @@ $today = (Get-Date).ToString("yyyy-MM-dd")
 Write-Log "CHECK 1: Verifying picks in DynamoDB..." "Yellow"
 try {
     $pythonExe = "$PSScriptRoot\.venv\Scripts\python.exe"
-    $checkScript = @"
-import boto3
-from datetime import datetime
-dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
-table = dynamodb.Table('SureBetBets')
-response = table.scan()
-today_picks = [p for p in response['Items'] if '$today' in p.get('bet_date', '')]
-print(len(today_picks))
-"@
-    
-    $pickCount = & $pythonExe -c $checkScript
+    $pickCount = & $pythonExe "$PSScriptRoot\check_today_in_db.py" 2>&1 | Select-Object -Last 1
     
     if ($pickCount -eq 0) {
         $issues += "No picks found in DynamoDB for $today"
@@ -76,19 +66,7 @@ print(len(today_picks))
 # CHECK 2: Verify future picks exist
 Write-Log "CHECK 2: Verifying future picks..." "Yellow"
 try {
-    $futureCheckScript = @"
-import boto3
-from datetime import datetime
-dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
-table = dynamodb.Table('SureBetBets')
-response = table.scan()
-today_picks = [p for p in response['Items'] if '$today' in p.get('bet_date', '')]
-now = datetime.utcnow()
-future = [p for p in today_picks if datetime.fromisoformat(p.get('race_time', '').replace('Z', '')) > now]
-print(len(future))
-"@
-    
-    $futureCount = & $pythonExe -c $futureCheckScript
+    $futureCount = & $pythonExe "$PSScriptRoot\check_future_picks.py" 2>&1 | Select-String "Future picks:" | ForEach-Object { $_ -replace '.*Future picks: (\d+).*','$1' }
     
     if ($futureCount -eq 0) {
         Write-Log "  ⚠ WARNING: No future picks (all races may have passed)" "Yellow"
