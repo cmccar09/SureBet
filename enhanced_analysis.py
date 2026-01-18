@@ -11,6 +11,7 @@ Implements sophisticated analysis strategies:
 import json
 import time
 import boto3
+from botocore.config import Config
 from typing import List, Dict, Any, Tuple
 from datetime import datetime
 
@@ -18,20 +19,29 @@ class EnhancedAnalyzer:
     """Multi-pass ensemble analysis engine"""
     
     def __init__(self, bedrock_client=None):
-        """Initialize with AWS Bedrock client"""
-        self.bedrock = bedrock_client or boto3.client('bedrock-runtime', region_name='us-east-1')
+        """Initialize with AWS Bedrock client with timeout configuration"""
+        if bedrock_client is None:
+            # Configure with 60 second timeouts to prevent hanging
+            config = Config(
+                read_timeout=60,
+                connect_timeout=10,
+                retries={'max_attempts': 2, 'mode': 'standard'}
+            )
+            self.bedrock = boto3.client('bedrock-runtime', region_name='us-east-1', config=config)
+        else:
+            self.bedrock = bedrock_client
         self.model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
     
     def _call_claude(self, prompt: str, max_tokens: int = 4096) -> str:
-        """Call Claude via AWS Bedrock with retry logic"""
+        """Call Claude via AWS Bedrock with retry logic and timeout handling"""
         body = json.dumps({
             "anthropic_version": "bedrock-2023-05-31",
             "max_tokens": max_tokens,
             "messages": [{"role": "user", "content": prompt}]
         })
         
-        max_retries = 3
-        retry_delay = 2
+        max_retries = 2  # Reduced from 3 to fail faster
+        retry_delay = 1
         
         for attempt in range(max_retries):
             try:
@@ -41,13 +51,23 @@ class EnhancedAnalyzer:
                 )
                 response_body = json.loads(response['body'].read())
                 return response_body['content'][0]['text']
-            except Exception as e:
+            except self.bedrock.exceptions.ModelTimeoutException as e:
+                print(f"  ⚠️ Bedrock timeout on attempt {attempt + 1}/{max_retries}")
                 if attempt < max_retries - 1:
-                    print(f"  Retry {attempt + 1}/{max_retries} after error: {e}")
                     time.sleep(retry_delay)
                     retry_delay *= 2
                 else:
-                    raise
+                    print(f"  ✗ Bedrock timeout - skipping this analysis pass")
+                    return ""  # Return empty instead of crashing
+            except Exception as e:
+                error_type = type(e).__name__
+                print(f"  ⚠️ Bedrock error ({error_type}) on attempt {attempt + 1}/{max_retries}: {str(e)[:100]}")
+                if attempt < max_retries - 1:
+                    time.sleep(retry_delay)
+                    retry_delay *= 2
+                else:
+                    print(f"  ✗ Bedrock failed - skipping this analysis pass")
+                    return ""  # Return empty instead of crashing
     
     def analyze_value_angle(self, race_data: str, historical_insights: str = "") -> Dict[str, Any]:
         """
@@ -253,7 +273,12 @@ Return EXACTLY 5 selections ranked by confidence (or fewer if race quality poor)
         return self._parse_json_response(response)
     
     def _parse_json_response(self, response: str) -> Dict[str, Any]:
-        """Extract JSON from Claude response (handles markdown wrapping)"""
+        """Extract JSON from Claude response (handles markdown wrapping and empty responses)"""
+        # Handle empty response from timeout/error
+        if not response or not response.strip():
+            print(f"  ⚠️ Empty response - returning empty selections")
+            return {"selections": [], "thinking": "API timeout - no analysis performed"}
+        
         text = response.strip()
         
         # Remove markdown code fences
