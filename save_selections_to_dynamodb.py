@@ -1012,7 +1012,7 @@ def main():
     
     # FALLBACK: Always show at least 1 pick (best of worst)
     if len(bets) == 0 and len(df) > 0:
-        print(f"\n⚠️ NO PICKS after filtering - selecting BEST OF WORST for UI display")
+        print(f"\nWARNING: NO PICKS after filtering - selecting BEST OF WORST for UI display")
         
         # Re-process all selections without ROI/confidence filters
         fallback_bets = []
@@ -1045,10 +1045,10 @@ def main():
             p_win = best_pick.get('p_win', 0)
             quality = best_pick.get('quality_score', 0)
             
-            print(f"✓ SELECTED: {horse} @ {venue}")
+            print(f"SELECTED: {horse} @ {venue}")
             print(f"  ROI: {roi:.1f}% | Confidence: {conf:.0f}% | P(Win): {p_win:.1%}")
             print(f"  Quality Score: {quality:.2f}")
-            print(f"  ⚠️ NOTE: Does not meet quality thresholds but shown as best available")
+            print(f"  NOTE: Does not meet quality thresholds but shown as best available")
             
             # Mark as fallback pick
             best_pick['is_fallback'] = True
@@ -1064,7 +1064,7 @@ def main():
     
     # GUARANTEE: If deduplication removed our fallback and we have nothing, force re-add it
     if len(bets) == 0 and has_fallback and len(df) > 0:
-        print(f"\n⚠️ OVERRIDE: Database deduplication removed fallback pick - forcing re-add to show system is active")
+        print(f"\nOVERRIDE: Database deduplication removed fallback pick - forcing re-add to show system is active")
         
         # Re-process to get best pick again
         fallback_bets = []
@@ -1092,7 +1092,7 @@ def main():
             
             horse = best_pick.get('horse', 'Unknown')
             venue = best_pick.get('course', 'Unknown')
-            print(f"✓ FORCED: {horse} @ {venue} (showing system is running)")
+            print(f"FORCED: {horse} @ {venue} (showing system is running)")
             
             bets = [best_pick]
             # Keep existing bet but mark for update rather than deletion
