@@ -269,12 +269,17 @@ def update_bet_with_result(bet, market_data):
             Key={'bet_date': bet_date, 'bet_id': bet_id},
             UpdateExpression="""
                 SET actual_result = :result,
+                    #status = :status,
                     race_winner = :winner,
                     profit = :profit,
                     result_captured_at = :timestamp
             """,
+            ExpressionAttributeNames={
+                '#status': 'status'
+            },
             ExpressionAttributeValues={
                 ':result': actual_result,
+                ':status': 'settled',
                 ':winner': winner_name,
                 ':profit': Decimal(str(round(profit, 2))),
                 ':timestamp': datetime.utcnow().isoformat()
