@@ -16,8 +16,19 @@ secretsmanager = boto3.client('secretsmanager', region_name='eu-west-1')
 table = dynamodb.Table('SureBetBets')
 
 def get_betfair_credentials():
-    """Get Betfair credentials from environment variables or Secrets Manager"""
-    # Try environment variables first (preferred for Lambda)
+    """Get Betfair credentials from local file, environment variables, or Secrets Manager"""
+    # Try local file first (for local dev)
+    local_creds_path = 'betfair-creds.json'
+    if os.path.exists(local_creds_path):
+        try:
+            with open(local_creds_path, 'r') as f:
+                creds = json.load(f)
+            print(f"Using credentials from local betfair-creds.json")
+            return creds['username'], creds['password'], creds['app_key']
+        except Exception as e:
+            print(f"Error reading local credentials: {e}")
+    
+    # Try environment variables (preferred for Lambda)
     username = os.environ.get('BETFAIR_USERNAME')
     password = os.environ.get('BETFAIR_PASSWORD')
     app_key = os.environ.get('BETFAIR_APP_KEY')
@@ -37,7 +48,16 @@ def get_betfair_credentials():
         return None, None, None
 
 def get_betfair_cert_from_secrets():
-    """Retrieve Betfair SSL certificate from Secrets Manager"""
+    """Retrieve Betfair SSL certificate from local files or Secrets Manager"""
+    # Check for local cert files first (for local dev)
+    local_cert = 'betfair-client.crt'
+    local_key = 'betfair-client.key'
+    
+    if os.path.exists(local_cert) and os.path.exists(local_key):
+        print(f"Using local certificate files: {local_cert} and {local_key}")
+        return local_cert, local_key
+    
+    # Fallback to Secrets Manager
     try:
         print("Retrieving SSL certificates from Secrets Manager (eu-west-1)...")
         response = secretsmanager.get_secret_value(SecretId='betfair-ssl-certificate')
@@ -177,9 +197,9 @@ def get_market_results(market_ids, session_token, app_key):
     
     all_results = {}
     
-    # Process in batches of 10 (API limit)
-    for i in range(0, len(market_ids), 10):
-        batch = market_ids[i:i+10]
+    # Process in batches of 5 (to avoid TOO_MUCH_DATA error)
+    for i in range(0, len(market_ids), 5):
+        batch = market_ids[i:i+5]
         
         payload = {
             "marketIds": batch,

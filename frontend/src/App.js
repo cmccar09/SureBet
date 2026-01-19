@@ -58,13 +58,15 @@ function App() {
     }
   };
 
-  const checkResults = async () => {
+  const checkResults = async (dateFilter = 'today') => {
     setResultsLoading(true);
     setError(null);
 
     try {
-      // Fetch today's results (updated live)
-      const endpoint = `${API_BASE_URL}/results`;
+      // Fetch results based on date filter
+      const endpoint = dateFilter === 'yesterday' 
+        ? `${API_BASE_URL}/picks/yesterday` 
+        : `${API_BASE_URL}/results`;
       console.log('Checking results from:', endpoint);
       const response = await fetch(endpoint);
       
@@ -201,8 +203,11 @@ function App() {
           >
             🐕 Greyhounds
           </button>
-          <button onClick={checkResults} className="results-btn" disabled={resultsLoading}>
-            {resultsLoading ? '⏳ Checking...' : '📊 Check Results'}
+          <button onClick={() => checkResults('today')} className="results-btn" disabled={resultsLoading}>
+            {resultsLoading ? '⏳ Checking...' : '📊 Today\'s Results'}
+          </button>
+          <button onClick={() => checkResults('yesterday')} className="results-btn" disabled={resultsLoading}>
+            {resultsLoading ? '⏳ Checking...' : '📈 Yesterday\'s Results'}
           </button>
         </div>
       </header>
@@ -336,6 +341,7 @@ function App() {
                 <div className="stat-label">ROI</div>
                 <div className="stat-value">{results.summary.roi}%</div>
               </div>
+            </div>
             </div>
 
             {/* Detailed picks list */}
@@ -780,9 +786,9 @@ function App() {
                 </div>
               </div>
             );
-            })}
+          })}
           </div>
-          </>
+        </>
         )}
       </main>
     </div>
