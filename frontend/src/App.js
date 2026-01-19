@@ -84,8 +84,35 @@ function App() {
         const losses = picks.filter(p => p.outcome === 'LOST').length;
         const pending = picks.filter(p => !p.outcome || p.outcome === 'PENDING').length;
         
-        const totalPL = picks.reduce((sum, p) => sum + (parseFloat(p.profit_loss) || 0), 0);
-        const totalStake = picks.length; // €1 per pick
+        // Calculate profit/loss based on outcome, stake, and odds
+        let totalPL = 0;
+        let totalStake = 0;
+        picks.forEach(p => {
+          const stake = parseFloat(p.stake || 0);
+          const odds = parseFloat(p.odds || 0);
+          const outcome = p.outcome;
+          
+          // Check if there's a pre-calculated profit field first
+          if (p.profit !== undefined && p.profit !== null) {
+            totalPL += parseFloat(p.profit);
+            totalStake += stake;
+          } else if (outcome === 'WON') {
+            // Win profit = stake * (odds - 1)
+            totalPL += stake * (odds - 1);
+            totalStake += stake;
+          } else if (outcome === 'PLACED') {
+            // Place profit (assume 1/4 odds for simplicity)
+            const placeOdds = 1 + ((odds - 1) * 0.25);
+            totalPL += stake * (placeOdds - 1);
+            totalStake += stake;
+          } else if (outcome === 'LOST') {
+            // Loss = -stake
+            totalPL -= stake;
+            totalStake += stake;
+          }
+          // Pending bets don't count toward P/L or stake
+        });
+        
         const totalReturn = totalStake + totalPL;
         const roi = totalStake > 0 ? ((totalPL / totalStake) * 100) : 0;
         const strikeRate = (wins + places) > 0 && picks.length > 0 ? 
@@ -351,7 +378,23 @@ function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {results.picks.map((pick, index) => {
                     const outcome = pick.outcome || 'PENDING';
-                    const pl = parseFloat(pick.profit_loss) || 0;
+                    
+                    // Calculate P/L for this pick
+                    const stake = parseFloat(pick.stake || 0);
+                    const odds = parseFloat(pick.odds || 0);
+                    let pl = 0;
+                    
+                    if (pick.profit !== undefined && pick.profit !== null) {
+                      pl = parseFloat(pick.profit);
+                    } else if (outcome === 'WON') {
+                      pl = stake * (odds - 1);
+                    } else if (outcome === 'PLACED') {
+                      const placeOdds = 1 + ((odds - 1) * 0.25);
+                      pl = stake * (placeOdds - 1);
+                    } else if (outcome === 'LOST') {
+                      pl = -stake;
+                    }
+                    
                     const outcomeColor = 
                       outcome === 'WON' ? '#10b981' : 
                       outcome === 'PLACED' ? '#f59e0b' : 
