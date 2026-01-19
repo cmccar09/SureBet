@@ -324,7 +324,66 @@ function App() {
             
             {/* Combined Summary */}
             <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '20px', marginBottom: '16px', color: '#333' }}>📈 Overall</h3>
+              <h3 style={{ fontSize: '22px', marginBottom: '20px', color: '#1f2937', fontWeight: 'bold' }}>📈 Overall Performance</h3>
+              
+              {/* Key Performance Indicators - Large Display */}
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                gap: '16px',
+                marginBottom: '24px'
+              }}>
+                <div style={{
+                  background: results.summary.profit >= 0 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                  color: 'white',
+                  padding: '24px',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                }}>
+                  <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px', fontWeight: '600' }}>TOTAL PROFIT/LOSS</div>
+                  <div style={{ fontSize: '36px', fontWeight: 'bold' }}>
+                    {results.summary.profit >= 0 ? '+' : ''}£{results.summary.profit}
+                  </div>
+                  <div style={{ fontSize: '13px', opacity: 0.85, marginTop: '4px' }}>
+                    From £{results.summary.total_stake} staked
+                  </div>
+                </div>
+                
+                <div style={{
+                  background: results.summary.roi >= 0 ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
+                  color: 'white',
+                  padding: '24px',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                }}>
+                  <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px', fontWeight: '600' }}>RETURN ON INVESTMENT</div>
+                  <div style={{ fontSize: '36px', fontWeight: 'bold' }}>
+                    {results.summary.roi >= 0 ? '+' : ''}{results.summary.roi}%
+                  </div>
+                  <div style={{ fontSize: '13px', opacity: 0.85, marginTop: '4px' }}>
+                    Total return: £{results.summary.total_return}
+                  </div>
+                </div>
+                
+                <div style={{
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+                  color: 'white',
+                  padding: '24px',
+                  borderRadius: '12px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                }}>
+                  <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px', fontWeight: '600' }}>WIN RATE</div>
+                  <div style={{ fontSize: '36px', fontWeight: 'bold' }}>
+                    {results.summary.strike_rate}%
+                  </div>
+                  <div style={{ fontSize: '13px', opacity: 0.85, marginTop: '4px' }}>
+                    {results.summary.wins} wins from {results.summary.total_picks} picks
+                  </div>
+                </div>
+              </div>
+              
+              {/* Detailed Stats Grid */}
+              <h4 style={{ fontSize: '16px', marginBottom: '12px', color: '#4b5563', fontWeight: '600' }}>Detailed Breakdown</h4>
               <div className="results-grid">
               <div className="result-stat">
                 <div className="stat-label">Total Picks</div>
