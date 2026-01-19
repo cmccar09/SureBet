@@ -265,21 +265,27 @@ def update_bet_with_result(bet, market_data):
     
     # Update DynamoDB
     try:
+        # Map actual_result to outcome format expected by UI
+        outcome = 'WON' if actual_result == 'WIN' else 'LOST'
+        
         table.update_item(
             Key={'bet_date': bet_date, 'bet_id': bet_id},
             UpdateExpression="""
                 SET actual_result = :result,
                     #status = :status,
+                    #outcome = :outcome,
                     race_winner = :winner,
                     profit = :profit,
                     result_captured_at = :timestamp
             """,
             ExpressionAttributeNames={
-                '#status': 'status'
+                '#status': 'status',
+                '#outcome': 'outcome'
             },
             ExpressionAttributeValues={
                 ':result': actual_result,
                 ':status': 'settled',
+                ':outcome': outcome,
                 ':winner': winner_name,
                 ':profit': Decimal(str(round(profit, 2))),
                 ':timestamp': datetime.utcnow().isoformat()
