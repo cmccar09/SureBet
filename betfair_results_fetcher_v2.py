@@ -197,7 +197,7 @@ def get_market_results(market_ids, session_token, app_key):
                 market_id = market.get('marketId')
                 all_results[market_id] = market
             
-            print(f"✓ Fetched results for {len(batch)} markets")
+            print(f"Fetched results for {len(batch)} markets")
         except Exception as e:
             print(f"✗ Error fetching batch: {e}")
             if hasattr(e, 'response'):
@@ -325,7 +325,7 @@ def lambda_handler(event, context):
             if update_bet_with_result(bet, market_results[market_id]):
                 updated_count += 1
     
-    print(f"\n✓ Updated {updated_count}/{len(pending_bets)} bets with results")
+    print(f"\nUpdated {updated_count}/{len(pending_bets)} bets with results")
     
     return {
         'statusCode': 200,
