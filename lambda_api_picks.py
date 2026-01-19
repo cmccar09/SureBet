@@ -142,26 +142,32 @@ def get_today_picks(headers):
     items = response.get('Items', [])
     items = [decimal_to_float(item) for item in items]
     
-    # Filter out races that have already started
-    now = datetime.utcnow()
-    future_picks = []
-    
-    for item in items:
-        race_time_str = item.get('race_time', '')
-        if race_time_str:
-            try:
-                # Parse race time (ISO format)
-                race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
-                # Only include if race is in the future
-                if race_time.replace(tzinfo=None) > now:
+    # DEMO MODE: On Jan 20, 2026, show ALL picks regardless of time
+    # This allows showing past races during the demo
+    if today == '2026-01-20':
+        print(f"DEMO MODE: Showing all {len(items)} picks for {today}")
+        future_picks = items
+    else:
+        # Filter out races that have already started
+        now = datetime.utcnow()
+        future_picks = []
+        
+        for item in items:
+            race_time_str = item.get('race_time', '')
+            if race_time_str:
+                try:
+                    # Parse race time (ISO format)
+                    race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
+                    # Only include if race is in the future
+                    if race_time.replace(tzinfo=None) > now:
+                        future_picks.append(item)
+                except Exception as e:
+                    print(f"Error parsing race time {race_time_str}: {e}")
+                    # Include if we can't parse (safer than excluding)
                     future_picks.append(item)
-            except Exception as e:
-                print(f"Error parsing race time {race_time_str}: {e}")
-                # Include if we can't parse (safer than excluding)
+            else:
+                # Include if no race time (safer than excluding)
                 future_picks.append(item)
-        else:
-            # Include if no race time (safer than excluding)
-            future_picks.append(item)
     
     future_picks.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
     
@@ -195,26 +201,31 @@ def get_greyhound_picks(headers):
     items = response.get('Items', [])
     items = [decimal_to_float(item) for item in items]
     
-    # Filter out races that have already started
-    now = datetime.utcnow()
-    future_picks = []
-    
-    for item in items:
-        race_time_str = item.get('race_time', '')
-        if race_time_str:
-            try:
-                # Parse race time (ISO format)
-                race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
-                # Only include if race is in the future
-                if race_time.replace(tzinfo=None) > now:
+    # DEMO MODE: On Jan 20, 2026, show ALL picks regardless of time
+    if today == '2026-01-20':
+        print(f"DEMO MODE: Showing all {len(items)} greyhound picks for {today}")
+        future_picks = items
+    else:
+        # Filter out races that have already started
+        now = datetime.utcnow()
+        future_picks = []
+        
+        for item in items:
+            race_time_str = item.get('race_time', '')
+            if race_time_str:
+                try:
+                    # Parse race time (ISO format)
+                    race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
+                    # Only include if race is in the future
+                    if race_time.replace(tzinfo=None) > now:
+                        future_picks.append(item)
+                except Exception as e:
+                    print(f"Error parsing race time {race_time_str}: {e}")
+                    # Include if we can't parse (safer than excluding)
                     future_picks.append(item)
-            except Exception as e:
-                print(f"Error parsing race time {race_time_str}: {e}")
-                # Include if we can't parse (safer than excluding)
+            else:
+                # Include if no race time (safer than excluding)
                 future_picks.append(item)
-        else:
-            # Include if no race time (safer than excluding)
-            future_picks.append(item)
     
     # Sort by race time (soonest first)
     future_picks.sort(key=lambda x: x.get('race_time', ''))
