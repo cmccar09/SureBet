@@ -430,11 +430,16 @@ function App() {
             </div>
             </div>
 
-            {/* Detailed picks list */}
+            {/* Detailed picks list - compact table format */}
             {results.picks && results.picks.length > 0 && (
               <div style={{ marginTop: '24px' }}>
-                <h3 style={{ fontSize: '18px', marginBottom: '16px', color: '#333' }}>Detailed Results</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <h3 style={{ fontSize: '18px', marginBottom: '12px', color: '#333' }}>Detailed Results</h3>
+                <div style={{ 
+                  background: 'white', 
+                  borderRadius: '8px', 
+                  overflow: 'hidden',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                }}>
                   {results.picks.map((pick, index) => {
                     const outcome = pick.outcome || 'PENDING';
                     
@@ -465,41 +470,44 @@ function App() {
 
                     return (
                       <div key={index} style={{
-                        background: 'white',
-                        padding: '16px',
-                        borderRadius: '8px',
-                        border: `2px solid ${outcomeColor}`,
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                        display: 'flex',
+                        alignItems: 'center',
+                        padding: '8px 12px',
+                        borderLeft: `4px solid ${outcomeColor}`,
+                        borderBottom: index < results.picks.length - 1 ? '1px solid #e5e7eb' : 'none',
+                        fontSize: '13px'
                       }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>
-                              {outcomeIcon} {pick.horse || 'Unknown Horse'}
-                            </div>
-                            <div style={{ fontSize: '14px', color: '#6b7280', marginBottom: '4px' }}>
-                              {pick.course} • {formatTime(pick.race_time)} • {pick.bet_type}
-                            </div>
-                            <div style={{ fontSize: '14px', color: '#6b7280' }}>
-                              Odds: {pick.odds}
-                            </div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ 
-                              fontSize: '18px', 
-                              fontWeight: 'bold', 
-                              color: outcomeColor,
-                              marginBottom: '4px'
-                            }}>
-                              {outcome}
-                            </div>
-                            <div style={{ 
-                              fontSize: '16px', 
-                              fontWeight: 'bold',
-                              color: pl >= 0 ? '#10b981' : '#ef4444'
-                            }}>
-                              {pl >= 0 ? '+' : ''}€{pl.toFixed(2)}
-                            </div>
-                          </div>
+                        <div style={{ width: '24px', flexShrink: 0 }}>{outcomeIcon}</div>
+                        <div style={{ flex: '1 1 200px', fontWeight: '600', color: '#111' }}>
+                          {pick.horse || 'Unknown Horse'}
+                        </div>
+                        <div style={{ flex: '0 0 100px', color: '#6b7280' }}>
+                          {pick.course}
+                        </div>
+                        <div style={{ flex: '0 0 70px', color: '#6b7280' }}>
+                          {formatTime(pick.race_time)}
+                        </div>
+                        <div style={{ flex: '0 0 50px', color: '#6b7280' }}>
+                          {pick.bet_type}
+                        </div>
+                        <div style={{ flex: '0 0 50px', color: '#6b7280' }}>
+                          {pick.odds}
+                        </div>
+                        <div style={{ 
+                          flex: '0 0 70px', 
+                          fontWeight: '600',
+                          color: outcomeColor,
+                          textAlign: 'center'
+                        }}>
+                          {outcome}
+                        </div>
+                        <div style={{ 
+                          flex: '0 0 80px', 
+                          fontWeight: '700',
+                          color: pl >= 0 ? '#10b981' : '#ef4444',
+                          textAlign: 'right'
+                        }}>
+                          {pl >= 0 ? '+' : ''}€{pl.toFixed(2)}
                         </div>
                       </div>
                     );
