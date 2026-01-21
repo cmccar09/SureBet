@@ -138,7 +138,7 @@ def betfair_login(username, password, app_key):
         return None
 
 def get_pending_bets():
-    """Get bets without results from last 2 days (both horses and greyhounds)"""
+    """Get bets without results from last 2 days (horses only - greyhounds disabled)"""
     today = datetime.utcnow().strftime('%Y-%m-%d')
     yesterday = (datetime.utcnow() - timedelta(days=1)).strftime('%Y-%m-%d')
     
@@ -148,8 +148,11 @@ def get_pending_bets():
         try:
             response = table.query(
                 KeyConditionExpression='bet_date = :date',
-                FilterExpression='attribute_not_exists(actual_result)',
-                ExpressionAttributeValues={':date': date}
+                FilterExpression='attribute_not_exists(actual_result) AND sport = :sport',
+                ExpressionAttributeValues={
+                    ':date': date,
+                    ':sport': 'horses'
+                }
             )
             pending_bets.extend(response.get('Items', []))
         except Exception as e:
