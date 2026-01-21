@@ -179,57 +179,21 @@ def get_today_picks(headers):
     }
 
 def get_greyhound_picks(headers):
-    """Get today's greyhound picks only - filter to show only upcoming races"""
+    """DISABLED: Greyhound picks are no longer generated"""
     today = datetime.now().strftime('%Y-%m-%d')
     
-    # Get today's picks and filter for greyhounds
-    response = table.scan(
-        FilterExpression='(#d = :today OR bet_date = :today) AND sport = :sport',
-        ExpressionAttributeNames={'#d': 'date'},
-        ExpressionAttributeValues={
-            ':today': today,
-            ':sport': 'greyhounds'
-        }
-    )
-    
-    items = response.get('Items', [])
-    items = [decimal_to_float(item) for item in items]
-    
-    # Filter out races that have already started
-    now = datetime.utcnow()
-    future_picks = []
-    
-    for item in items:
-        race_time_str = item.get('race_time', '')
-        if race_time_str:
-            try:
-                # Parse race time (ISO format)
-                race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
-                # Only include if race is in the future
-                if race_time.replace(tzinfo=None) > now:
-                    future_picks.append(item)
-            except Exception as e:
-                print(f"Error parsing race time {race_time_str}: {e}")
-                # Include if we can't parse (safer than excluding)
-                future_picks.append(item)
-        else:
-            # Include if no race time (safer than excluding)
-            future_picks.append(item)
-    
-    # Sort by race time (soonest first)
-    future_picks.sort(key=lambda x: x.get('race_time', ''))
-    
-    print(f"Greyhound picks today: {len(items)}, Future greyhound picks: {len(future_picks)}")
+    print(f"Greyhound picks endpoint called but greyhound picks are DISABLED")
     
     return {
         'statusCode': 200,
         'headers': headers,
         'body': json.dumps({
             'success': True,
-            'picks': future_picks,
-            'count': len(future_picks),
+            'picks': [],
+            'count': 0,
             'date': today,
-            'sport': 'greyhounds'
+            'sport': 'greyhounds',
+            'message': 'Greyhound picks disabled'
         })
     }
 
@@ -350,9 +314,9 @@ def check_today_results(headers):
     profit = total_return - total_stake
     roi = (profit / total_stake * 100) if total_stake > 0 else 0
     
-    # Separate picks by sport
+    # Separate picks by sport (greyhounds disabled - return empty)
     horse_picks = [p for p in picks_with_results if p.get('sport') == 'horses']
-    greyhound_picks = [p for p in picks_with_results if p.get('sport') == 'greyhounds']
+    greyhound_picks = []  # Greyhound picks disabled
     
     # Calculate sport-specific summaries
     def calculate_sport_summary(sport_picks):

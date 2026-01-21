@@ -881,7 +881,7 @@ def main():
     
     print(f"\nFormatting for DynamoDB...")
     print(f"  Horse minimum ROI: {horse_min_roi}%")
-    print(f"  Greyhound minimum ROI: {greyhound_min_roi}%")
+    print(f"  Greyhound picks: DISABLED (skipping all greyhound races)")
     
     bets = []
     filtered_out = 0
@@ -890,6 +890,13 @@ def main():
             # Auto-detect sport from venue
             venue = row.get('venue', '')
             detected_sport = 'greyhounds' if venue in greyhound_venues else 'horses'
+            
+            # SKIP ALL GREYHOUND PICKS
+            if detected_sport == 'greyhounds':
+                filtered_out += 1
+                horse = row.get('runner', row.get('horse', 'Unknown'))
+                print(f"FILTERED [GREYHOUNDS]: {horse} @ {venue} (greyhound picks disabled)")
+                continue
             
             bet_item = format_bet_for_dynamodb(row, market_odds, detected_sport)
             
