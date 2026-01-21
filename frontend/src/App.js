@@ -224,12 +224,6 @@ function App() {
           >
             🏇 Horses
           </button>
-          <button 
-            className={filter === 'greyhounds' ? 'active' : ''} 
-            onClick={() => setFilter('greyhounds')}
-          >
-            🐕 Greyhounds
-          </button>
           <button onClick={() => checkResults('today')} className="results-btn" disabled={resultsLoading}>
             {resultsLoading ? '⏳ Checking...' : '📊 Today\'s Results'}
           </button>
@@ -279,44 +273,6 @@ function App() {
                   <div className={`result-stat ${results.horses.summary.roi >= 0 ? 'profit' : 'loss'}`}>
                     <div className="stat-label">ROI</div>
                     <div className="stat-value">{results.horses.summary.roi}%</div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {results.greyhounds && results.greyhounds.summary && (
-              <div style={{ marginBottom: '32px' }}>
-                <h3 style={{ fontSize: '20px', marginBottom: '16px', color: '#333' }}>🐕 Greyhound Racing</h3>
-                <div className="results-grid">
-                  <div className="result-stat">
-                    <div className="stat-label">Total Picks</div>
-                    <div className="stat-value">{results.greyhounds.summary.total_picks}</div>
-                  </div>
-                  <div className="result-stat win">
-                    <div className="stat-label">Wins</div>
-                    <div className="stat-value">{results.greyhounds.summary.wins}</div>
-                  </div>
-                  <div className="result-stat loss">
-                    <div className="stat-label">Losses</div>
-                    <div className="stat-value">{results.greyhounds.summary.losses}</div>
-                  </div>
-                  <div className="result-stat pending">
-                    <div className="stat-label">Pending</div>
-                    <div className="stat-value">{results.greyhounds.summary.pending}</div>
-                  </div>
-                  <div className="result-stat">
-                    <div className="stat-label">Win Rate</div>
-                    <div className="stat-value">{results.greyhounds.summary.strike_rate}%</div>
-                  </div>
-                  <div className={`result-stat ${results.greyhounds.summary.profit >= 0 ? 'profit' : 'loss'}`}>
-                    <div className="stat-label">P/L</div>
-                    <div className="stat-value">
-                      {results.greyhounds.summary.profit >= 0 ? '+' : ''}€{results.greyhounds.summary.profit}
-                    </div>
-                  </div>
-                  <div className={`result-stat ${results.greyhounds.summary.roi >= 0 ? 'profit' : 'loss'}`}>
-                    <div className="stat-label">ROI</div>
-                    <div className="stat-value">{results.greyhounds.summary.roi}%</div>
                   </div>
                 </div>
               </div>
