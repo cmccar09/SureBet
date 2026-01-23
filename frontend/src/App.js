@@ -384,6 +384,166 @@ function App() {
                 <div className="stat-value">{results.summary.roi}%</div>
               </div>
             </div>
+            
+            {/* Bet Type and Confidence Breakdown */}
+            <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              {/* Bet Type Breakdown */}
+              <div style={{ 
+                background: 'white', 
+                borderRadius: '12px', 
+                padding: '20px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}>
+                <h4 style={{ fontSize: '16px', marginBottom: '16px', color: '#1f2937', fontWeight: '600' }}>
+                  📊 Bet Type Distribution
+                </h4>
+                {(() => {
+                  const ewBets = results.picks.filter(p => {
+                    const bt = (p.bet_type || '').toUpperCase();
+                    return bt === 'EW' || bt === 'EACH-WAY' || bt === 'EACH WAY';
+                  });
+                  const winBets = results.picks.filter(p => {
+                    const bt = (p.bet_type || 'WIN').toUpperCase();
+                    return bt === 'WIN' || bt === 'W';
+                  });
+                  const totalBets = results.picks.length;
+                  const ewPercent = totalBets > 0 ? ((ewBets.length / totalBets) * 100).toFixed(1) : 0;
+                  const winPercent = totalBets > 0 ? ((winBets.length / totalBets) * 100).toFixed(1) : 0;
+                  
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '14px', color: '#6b7280' }}>Each-Way (EW)</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#f59e0b' }}>
+                            {ewBets.length}
+                          </span>
+                          <span style={{ fontSize: '14px', color: '#9ca3af' }}>
+                            ({ewPercent}%)
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ 
+                        width: '100%', 
+                        height: '8px', 
+                        background: '#e5e7eb', 
+                        borderRadius: '4px',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{ 
+                          width: `${ewPercent}%`, 
+                          height: '100%', 
+                          background: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)',
+                          transition: 'width 0.5s ease'
+                        }}></div>
+                      </div>
+                      
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
+                        <span style={{ fontSize: '14px', color: '#6b7280' }}>Win</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>
+                            {winBets.length}
+                          </span>
+                          <span style={{ fontSize: '14px', color: '#9ca3af' }}>
+                            ({winPercent}%)
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ 
+                        width: '100%', 
+                        height: '8px', 
+                        background: '#e5e7eb', 
+                        borderRadius: '4px',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{ 
+                          width: `${winPercent}%`, 
+                          height: '100%', 
+                          background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
+                          transition: 'width 0.5s ease'
+                        }}></div>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+              
+              {/* Confidence Level Breakdown */}
+              <div style={{ 
+                background: 'white', 
+                borderRadius: '12px', 
+                padding: '20px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}>
+                <h4 style={{ fontSize: '16px', marginBottom: '16px', color: '#1f2937', fontWeight: '600' }}>
+                  🎯 Confidence Distribution
+                </h4>
+                {(() => {
+                  const getConfidenceLevel = (conf) => {
+                    const c = parseFloat(conf) || 0;
+                    if (c >= 80) return 'Excellent';
+                    if (c >= 70) return 'Good';
+                    if (c >= 60) return 'Fair';
+                    return 'Poor';
+                  };
+                  
+                  const confidenceBuckets = {
+                    'Excellent': { count: 0, color: '#10b981', min: 80 },
+                    'Good': { count: 0, color: '#3b82f6', min: 70 },
+                    'Fair': { count: 0, color: '#f59e0b', min: 60 },
+                    'Poor': { count: 0, color: '#ef4444', min: 0 }
+                  };
+                  
+                  results.picks.forEach(p => {
+                    const level = getConfidenceLevel(p.combined_confidence || p.confidence);
+                    if (confidenceBuckets[level]) {
+                      confidenceBuckets[level].count++;
+                    }
+                  });
+                  
+                  const totalBets = results.picks.length;
+                  
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {Object.entries(confidenceBuckets).map(([level, data]) => {
+                        const percent = totalBets > 0 ? ((data.count / totalBets) * 100).toFixed(1) : 0;
+                        return (
+                          <div key={level}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                              <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                                {level} ({data.min}%+)
+                              </span>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span style={{ fontSize: '16px', fontWeight: 'bold', color: data.color }}>
+                                  {data.count}
+                                </span>
+                                <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                                  ({percent}%)
+                                </span>
+                              </div>
+                            </div>
+                            <div style={{ 
+                              width: '100%', 
+                              height: '6px', 
+                              background: '#e5e7eb', 
+                              borderRadius: '3px',
+                              overflow: 'hidden'
+                            }}>
+                              <div style={{ 
+                                width: `${percent}%`, 
+                                height: '100%', 
+                                background: data.color,
+                                transition: 'width 0.5s ease'
+                              }}></div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
             </div>
 
             {/* Detailed picks list - compact table format */}
