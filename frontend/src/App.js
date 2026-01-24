@@ -16,9 +16,11 @@ function App() {
   const [filter, setFilter] = useState('today');
   const [results, setResults] = useState(null);
   const [resultsLoading, setResultsLoading] = useState(false);
+  const [todaySummary, setTodaySummary] = useState(null);
 
   useEffect(() => {
     fetchPicks();
+    fetchTodaySummary(); // Fetch summary stats on load
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
@@ -29,7 +31,8 @@ function App() {
     try {
       let endpoint;
       if (filter === 'today') {
-        endpoint = `${API_BASE_URL}/picks/today`;
+        // Use /results endpoint to show all today's picks with outcomes
+        endpoint = `${API_BASE_URL}/results`;
       } else if (filter === 'greyhounds') {
         endpoint = `${API_BASE_URL}/picks/greyhounds`;
       } else {
@@ -45,7 +48,7 @@ function App() {
       
       const data = await response.json();
 
-      if (data.success) {
+      if (data.success !== false) {
         setPicks(data.picks || []);
       } else {
         setError(data.error || 'Failed to load picks');
@@ -55,6 +58,27 @@ function App() {
       setError(`Cannot load picks: ${err.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTodaySummary = async () => {
+    try {
+      const endpoint = `${API_BASE_URL}/results/today`;
+      console.log('Fetching summary from:', endpoint);
+      const response = await fetch(endpoint);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      
+      const data = await response.json();
+
+      if (data.success && data.summary) {
+        setTodaySummary(data.summary);
+      }
+    } catch (err) {
+      console.error('Error fetching summary:', err);
+      // Don't set error - summary is optional
     }
   };
 
