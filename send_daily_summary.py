@@ -36,37 +36,47 @@ def load_today_selections():
     return latest_file, pick_count
 
 def load_yesterday_performance():
-    """Load yesterday's performance results"""
-    yesterday_slug = (datetime.now() - timedelta(days=1)).strftime("%Y%m%d")
-    history_dir = Path(__file__).parent / "history"
-    
-    results_file = history_dir / f"results_{yesterday_slug}.json"
-    performance_file = history_dir / f"performance_{yesterday_slug}.md"
-    
-    if not results_file.exists():
+    """Load yesterday's performance results from DynamoDB"""
+    try:
+        dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
+        table = dynamodb.Table('SureBetBets')
+        
+        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        
+        response = table.query(
+            KeyConditionExpression='bet_date = :date',
+            ExpressionAttributeValues={':date': yesterday}
+        )
+        
+        items = response.get('Items', [])
+        
+        if not items:
+            return None
+        
+        # Calculate stats from DynamoDB items
+        stats = {
+            'total_picks': len(items),
+            'wins': 0,
+            'places': 0,
+            'losses': 0,
+            'pending': 0
+        }
+        
+        for item in items:
+            outcome = item.get('outcome')
+            if outcome == 'win':
+                stats['wins'] += 1
+            elif outcome == 'placed':
+                stats['places'] += 1
+            elif outcome == 'loss':
+                stats['losses'] += 1
+            else:
+                stats['pending'] += 1
+        
+        return stats
+    except Exception as e:
+        print(f"Error loading yesterday's performance from DynamoDB: {e}")
         return None
-    
-    with open(results_file, 'r') as f:
-        results = json.load(f)
-    
-    # Extract win/place stats
-    stats = {
-        'total_races': len(results.get('races', [])),
-        'wins': 0,
-        'places': 0,
-        'losses': 0
-    }
-    
-    for race in results.get('races', []):
-        result = race.get('result', '')
-        if result == 'WON':
-            stats['wins'] += 1
-        elif result in ['PLACED_2ND', 'PLACED_3RD', 'PLACED_4TH']:
-            stats['places'] += 1
-        else:
-            stats['losses'] += 1
-    
-    return stats
 
 def get_bets_from_dynamodb():
     """Retrieve today's bets from DynamoDB"""
@@ -76,10 +86,9 @@ def get_bets_from_dynamodb():
         
         today = datetime.now().strftime("%Y-%m-%d")
         
-        response = table.scan(
-            FilterExpression='begins_with(#pk, :today)',
-            ExpressionAttributeNames={'#pk': 'pk'},
-            ExpressionAttributeValues={':today': today}
+        response = table.query(
+            KeyConditionExpression='bet_date = :date',
+            ExpressionAttributeValues={':date': today}
         )
         
         return response.get('Items', [])
@@ -211,20 +220,32 @@ def generate_summary_email():
     if yesterday_stats:
         html_parts.append('<div class="section">')
         html_parts.append('<h2>📈 Yesterday\'s Results</h2>')
-        html_parts.append(f'<p>Races: {yesterday_stats["total_races"]}</p>')
-        html_parts.append(f'<p>🏆 Wins: {yesterday_stats["wins"]}</p>')
-        html_parts.append(f'<p>🥈 Places: {yesterday_stats["places"]}</p>')
+        html_parts.append(f'<p>Total Picks: {yesterday_stats["total_picks"]}</p>')
+        html_parts.append(f'<p>🏆 Wins: <span class="stat">{yesterday_stats["wins"]}</span></p>')
+        html_parts.append(f'<p>🥈 Places: <span class="stat">{yesterday_stats["places"]}</span></p>')
         html_parts.append(f'<p>❌ Losses: {yesterday_stats["losses"]}</p>')
+        html_parts.append(f'<p>⏳ Pending: {yesterday_stats["pending"]}</p>')
         
-        win_rate = (yesterday_stats["wins"] / yesterday_stats["total_races"] * 100) if yesterday_stats["total_races"] > 0 else 0
-        html_parts.append(f'<p>Win Rate: {win_rate:.1f}%</p>')
+        completed = yesterday_stats["wins"] + yesterday_stats["places"] + yesterday_stats["losses"]
+        if completed > 0:
+            win_rate = (yesterday_stats["wins"] / completed * 100)
+            html_parts.append(f'<p>Win Rate: {win_rate:.1f}%</p>')
         html_parts.append('</div>')
         
         text_parts.append(f"\nYesterday's Results:")
-        text_parts.append(f"  Races: {yesterday_stats['total_races']}")
+        text_parts.append(f"  Total Picks: {yesterday_stats['total_picks']}")
         text_parts.append(f"  Wins: {yesterday_stats['wins']}")
         text_parts.append(f"  Places: {yesterday_stats['places']}")
-        text_parts.append(f"  Win Rate: {win_rate:.1f}%")
+        text_parts.append(f"  Losses: {yesterday_stats['losses']}")
+        text_parts.append(f"  Pending: {yesterday_stats['pending']}")
+        if completed > 0:
+            text_parts.append(f"  Win Rate: {win_rate:.1f}%")
+    else:
+        html_parts.append('<div class="section">')
+        html_parts.append('<h2>📈 Yesterday\'s Results</h2>')
+        html_parts.append('<p class="info">No picks from yesterday found</p>')
+        html_parts.append('</div>')
+        text_parts.append("\nYesterday's Results: No picks found")
     
     # Learning Status
     html_parts.append('<div class="section">')

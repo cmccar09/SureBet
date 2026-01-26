@@ -137,32 +137,30 @@ try {
 }
 
 # CHECK 6: Verify Betfair token is valid
-Write-Log "CHECK 6: Verifying Betfair authentication..." "Yellow"
+Write-Log "CHECK 6: Verifying Betfair authentication..." "Cyan"
 try {
-    $tokenCheckScript = @"
-import json
-from datetime import datetime, timedelta
-with open('betfair-creds.json', 'r') as f:
-    creds = json.load(f)
-# Check both token_created (new format) and last_refresh (old format)
-created_field = creds.get('token_created') or creds.get('last_refresh')
-if created_field:
-    created = datetime.fromisoformat(created_field)
-    age_hours = (datetime.utcnow() - created).total_seconds() / 3600
-    print(f'{age_hours:.1f}')
-else:
-    print('0')
-"@
-    
-    $tokenAge = & $pythonExe -c $tokenCheckScript
-    
-    if ([double]$tokenAge -gt 23) {
-        Write-Log "  ⚠ WARNING: Betfair token is $tokenAge hours old (expires at 24h)" "Yellow"
-    } elseif ([double]$tokenAge -gt 0) {
-        Write-Log "  ✓ PASS: Betfair token is $tokenAge hours old" "Green"
+    # Check token age using PowerShell instead of Python inline script
+    if (Test-Path "betfair-creds.json") {
+        $creds = Get-Content "betfair-creds.json" | ConvertFrom-Json
+        $created_field = if ($creds.token_created) { $creds.token_created } else { $creds.last_refresh }
+        
+        if ($created_field) {
+            $created = [DateTime]::Parse($created_field)
+            $age_hours = ((Get-Date).ToUniversalTime() - $created).TotalHours
+            
+            if ($age_hours -gt 23) {
+                Write-Log "  ⚠ WARNING: Betfair token is $([math]::Round($age_hours, 1)) hours old (expires at 24h)" "Yellow"
+            } elseif ($age_hours -gt 0) {
+                Write-Log "  ✓ PASS: Betfair token is $([math]::Round($age_hours, 1)) hours old" "Green"
+            } else {
+                $issues += "Betfair token missing or invalid"
+                Write-Log "  ✗ FAIL: Token missing" "Red"
+            }
+        } else {
+            Write-Log "  ⚠ WARNING: No token timestamp found" "Yellow"
+        }
     } else {
-        $issues += "Betfair token missing or invalid"
-        Write-Log "  ✗ FAIL: Token missing" "Red"
+        Write-Log "  ⚠ WARNING: betfair-creds.json not found" "Yellow"
     }
 } catch {
     Write-Log "  ⚠ WARNING: Could not check token: $_" "Yellow"

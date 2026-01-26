@@ -32,11 +32,11 @@ function App() {
       let endpoint;
       if (filter === 'today') {
         // Use /picks/today to show only FUTURE races (upcoming bets)
-        endpoint = `${API_BASE_URL}/picks/today`;
+        endpoint = `${API_BASE_URL}/api/picks/today`;
       } else if (filter === 'greyhounds') {
-        endpoint = `${API_BASE_URL}/picks/greyhounds`;
+        endpoint = `${API_BASE_URL}/api/picks/greyhounds`;
       } else {
-        endpoint = `${API_BASE_URL}/picks`;
+        endpoint = `${API_BASE_URL}/api/picks`;
       }
       
       console.log('Fetching from:', endpoint);
@@ -63,7 +63,7 @@ function App() {
 
   const fetchTodaySummary = async () => {
     try {
-      const endpoint = `${API_BASE_URL}/results/today`;
+      const endpoint = `${API_BASE_URL}/api/results/today`;
       console.log('Fetching summary from:', endpoint);
       const response = await fetch(endpoint);
       
@@ -89,8 +89,8 @@ function App() {
     try {
       // Fetch results based on date filter
       const endpoint = dateFilter === 'yesterday' 
-        ? `${API_BASE_URL}/picks/yesterday` 
-        : `${API_BASE_URL}/results`;
+        ? `${API_BASE_URL}/api/picks/yesterday` 
+        : `${API_BASE_URL}/api/results`;
       console.log('Checking results from:', endpoint);
       const response = await fetch(endpoint);
       

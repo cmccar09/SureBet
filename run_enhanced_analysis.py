@@ -100,13 +100,18 @@ def main(hours=1):
     time_ahead = now + timedelta(hours=hours)
     
     races_in_window = []
+    past_races = 0
     for r in races:
         start_time_str = r.get('start_time', '')
         if start_time_str:
             try:
                 # Parse ISO format timestamp
                 start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
-                if now <= start_time <= time_ahead:
+                # Only include future races within time window
+                if start_time < now:
+                    past_races += 1
+                    continue
+                if start_time <= time_ahead:
                     races_in_window.append(r)
             except:
                 # If parsing fails, include the race to be safe
@@ -115,7 +120,7 @@ def main(hours=1):
             # No timestamp, include it
             races_in_window.append(r)
     
-    print(f"Filtered to {len(races_in_window)} races in next {hours} hour(s)")
+    print(f"Filtered to {len(races_in_window)} races in next {hours} hour(s) (excluded {past_races} past races)")
     
     # PROCESS ALL RACES - Detailed analysis for every race in the time window
     # Filter to horses only (skip greyhounds)

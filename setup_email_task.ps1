@@ -1,9 +1,9 @@
 #!/usr/bin/env pwsh
 <#
 .SYNOPSIS
-    Setup Windows Task Scheduler to send daily email at 2pm
+    Setup Windows Task Scheduler to send daily email at 9am
 .DESCRIPTION
-    Creates a scheduled task that sends betting picks email at 14:00 (2pm) daily
+    Creates a scheduled task that sends betting picks email at 09:00 (9am) daily
 #>
 
 param(
@@ -12,7 +12,7 @@ param(
 
 $taskName = "BettingDailyEmail"
 $scriptPath = "$PSScriptRoot\send_daily_email.ps1"
-$runTime = "14:00"  # 2pm
+$runTime = "09:00"  # 9am
 
 Write-Host "="*60 -ForegroundColor Cyan
 if ($Remove) {
@@ -39,7 +39,7 @@ if ($Remove) {
         -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`"" `
         -WorkingDirectory $PSScriptRoot
     
-    # Define the trigger (daily at 2pm)
+    # Define the trigger (daily at 9am)
     $trigger = New-ScheduledTaskTrigger -Daily -At $runTime
     
     # Define settings

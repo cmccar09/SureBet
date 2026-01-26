@@ -8,16 +8,119 @@ import os
 import sys
 import json
 import argparse
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 import pandas as pd
 import requests
+from dateutil import parser as date_parser
 
 try:
     import boto3
     HAS_BOTO3 = True
 except ImportError:
     HAS_BOTO3 = False
+
+def filter_races_by_time(df, min_lead_time_minutes=30, max_future_hours=24):
+    """
+    Filter out races that are too close to start time or too far in the future
+    
+    Args:
+        df: DataFrame with selections (must have 'start_time_dublin' column)
+        min_lead_time_minutes: Minimum time before race (default: 30 minutes)
+        max_future_hours: Maximum hours in future to consider (default: 24 hours)
+    
+    Returns:
+        Filtered DataFrame, count of filtered races
+    """
+    if df.empty:
+        return df, 0
+    
+    now = datetime.now()
+    filtered_df = df.copy()
+    original_count = len(filtered_df)
+    
+    print(f"\nRace Time Filtering (Current time: {now.strftime('%Y-%m-%d %H:%M:%S')})")
+    print(f"  Minimum lead time: {min_lead_time_minutes} minutes")
+    print(f"  Maximum future window: {max_future_hours} hours")
+    
+    races_to_keep = []
+    too_soon_count = 0
+    too_far_count = 0
+    past_races_count = 0
+    parse_errors = 0
+    
+    for idx, row in filtered_df.iterrows():
+        race_time_str = str(row.get('start_time_dublin', ''))
+        horse = row.get('runner_name', row.get('horse', 'Unknown'))
+        venue = row.get('venue', 'Unknown')
+        
+        if not race_time_str:
+            print(f"  SKIP: {horse} @ {venue} - No race time")
+            parse_errors += 1
+            continue
+        
+        try:
+            # Parse race time (handle various formats)
+            # Remove timezone suffixes and milliseconds for parsing
+            clean_time = race_time_str.replace('.000Z', '').replace('Z', '').split('+')[0].split('.')[0]
+            
+            # Try parsing as ISO format first
+            try:
+                race_time = datetime.fromisoformat(clean_time)
+            except:
+                # Fall back to dateutil parser for flexible parsing
+                race_time = date_parser.parse(clean_time)
+            
+            # Calculate time until race
+            time_until_race = race_time - now
+            minutes_until_race = time_until_race.total_seconds() / 60
+            hours_until_race = minutes_until_race / 60
+            
+            # Check if race has already started/passed
+            if minutes_until_race < 0:
+                print(f"  FILTERED (PAST): {horse} @ {venue} - Race started {abs(minutes_until_race):.0f} min ago ({race_time.strftime('%H:%M')})")
+                past_races_count += 1
+                continue
+            
+            # Check if race is too soon (within minimum lead time)
+            if minutes_until_race < min_lead_time_minutes:
+                print(f"  FILTERED (TOO SOON): {horse} @ {venue} - Only {minutes_until_race:.0f} min until race ({race_time.strftime('%H:%M')})")
+                too_soon_count += 1
+                continue
+            
+            # Check if race is too far in future
+            if hours_until_race > max_future_hours:
+                print(f"  FILTERED (TOO FAR): {horse} @ {venue} - {hours_until_race:.1f} hours away ({race_time.strftime('%Y-%m-%d %H:%M')})")
+                too_far_count += 1
+                continue
+            
+            # Race passes all time checks
+            print(f"  OK: {horse} @ {venue} - {minutes_until_race:.0f} min until race ({race_time.strftime('%H:%M')})")
+            races_to_keep.append(idx)
+            
+        except Exception as e:
+            print(f"  ERROR: {horse} @ {venue} - Failed to parse time '{race_time_str}': {e}")
+            parse_errors += 1
+            continue
+    
+    # Filter DataFrame to only keep valid races
+    if races_to_keep:
+        filtered_df = filtered_df.loc[races_to_keep]
+    else:
+        filtered_df = pd.DataFrame()  # Empty DataFrame
+    
+    filtered_count = original_count - len(filtered_df)
+    
+    print(f"\nTime Filtering Results:")
+    print(f"  Original races: {original_count}")
+    print(f"  Kept: {len(filtered_df)} races")
+    print(f"  Filtered out: {filtered_count} total")
+    print(f"    - Past races: {past_races_count}")
+    print(f"    - Too soon (<{min_lead_time_minutes}min): {too_soon_count}")
+    print(f"    - Too far (>{max_future_hours}h): {too_far_count}")
+    print(f"    - Parse errors: {parse_errors}")
+    
+    return filtered_df, filtered_count
 
 def convert_floats(obj):
     """Convert float values to Decimal for DynamoDB"""
@@ -810,6 +913,10 @@ def filter_picks_per_race(bets: list) -> tuple:
         # Create race key from course + normalized race_time
         race_key = f"{bet.get('course', 'Unknown')}_{normalized_time}"
         races[race_key].append(bet)
+        
+        # DEBUG: Log race grouping
+        if len(races[race_key]) > 1:
+            print(f"  [DEBUG] Multiple picks for {race_key}: {[b.get('horse') for b in races[race_key]]}")
     
     filtered_bets = []
     removed_count = 0
@@ -849,6 +956,8 @@ def main():
     parser.add_argument("--dry_run", action="store_true", help="Don't actually save to DynamoDB")
     parser.add_argument("--min_roi", type=float, default=0.0, help="Minimum ROI threshold in percentage (default: 0.0 - breakeven)")
     parser.add_argument("--sport", type=str, choices=['horses', 'greyhounds'], default='horses', help="Sport type: horses or greyhounds (default: horses)")
+    parser.add_argument("--min_lead_time", type=int, default=30, help="Minimum minutes before race start (default: 30)")
+    parser.add_argument("--max_future_hours", type=int, default=24, help="Maximum hours in future to consider (default: 24)")
     
     args = parser.parse_args()
     
@@ -863,6 +972,18 @@ def main():
     
     if df.empty:
         print("No selections to save")
+        return
+    
+    # FILTER RACES BY TIME (critical: prevent late picks)
+    # Only process races with at least min_lead_time minutes before start
+    # Maximum max_future_hours in future
+    df, filtered_count = filter_races_by_time(df, 
+                                               min_lead_time_minutes=args.min_lead_time, 
+                                               max_future_hours=args.max_future_hours)
+    
+    if df.empty:
+        print("\nNo races meet timing criteria (all too soon, too far, or already started)")
+        print("This is normal - workflow will pick up future races on next run")
         return
     
     # Load market odds from snapshot

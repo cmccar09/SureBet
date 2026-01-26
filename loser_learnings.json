@@ -1,35 +1,90 @@
 [
   {
-    "our_pick": "Rising Force",
+    "our_pick": "Expelliarmus",
     "our_odds": 0,
-    "our_p_win": 0.38,
+    "our_p_win": 0.18,
     "actual_winner": "Unknown",
-    "winner_selection_id": "72643425",
-    "market_id": "1.252650158",
-    "venue": "Kempton",
-    "race_time": "2026-01-14T17:30:00Z",
-    "lesson": "Picked Rising Force but None won - need to analyze winner's characteristics"
+    "winner_selection_id": "66868095",
+    "market_id": "1.253097788",
+    "venue": "Sedgefield",
+    "race_time": "2026-01-25T14:40:00.000Z",
+    "lesson": "Picked Expelliarmus but None won - need to analyze winner's characteristics"
   },
   {
-    "our_pick": "Homme De Fer",
+    "our_pick": "The Coffey Boy",
     "our_odds": 0,
-    "our_p_win": 0.3,
+    "our_p_win": 0.12,
     "actual_winner": "Unknown",
-    "winner_selection_id": "18121674",
-    "market_id": "1.252650255",
-    "venue": "Kempton",
-    "race_time": "2026-01-14T18:00:00Z",
-    "lesson": "Picked Homme De Fer but None won - need to analyze winner's characteristics"
+    "winner_selection_id": "66868095",
+    "market_id": "1.253097788",
+    "venue": "Sedgefield",
+    "race_time": "2026-01-25T14:40:00.000Z",
+    "lesson": "Picked The Coffey Boy but None won - need to analyze winner's characteristics"
   },
   {
-    "our_pick": "Church Wedding",
+    "our_pick": "My My My Delilah",
     "our_odds": 0,
-    "our_p_win": 0.35,
+    "our_p_win": 0.07,
     "actual_winner": "Unknown",
-    "winner_selection_id": "83880812",
-    "market_id": "1.252650261",
-    "venue": "Kempton",
-    "race_time": "2026-01-14T18:30:00Z",
-    "lesson": "Picked Church Wedding but None won - need to analyze winner's characteristics"
+    "winner_selection_id": "66868095",
+    "market_id": "1.253097788",
+    "venue": "Sedgefield",
+    "race_time": "2026-01-25T14:40:00.000Z",
+    "lesson": "Picked My My My Delilah but None won - need to analyze winner's characteristics"
+  },
+  {
+    "our_pick": "Saviour",
+    "our_odds": 0,
+    "our_p_win": 0.06,
+    "actual_winner": "Unknown",
+    "winner_selection_id": "66868095",
+    "market_id": "1.253097788",
+    "venue": "Sedgefield",
+    "race_time": "2026-01-25T14:40:00.000Z",
+    "lesson": "Picked Saviour but None won - need to analyze winner's characteristics"
+  },
+  {
+    "our_pick": "Largy Star",
+    "our_odds": 0,
+    "our_p_win": 0.2,
+    "actual_winner": "Unknown",
+    "winner_selection_id": "94238089",
+    "market_id": "1.253100648",
+    "venue": "Naas",
+    "race_time": "2026-01-25T14:55:00.000Z",
+    "lesson": "Picked Largy Star but None won - need to analyze winner's characteristics"
+  },
+  {
+    "our_pick": "Doctor Elvis",
+    "our_odds": 0,
+    "our_p_win": 0.15,
+    "actual_winner": "Unknown",
+    "winner_selection_id": "94238089",
+    "market_id": "1.253100648",
+    "venue": "Naas",
+    "race_time": "2026-01-25T14:55:00.000Z",
+    "lesson": "Picked Doctor Elvis but None won - need to analyze winner's characteristics"
+  },
+  {
+    "our_pick": "Touch The Clouds",
+    "our_odds": 0,
+    "our_p_win": 0.12,
+    "actual_winner": "Unknown",
+    "winner_selection_id": "94238089",
+    "market_id": "1.253100648",
+    "venue": "Naas",
+    "race_time": "2026-01-25T14:55:00.000Z",
+    "lesson": "Picked Touch The Clouds but None won - need to analyze winner's characteristics"
+  },
+  {
+    "our_pick": "Vienna Storm",
+    "our_odds": 0,
+    "our_p_win": 0.1,
+    "actual_winner": "Unknown",
+    "winner_selection_id": "94238089",
+    "market_id": "1.253100648",
+    "venue": "Naas",
+    "race_time": "2026-01-25T14:55:00.000Z",
+    "lesson": "Picked Vienna Storm but None won - need to analyze winner's characteristics"
   }
 ]

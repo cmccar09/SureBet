@@ -21,6 +21,39 @@ def decimal_to_float(obj):
         return [decimal_to_float(item) for item in obj]
     return obj
 
+def lambda_handler_OLD_TEST(event, context):
+    """Handle API Gateway requests - OLD TEST MODE"""
+    
+    # TEST MODE - just return raw outcomes
+    dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
+    table = dynamodb.Table('SureBetBets')
+    today = datetime.now().strftime('%Y-%m-%d')
+    
+    response = table.scan(
+        FilterExpression='#d = :today',
+        ExpressionAttributeNames={'#d': 'date'},
+        ExpressionAttributeValues={':today': today}
+    )
+    
+    items = response.get('Items', [])
+    
+    test_results = []
+    for item in items:
+        outcome_val = item.get('outcome')
+        test_results.append({
+            'raw_outcome': str(outcome_val),
+            'type': str(type(outcome_val)),
+            'repr': repr(outcome_val),
+            'equals_win': outcome_val == 'win',
+            'horse': item.get('horse_name', 'unknown')
+        })
+    
+    return {
+        'statusCode': 200,
+        'headers': {'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json'},
+        'body': json.dumps({'test_results': test_results}, default=str)
+    }
+
 def lambda_handler(event, context):
     """Handle API Gateway requests"""
     
@@ -128,44 +161,58 @@ def get_today_picks(headers):
     """Get today's picks only - filter to show only upcoming horse races"""
     today = datetime.now().strftime('%Y-%m-%d')
     
-    # Check both 'date' and 'bet_date' fields (schema evolved)
-    # Filter out greyhounds to only show horses
-    response = table.scan(
-        FilterExpression='(#d = :today OR bet_date = :today) AND (attribute_not_exists(sport) OR sport = :sport)',
-        ExpressionAttributeNames={'#d': 'date'},
-        ExpressionAttributeValues={
-            ':today': today,
-            ':sport': 'horses'
-        }
-    )
+    # Use query with partition key for better performance
+    try:
+        response = table.query(
+            KeyConditionExpression='bet_date = :today',
+            ExpressionAttributeValues={':today': today}
+        )
+    except Exception as e:
+        print(f"Query failed, falling back to scan: {e}")
+        # Fallback to scan if query fails
+        response = table.scan(
+            FilterExpression='(#d = :today OR bet_date = :today)',
+            ExpressionAttributeNames={'#d': 'date'},
+            ExpressionAttributeValues={':today': today}
+        )
     
     items = response.get('Items', [])
     items = [decimal_to_float(item) for item in items]
     
-    # Filter out races that have already started
-    now = datetime.utcnow()
-    future_picks = []
+    # Filter out greyhounds - only show horses
+    horse_items = [item for item in items if item.get('sport', 'horses') == 'horses']
     
-    for item in items:
-        race_time_str = item.get('race_time', '')
-        if race_time_str:
-            try:
-                # Parse race time (ISO format)
-                race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
-                # Only include if race is in the future
-                if race_time.replace(tzinfo=None) > now:
+    # DEMO MODE: On Jan 20, 2026, show ALL picks regardless of time
+    # This allows showing past races during the demo
+    if today == '2026-01-20':
+        print(f"DEMO MODE: Showing all {len(horse_items)} picks for {today}")
+        future_picks = horse_items
+    else:
+        # Filter out races that have already started
+        now = datetime.utcnow()
+        future_picks = []
+        
+        for item in horse_items:
+            race_time_str = item.get('race_time', '')
+            if race_time_str:
+                try:
+                    # Parse race time (ISO format)
+                    race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
+                    # Only include if race is in the future
+                    if race_time.replace(tzinfo=None) > now:
+                        future_picks.append(item)
+                except Exception as e:
+                    print(f"Error parsing race time {race_time_str}: {e}")
+                    # Include if we can't parse (safer than excluding)
                     future_picks.append(item)
-            except Exception as e:
-                print(f"Error parsing race time {race_time_str}: {e}")
-                # Include if we can't parse (safer than excluding)
+            else:
+                # Include if no race time (safer than excluding)
                 future_picks.append(item)
-        else:
-            # Include if no race time (safer than excluding)
-            future_picks.append(item)
     
-    future_picks.sort(key=lambda x: x.get('timestamp', ''), reverse=True)
+    # Sort by race time ascending (earliest races first)
+    future_picks.sort(key=lambda x: x.get('race_time', ''))
     
-    print(f"Total picks: {len(items)}, Future picks: {len(future_picks)}")
+    print(f"Total picks: {len(items)}, Horse picks: {len(horse_items)}, Future picks: {len(future_picks)}")
     
     return {
         'statusCode': 200,
@@ -179,21 +226,62 @@ def get_today_picks(headers):
     }
 
 def get_greyhound_picks(headers):
-    """DISABLED: Greyhound picks are no longer generated"""
+    """Get today's greyhound picks only - filter to show only upcoming races"""
     today = datetime.now().strftime('%Y-%m-%d')
     
-    print(f"Greyhound picks endpoint called but greyhound picks are DISABLED")
+    # Get today's picks and filter for greyhounds
+    response = table.scan(
+        FilterExpression='(#d = :today OR bet_date = :today) AND sport = :sport',
+        ExpressionAttributeNames={'#d': 'date'},
+        ExpressionAttributeValues={
+            ':today': today,
+            ':sport': 'greyhounds'
+        }
+    )
+    
+    items = response.get('Items', [])
+    items = [decimal_to_float(item) for item in items]
+    
+    # DEMO MODE: On Jan 20, 2026, show ALL picks regardless of time
+    if today == '2026-01-20':
+        print(f"DEMO MODE: Showing all {len(items)} greyhound picks for {today}")
+        future_picks = items
+    else:
+        # Filter out races that have already started
+        now = datetime.utcnow()
+        future_picks = []
+        
+        for item in items:
+            race_time_str = item.get('race_time', '')
+            if race_time_str:
+                try:
+                    # Parse race time (ISO format)
+                    race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
+                    # Only include if race is in the future
+                    if race_time.replace(tzinfo=None) > now:
+                        future_picks.append(item)
+                except Exception as e:
+                    print(f"Error parsing race time {race_time_str}: {e}")
+                    # Include if we can't parse (safer than excluding)
+                    future_picks.append(item)
+            else:
+                # Include if no race time (safer than excluding)
+                future_picks.append(item)
+    
+    # Sort by race time (soonest first)
+    future_picks.sort(key=lambda x: x.get('race_time', ''))
+    
+    print(f"Greyhound picks today: {len(items)}, Future greyhound picks: {len(future_picks)}")
     
     return {
         'statusCode': 200,
         'headers': headers,
         'body': json.dumps({
             'success': True,
-            'picks': [],
-            'count': 0,
+            'picks': future_picks,
+            'count': len(future_picks),
             'date': today,
-            'sport': 'greyhounds',
-            'message': 'Greyhound picks disabled'
+            'sport': 'greyhounds'
         })
     }
 
@@ -255,6 +343,11 @@ def check_today_results(headers):
     all_picks = response.get('Items', [])
     all_picks = [decimal_to_float(item) for item in all_picks]
     
+    # DEBUG: Check raw DynamoDB response
+    print(f"Raw Items count: {len(all_picks)}")
+    for item in all_picks:
+        print(f"Raw item outcome field: {repr(item.get('outcome'))}")
+    
     # No filtering - use ALL picks
     picks = all_picks
     
@@ -284,11 +377,20 @@ def check_today_results(headers):
     # No need to call Betfair API - outcomes are already in the picks
     picks_with_results = picks
     
+    # DEBUG: Print outcomes
+    for p in picks:
+        print(f"Pick: {p.get('horse_name', 'unknown')} | outcome: '{p.get('outcome')}' | type: {type(p.get('outcome'))}")
+    
     # Calculate overall stats from existing outcomes
-    wins = sum(1 for p in picks if p.get('outcome') == 'WON')
-    places = sum(1 for p in picks if p.get('outcome') == 'PLACED')
-    losses = sum(1 for p in picks if p.get('outcome') == 'LOST')
-    pending = sum(1 for p in picks if p.get('outcome') in ['PENDING', 'NO_RESULT', None])
+    wins = sum(1 for p in picks if p.get('outcome') == 'win')
+    print(f"DEBUG: Calculated wins={wins}, checking for outcome=='win'")
+    print(f"DEBUG: Outcomes in picks: {[p.get('outcome') for p in picks]}")
+    print(f"DEBUG: Types: {[type(p.get('outcome')) for p in picks]}")
+    print(f"DEBUG: Repr: {[repr(p.get('outcome')) for p in picks]}")
+    print(f"DEBUG: Manual check - first pick outcome: '{picks[0].get('outcome')}' == 'win'? {picks[0].get('outcome') == 'win'}")
+    places = sum(1 for p in picks if p.get('outcome') == 'placed')
+    losses = sum(1 for p in picks if p.get('outcome') == 'loss')
+    pending = sum(1 for p in picks if p.get('outcome') in ['pending', None])
     
     total_stake = sum(float(p.get('stake', 2.0)) for p in picks)
     
@@ -296,7 +398,7 @@ def check_today_results(headers):
     total_return = 0
     for p in picks:
         outcome = p.get('outcome')
-        if outcome == 'WON':
+        if outcome == 'win':
             stake = float(p.get('stake', 2.0))
             odds = float(p.get('odds', 0))
             bet_type = p.get('bet_type', 'WIN').upper()
@@ -305,7 +407,7 @@ def check_today_results(headers):
             else:  # EW
                 ew_fraction = float(p.get('ew_fraction', 0.2))
                 total_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
-        elif outcome == 'PLACED':
+        elif outcome == 'placed':
             stake = float(p.get('stake', 2.0))
             odds = float(p.get('odds', 0))
             ew_fraction = float(p.get('ew_fraction', 0.2))
@@ -314,25 +416,25 @@ def check_today_results(headers):
     profit = total_return - total_stake
     roi = (profit / total_stake * 100) if total_stake > 0 else 0
     
-    # Separate picks by sport (greyhounds disabled - return empty)
+    # Separate picks by sport
     horse_picks = [p for p in picks_with_results if p.get('sport') == 'horses']
-    greyhound_picks = []  # Greyhound picks disabled
+    greyhound_picks = [p for p in picks_with_results if p.get('sport') == 'greyhounds']
     
     # Calculate sport-specific summaries
     def calculate_sport_summary(sport_picks):
         if not sport_picks:
             return None
         
-        sport_wins = sum(1 for p in sport_picks if p.get('outcome') == 'WON')
-        sport_places = sum(1 for p in sport_picks if p.get('outcome') == 'PLACED')
-        sport_losses = sum(1 for p in sport_picks if p.get('outcome') == 'LOST')
-        sport_pending = sum(1 for p in sport_picks if p.get('outcome') in ['PENDING', 'NO_RESULT'])
+        sport_wins = sum(1 for p in sport_picks if p.get('outcome') == 'win')
+        sport_places = sum(1 for p in sport_picks if p.get('outcome') == 'placed')
+        sport_losses = sum(1 for p in sport_picks if p.get('outcome') == 'loss')
+        sport_pending = sum(1 for p in sport_picks if p.get('outcome') in ['pending', None])
         sport_stake = sum(float(p.get('stake', 2.0)) for p in sport_picks)
         
         # Calculate returns for this sport
         sport_return = 0
         for p in sport_picks:
-            if p.get('outcome') == 'WON':
+            if p.get('outcome') == 'win':
                 stake = float(p.get('stake', 2.0))
                 odds = float(p.get('odds', 0))
                 bet_type = p.get('bet_type', 'WIN').upper()
@@ -341,7 +443,7 @@ def check_today_results(headers):
                 else:  # EW
                     ew_fraction = float(p.get('ew_fraction', 0.2))
                     sport_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
-            elif p.get('outcome') == 'PLACED':
+            elif p.get('outcome') == 'placed':
                 stake = float(p.get('stake', 2.0))
                 odds = float(p.get('odds', 0))
                 ew_fraction = float(p.get('ew_fraction', 0.2))

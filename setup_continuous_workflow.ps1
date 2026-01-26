@@ -1,10 +1,10 @@
-# Setup Continuous Betting Workflow - Runs every 30 minutes from 12:00-20:00 (8 PM)
+# Setup Continuous Betting Workflow - Runs every 10 minutes from 06:00-20:00 (8 PM)
 # This replaces all the individual BettingWorkflow_* tasks with a single repeating task
 
 $ErrorActionPreference = "Continue"
 
 Write-Host "`n=== Betting Workflow Task Setup ===" -ForegroundColor Cyan
-Write-Host "This will create a single task that runs every 30 minutes from 12:00-20:00 (8 PM)`n" -ForegroundColor Yellow
+Write-Host "This will create a single task that runs every 10 minutes from 06:00-20:00 (8 PM)`n" -ForegroundColor Yellow
 Write-Host "NOTE: Removing old tasks requires administrator privileges" -ForegroundColor Yellow
 
 # Task configuration
@@ -46,9 +46,9 @@ $action = New-ScheduledTaskAction `
     -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`"" `
     -WorkingDirectory $workingDir
 
-# Trigger: Daily at 12:00 PM, repeat every 30 minutes for 8 hours
-$trigger = New-ScheduledTaskTrigger -Daily -At 12:00PM
-$repetitionPattern = New-ScheduledTaskTrigger -Once -At 12:00PM -RepetitionInterval (New-TimeSpan -Minutes 30) -RepetitionDuration (New-TimeSpan -Hours 8)
+# Trigger: Daily at 06:00 AM, repeat every 10 minutes for 14 hours
+$trigger = New-ScheduledTaskTrigger -Daily -At 06:00AM
+$repetitionPattern = New-ScheduledTaskTrigger -Once -At 06:00AM -RepetitionInterval (New-TimeSpan -Minutes 10) -RepetitionDuration (New-TimeSpan -Hours 14)
 $trigger.Repetition = $repetitionPattern.Repetition
 
 # Settings
@@ -72,7 +72,7 @@ Register-ScheduledTask `
     -Trigger $trigger `
     -Settings $settings `
     -Principal $principal `
-    -Description "Continuous horse racing betting workflow - Runs every 30 minutes from 12:00 PM to 8:00 PM daily" | Out-Null
+    -Description "Continuous horse racing betting workflow - Runs every 10 minutes from 06:00 AM to 8:00 PM daily" | Out-Null
 
 Write-Host "  Task created successfully!" -ForegroundColor Green
 

@@ -163,14 +163,10 @@ $currentTime = Get-Date -Format "HH:mm"
 $currentHour = (Get-Date).Hour
 $currentMinute = (Get-Date).Minute
 
-# Check if this is the 10:30am full analysis run
-$analysisHours = 1  # Default: 1-hour analysis
-if ($currentHour -eq 10 -and $currentMinute -ge 25 -and $currentMinute -le 35) {
-    $analysisHours = 4  # Full 4-hour analysis at 10:30am
-    Write-Log "  FULL MORNING ANALYSIS: Analyzing next $analysisHours hours" "Cyan"
-} else {
-    Write-Log "  Quick scan: Analyzing next $analysisHours hour" "Gray"
-}
+# Balanced approach: 2-hour window for quality bet detection
+# (Still fast ~2min runtime, but catches more opportunities early)
+$analysisHours = 2
+Write-Log "  Analyzing next $analysisHours hours (balanced depth + speed)" "Cyan"
 
 # Enhanced analysis saves directly to today_picks.csv
 $outputCsv = "$PSScriptRoot\today_picks.csv"
@@ -214,10 +210,14 @@ $finalFile = $snapshotFile
 Write-Log "  Applying ENHANCED multi-pass AI analysis to enriched markets..." "Yellow"
 # Update snapshot env variable for enhanced analysis to use
 $env:SNAPSHOT_FILE = $finalFile
-& $pythonExe "$PSScriptRoot\run_enhanced_analysis.py" --hours $analysisHours 2>&1 | Tee-Object -Append -FilePath $logFile
+
+# Run AI analysis with direct execution (no Start-Job to avoid output capture issues)
+Write-Log "Running AI analysis..."
+$analysisOutput = & $pythonExe "$PSScriptRoot\run_enhanced_analysis.py" --hours $analysisHours 2>&1
+$analysisOutput | Tee-Object -Append -FilePath $logFile
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Log "ERROR: Failed to generate selections" "Red"
+    Write-Log "ERROR: AI analysis failed with exit code $LASTEXITCODE" "Red"
     exit 1
 }
 
@@ -228,9 +228,9 @@ if (Test-Path $outputCsv) {
     if ($pickCount -gt 0) {
         Write-Log "  Generated $pickCount pick(s)" "Green"
         
-        # STEP 3: Save to DynamoDB (EU-WEST-1, breakeven threshold)
-        Write-Log "`nSTEP 3: Saving to DynamoDB EU-WEST-1 (minimum ROI: 0% - breakeven)..." "Cyan"
-        & $pythonExe "$PSScriptRoot\save_selections_to_dynamodb.py" --selections $outputCsv --min_roi 0.0 --region eu-west-1 2>&1 | Tee-Object -Append -FilePath $logFile
+        # STEP 3: Save to DynamoDB (EU-WEST-1, breakeven threshold, 30-min minimum lead time)
+        Write-Log "`nSTEP 3: Saving to DynamoDB EU-WEST-1 (ROI: 0%+, Lead time: 30+ min)..." "Cyan"
+        & $pythonExe "$PSScriptRoot\save_selections_to_dynamodb.py" --selections $outputCsv --min_roi 0.0 --region eu-west-1 --min_lead_time 30 --max_future_hours 24 2>&1 | Tee-Object -Append -FilePath $logFile
         
         if ($LASTEXITCODE -eq 0) {
             Write-Log "  Successfully saved to database" "Green"
