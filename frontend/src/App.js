@@ -3,7 +3,7 @@ import './App.css';
 
 // Use API Gateway in eu-west-1
 const API_BASE_URL = process.env.REACT_APP_API_URL || 
-                     'https://e5na6ldp35.execute-api.eu-west-1.amazonaws.com/prod';
+                     'https://mnybvagd5m.execute-api.eu-west-1.amazonaws.com';
 
 // Budget configuration - €100 daily budget on top 5 picks only
 const DAILY_BUDGET = 100;
@@ -31,8 +31,8 @@ function App() {
     try {
       let endpoint;
       if (filter === 'today') {
-        // Use /results endpoint to show all today's picks with outcomes
-        endpoint = `${API_BASE_URL}/results`;
+        // Use /picks/today to show only FUTURE races (upcoming bets)
+        endpoint = `${API_BASE_URL}/picks/today`;
       } else if (filter === 'greyhounds') {
         endpoint = `${API_BASE_URL}/picks/greyhounds`;
       } else {
