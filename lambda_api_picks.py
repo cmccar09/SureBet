@@ -50,7 +50,9 @@ def lambda_handler(event, context):
     
     try:
         # Route requests - check more specific paths first
-        if 'results/today' in path or path.endswith('/results'):
+        if 'results/yesterday' in path:
+            return check_yesterday_results(headers)
+        elif 'results/today' in path or path.endswith('/results'):
             return check_today_results(headers)
         elif 'picks/greyhounds' in path:
             return get_greyhound_picks(headers)
@@ -296,15 +298,119 @@ def get_health(headers):
         })
     }
 
+def check_yesterday_results(headers):
+    """Check results for yesterday's picks - ALL picks separated by sport"""
+    from boto3.dynamodb.conditions import Key
+    from datetime import timedelta
+    yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    # Get ALL yesterday's picks using partition key query
+    response = table.query(
+        KeyConditionExpression=Key('bet_date').eq(yesterday)
+    )
+    
+    all_picks = response.get('Items', [])
+    all_picks = [decimal_to_float(item) for item in all_picks]
+    picks = all_picks
+    
+    print(f"Yesterday ({yesterday}) - Total picks retrieved: {len(picks)}")
+    
+    if not picks:
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'message': f'No picks for yesterday',
+                'date': yesterday,
+                'summary': {'total_picks': 0, 'wins': 0, 'losses': 0, 'pending': 0},
+                'horses': {'summary': None, 'picks': []},
+                'greyhounds': {'summary': None, 'picks': []},
+                'picks': []
+            })
+        }
+    
+    # Calculate stats from existing outcomes
+    wins = sum(1 for p in picks if p.get('outcome') == 'win')
+    places = sum(1 for p in picks if p.get('outcome') == 'placed')
+    losses = sum(1 for p in picks if p.get('outcome') == 'loss')
+    pending = sum(1 for p in picks if p.get('outcome') in ['pending', None])
+    
+    total_stake = sum(float(p.get('stake', 0)) for p in picks)
+    total_return = sum(float(p.get('stake', 0)) * float(p.get('odds', 0)) for p in picks if p.get('outcome') == 'win')
+    
+    # Use profit field if available
+    total_profit = sum(float(p.get('profit', 0)) for p in picks if p.get('profit') is not None)
+    roi = (total_profit / total_stake * 100) if total_stake > 0 else 0
+    
+    # Separate by sport
+    horse_picks = [p for p in picks if p.get('sport') == 'horses']
+    greyhound_picks = [p for p in picks if p.get('sport') == 'greyhounds']
+    
+    def calculate_sport_summary(sport_picks):
+        if not sport_picks:
+            return None
+        
+        sport_wins = sum(1 for p in sport_picks if p.get('outcome') == 'win')
+        sport_places = sum(1 for p in sport_picks if p.get('outcome') == 'placed')
+        sport_losses = sum(1 for p in sport_picks if p.get('outcome') == 'loss')
+        sport_pending = sum(1 for p in sport_picks if p.get('outcome') in ['pending', None])
+        sport_stake = sum(float(p.get('stake', 0)) for p in sport_picks)
+        sport_profit = sum(float(p.get('profit', 0)) for p in sport_picks if p.get('profit') is not None)
+        sport_roi = (sport_profit / sport_stake * 100) if sport_stake > 0 else 0
+        
+        return {
+            'total_picks': len(sport_picks),
+            'wins': sport_wins,
+            'places': sport_places,
+            'losses': sport_losses,
+            'pending': sport_pending,
+            'total_stake': round(sport_stake, 2),
+            'total_return': round(sport_stake + sport_profit, 2),
+            'profit': round(sport_profit, 2),
+            'roi': round(sport_roi, 1),
+            'strike_rate': round((sport_wins / (sport_wins + sport_losses) * 100) if (sport_wins + sport_losses) > 0 else 0, 1)
+        }
+    
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'success': True,
+            'date': yesterday,
+            'summary': {
+                'total_picks': len(picks),
+                'wins': wins,
+                'places': places,
+                'losses': losses,
+                'pending': pending,
+                'total_stake': round(total_stake, 2),
+                'total_return': round(total_stake + total_profit, 2),
+                'profit': round(total_profit, 2),
+                'roi': round(roi, 1),
+                'strike_rate': round((wins / (wins + losses) * 100) if (wins + losses) > 0 else 0, 1)
+            },
+            'horses': {
+                'summary': calculate_sport_summary(horse_picks),
+                'picks': horse_picks
+            },
+            'greyhounds': {
+                'summary': calculate_sport_summary(greyhound_picks),
+                'picks': greyhound_picks
+            },
+            'picks': picks,
+            'debug_timestamp': datetime.now().isoformat()
+        })
+    }
+
 def check_today_results(headers):
     """Check results for today's picks - ALL picks separated by sport"""
+    from boto3.dynamodb.conditions import Key
     today = datetime.now().strftime('%Y-%m-%d')
     
-    # Get ALL today's picks
-    response = table.scan(
-        FilterExpression='#d = :today',
-        ExpressionAttributeNames={'#d': 'date'},
-        ExpressionAttributeValues={':today': today}
+    # Get ALL today's picks using partition key query (much faster than scan)
+    response = table.query(
+        KeyConditionExpression=Key('bet_date').eq(today)
     )
     
     all_picks = response.get('Items', [])

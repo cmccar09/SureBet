@@ -471,6 +471,8 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None, sport: str
     from learning_engine import calculate_bet_stake
     
     bankroll = 1000.0  # Default bankroll (make configurable via args in future)
+    STAKE_MULTIPLIER = 0.6  # Ultra-conservative mode - reduce stakes to 60% (was 0.8)
+    
     optimal_stake = calculate_bet_stake(
         odds=implied_odds,
         p_win=p_win,
@@ -479,6 +481,9 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None, sport: str
         p_place=p_place,
         ew_fraction=ew_fraction if ew_fraction > 0 else 0.2
     )
+    
+    # Apply stake multiplier for caution
+    optimal_stake = optimal_stake * STAKE_MULTIPLIER
     
     # Scoring system (0-100 scale):
     # - ROI weight: 40% (normalized to 0-40, capped at 50% ROI = max score)
@@ -997,8 +1002,8 @@ def main():
                         'Sheffield', 'Newcastle (Greyhounds)', 'Sunderland', 'Harlow', 'Henlow', 'Oxford']
     
     # Sport-specific ROI thresholds (ENABLED - quality control)
-    horse_min_roi = 5.0  # Minimum 5% ROI for horses
-    greyhound_min_roi = 5.0  # Minimum 5% ROI for greyhounds
+    horse_min_roi = 20.0  # Minimum 20% ROI for horses (increased from 5%)
+    greyhound_min_roi = 20.0  # Minimum 20% ROI for greyhounds (increased from 5%)
     
     print(f"\nFormatting for DynamoDB...")
     print(f"  Horse minimum ROI: {horse_min_roi}%")
@@ -1106,15 +1111,15 @@ def main():
             continue
         
         # Rule 5: Minimum combined confidence (quality threshold)
-        if combined_confidence < 30:
-            print(f"REJECTED: {horse} - Confidence {combined_confidence}% < 30% minimum")
+        if combined_confidence < 40:
+            print(f"REJECTED: {horse} - Confidence {combined_confidence}% < 40% minimum")
             validation_rejected += 1
             continue
         
-        # Rule 6: Minimum win probability (20%)
+        # Rule 6: Minimum win probability (30%)
         p_win = bet.get('p_win', 0)
-        if p_win < 0.20:
-            print(f"REJECTED: {horse} - Win probability {p_win:.1%} < 20% minimum")
+        if p_win < 0.30:
+            print(f"REJECTED: {horse} - Win probability {p_win:.1%} < 30% minimum")
             validation_rejected += 1
             continue
         
