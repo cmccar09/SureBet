@@ -675,79 +675,40 @@ def deduplicate_against_database(new_bets: list, table_name: str = None, region:
         for race_key in conflicting_races:
             all_picks = existing_by_race[race_key] + new_by_race[race_key]
             
-            # Apply same filtering logic as filter_picks_per_race
-            if len(all_picks) <= 2:
-                if len(all_picks) == 2:
-                    bet_types = [pick['bet_type'] for pick in all_picks]
-                    
-                    if bet_types[0] == bet_types[1]:
-                        # Both same type - keep only higher scoring one
-                        sorted_picks = sorted(all_picks, key=lambda x: x['decision_score'], reverse=True)
-                        kept_pick = sorted_picks[0]
-                        removed_pick = sorted_picks[1]
-                        
-                        venue = all_picks[0]['course']
-                        print(f"  {venue}: Both {bet_types[0]} - keeping {kept_pick['horse']} (score: {kept_pick['decision_score']:.1f})")
-                        
-                        if kept_pick['is_existing']:
-                            stats['existing_picks_kept'] += 1
-                        else:
-                            stats['new_picks_kept'] += 1
-                        
-                        if removed_pick['is_existing']:
-                            # Store both keys needed for DynamoDB deletion (composite key: bet_date + bet_id)
-                            bet_ids_to_delete.append({
-                                'bet_date': removed_pick.get('bet_date', removed_pick.get('date')),
-                                'bet_id': removed_pick['bet_id']
-                            })
-                            stats['existing_picks_deleted'] += 1
-                            print(f"    DELETE existing: {removed_pick['horse']}")
-                        else:
-                            stats['new_picks_filtered'] += 1
-                            print(f"    FILTER new: {removed_pick['horse']}")
-                    else:
-                        # Different types - keep both
-                        stats['existing_picks_kept'] += sum(1 for p in all_picks if p['is_existing'])
-                        stats['new_picks_kept'] += sum(1 for p in all_picks if not p['is_existing'])
-                else:
-                    # Only 1 pick - keep it
-                    if all_picks[0]['is_existing']:
+            # STRICT RULE: Keep only 1 pick per race (highest quality score)
+            # Calculate quality scores for all picks
+            for pick in all_picks:
+                decision_score = pick.get('decision_score', 0)
+                pick['_quality_score'] = decision_score
+            
+            # Sort by quality score and keep ONLY the best one
+            sorted_picks = sorted(all_picks, key=lambda x: x['_quality_score'], reverse=True)
+            kept_pick = sorted_picks[0]
+            
+            venue = all_picks[0]['course']
+            print(f"  {venue}: {len(all_picks)} picks - keeping ONLY best: {kept_pick['horse']} ({kept_pick['bet_type']})")
+            
+            # Mark picks for keeping/deletion
+            for pick in all_picks:
+                if pick == kept_pick:
+                    if pick['is_existing']:
                         stats['existing_picks_kept'] += 1
                     else:
                         stats['new_picks_kept'] += 1
-            else:
-                # More than 2 picks - keep top 2 with different types
-                sorted_picks = sorted(all_picks, key=lambda x: x['decision_score'], reverse=True)
-                top_two = sorted_picks[:2]
-                bet_types = [pick['bet_type'] for pick in top_two]
-                
-                venue = all_picks[0]['course']
-                print(f"  {venue}: {len(all_picks)} picks - applying 2-pick limit")
-                
-                if bet_types[0] != bet_types[1]:
-                    # Different types - keep top 2
-                    kept_picks = top_two
+                        print(f"    KEEP new: {pick['horse']} ({pick['bet_type']}) - score: {pick['_quality_score']:.1f}")
                 else:
-                    # Both same type - keep highest + find different type
-                    kept_picks = [top_two[0]]
-                    different_type = next(
-                        (p for p in sorted_picks[1:] if p['bet_type'] != bet_types[0]),
-                        None
-                    )
-                    if different_type:
-                        kept_picks.append(different_type)
-                
-                # Mark picks for keeping/deletion
-                for pick in all_picks:
-                    if pick in kept_picks:
-                        if pick['is_existing']:
-                            stats['existing_picks_kept'] += 1
-                        else:
-                            stats['new_picks_kept'] += 1
-                            print(f"    KEEP new: {pick['horse']} ({pick['bet_type']})")
+                    if pick['is_existing']:
+                        # Store both keys needed for DynamoDB deletion (composite key: bet_date + bet_id)
+                        bet_date = pick.get('bet_date') or pick.get('race_time', '')[:10]
+                        bet_ids_to_delete.append({
+                            'bet_date': bet_date,
+                            'bet_id': pick['bet_id']
+                        })
+                        stats['existing_picks_deleted'] += 1
+                        print(f"    DELETE existing: {pick['horse']} ({pick['bet_type']}) - score: {pick['_quality_score']:.1f}")
                     else:
-                        if pick['is_existing']:
-                            # Store both keys needed for DynamoDB deletion (composite key: bet_date + bet_id)
+                        stats['new_picks_filtered'] += 1
+                        print(f"    FILTER new: {pick['horse']} ({pick['bet_type']}) - score: {pick['_quality_score']:.1f}")
                             bet_ids_to_delete.append({
                                 'bet_date': pick.get('bet_date', pick.get('date')),
                                 'bet_id': pick['bet_id']
@@ -759,56 +720,38 @@ def deduplicate_against_database(new_bets: list, table_name: str = None, region:
                             print(f"    FILTER new: {pick['horse']} ({pick['bet_type']})")
         
         # Filter new_bets to only include those we want to keep
-        # For non-conflicting races, keep all new picks
-        for race_key in set(new_by_race.keys()) - conflicting_races:
-            filtered_new_bets.extend([bet for bet in new_bets if f"{bet.get('course', 'Unknown')}_{bet.get('race_time', '').replace('.000Z', '').replace('Z', '').split('+')[0].split('.')[0]}" == race_key])
-        
         # For conflicting races, only keep new picks that weren't filtered
         for race_key in conflicting_races:
             all_picks = existing_by_race[race_key] + new_by_race[race_key]
             
-            # Re-apply filtering logic to determine which new picks to keep
-            if len(all_picks) <= 2:
-                if len(all_picks) == 2:
-                    bet_types = [pick['bet_type'] for pick in all_picks]
-                    if bet_types[0] == bet_types[1]:
-                        sorted_picks = sorted(all_picks, key=lambda x: x['decision_score'], reverse=True)
-                        kept_pick = sorted_picks[0]
-                        if not kept_pick['is_existing']:
-                            # Find original bet object
-                            original_bet = next((bet for bet in new_bets if bet.get('horse') == kept_pick['horse'] and bet.get('course') == kept_pick['course']), None)
-                            if original_bet:
-                                filtered_new_bets.append(original_bet)
-                    else:
-                        # Keep all new picks (different types)
-                        for pick in all_picks:
-                            if not pick['is_existing']:
-                                original_bet = next((bet for bet in new_bets if bet.get('horse') == pick['horse'] and bet.get('course') == pick['course']), None)
-                                if original_bet:
-                                    filtered_new_bets.append(original_bet)
-                else:
-                    # Only 1 pick - keep if it's new
-                    if not all_picks[0]['is_existing']:
-                        original_bet = next((bet for bet in new_bets if bet.get('horse') == all_picks[0]['horse'] and bet.get('course') == all_picks[0]['course']), None)
-                        if original_bet:
-                            filtered_new_bets.append(original_bet)
-            else:
-                # More than 2 picks - complex logic
-                sorted_picks = sorted(all_picks, key=lambda x: x['decision_score'], reverse=True)
-                top_two = sorted_picks[:2]
-                bet_types = [pick['bet_type'] for pick in top_two]
-                
-                kept_picks = top_two if bet_types[0] != bet_types[1] else [top_two[0]]
-                if bet_types[0] == bet_types[1]:
-                    different_type = next((p for p in sorted_picks[1:] if p['bet_type'] != bet_types[0]), None)
-                    if different_type:
-                        kept_picks.append(different_type)
-                
-                for pick in kept_picks:
-                    if not pick['is_existing']:
-                        original_bet = next((bet for bet in new_bets if bet.get('horse') == pick['horse'] and bet.get('course') == pick['course']), None)
-                        if original_bet:
-                            filtered_new_bets.append(original_bet)
+            # STRICT: Only 1 pick per race, already determined above
+            sorted_picks = sorted(all_picks, key=lambda x: x.get('_quality_score', 0), reverse=True)
+            kept_pick = sorted_picks[0]
+            
+            if not kept_pick['is_existing']:
+                # This new pick was kept - find original bet object
+                original_bet = next(
+                    (bet for bet in new_bets 
+                     if bet.get('horse') == kept_pick['horse'] 
+                     and bet.get('course') == kept_pick['course']
+                     and bet.get('race_time') == kept_pick['race_time']),
+                    None
+                )
+                if original_bet:
+                    filtered_new_bets.append(original_bet)
+        
+        # For non-conflicting races, keep all new picks
+        for race_key in set(new_by_race.keys()) - conflicting_races:
+            for pick in new_by_race[race_key]:
+                original_bet = next(
+                    (bet for bet in new_bets 
+                     if bet.get('horse') == pick['horse'] 
+                     and bet.get('course') == pick['course']
+                     and bet.get('race_time') == pick['race_time']),
+                    None
+                )
+                if original_bet:
+                    filtered_new_bets.append(original_bet)
         
         print(f"\nDeduplication summary:")
         print(f"  New picks to save: {stats['new_picks_kept']}")
@@ -931,24 +874,26 @@ def filter_picks_per_race(bets: list) -> tuple:
             # Only 1 pick for this race - keep it
             filtered_bets.extend(race_bets)
         else:
-            # Multiple picks for this race - keep ONLY the best one
-            # Calculate quality score: combined_confidence * p_win
+            # Multiple picks for this race - keep ONLY the best one (STRICT 1 per race)
+            # Calculate quality score: combined_confidence * p_win * roi_factor
             for bet in race_bets:
                 conf = bet.get('combined_confidence', 0)
                 p_win = bet.get('p_win', 0)
-                bet['_quality_score'] = conf * p_win
+                roi = bet.get('roi', 0)
+                # Quality score: confidence × p_win + (ROI boost)
+                bet['_quality_score'] = (conf * p_win) + (max(0, roi) * 0.1)
             
             # Sort by quality score descending
             sorted_bets = sorted(race_bets, key=lambda x: float(x.get('_quality_score', 0)), reverse=True)
             
-            # Keep only the top one
+            # Keep only the top one (STRICT: 1 pick per race regardless of bet type)
             best_bet = sorted_bets[0]
             filtered_bets.append(best_bet)
             removed_count += len(sorted_bets) - 1
             
             print(f"  KEPT: {best_bet['horse']} ({best_bet.get('bet_type')}) - quality score: {best_bet['_quality_score']:.2f}")
             for removed_bet in sorted_bets[1:]:
-                print(f"  REMOVED: {removed_bet['horse']} - lower quality score ({removed_bet['_quality_score']:.2f})")
+                print(f"  REMOVED: {removed_bet['horse']} ({removed_bet.get('bet_type')}) - lower quality score ({removed_bet['_quality_score']:.2f})")
     
     return filtered_bets, removed_count
 
