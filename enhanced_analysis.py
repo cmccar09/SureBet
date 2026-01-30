@@ -76,6 +76,12 @@ class EnhancedAnalyzer:
         """
         prompt = f"""You are a VALUE BETTING EXPERT analyzing horse races for pricing inefficiencies.
 
+CRITICAL: ODDS SWEET SPOT (2.0/1 to 8.0/1 ONLY)
+Historical data shows:
+• 2-8/1 odds: 28.6% win rate ✓ PROFITABLE
+• 8+/1 odds: 0% win rate ✗ NEVER WIN
+**ONLY recommend horses with odds 2.0-8.0/1. Longshots (8+/1) are automatic rejections.**
+
 HISTORICAL LEARNINGS:
 {historical_insights if historical_insights else "No historical data yet - use fundamental analysis."}
 
@@ -217,6 +223,11 @@ Return 2-4 horses with best situational edges."""
         picks_summary = json.dumps(ensemble_picks, indent=2)
         
         prompt = f"""You are a SKEPTICAL RACING ANALYST reviewing betting selections for weaknesses.
+
+CRITICAL: REJECT LONGSHOTS
+• Odds 2-8/1: 28.6% win rate ✓ ACCEPT
+• Odds 8+/1: 0% win rate ✗ REJECT
+**If a horse has odds above 8/1, it must be removed from final selections. No exceptions.**
 
 {race_data}
 
