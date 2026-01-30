@@ -1,3 +1,18 @@
+# WARNING: THIS SCRIPT DELETES HISTORICAL DATA - DO NOT RUN!
+# Historical data is needed for AI learning and performance analysis.
+# The UI already filters past races using race_time in the API.
+# This script is DISABLED to preserve learning history.
+
+import sys
+print("\n" + "="*80)
+print("ERROR: This cleanup script is DISABLED")
+print("="*80)
+print("Historical betting data must be preserved for AI learning.")
+print("The UI automatically hides past races using race_time filtering.")
+print("If you need to clean up, contact the developer.")
+print("="*80 + "\n")
+sys.exit(1)
+
 import boto3
 from datetime import datetime, timezone
 

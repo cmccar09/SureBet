@@ -1,5 +1,18 @@
 #!/usr/bin/env pwsh
-# Clear all old test data from DynamoDB and keep only today's real picks
+# WARNING: THIS SCRIPT DELETES HISTORICAL DATA - DISABLED!
+# Historical data is needed for AI learning and performance analysis.
+# The UI already filters past races using race_time in the API.
+
+Write-Host "`n" -NoNewline
+Write-Host "="*80 -ForegroundColor Red
+Write-Host "ERROR: This cleanup script is DISABLED" -ForegroundColor Red
+Write-Host "="*80 -ForegroundColor Red
+Write-Host "Historical betting data must be preserved for AI learning." -ForegroundColor Yellow
+Write-Host "The UI automatically hides past races using race_time filtering." -ForegroundColor Yellow
+Write-Host "If you need to clean up, contact the developer." -ForegroundColor Yellow
+Write-Host "="*80 -ForegroundColor Red
+Write-Host "`n" -NoNewline
+exit 1
 
 Write-Host "Clearing old test data from DynamoDB..." -ForegroundColor Yellow
 Write-Host ""

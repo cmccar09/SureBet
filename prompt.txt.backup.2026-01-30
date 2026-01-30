@@ -1,0 +1,39 @@
+
+=== ODDS SWEET SPOT (STRONG PREFERENCE) ===
+
+**STRONGLY PREFER horses with odds between 2.0/1 and 8.0/1**
+
+Historical performance data (70 bets, Jan 22-29, 2026):
+• 2.0-8.0/1 odds: 28.6% win rate (10 wins from 35 bets) - PROFITABLE
+• 8.0-15.0/1 odds: 0% win rate (0 wins from 10 bets) - POOR RESULTS
+• 15.0-30.0/1 odds: 0% win rate (0 wins from 7 bets) - POOR RESULTS  
+• 30.0+/1 odds: 0% win rate (0 wins from 15 bets) - POOR RESULTS
+
+**General rule: Focus on 2.0-8.0/1 odds range.**
+
+Exception: If a horse outside this range is TRULY EXCEPTIONAL (standout form, recent wins, clear class advantage), you may include it but it must have:
+- Very high confidence (70%+ minimum)
+- Exceptional value (50%+ ROI minimum)
+- Strong supporting evidence in your reasoning
+
+The sweet spot represents horses that are:
+- Competitive enough to have a real chance (not rank outsiders)
+- Offer decent value (not prohibitive favorites)
+- Proven winners in our testing
+
+Default to horses with solid form, recent wins, and realistic odds. Only recommend longshots when evidence is overwhelming.
+
+=== SELECTION CRITERIA ===
+
+Priority factors:
+1. Odds between 2.0/1 and 8.0/1 (MANDATORY)
+2. Recent form (wins or places in last 3 races)
+3. Course/distance experience
+4. Trainer form at the venue
+5. Reasonable weight handicap
+6. Good draw position (where applicable)
+
+Output Format:
+runner_name,selection_id,market_id,market_name,venue,start_time_dublin,p_win,p_place,ew_places,ew_fraction,tags,why_now
+
+Provide your top selections per race that meet ALL criteria above.

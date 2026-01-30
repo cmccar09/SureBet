@@ -1,46 +1,46 @@
 [
   {
-    "our_pick": "Prince Quattro",
+    "our_pick": "Taranjerine",
     "our_odds": 0,
-    "our_p_win": 0.25,
+    "our_p_win": 0.36,
     "actual_winner": "Unknown",
-    "winner_selection_id": "11248111",
-    "market_id": "1.253196217",
-    "venue": "Wolverhampton",
-    "race_time": "2026-01-27T18:30:00.000Z",
-    "lesson": "Picked Prince Quattro but None won - need to analyze winner's characteristics"
+    "winner_selection_id": "76913048",
+    "market_id": "1.253275135",
+    "venue": "Chelmsford City",
+    "race_time": "2026-01-29T19:30:00.000Z",
+    "lesson": "Picked Taranjerine but None won - need to analyze winner's characteristics"
   },
   {
-    "our_pick": "Daaris",
-    "our_odds": 0,
-    "our_p_win": 0.2,
-    "actual_winner": "Unknown",
-    "winner_selection_id": "11248111",
-    "market_id": "1.253196217",
-    "venue": "Wolverhampton",
-    "race_time": "2026-01-27T18:30:00.000Z",
-    "lesson": "Picked Daaris but None won - need to analyze winner's characteristics"
-  },
-  {
-    "our_pick": "Billy Bathgate",
+    "our_pick": "Burano Murano",
     "our_odds": 0,
     "our_p_win": 0.15,
     "actual_winner": "Unknown",
-    "winner_selection_id": "11248111",
-    "market_id": "1.253196217",
-    "venue": "Wolverhampton",
-    "race_time": "2026-01-27T18:30:00.000Z",
-    "lesson": "Picked Billy Bathgate but None won - need to analyze winner's characteristics"
+    "winner_selection_id": "76913048",
+    "market_id": "1.253275135",
+    "venue": "Chelmsford City",
+    "race_time": "2026-01-29T19:30:00.000Z",
+    "lesson": "Picked Burano Murano but None won - need to analyze winner's characteristics"
   },
   {
-    "our_pick": "Slowdownbarney",
+    "our_pick": "Sullivan Bay",
     "our_odds": 0,
-    "our_p_win": 0.28,
+    "our_p_win": 0.1,
     "actual_winner": "Unknown",
-    "winner_selection_id": "11248111",
-    "market_id": "1.253196217",
-    "venue": "Wolverhampton",
-    "race_time": "2026-01-27T18:30:00.000Z",
-    "lesson": "Picked Slowdownbarney but None won - need to analyze winner's characteristics"
+    "winner_selection_id": "76913048",
+    "market_id": "1.253275135",
+    "venue": "Chelmsford City",
+    "race_time": "2026-01-29T19:30:00.000Z",
+    "lesson": "Picked Sullivan Bay but None won - need to analyze winner's characteristics"
+  },
+  {
+    "our_pick": "Hiconic",
+    "our_odds": 0,
+    "our_p_win": 0.08,
+    "actual_winner": "Unknown",
+    "winner_selection_id": "76913048",
+    "market_id": "1.253275135",
+    "venue": "Chelmsford City",
+    "race_time": "2026-01-29T19:30:00.000Z",
+    "lesson": "Picked Hiconic but None won - need to analyze winner's characteristics"
   }
 ]

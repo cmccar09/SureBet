@@ -1,226 +1,186 @@
-PROFESSIONAL HORSE RACING ANALYSIS - DETAILED WINNER FINDING SYSTEM (UK & IRE)
 
-=== PRIMARY OBJECTIVE ===
-Find GENUINE WINNERS through exhaustive analysis. We need horses that will actually WIN races, not just value plays.
-Focus on WIN bets for strong contenders and EACH-WAY bets for solid place prospects.
-Every selection must be justified through comprehensive head-to-head comparison and detailed research.
 
-=== SCOPE ===
-Evaluate all UK & Ireland flat & jumps races with off-time NOW ≤ t ≤ NOW+4h.
-Exclude races already run or >4h ahead; skip abandoned/voided.
-Unified timestamp: Europe/Dublin.
+=== LEARNED INSIGHTS (Updated 2026-01-29) ===
 
-=== CORE ANALYSIS REQUIREMENTS ===
-For EVERY horse in EVERY race, conduct detailed research on:
+Based on analysis of last 7 days performance (weekly learning cycle):
 
-1. GROUND CONDITIONS MATCH (CRITICAL)
-   - Compare today's going to each horse's preferred ground conditions
-   - Check last 5 runs: wins/places on similar going vs failures on different going
-   - Heavy/Soft specialists will NOT perform on Good/Firm (and vice versa)
-   - Flag horses that have NEVER won on today's going = AUTO-EXCLUDE
-   - Prefer horses with proven winning form on identical going
+• AVOID favorite selections - losing 89% ROI (n=90)
+• FOCUS on longshot selections - strong 87% ROI (n=38)
+• AVOID mid_price selections - losing 95% ROI (n=183)
+• AVOID outsider selections - losing 88% ROI (n=72)
+• WIN bet strike rate too low (7%) - need stronger fancies (n=60)
+• Each-way place rate too low (6%) - tighten EW criteria (n=97)
+• Be cautious at: Wolverhampton, Lingfield, Kempton
+• Winning pattern: prioritize enhanced_analysis selections
 
-2. CURRENT FORM ANALYSIS (Last 6 runs minimum)
-   - Recent wins (within 30 days) = strong positive
-   - Consistent placings (3+ places in last 5) = reliable
-   - Length beaten in recent races (close 2nds/3rds vs well beaten)
-   - Improvement trend (getting closer) vs decline (getting further behind)
-   - Time since last win (180+ days = concern unless clear reason)
-   
-3. COURSE & DISTANCE FORM (Critical at all courses)
-   - Course winners at TODAY'S track = HUGE ADVANTAGE (add 20% to rating)
-   - Distance winners at TODAY'S trip = proven ability
-   - Course/Distance combination (C&D) winners = strongest signal
-   - Track shape suitability (sharp vs galloping, left vs right-handed)
-   - Previous course placings still valuable (within 3 lengths)
+Apply these learnings when making selections. Continuously adapt strategy based on what works.
 
-4. JOCKEY & TRAINER ANALYSIS
-   - Trainer strike rate at THIS COURSE (last 12 months)
-   - Jockey strike rate at THIS COURSE (last 12 months)
-   - Trainer/Jockey combination win rate (when partnered)
-   - Recent form (last 14 days): hot combos vs cold spells
-   - Jockey booking significance (top jockey on outsider = strong signal)
-   - Stable in form (3+ winners in last 7 days) = confidence boost
 
-5. HEAD-TO-HEAD COMPARISONS (MANDATORY)
-   For each race, compare EVERY horse against EVERY other horse:
-   - Previous meetings (who finished ahead when they've met before)
-   - Class levels (Official Ratings comparison - higher is better)
-   - Speed figures (best recent figures vs opposition)
-   - Weight comparison (lb differences and who's better in)
-   - Age & experience (seasoned campaigners vs inexperienced)
-   - Identify the 2-3 horses with clear superiority over field
 
-6. RACE-SPECIFIC FACTORS
-   - Draw bias (low numbers advantage at certain tracks/distances)
-   - Pace scenario (front runners vs closers, likely pace setup)
-   - Field size (small fields favor class, big fields favor in-form)
-   - Race class (Class 1-7, don't back class droppers struggling)
-   - Trip suitability (proven stamina for distance)
-   - Equipment changes (first-time blinkers/cheekpieces/tongue-tie)
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
 
-7. SUSPICIOUS RACING PATTERNS (Lower Profile Courses)
-   ⚠️ RED FLAGS for potential "not trying hard" scenarios:
-   - Multiple runners from same stable (which one is the "live" one?)
-   - Top trainer at minor course with unfancied odds (could be prep run)
-   - Jockey booking downgrade (claimer on previous winner)
-   - Significant ease in class without obvious reason
-   - Horse returning from long break at minor venue (fitness run)
-   - Pattern of running below par then winning next time at bigger odds
-   
-   At lower grade courses (Class 4-7) be extra vigilant:
-   - Trainers known for "placing" horses (targeting specific races)
-   - Horses that run poorly then win at better prices next time
-   - If you suspect a "prep run", AVOID or note for future tracking
-   - Prefer in-form yards being obviously competitive
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
 
-=== SELECTION CRITERIA ===
 
-WINNERS (WIN Bets):
-Must meet ALL of these criteria:
-✓ Proven form on today's going (wins or close 2nds)
-✓ Course form if available (winner or placed within 3L)
-✓ In-form trainer/jockey (strike rate >15% at course)
-✓ Superior to all rivals on head-to-head comparison
-✓ No negative patterns suggesting "prep run"
-✓ Clear reason WHY this horse wins TODAY
-✓ Odds represent value (overlay of 10%+ vs true chances)
 
-EACH-WAY Bets:
-Must meet these criteria:
-✓ Genuine place chance (top 4 on ratings minimum)
-✓ Good ground/course suitability
-✓ Consistent recent form (3+ places in last 5)
-✓ Each-way terms favorable (3+ places, 1/4 or 1/5 odds)
-✓ Better value on place than win (especially 6/1 to 12/1 range)
-✓ Strong jockey/trainer combo even if not favored to win outright
+=== LEARNED INSIGHTS (Updated 2026-01-29) ===
 
-EXCLUSIONS (Never select these):
-✗ Wrong ground conditions for horse's preferences
-✗ Poor recent form with no obvious excuse
-✗ Trainer/Jockey combo with <10% strike rate at course
-✗ Suspicion of "not trying" (prep run indicators)
-✗ Outclassed on head-to-head comparison
-✗ Distance/trip suitability concerns
-✗ Long layoff (100+ days) without workout reports
+Based on analysis of last 7 days performance (weekly learning cycle):
 
-=== DETAILED RESEARCH PROCESS ===
+• AVOID favorite selections - losing 89% ROI (n=90)
+• FOCUS on longshot selections - strong 87% ROI (n=38)
+• AVOID mid_price selections - losing 95% ROI (n=183)
+• AVOID outsider selections - losing 88% ROI (n=72)
+• WIN bet strike rate too low (7%) - need stronger fancies (n=60)
+• Each-way place rate too low (6%) - tighten EW criteria (n=97)
+• Be cautious at: Wolverhampton, Lingfield, Kempton
+• Winning pattern: prioritize enhanced_analysis selections
 
-For each race, document your research:
+Apply these learnings when making selections. Continuously adapt strategy based on what works.
 
-STEP 1: GROUND ASSESSMENT
-List today's going and each horse's record on similar going.
-Identify horses with proven winning form on today's surface.
-Eliminate horses that have never won on this going.
 
-STEP 2: FORM REVIEW
-Examine last 6 runs for each horse.
-Note wins, places, beaten distances, and improvement/decline trends.
-Highlight any excuses (bad draw, trouble in running, unsuitable ground).
 
-STEP 3: COURSE FORM
-Check if any horses have won at today's course before.
-Course winners get priority consideration.
-Note any horses with multiple course placings.
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
 
-STEP 4: HEAD-TO-HEAD MATRIX
-Create comparison table of top 4-5 contenders:
-- Official rating comparison
-- Best recent speed figures
-- Head-to-head record if previously met
-- Weight comparison
-- Class level
-Identify clear superiority of potential selection.
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
 
-STEP 5: TRAINER/JOCKEY INTELLIGENCE
-Check trainer strike rate at this course.
-Check jockey strike rate at this course.
-Note if this is a strong trainer/jockey combination.
-Consider recent yard form (last 14 days).
 
-STEP 6: INTEGRITY CHECK
-Look for red flags suggesting "not trying":
-- Multi-runner stables (which is the intended winner?)
-- Class drops without logical explanation
-- Jockey downgrades
-- Pattern of poor runs before winning
-If red flags present, move to next horse.
 
-STEP 7: FINAL SELECTION
-Choose 3-5 horses that clearly stand out as genuine winning chances.
-Each selection must have a compelling "Why This Horse Wins Today" narrative.
-Mix of WIN bets (strong favorites/contenders) and EW bets (value place chances).
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
 
-=== OUTPUT REQUIREMENTS ===
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
 
-For each selection provide:
 
-runner_name: Horse name (this field name for compatibility)
-selection_id: Selection identifier
-market_id: Market identifier
-market_name: Race type/distance
-venue: Course name (this field name for compatibility)
-start_time_dublin: ISO format timestamp
-odds: Current decimal odds
-bet_type: "WIN" or "EW" (Each-Way)
 
-p_win: Win probability (0-1 decimal, based on research)
-p_place: Place probability (0-1 decimal)
-ew_places: Number of places paid (typically 3-4)
-ew_fraction: Place fraction (0.2 for 1/5, 0.25 for 1/4)
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
 
-confidence: Score 0-100 based on strength of research
-roi: Expected return percentage (as decimal, e.g., 0.15 = 15%)
-ev: Expected value (as decimal)
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
 
-tags: Comma-separated string of relevant factors, e.g.:
-  "COURSE_WINNER,GROUND_SPECIALIST,IN_FORM_YARD,STRONG_JOCKEY,CLASS_EDGE"
-  or "EW_VALUE,CONSISTENT_PLACER,GOOD_EACH_WAY_TERMS"
-  Include "BELOW_THRESHOLD" if ROI <5% but still best available
-  Include warning tags if relevant: "MULTI_RUNNER_STABLE" or "PREP_RUN_RISK"
 
-why_now: Detailed explanation (100-200 words) covering:
-  - Ground suitability analysis
-  - Recent form summary and trend
-  - Course/distance record
-  - Head-to-head superiority over main rivals
-  - Trainer/jockey strengths at this venue
-  - Key factor that makes this horse win TODAY
-  - Why odds represent value
-  - For EW: why place value is strong
 
-=== IMPORTANT RULES ===
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
 
-1. ALWAYS output 3-5 selections (best opportunities available)
-2. Prioritize quality over quantity - WINNERS not just value
-3. Each selection must pass ALL relevant checks
-4. Be honest about confidence levels (70%+ = strong, 50-70% = moderate, <50% = speculative)
-5. Mark selections BELOW_THRESHOLD if <5% ROI but note they're still best available
-6. Consider race context (competitive handicap vs weak field)
-7. Factor in track profile (sharp tracks favor speed, galloping tracks favor stamina)
-8. Weight changes matter (3lb+ can swing races)
-9. First-time equipment (blinkers/tongue-tie) can transform performance
-10. Trust the detailed research over just odds movements
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
 
-=== PORTFOLIO GUIDELINES ===
 
-- Aim for 2-3 WIN bets on strongest fancies (odds 2/1 to 7/1 ideal)
-- Include 1-2 EACH-WAY bets on solid place prospects (6/1 to 12/1 range)
-- Avoid odds-on shots unless utterly dominant
-- Avoid 20/1+ outsiders unless exceptional value case
-- Diversify across different race types/courses
-- Maximum 1 selection per race
-- Overall portfolio target: 25%+ win strike rate, positive ROI after commission
 
-=== CSV OUTPUT FORMAT ===
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
 
-Return selections in CSV format with these exact columns:
-runner_name,selection_id,market_id,market_name,venue,start_time_dublin,p_win,p_place,ew_places,ew_fraction,tags,why_now
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
 
-Make sure to output valid CSV with proper escaping of commas in text fields.
-Sort by confidence score (highest first).
-Ensure every selection has comprehensive why_now explanation.
 
-Example:
-runner_name,selection_id,market_id,market_name,venue,start_time_dublin,p_win,p_place,ew_places,ew_fraction,tags,why_now
-Example Runner,12345,1.234567,7f Handicap,Newmarket,2026-01-03T14:30:00,0.35,0.65,3,0.2,"COURSE_WINNER,GROUND_SPECIALIST,CLASS_EDGE,IN_FORM_YARD","Won twice at Newmarket on Good ground including 3-length victory over main rival Sharp Shot last month. Trainer Jessica Harrington 24% strike rate at track. In career-best form 1-2-1 last three. Official Rating 95 clear edge over rivals 88-92. Draw 3 ideal for pace setup. Jockey Donnacha O'Brien (18% course record) takes over. Ground dried to Good suits perfectly - all 4 wins on Good. At 4.5 we have 35% win chance priced at 22% clear value overlay."
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-01-29)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.4%. Consider adjusting probability model or isotonic regression parameters.
+

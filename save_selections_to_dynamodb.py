@@ -709,22 +709,7 @@ def deduplicate_against_database(new_bets: list, table_name: str = None, region:
                     else:
                         stats['new_picks_filtered'] += 1
                         print(f"    FILTER new: {pick['horse']} ({pick['bet_type']}) - score: {pick['_quality_score']:.1f}")
-                            bet_ids_to_delete.append({
-                                'bet_date': pick.get('bet_date', pick.get('date')),
-                                'bet_id': pick['bet_id']
-                            })
-                            stats['existing_picks_deleted'] += 1
-                            print(f"    DELETE existing: {pick['horse']} ({pick['bet_type']})")
-                        else:
-                            stats['new_picks_filtered'] += 1
-                            print(f"    FILTER new: {pick['horse']} ({pick['bet_type']})")
-        
-        # Filter new_bets to only include those we want to keep
-        # For conflicting races, only keep new picks that weren't filtered
-        for race_key in conflicting_races:
-            all_picks = existing_by_race[race_key] + new_by_race[race_key]
-            
-            # STRICT: Only 1 pick per race, already determined above
+
             sorted_picks = sorted(all_picks, key=lambda x: x.get('_quality_score', 0), reverse=True)
             kept_pick = sorted_picks[0]
             
@@ -1024,6 +1009,20 @@ def main():
         has_enrichment = bool(bet.get('enrichment_data'))
         reasoning = bet.get('why_now', '').lower()
         horse = bet.get('horse', 'Unknown')
+        odds = float(bet.get('odds', 0))
+        
+        # Rule 0: SWEET SPOT ODDS RANGE (2.0 to 8.0 preference)
+        # Historical data shows: 2-8/1 = 28.6% win rate, 8+/1 = 0% win rate
+        # Allow exceptions for EXCEPTIONAL bets (70%+ confidence AND 50%+ ROI)
+        outside_sweet_spot = odds < 2.0 or odds > 8.0
+        is_exceptional = combined_confidence >= 70 and float(bet.get('roi', 0)) >= 50
+        
+        if outside_sweet_spot and not is_exceptional:
+            print(f"REJECTED: {horse} - Odds {odds:.1f}/1 outside sweet spot (need 70%+ conf + 50%+ ROI for exception)")
+            validation_rejected += 1
+            continue
+        elif outside_sweet_spot and is_exceptional:
+            print(f"EXCEPTION: {horse} - Odds {odds:.1f}/1 outside sweet spot but EXCEPTIONAL quality (conf={combined_confidence}%, roi={bet.get('roi')}%)")
         
         # Rule 1: Greyhounds with high confidence MUST have enrichment data
         if args.sport == 'greyhounds' and confidence >= 60 and not has_enrichment:

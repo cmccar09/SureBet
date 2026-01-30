@@ -1,1 +1,1 @@
-{"statusCode": 500, "headers": {"Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token", "Access-Control-Allow-Methods": "GET,POST,OPTIONS"}, "body": "{\"error\": \"name 'determine_bet_type' is not defined\"}"}
+{"statusCode": 202, "body": "{\"success\": true, \"message\": \"Workflow trigger received\", \"timestamp\": \"2026-01-29T12:44:03.765224\", \"info\": \"The workflow is scheduled to run hourly. New picks will appear within 60-90 minutes.\"}"}
