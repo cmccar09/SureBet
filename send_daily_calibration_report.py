@@ -183,9 +183,9 @@ def generate_html_report(calibration_report, loss_report):
 
 def generate_calibration_section(report):
     """Generate calibration analysis HTML section"""
-    summary = report.get('summary', {})
-    bins = report.get('calibration_bins', [])
-    brier_score = report.get('overall_brier_score', 0)
+    overall = report.get('overall', {})
+    bins_dict = report.get('calibration_bins', {})
+    brier_score = report.get('brier_score', {}).get('score', 0)
     
     html = f"""
         <div class="section">
@@ -195,15 +195,15 @@ def generate_calibration_section(report):
             
             <div class="summary-grid">
                 <div class="summary-stat">
-                    <div class="summary-stat-value">{summary.get('total_picks', 0)}</div>
+                    <div class="summary-stat-value">{overall.get('total_picks', 0)}</div>
                     <div class="summary-stat-label">Picks Analyzed</div>
                 </div>
                 <div class="summary-stat">
-                    <div class="summary-stat-value">{summary.get('total_wins', 0)}</div>
+                    <div class="summary-stat-value">{overall.get('wins', 0)}</div>
                     <div class="summary-stat-label">Actual Wins</div>
                 </div>
                 <div class="summary-stat">
-                    <div class="summary-stat-value">{summary.get('win_rate', 0):.1f}%</div>
+                    <div class="summary-stat-value">{overall.get('win_rate', 0)*100:.1f}%</div>
                     <div class="summary-stat-label">Overall Win Rate</div>
                 </div>
             </div>
@@ -221,11 +221,11 @@ def generate_calibration_section(report):
             <div class="bins-grid">
     """
     
-    for bin_data in bins:
-        bin_range = bin_data.get('bin_range', 'Unknown')
-        predicted = bin_data.get('avg_predicted_prob', 0) * 100
-        actual = bin_data.get('actual_win_rate', 0) * 100
-        count = bin_data.get('count', 0)
+    # Convert dict to sorted list for display
+    for bin_range, bin_data in sorted(bins_dict.items()):
+        predicted = bin_data.get('predicted', 0) * 100
+        actual = bin_data.get('actual', 0) * 100
+        count = bin_data.get('sample_size', 0)
         wins = bin_data.get('wins', 0)
         calibration_error = bin_data.get('calibration_error', 0)
         
@@ -384,24 +384,23 @@ def generate_loss_comparison_section(loss_report):
 def send_email(html_content, subject):
     """Send email via AWS SES"""
     try:
-        ses = boto3.client('ses', region_name='eu-west-1')
+        # Save HTML to file for now (SES not verified)
+        output_file = Path(__file__).parent / "calibration_email_output.html"
+        with open(output_file, 'w', encoding='utf-8') as f:
+            f.write(html_content)
         
-        response = ses.send_email(
-            Source='noreply@surebet.ai',  # Update with your verified SES email
-            Destination={'ToAddresses': EMAIL_RECIPIENTS},
-            Message={
-                'Subject': {'Data': subject, 'Charset': 'UTF-8'},
-                'Body': {'Html': {'Data': html_content, 'Charset': 'UTF-8'}}
-            }
-        )
-        
-        print(f"✅ Email sent successfully!")
-        print(f"   Message ID: {response['MessageId']}")
+        print(f"✅ Email HTML saved to: {output_file}")
+        print(f"   Open this file in a browser to view the formatted report")
         print(f"   Recipients: {', '.join(EMAIL_RECIPIENTS)}")
+        
+        # TODO: Configure SES verified sender email
+        # ses = boto3.client('ses', region_name='eu-west-1')
+        # response = ses.send_email(...)
+        
         return True
         
     except Exception as e:
-        print(f"❌ Error sending email: {e}")
+        print(f"❌ Error: {e}")
         return False
 
 def main():

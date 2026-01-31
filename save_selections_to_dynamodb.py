@@ -577,7 +577,7 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None, sport: str
         'feedback_processed': False,
         
         # ALL HORSES ANALYZED (for comparative learning)
-        'all_horses_analyzed': bet.get('all_horses_analyzed', {}),
+        'all_horses_analyzed': row.get('all_horses_analyzed', {}),
         
         # Full bet object for reference
         'bet': {
