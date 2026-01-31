@@ -112,10 +112,11 @@ function App() {
       if (data.success && data.picks) {
         // Calculate summary from picks
         const picks = data.picks;
-        const wins = picks.filter(p => p.outcome === 'WON').length;
-        const places = picks.filter(p => p.outcome === 'PLACED').length;
-        const losses = picks.filter(p => p.outcome === 'LOST').length;
-        const pending = picks.filter(p => !p.outcome || p.outcome === 'PENDING').length;
+        // Use lowercase outcome values to match database format
+        const wins = picks.filter(p => p.outcome === 'win' || p.outcome === 'placed').length; // Count placed as wins
+        const places = picks.filter(p => p.outcome === 'placed').length;
+        const losses = picks.filter(p => p.outcome === 'loss').length;
+        const pending = picks.filter(p => !p.outcome || p.outcome === 'pending').length;
         
         // Calculate profit/loss based on outcome, stake, and odds
         let totalPL = 0;
@@ -129,16 +130,16 @@ function App() {
           if (p.profit !== undefined && p.profit !== null) {
             totalPL += parseFloat(p.profit);
             totalStake += stake;
-          } else if (outcome === 'WON') {
+          } else if (outcome === 'win') {
             // Win profit = stake * (odds - 1)
             totalPL += stake * (odds - 1);
             totalStake += stake;
-          } else if (outcome === 'PLACED') {
+          } else if (outcome === 'placed') {
             // Place profit (assume 1/4 odds for simplicity)
             const placeOdds = 1 + ((odds - 1) * 0.25);
             totalPL += stake * (placeOdds - 1);
             totalStake += stake;
-          } else if (outcome === 'LOST') {
+          } else if (outcome === 'loss') {
             // Loss = -stake
             totalPL -= stake;
             totalStake += stake;
@@ -589,7 +590,7 @@ function App() {
                   gap: '12px'
                 }}>
                   {results.picks.map((pick, index) => {
-                    const outcome = pick.outcome || 'PENDING';
+                    const outcome = pick.outcome || 'pending';
                     
                     // Calculate P/L for this pick
                     const stake = parseFloat(pick.stake || 0);
@@ -598,23 +599,22 @@ function App() {
                     
                     if (pick.profit !== undefined && pick.profit !== null) {
                       pl = parseFloat(pick.profit);
-                    } else if (outcome === 'WON') {
+                    } else if (outcome === 'win') {
                       pl = stake * (odds - 1);
-                    } else if (outcome === 'PLACED') {
+                    } else if (outcome === 'placed') {
                       const placeOdds = 1 + ((odds - 1) * 0.25);
                       pl = stake * (placeOdds - 1);
-                    } else if (outcome === 'LOST') {
+                    } else if (outcome === 'loss') {
                       pl = -stake;
                     }
                     
                     const outcomeColor = 
-                      outcome === 'WON' ? '#10b981' : 
-                      outcome === 'PLACED' ? '#f59e0b' : 
-                      outcome === 'LOST' ? '#ef4444' : '#6b7280';
+                      outcome === 'win' || outcome === 'placed' ? '#10b981' : 
+                      outcome === 'loss' ? '#ef4444' : '#6b7280';
                     const outcomeIcon = 
-                      outcome === 'WON' ? '🏆' : 
-                      outcome === 'PLACED' ? '📍' : 
-                      outcome === 'LOST' ? '❌' : '⏳';
+                      outcome === 'win' ? '🏆' : 
+                      outcome === 'placed' ? '📍' : 
+                      outcome === 'loss' ? '❌' : '⏳';
 
                     return (
                       <div key={index} style={{
