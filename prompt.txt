@@ -297,10 +297,10 @@ Based on analysis of last 7 days performance (weekly learning cycle):
 
 • AVOID favorite selections - losing 89% ROI (n=92)
 • FOCUS on longshot selections - strong 54% ROI (n=46)
-• AVOID mid_price selections - losing 95% ROI (n=189)
-• AVOID outsider selections - losing 88% ROI (n=78)
-• WIN bet strike rate too low (6%) - need stronger fancies (n=68)
-• Each-way place rate too low (5%) - tighten EW criteria (n=111)
+• AVOID mid_price selections - losing 95% ROI (n=192)
+• AVOID outsider selections - losing 89% ROI (n=81)
+• WIN bet strike rate too low (6%) - need stronger fancies (n=71)
+• Each-way place rate too low (5%) - tighten EW criteria (n=114)
 • Be cautious at: Wolverhampton, Lingfield, Kempton
 • Winning pattern: prioritize enhanced_analysis selections
 
