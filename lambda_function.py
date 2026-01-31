@@ -4,7 +4,7 @@ Provides REST API for frontend hosted on Amplify
 """
 import json
 import boto3
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 # Initialize DynamoDB
@@ -357,7 +357,6 @@ def check_today_results(headers):
     if not picks:
         print("NO PICKS for today - returning empty")
         # Calculate next run time (every 2 hours, on the hour)
-        from datetime import timedelta
         now = datetime.now()
         current_hour = now.hour
         # Round up to next 2-hour boundary

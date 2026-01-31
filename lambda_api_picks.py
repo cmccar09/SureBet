@@ -4,7 +4,7 @@ Provides REST API for frontend hosted on Amplify
 """
 import json
 import boto3
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 # Initialize DynamoDB
@@ -424,13 +424,25 @@ def check_today_results(headers):
     
     if not picks:
         print("NO PICKS for today - returning empty")
+        # Calculate next run time (every 2 hours, on the hour)
+        now = datetime.now()
+        current_hour = now.hour
+        # Round up to next 2-hour boundary
+        next_hour = ((current_hour // 2) + 1) * 2
+        if next_hour >= 24:
+            next_run = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        else:
+            next_run = now.replace(hour=next_hour, minute=0, second=0, microsecond=0)
+        
         return {
             'statusCode': 200,
             'headers': headers,
             'body': json.dumps({
                 'success': True,
-                'message': f'No picks for today',
+                'message': f'No selections met the criteria',
                 'date': today,
+                'last_run': now.strftime('%Y-%m-%d %H:%M:%S'),
+                'next_run': next_run.strftime('%Y-%m-%d %H:%M:%S'),
                 'summary': {'total_picks': 0, 'wins': 0, 'losses': 0, 'pending': 0},
                 'horses': {'summary': None, 'picks': []},
                 'greyhounds': {'summary': None, 'picks': []},
