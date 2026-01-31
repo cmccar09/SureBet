@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-01-30T09:39:07.240961",
-  "sample_size": 186,
-  "date_range": "20260103 to 20260129",
+  "generated_at": "2026-01-31T15:58:19.357935",
+  "sample_size": 200,
+  "date_range": "20260103 to 20260130",
   "overall_stats": {
-    "total_bets": 186,
-    "wins": 36,
-    "win_rate": 0.1935483870967742,
-    "places": 36,
-    "place_rate": 0.1935483870967742,
-    "avg_p_win": 0.21709677419354836
+    "total_bets": 200,
+    "wins": 39,
+    "win_rate": 0.195,
+    "places": 39,
+    "place_rate": 0.195,
+    "avg_p_win": 0.21885
   },
   "winning_patterns": [
     {
@@ -20,9 +20,9 @@
     },
     {
       "pattern": "Consistent recent form",
-      "win_rate": "40.0%",
-      "expected": "29.9%",
-      "sample_size": 10,
+      "win_rate": "50.0%",
+      "expected": "29.6%",
+      "sample_size": 12,
       "action": "KEEP - this strategy is working"
     },
     {
@@ -30,6 +30,13 @@
       "win_rate": "42.9%",
       "expected": "34.4%",
       "sample_size": 7,
+      "action": "KEEP - this strategy is working"
+    },
+    {
+      "pattern": "Decent recent form",
+      "win_rate": "20.0%",
+      "expected": "22.8%",
+      "sample_size": 5,
       "action": "KEEP - this strategy is working"
     },
     {
@@ -42,8 +49,8 @@
   ],
   "failing_patterns": [],
   "recommendations": [
-    "CALIBRATED: Win rate (19.4%) matches predictions (21.7%). Probability model is well-calibrated.",
-    "EW bets: 153 bets, 13.1% place rate"
+    "CALIBRATED: Win rate (19.5%) matches predictions (21.9%). Probability model is well-calibrated.",
+    "EW bets: 167 bets, 13.8% place rate"
   ],
-  "prompt_guidance": "\nHISTORICAL PERFORMANCE INSIGHTS (Last 186 bets):\n\nWHAT'S WORKING:\n- BELOW_THRESHOLD: 27.3% win rate (expected 28.0%)\n- Consistent recent form: 40.0% win rate (expected 29.9%)\n- Recent win: 42.9% win rate (expected 34.4%)\n- Consistent placer: 20.0% win rate (expected 17.4%)\n\nRECOMMENDATIONS:\n- CALIBRATED: Win rate (19.4%) matches predictions (21.7%). Probability model is well-calibrated.\n- EW bets: 153 bets, 13.1% place rate\n"
+  "prompt_guidance": "\nHISTORICAL PERFORMANCE INSIGHTS (Last 200 bets):\n\nWHAT'S WORKING:\n- BELOW_THRESHOLD: 27.3% win rate (expected 28.0%)\n- Consistent recent form: 50.0% win rate (expected 29.6%)\n- Recent win: 42.9% win rate (expected 34.4%)\n- Decent recent form: 20.0% win rate (expected 22.8%)\n- Consistent placer: 20.0% win rate (expected 17.4%)\n\nRECOMMENDATIONS:\n- CALIBRATED: Win rate (19.5%) matches predictions (21.9%). Probability model is well-calibrated.\n- EW bets: 167 bets, 13.8% place rate\n"
 }
