@@ -774,8 +774,18 @@ function App() {
               </div>
             </div>
 
-            <div className="picks-summary">
-              Showing top {Math.min(5, picks.length)} of {picks.length} selections
+            <div className="picks-summary" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+              <span>Showing top {Math.min(5, picks.length)} of {picks.length} selections</span>
+              {picks.length > 0 && picks[0].timestamp && (
+                <span style={{fontSize: '11px', opacity: 0.7}}>
+                  Last run: {new Date(picks[0].timestamp).toLocaleString('en-GB', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
+              )}
             </div>
             <div className="picks-grid">
             {picks
