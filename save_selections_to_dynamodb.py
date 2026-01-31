@@ -20,13 +20,13 @@ try:
 except ImportError:
     HAS_BOTO3 = False
 
-def filter_races_by_time(df, min_lead_time_minutes=30, max_future_hours=24):
+def filter_races_by_time(df, min_lead_time_minutes=10, max_future_hours=24):
     """
     Filter out races that are too close to start time or too far in the future
     
     Args:
         df: DataFrame with selections (must have 'start_time_dublin' column)
-        min_lead_time_minutes: Minimum time before race (default: 30 minutes)
+        min_lead_time_minutes: Minimum time before race (default: 10 minutes)
         max_future_hours: Maximum hours in future to consider (default: 24 hours)
     
     Returns:
@@ -891,7 +891,7 @@ def main():
     parser.add_argument("--dry_run", action="store_true", help="Don't actually save to DynamoDB")
     parser.add_argument("--min_roi", type=float, default=0.0, help="Minimum ROI threshold in percentage (default: 0.0 - breakeven)")
     parser.add_argument("--sport", type=str, choices=['horses', 'greyhounds'], default='horses', help="Sport type: horses or greyhounds (default: horses)")
-    parser.add_argument("--min_lead_time", type=int, default=30, help="Minimum minutes before race start (default: 30)")
+    parser.add_argument("--min_lead_time", type=int, default=10, help="Minimum minutes before race start (default: 10)")
     parser.add_argument("--max_future_hours", type=int, default=24, help="Maximum hours in future to consider (default: 24)")
     
     args = parser.parse_args()
