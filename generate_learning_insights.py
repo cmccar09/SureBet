@@ -118,11 +118,32 @@ def merge_all_selections_with_results(days_back: int = 30) -> pd.DataFrame:
                     is_winner = result.get('is_winner', False) or status == 'WINNER'
                     is_placed = result.get('is_placed', False) or status in ['WINNER', 'PLACED']
                     
+                    # Extract odds (try multiple field names)
+                    odds = None
+                    for odds_field in ['odds', 'last_price_traded', 'sp']:
+                        if odds_field in row:
+                            try:
+                                odds = float(row[odds_field])
+                                break
+                            except (ValueError, TypeError):
+                                continue
+                    
+                    # If no odds in row, try result
+                    if odds is None and result:
+                        for odds_field in ['odds', 'last_price_traded', 'sp']:
+                            if odds_field in result:
+                                try:
+                                    odds = float(result[odds_field])
+                                    break
+                                except (ValueError, TypeError):
+                                    continue
+                    
                     merged = {
                         'date': date_str,
                         'runner_name': row.get('runner_name', ''),
                         'venue': row.get('venue', ''),
                         'market_name': row.get('market_name', ''),
+                        'odds': odds if odds else 0.0,
                         'p_win': float(row.get('p_win', 0)),
                         'p_place': float(row.get('p_place', 0)),
                         'bet_type': row.get('bet_type', 'EW'),
@@ -185,7 +206,65 @@ def analyze_tag_performance(df: pd.DataFrame) -> Dict[str, Dict]:
     return results
 
 
-def extract_pattern_learnings(df: pd.DataFrame, tag_performance: Dict) -> Dict[str, Any]:
+def analyze_odds_ranges(df: pd.DataFrame) -> Dict[str, Dict]:
+    """Analyze performance by odds ranges - KEY FOR SWEET SPOT OPTIMIZATION"""
+    
+    if 'odds' not in df.columns or len(df) == 0:
+        return {}
+    
+    # Filter out invalid odds
+    df_valid = df[df['odds'] > 0].copy()
+    
+    if len(df_valid) == 0:
+        return {}
+    
+    # Define sweet spot ranges
+    ranges = {
+        'ultimate_sweet_spot': (3.5, 6.0),  # Perfect range
+        'sweet_spot': (3.0, 9.0),           # Target range  
+        'short_odds': (1.0, 3.0),           # Favorites
+        'medium_odds': (9.0, 15.0),         # Long shots
+        'long_odds': (15.0, 50.0),          # Very long
+        'extreme_odds': (50.0, 1000.0)      # Avoid
+    }
+    
+    odds_stats = {}
+    
+    for range_name, (min_odds, max_odds) in ranges.items():
+        range_df = df_valid[(df_valid['odds'] >= min_odds) & (df_valid['odds'] < max_odds)]
+        
+        if len(range_df) == 0:
+            continue
+        
+        total_bets = len(range_df)
+        wins = range_df['won'].sum()
+        win_rate = wins / total_bets if total_bets > 0 else 0
+        
+        # Calculate ROI (simple: assume €1 stake per bet)
+        total_stake = total_bets
+        total_return = 0
+        
+        for _, row in range_df.iterrows():
+            if row['won']:
+                total_return += row['odds']  # Return includes stake
+        
+        profit = total_return - total_stake
+        roi = (profit / total_stake * 100) if total_stake > 0 else 0
+        
+        odds_stats[range_name] = {
+            'range': f"{min_odds:.1f}-{max_odds:.1f}",
+            'total_bets': int(total_bets),
+            'wins': int(wins),
+            'win_rate': float(win_rate),
+            'roi': float(roi),
+            'avg_odds': float(range_df['odds'].mean()),
+            'verdict': 'PROFITABLE' if roi > 0 else 'LOSING'
+        }
+    
+    return odds_stats
+
+
+def extract_pattern_learnings(df: pd.DataFrame, tag_performance: Dict, odds_performance: Dict) -> Dict[str, Any]:
     """Extract specific learnings from the data"""
     
     learnings = {
@@ -193,6 +272,8 @@ def extract_pattern_learnings(df: pd.DataFrame, tag_performance: Dict) -> Dict[s
         'sample_size': len(df),
         'date_range': f"{df['date'].min()} to {df['date'].max()}" if len(df) > 0 else "No data",
         'overall_stats': {},
+        'odds_performance': odds_performance,
+        'sweet_spot_analysis': {},
         'winning_patterns': [],
         'failing_patterns': [],
         'recommendations': []
@@ -211,6 +292,51 @@ def extract_pattern_learnings(df: pd.DataFrame, tag_performance: Dict) -> Dict[s
         'place_rate': float(df['placed'].mean()),
         'avg_p_win': float(df['p_win'].mean())
     }
+    
+    # Sweet spot specific analysis
+    if 'odds' in df.columns:
+        df_valid = df[df['odds'] > 0].copy()
+        sweet_spot_df = df_valid[(df_valid['odds'] >= 3.0) & (df_valid['odds'] < 9.0)]
+        ultimate_sweet_df = df_valid[(df_valid['odds'] >= 3.5) & (df_valid['odds'] < 6.0)]
+        
+        if len(sweet_spot_df) > 0:
+            ss_wins = sweet_spot_df['won'].sum()
+            ss_total = len(sweet_spot_df)
+            ss_win_rate = ss_wins / ss_total if ss_total > 0 else 0
+            
+            # Calculate ROI for sweet spot
+            ss_stake = ss_total
+            ss_return = sum(row['odds'] for _, row in sweet_spot_df.iterrows() if row['won'])
+            ss_profit = ss_return - ss_stake
+            ss_roi = (ss_profit / ss_stake * 100) if ss_stake > 0 else 0
+            
+            learnings['sweet_spot_analysis'] = {
+                'range': '3.0-9.0 (2/1 to 8/1)',
+                'total_bets': int(ss_total),
+                'wins': int(ss_wins),
+                'win_rate': float(ss_win_rate),
+                'roi': float(ss_roi),
+                'percentage_of_portfolio': float(ss_total / len(df_valid) * 100) if len(df_valid) > 0 else 0,
+                'verdict': 'PROFITABLE' if ss_roi > 0 else 'NEEDS_IMPROVEMENT'
+            }
+            
+            # Ultimate sweet spot
+            if len(ultimate_sweet_df) > 0:
+                uss_wins = ultimate_sweet_df['won'].sum()
+                uss_total = len(ultimate_sweet_df)
+                uss_win_rate = uss_wins / uss_total if uss_total > 0 else 0
+                uss_stake = uss_total
+                uss_return = sum(row['odds'] for _, row in ultimate_sweet_df.iterrows() if row['won'])
+                uss_profit = uss_return - uss_stake
+                uss_roi = (uss_profit / uss_stake * 100) if uss_stake > 0 else 0
+                
+                learnings['sweet_spot_analysis']['ultimate'] = {
+                    'range': '3.5-6.0 (5/2 to 5/1)',
+                    'total_bets': int(uss_total),
+                    'wins': int(uss_wins),
+                    'win_rate': float(uss_win_rate),
+                    'roi': float(uss_roi)
+                }
     
     # Winning patterns (tags that outperform)
     for tag, stats in tag_performance.items():
@@ -234,25 +360,70 @@ def extract_pattern_learnings(df: pd.DataFrame, tag_performance: Dict) -> Dict[s
                 'action': 'REDUCE - underperforming expectations'
             })
     
-    # Generate recommendations
+    # Generate recommendations - SWEET SPOT FOCUS
     overall_win_rate = learnings['overall_stats']['win_rate']
     avg_p_win = learnings['overall_stats']['avg_p_win']
     
+    # Priority 1: Sweet spot performance
+    if learnings.get('sweet_spot_analysis'):
+        ss_data = learnings['sweet_spot_analysis']
+        ss_percentage = ss_data.get('percentage_of_portfolio', 0)
+        ss_roi = ss_data.get('roi', 0)
+        ss_win_rate = ss_data.get('win_rate', 0)
+        
+        if ss_percentage < 60:
+            learnings['recommendations'].append(
+                f"🎯 CRITICAL: Only {ss_percentage:.1f}% of bets in SWEET SPOT (3.0-9.0 odds). "
+                f"TARGET: 80%+ in this range. This is where winners are!"
+            )
+        
+        if ss_roi > 10:
+            learnings['recommendations'].append(
+                f"✅ SWEET SPOT WORKING: {ss_roi:.1f}% ROI with {ss_win_rate:.1%} win rate. "
+                f"DOUBLE DOWN on 3.0-9.0 odds range!"
+            )
+        elif ss_roi < -10:
+            learnings['recommendations'].append(
+                f"⚠️ Sweet spot underperforming: {ss_roi:.1f}% ROI. "
+                f"Review selection criteria WITHIN the range - need better winners at 3-9 odds."
+            )
+        
+        # Ultimate sweet spot guidance
+        if 'ultimate' in ss_data:
+            uss_data = ss_data['ultimate']
+            if uss_data['total_bets'] >= 5:
+                if uss_data['roi'] > ss_roi:
+                    learnings['recommendations'].append(
+                        f"🏆 ULTIMATE SWEET SPOT (3.5-6.0) is BEST: {uss_data['roi']:.1f}% ROI. "
+                        f"Prioritize this sub-range within sweet spot!"
+                    )
+    
+    # Calibration
     if overall_win_rate < avg_p_win * 0.7:
         learnings['recommendations'].append(
-            f"CRITICAL: Win rate ({overall_win_rate:.1%}) is significantly below predictions ({avg_p_win:.1%}). "
-            "AI is overconfident. Consider increasing selectivity or adjusting probability estimates."
+            f"Calibration issue: Win rate ({overall_win_rate:.1%}) well below predictions ({avg_p_win:.1%}). "
+            "Focus on PROVEN WINNERS in sweet spot, not hopefuls."
         )
-    elif overall_win_rate > avg_p_win * 1.2:
-        learnings['recommendations'].append(
-            f"OPPORTUNITY: Win rate ({overall_win_rate:.1%}) exceeds predictions ({avg_p_win:.1%}). "
-            "AI is underconfident. Consider being more aggressive with Win bets."
-        )
-    else:
-        learnings['recommendations'].append(
-            f"CALIBRATED: Win rate ({overall_win_rate:.1%}) matches predictions ({avg_p_win:.1%}). "
-            "Probability model is well-calibrated."
-        )
+    
+    # Odds range comparison
+    if odds_performance:
+        # Find best performing range
+        best_range = None
+        best_roi = -999
+        for range_name, stats in odds_performance.items():
+            if stats['total_bets'] >= 5 and stats['roi'] > best_roi:
+                best_roi = stats['roi']
+                best_range = (range_name, stats)
+        
+        if best_range and best_range[0] in ['sweet_spot', 'ultimate_sweet_spot']:
+            learnings['recommendations'].append(
+                f"✅ BEST RANGE CONFIRMED: {best_range[1]['range']} odds with {best_roi:.1f}% ROI. Stay focused here!"
+            )
+        elif best_range:
+            learnings['recommendations'].append(
+                f"⚠️ WARNING: {best_range[1]['range']} odds performing best, but SWEET SPOT (3-9) should be target. "
+                f"Need better horse selection within sweet spot."
+            )
     
     # Win vs EW performance
     if 'bet_type' in df.columns:
@@ -261,9 +432,11 @@ def extract_pattern_learnings(df: pd.DataFrame, tag_performance: Dict) -> Dict[s
         
         if len(win_bets) >= 5:
             win_strike_rate = win_bets['won'].mean()
-            learnings['recommendations'].append(
-                f"Win bets: {len(win_bets)} bets, {win_strike_rate:.1%} strike rate"
-            )
+            if win_strike_rate < 0.15:  # Less than 15%
+                learnings['recommendations'].append(
+                    f"Win bet strike rate low ({win_strike_rate:.1%}). "
+                    f"Need more CONFIDENT selections in sweet spot - look for recent WINNERS."
+                )
         
         if len(ew_bets) >= 5:
             ew_place_rate = ew_bets['placed'].mean()
@@ -275,28 +448,72 @@ def extract_pattern_learnings(df: pd.DataFrame, tag_performance: Dict) -> Dict[s
 
 
 def generate_prompt_guidance(learnings: Dict) -> str:
-    """Generate guidance text to add to AI prompts"""
+    """Generate guidance text to add to AI prompts - SWEET SPOT FOCUSED"""
     
     if learnings['sample_size'] < 10:
-        return "INSUFFICIENT DATA - Continue with standard analysis approach."
+        return "INSUFFICIENT DATA - Focus on SWEET SPOT (3.0-9.0 odds) with recent WINNERS."
     
     guidance = f"""
-HISTORICAL PERFORMANCE INSIGHTS (Last {learnings['sample_size']} bets):
+=== PERFORMANCE-DRIVEN INSIGHTS ({learnings['sample_size']} bets analyzed) ===
 
-WHAT'S WORKING:
+🎯 SWEET SPOT PERFORMANCE (3.0-9.0 odds / 2/1-8/1):
 """
     
-    for pattern in learnings['winning_patterns'][:5]:  # Top 5
-        guidance += f"- {pattern['pattern']}: {pattern['win_rate']} win rate (expected {pattern['expected']})\n"
+    # Sweet spot analysis first - THIS IS PRIORITY
+    if learnings.get('sweet_spot_analysis'):
+        ss = learnings['sweet_spot_analysis']
+        guidance += f"""
+Range: {ss['range']}
+Bets in range: {ss['total_bets']} ({ss['percentage_of_portfolio']:.1f}% of portfolio)
+Win rate: {ss['win_rate']:.1%}
+ROI: {ss['roi']:.1f}%
+Status: {ss['verdict']}
+"""
+        
+        if 'ultimate' in ss:
+            uss = ss['ultimate']
+            guidance += f"""
+🏆 ULTIMATE SWEET SPOT ({uss['range']}):
+  - Bets: {uss['total_bets']} | Wins: {uss['wins']} | Win rate: {uss['win_rate']:.1%} | ROI: {uss['roi']:.1f}%
+"""
     
+    # Odds range breakdown
+    if learnings.get('odds_performance'):
+        guidance += "\n📊 ODDS RANGE BREAKDOWN:\n"
+        # Sort by ROI descending
+        sorted_ranges = sorted(
+            learnings['odds_performance'].items(),
+            key=lambda x: x[1]['roi'],
+            reverse=True
+        )
+        for range_name, stats in sorted_ranges[:5]:  # Top 5
+            symbol = "✅" if stats['roi'] > 0 else "❌"
+            guidance += f"{symbol} {stats['range']}: {stats['total_bets']} bets, {stats['win_rate']:.1%} win rate, {stats['roi']:.1f}% ROI\n"
+    
+    # Winning patterns
+    if learnings['winning_patterns']:
+        guidance += "\n✅ WORKING STRATEGIES:\n"
+        for pattern in learnings['winning_patterns'][:5]:  # Top 5
+            guidance += f"  • {pattern['pattern']}: {pattern['win_rate']} actual vs {pattern['expected']} expected (n={pattern['sample_size']})\n"
+    
+    # Failing patterns
     if learnings['failing_patterns']:
-        guidance += "\nWHAT'S NOT WORKING:\n"
+        guidance += "\n❌ UNDERPERFORMING STRATEGIES (AVOID):\n"
         for pattern in learnings['failing_patterns'][:5]:
-            guidance += f"- {pattern['pattern']}: {pattern['win_rate']} win rate (expected {pattern['expected']}) - BE CAUTIOUS\n"
+            guidance += f"  • {pattern['pattern']}: {pattern['win_rate']} actual vs {pattern['expected']} expected (n={pattern['sample_size']})\n"
     
-    guidance += "\nRECOMMENDATIONS:\n"
-    for rec in learnings['recommendations']:
-        guidance += f"- {rec}\n"
+    # Key recommendations
+    guidance += "\n🔑 KEY ACTIONS:\n"
+    for rec in learnings['recommendations'][:7]:  # Top 7 most important
+        guidance += f"  • {rec}\n"
+    
+    guidance += """
+⚡ FOCUS MANDATE: 
+  - Prioritize 3.0-9.0 odds range (especially 3.5-6.0)
+  - Look for RECENT WINNERS (won in last 3 races)
+  - In-form trainers/jockeys
+  - Value quality over quantity - better 3 great picks than 10 mediocre
+"""
     
     return guidance
 
@@ -335,12 +552,16 @@ def main():
     # Analyze performance
     print("\nAnalyzing tag performance...")
     tag_performance = analyze_tag_performance(df)
-    
     print(f"Found {len(tag_performance)} distinct strategies")
+    
+    # Analyze odds ranges - CRITICAL FOR SWEET SPOT
+    print("\nAnalyzing odds range performance...")
+    odds_performance = analyze_odds_ranges(df)
+    print(f"Analyzed {len(odds_performance)} odds ranges")
     
     # Extract learnings
     print("\nGenerating insights...")
-    learnings = extract_pattern_learnings(df, tag_performance)
+    learnings = extract_pattern_learnings(df, tag_performance, odds_performance)
     
     # Generate prompt guidance
     prompt_guidance = generate_prompt_guidance(learnings)

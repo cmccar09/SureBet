@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-01-31T15:58:19.357935",
+  "generated_at": "2026-01-31T16:11:38.017492",
   "sample_size": 200,
   "date_range": "20260103 to 20260130",
   "overall_stats": {
@@ -10,6 +10,8 @@
     "place_rate": 0.195,
     "avg_p_win": 0.21885
   },
+  "odds_performance": {},
+  "sweet_spot_analysis": {},
   "winning_patterns": [
     {
       "pattern": "BELOW_THRESHOLD",
@@ -49,8 +51,7 @@
   ],
   "failing_patterns": [],
   "recommendations": [
-    "CALIBRATED: Win rate (19.5%) matches predictions (21.9%). Probability model is well-calibrated.",
     "EW bets: 167 bets, 13.8% place rate"
   ],
-  "prompt_guidance": "\nHISTORICAL PERFORMANCE INSIGHTS (Last 200 bets):\n\nWHAT'S WORKING:\n- BELOW_THRESHOLD: 27.3% win rate (expected 28.0%)\n- Consistent recent form: 50.0% win rate (expected 29.6%)\n- Recent win: 42.9% win rate (expected 34.4%)\n- Decent recent form: 20.0% win rate (expected 22.8%)\n- Consistent placer: 20.0% win rate (expected 17.4%)\n\nRECOMMENDATIONS:\n- CALIBRATED: Win rate (19.5%) matches predictions (21.9%). Probability model is well-calibrated.\n- EW bets: 167 bets, 13.8% place rate\n"
+  "prompt_guidance": "\n=== PERFORMANCE-DRIVEN INSIGHTS (200 bets analyzed) ===\n\n\ud83c\udfaf SWEET SPOT PERFORMANCE (3.0-9.0 odds / 2/1-8/1):\n\n\u2705 WORKING STRATEGIES:\n  \u2022 BELOW_THRESHOLD: 27.3% actual vs 28.0% expected (n=11)\n  \u2022 Consistent recent form: 50.0% actual vs 29.6% expected (n=12)\n  \u2022 Recent win: 42.9% actual vs 34.4% expected (n=7)\n  \u2022 Decent recent form: 20.0% actual vs 22.8% expected (n=5)\n  \u2022 Consistent placer: 20.0% actual vs 17.4% expected (n=5)\n\n\ud83d\udd11 KEY ACTIONS:\n  \u2022 EW bets: 167 bets, 13.8% place rate\n\n\u26a1 FOCUS MANDATE: \n  - Prioritize 3.0-9.0 odds range (especially 3.5-6.0)\n  - Look for RECENT WINNERS (won in last 3 races)\n  - In-form trainers/jockeys\n  - Value quality over quantity - better 3 great picks than 10 mediocre\n"
 }
