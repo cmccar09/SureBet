@@ -17,6 +17,7 @@ function App() {
   const [results, setResults] = useState(null);
   const [resultsLoading, setResultsLoading] = useState(false);
   const [todaySummary, setTodaySummary] = useState(null);
+  const [systemStatus, setSystemStatus] = useState(null);
 
   useEffect(() => {
     fetchPicks();
@@ -50,6 +51,14 @@ function App() {
 
       if (data.success !== false) {
         setPicks(data.picks || []);
+        // Store system status for "no picks" message
+        if (data.last_run && data.next_run) {
+          setSystemStatus({
+            lastRun: data.last_run,
+            nextRun: data.next_run,
+            message: data.message
+          });
+        }
       } else {
         setError(data.error || 'Failed to load picks');
       }
@@ -674,8 +683,22 @@ function App() {
 
         {!loading && !error && picks.length === 0 && (
           <div className="no-picks">
-            <h3>No picks found</h3>
-            <p>No selections available today</p>
+            <h3>No Selections Available</h3>
+            {systemStatus ? (
+              <>
+                <p style={{marginBottom: '10px'}}>
+                  <strong>Last Run:</strong> {new Date(systemStatus.lastRun).toLocaleString()}
+                </p>
+                <p style={{marginBottom: '10px'}}>
+                  {systemStatus.message || 'No selections met the criteria'}
+                </p>
+                <p style={{color: '#3b82f6', fontWeight: 'bold'}}>
+                  <strong>Running again at:</strong> {new Date(systemStatus.nextRun).toLocaleString()}
+                </p>
+              </>
+            ) : (
+              <p>No selections available today</p>
+            )}
           </div>
         )}
 
