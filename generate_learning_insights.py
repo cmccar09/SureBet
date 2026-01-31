@@ -447,6 +447,146 @@ def extract_pattern_learnings(df: pd.DataFrame, tag_performance: Dict, odds_perf
     return learnings
 
 
+def analyze_prediction_calibration(df: pd.DataFrame) -> Dict[str, Any]:
+    """V2.2: Analyze prediction calibration - are we accurate?"""
+    
+    if len(df) == 0 or 'p_win' not in df.columns:
+        return {}
+    
+    # Define calibration bins
+    bins = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    labels = ['0-20%', '20-40%', '40-60%', '60-80%', '80-100%']
+    
+    df['confidence_bin'] = pd.cut(df['p_win'], bins=bins, labels=labels, include_lowest=True)
+    
+    calibration_results = {}
+    
+    for bin_name in labels:
+        bin_df = df[df['confidence_bin'] == bin_name]
+        
+        if len(bin_df) == 0:
+            continue
+        
+        predicted_avg = bin_df['p_win'].mean()
+        actual_rate = bin_df['won'].mean()
+        calibration_error = actual_rate - predicted_avg
+        
+        calibration_results[bin_name] = {
+            'predicted': round(predicted_avg, 3),
+            'actual': round(actual_rate, 3),
+            'error': round(calibration_error, 3),
+            'sample_size': len(bin_df),
+            'verdict': 'OVERCONFIDENT' if calibration_error < -0.1 else 
+                      'UNDERCONFIDENT' if calibration_error > 0.1 else 'CALIBRATED'
+        }
+    
+    return calibration_results
+
+
+def analyze_systematic_failures(df: pd.DataFrame) -> List[Dict[str, Any]]:
+    """V2.2: Find patterns in high-confidence losses"""
+    
+    if len(df) == 0:
+        return []
+    
+    # High confidence losses (40%+ predicted, but lost)
+    high_conf_losses = df[(df['p_win'] >= 0.4) & (df['won'] == 0)]
+    
+    if len(high_conf_losses) == 0:
+        return []
+    
+    recommendations = []
+    
+    # Pattern 1: Failing trainers
+    if 'trainer' in high_conf_losses.columns:
+        trainer_failures = high_conf_losses.groupby('trainer').size()
+        for trainer, count in trainer_failures.items():
+            if count >= 3:  # 3+ failures = pattern
+                recommendations.append({
+                    'type': 'TRAINER_ISSUE',
+                    'pattern': f"Trainer {trainer}: {count} high-conf losses",
+                    'action': f"Reduce confidence for {trainer} by 25%"
+                })
+    
+    # Pattern 2: Problematic courses
+    if 'course' in high_conf_losses.columns:
+        course_failures = high_conf_losses.groupby('course').size()
+        for course, count in course_failures.items():
+            if count >= 3:
+                recommendations.append({
+                    'type': 'COURSE_ISSUE',
+                    'pattern': f"Course {course}: {count} high-conf losses",
+                    'action': f"Review course-specific factors at {course}"
+                })
+    
+    # Pattern 3: Failing in specific odds ranges
+    if 'odds' in high_conf_losses.columns:
+        high_conf_losses['odds_bin'] = pd.cut(
+            high_conf_losses['odds'],
+            bins=[0, 4, 6, 9, 20],
+            labels=['<4.0', '4-6', '6-9', '9+']
+        )
+        odds_failures = high_conf_losses.groupby('odds_bin').size()
+        for odds_range, count in odds_failures.items():
+            if count >= 4:
+                recommendations.append({
+                    'type': 'ODDS_ISSUE',
+                    'pattern': f"Odds {odds_range}: {count} high-conf losses",
+                    'action': f"Recalibrate predictions in {odds_range} range"
+                })
+    
+    return recommendations
+
+
+def analyze_successful_patterns(df: pd.DataFrame) -> List[Dict[str, Any]]:
+    """V2.2: Find what's working - reinforce successful predictions"""
+    
+    if len(df) == 0:
+        return []
+    
+    # Successful predictions (30%+ predicted and won)
+    successes = df[(df['p_win'] >= 0.3) & (df['won'] == 1)]
+    
+    if len(successes) == 0:
+        return []
+    
+    reinforcements = []
+    
+    # Pattern 1: Winning trainers
+    if 'trainer' in successes.columns:
+        trainer_wins = successes.groupby('trainer').size()
+        for trainer, count in trainer_wins.items():
+            if count >= 2:  # 2+ wins = pattern
+                reinforcements.append({
+                    'type': 'TRAINER_SUCCESS',
+                    'pattern': f"Trainer {trainer}: {count} wins",
+                    'action': f"Maintain/increase confidence for {trainer}"
+                })
+    
+    # Pattern 2: Winning courses
+    if 'course' in successes.columns:
+        course_wins = successes.groupby('course').size()
+        for course, count in course_wins.items():
+            if count >= 2:
+                reinforcements.append({
+                    'type': 'COURSE_SUCCESS',
+                    'pattern': f"Course {course}: {count} wins",
+                    'action': f"Track patterns at {course} - understanding it well"
+                })
+    
+    # Pattern 3: Sweet spot validation
+    if 'odds' in successes.columns:
+        sweet_spot_wins = successes[(successes['odds'] >= 3.0) & (successes['odds'] <= 9.0)]
+        if len(sweet_spot_wins) >= len(successes) * 0.6:  # 60%+ in sweet spot
+            reinforcements.append({
+                'type': 'SWEET_SPOT_CONFIRMED',
+                'pattern': f"{len(sweet_spot_wins)}/{len(successes)} wins in 3-9 odds",
+                'action': "Continue focusing on sweet spot - strategy validated"
+            })
+    
+    return reinforcements
+
+
 def generate_prompt_guidance(learnings: Dict) -> str:
     """Generate guidance text to add to AI prompts - SWEET SPOT FOCUSED"""
     
@@ -507,6 +647,25 @@ Status: {ss['verdict']}
     for rec in learnings['recommendations'][:7]:  # Top 7 most important
         guidance += f"  • {rec}\n"
     
+    # V2.2: Add calibration insights
+    if learnings.get('calibration_analysis'):
+        guidance += "\n📊 PREDICTION CALIBRATION:\n"
+        for bin_name, stats in learnings['calibration_analysis'].items():
+            if stats['sample_size'] >= 3:
+                guidance += f"  {bin_name}: Predicted {stats['predicted']:.1%} vs Actual {stats['actual']:.1%} ({stats['verdict']})\n"
+    
+    # V2.2: Add systematic failures
+    if learnings.get('systematic_failures'):
+        guidance += "\n❌ SYSTEMATIC FAILURES TO FIX:\n"
+        for failure in learnings['systematic_failures'][:3]:
+            guidance += f"  • {failure['pattern']} → {failure['action']}\n"
+    
+    # V2.2: Add success patterns
+    if learnings.get('success_patterns'):
+        guidance += "\n✅ SUCCESS PATTERNS TO REINFORCE:\n"
+        for success in learnings['success_patterns'][:3]:
+            guidance += f"  • {success['pattern']} → {success['action']}\n"
+    
     guidance += """
 ⚡ FOCUS MANDATE: 
   - Prioritize 3.0-9.0 odds range (especially 3.5-6.0)
@@ -566,6 +725,21 @@ def main():
     # Generate prompt guidance
     prompt_guidance = generate_prompt_guidance(learnings)
     learnings['prompt_guidance'] = prompt_guidance
+    
+    # V2.2: Add prediction calibration analysis
+    print("\nAnalyzing prediction calibration...")
+    calibration_analysis = analyze_prediction_calibration(df)
+    learnings['calibration_analysis'] = calibration_analysis
+    
+    # V2.2: Analyze systematic failures
+    print("Identifying systematic failures...")
+    failure_patterns = analyze_systematic_failures(df)
+    learnings['systematic_failures'] = failure_patterns
+    
+    # V2.2: Analyze successful patterns
+    print("Validating successful patterns...")
+    success_patterns = analyze_successful_patterns(df)
+    learnings['success_patterns'] = success_patterns
     
     # Save to file
     output_file = Path(__file__).parent / "learning_insights.json"

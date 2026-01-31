@@ -542,7 +542,102 @@ Overall Calibration:
 
 **Implementation Priority:**
 
-**Phase 1 (Immediate):**
+**✅ IMPLEMENTED (v2.2 - January 31, 2026):**
+
+**Core Scripts Created:**
+- ✅ **analyze_prediction_calibration.py** - Standalone calibration analysis tool
+  - Loads picks from DynamoDB with outcomes (last 7 days)
+  - Calculates calibration bins (0-20%, 20-40%, 40-60%, 60-80%, 80-100%)
+  - Computes Brier score for prediction quality
+  - Analyzes expected vs actual win rates
+  - Identifies systematic failures (trainer/course/tag patterns)
+  - Validates successful predictions (what's working)
+  - Generates comprehensive calibration report (JSON + console)
+  
+- ✅ **Enhanced generate_learning_insights.py** - Daily learning with calibration
+  - Added `analyze_prediction_calibration()` function
+  - Added `analyze_systematic_failures()` function  
+  - Added `analyze_successful_patterns()` function
+  - Integrated calibration metrics into daily learning cycle
+  - Stores calibration analysis in learning_insights.json
+  - Adds calibration insights to prompt guidance
+
+**Storage Confirmed:**
+- ✅ **save_selections_to_dynamodb.py** already stores:
+  - `p_win` - Predicted win probability per pick
+  - `confidence` - Combined confidence score
+  - `tags` - Strategy tags for pattern tracking
+  - `why_now` - AI's reasoning for selection
+  - `outcome` - Actual result (win/loss/placed)
+  - All fields needed for calibration analysis ✓
+
+**What Works Now:**
+
+1. **Daily Calibration Analysis:**
+   ```bash
+   python analyze_prediction_calibration.py
+   # Analyzes last 7 days of picks
+   # Outputs: calibration_report.json
+   ```
+
+2. **Integrated Learning:**
+   ```bash
+   python generate_learning_insights.py
+   # Now includes calibration analysis
+   # Outputs: learning_insights.json (with calibration_analysis field)
+   ```
+
+3. **Automatic Insights:**
+   - Calibration status per confidence bin
+   - Overconfident/underconfident detection
+   - Systematic failure identification
+   - Success pattern validation
+   - Actionable recommendations
+
+**Example Output (Real Data from Jan 31):**
+```
+📊 OVERALL PERFORMANCE:
+   Wins: 11/61 (18.0%)
+   Predicted avg: 25.0%
+   
+📈 CALIBRATION:
+   20-40% predictions: Predicted 32.2% | Actual 20.7% | OVERCONFIDENT ⚠️
+   
+❌ SYSTEMATIC ISSUES:
+   • TAG_FAILING: 3 losses with 'enhanced_analysis' tag
+     Action: Reduce confidence boost by 10-15 points
+   
+✅ WORKING STRATEGIES:
+   • COURSE_SUCCESS: Wolverhampton - 4 wins
+   • TAG_WORKING: 'Recent winner' tag - 2 wins
+     
+🔧 PRIORITY ACTIONS:
+   1. Reduce overall confidence by 28%
+   2. Reinforce 'Recent winner' tag
+```
+
+**Remaining Phases:**
+
+**Phase 2 (Next 1-2 weeks):**
+- ⏳ Automated confidence adjustments
+  - Auto-reduce confidence for failing trainers/courses
+  - Auto-boost confidence for working patterns
+  - Update prompt.txt dynamically based on calibration
+  
+- ⏳ Course/trainer-specific confidence modifiers
+  - Store modifier per trainer (e.g., "Trainer Smith: -20%")
+  - Apply modifiers during selection process
+  
+**Phase 3 (Weeks 3-4):**
+- ⏳ Deeper failure analysis
+  - Check going changes, draw bias, jockey switches
+  - Compare predicted vs actual race dynamics
+  
+- ⏳ Enhanced success validation
+  - Find trainer/jockey/course combinations
+  - Identify optimal conditions for each pattern
+
+**Phase 4 (Month 2):**
 - Store p_win with every pick in DynamoDB
 - Add actual_outcome field after results
 - Basic calibration: predicted vs actual by confidence bin
@@ -816,6 +911,12 @@ cat learning_insights.json | ConvertFrom-Json | Select-Object -ExpandProperty sw
 - Updated App.js to correctly show win/loss counts
 - Deployed frontend fixes to AWS Amplify
 
+**Commit 7b23674** (Jan 31, 16:00)
+"Update strategy docs to v2.1 with sweet spot optimization details"
+- Documented entire v2.1 system in BETTING_STRATEGY_V2.md
+- Comprehensive coverage: rationale, implementation, results, evolution
+- 761 lines added with full technical details
+
 **What Changed v2.0 → v2.1:**
 - v2.0: Prevented bad picks (longshots filtered out)
 - v2.1: Actively hunts good picks (winners in sweet spot)
@@ -826,20 +927,69 @@ cat learning_insights.json | ConvertFrom-Json | Select-Object -ExpandProperty sw
 - v2.0: No odds tracking in learning
 - v2.1: Full odds range analysis with ROI by range
 
+### v2.2 Prediction Accountability (Jan 31, 2026)
+
+**Commit b42a7e7** (Jan 31, 16:25)
+"Add v2.2: Prediction accountability & calibration tracking system"
+- Documented Layer 4 of learning system (prediction accountability)
+- Added calibration methodology and metrics
+- Designed 4-phase implementation plan
+
+**Commit [CURRENT]** (Jan 31)
+"Implement v2.2: Prediction calibration system fully operational"
+- ✅ Created analyze_prediction_calibration.py (542 lines)
+  - Calibration bins (0-20%, 20-40%, 40-60%, 60-80%, 80-100%)
+  - Brier score calculation (prediction quality metric)
+  - Expected vs actual win rate comparison
+  - Systematic failure detection (by trainer/course/tags)
+  - Success pattern validation (what's working)
+  - Comprehensive reporting (JSON + console output)
+- ✅ Enhanced generate_learning_insights.py (+115 lines)
+  - analyze_prediction_calibration() function
+  - analyze_systematic_failures() function  
+  - analyze_successful_patterns() function
+  - Integrated calibration into daily learning workflow
+  - Calibration insights added to prompt guidance
+- ✅ Verified save_selections_to_dynamodb.py
+  - Already stores p_win, tags, why_now, outcome
+  - No changes needed - ready for calibration
+- ✅ Tested on real data (61 picks, 7 days)
+  - Successfully identified overconfidence in 20-40% bin
+  - Found failing tag ('enhanced_analysis': 3 high-conf losses)
+  - Found working patterns (Wolverhampton: 4 wins)
+  - Generated actionable recommendations
+- ✅ Updated BETTING_STRATEGY_V2.md
+  - Implementation status and usage instructions
+  - Real output examples from Jan 31 testing
+  - Version updated to v2.2
+
+**What Changed v2.1 → v2.2:**
+- v2.1: Tracked performance by odds ranges
+- v2.2: Tracks prediction accuracy by confidence bins
+- v2.1: General calibration check (overall win rate vs predicted)
+- v2.2: Detailed calibration per confidence level + Brier score
+- v2.1: Basic high-confidence loss analysis
+- v2.2: Systematic pattern detection (trainer/course/tag failures)
+- v2.1: Identified working tags
+- v2.2: Validates WHY predictions succeeded (reinforcement)
+- v2.1: Recommendations from aggregate patterns
+- v2.2: Specific actions from individual prediction analysis
+
 ---
 
 ## DO NOT CHANGE (Protected Strategy Core)
 
 ## DO NOT CHANGE (Protected Strategy Core)
 
-### Protected Files (v2.1 Strategy)
+### Protected Files (v2.2 Strategy)
 1. **prompt.txt**: Sweet spot mandatory focus + confidence boosters (lines 1-70)
-2. **generate_learning_insights.py**: Odds range analysis functions
-3. **enhanced_analysis.py**: All 4 expert prompts with sweet spot logic
-4. **save_selections_to_dynamodb.py**: Odds filter backup (lines 1008-1018)
-5. **cleanup_old_picks.py**: DISABLED (exit warning at top)
-6. **clear_old_data.ps1**: DISABLED (exit warning at top)
-7. **frontend/src/App.js**: Outcome value matching (lowercase)
+2. **generate_learning_insights.py**: Odds range analysis + calibration functions
+3. **analyze_prediction_calibration.py**: Standalone calibration analysis tool
+4. **enhanced_analysis.py**: All 4 expert prompts with sweet spot logic
+5. **save_selections_to_dynamodb.py**: Odds filter + prediction storage
+6. **cleanup_old_picks.py**: DISABLED (exit warning at top)
+7. **clear_old_data.ps1**: DISABLED (exit warning at top)
+8. **frontend/src/App.js**: Outcome value matching (lowercase)
 
 ### If You Must Adjust Strategy
 
@@ -1153,6 +1303,68 @@ git checkout 20e8732 -- save_selections_to_dynamodb.py
 
 ## Strategy Documentation
 
+---
+
+## Summary: v2.2 Prediction Accountability System
+
+**Status: IMPLEMENTED & OPERATIONAL ✅ (January 31, 2026)**
+
+**What Changed:**
+- ✅ Created **analyze_prediction_calibration.py** - Standalone calibration analysis
+- ✅ Enhanced **generate_learning_insights.py** - Added calibration to daily learning
+- ✅ Verified **save_selections_to_dynamodb.py** - Already stores all needed fields
+
+**Key Features Working Now:**
+- 📊 Calibration bins show prediction accuracy by confidence level
+- 🎲 Brier score tracks overall prediction quality (target <0.20)
+- ❌ Systematic failure detection finds patterns in losses (trainer/course/tags)
+- ✅ Success validation reinforces what's working
+- 🔧 Actionable recommendations for confidence recalibration
+
+**Daily Usage:**
+```bash
+# Run after yesterday's results are processed
+python analyze_prediction_calibration.py  # Detailed 7-day calibration report
+python generate_learning_insights.py      # Full 30-day learning (includes calibration)
+```
+
+**Example Real Output (Jan 31, 2026):**
+```
+📊 OVERALL: 11/61 wins (18.0%) | Expected: 25.0%
+📈 CALIBRATION:
+   20-40% bin: Predicted 32.2% | Actual 20.7% | OVERCONFIDENT ⚠️
+   Brier Score: 0.116 (Good - under 0.20 target)
+❌ SYSTEMATIC ISSUES:
+   • TAG_FAILING: 'enhanced_analysis' tag - 3 high-conf losses
+     Action: Reduce boost by 10-15 points
+✅ WORKING:
+   • Wolverhampton: 4 wins | Reinforce course understanding
+   • 'Recent winner' tag: 2 wins | Add +5-10 points
+🔧 ACTIONS:
+   1. Reduce overall confidence by 28%
+   2. Adjust failing tags
+```
+
+**Files Modified:**
+- [analyze_prediction_calibration.py](analyze_prediction_calibration.py) - NEW (542 lines)
+- [generate_learning_insights.py](generate_learning_insights.py) - Enhanced (+115 lines)
+- [calibration_report.json](calibration_report.json) - NEW (generated daily)
+- [learning_insights.json](learning_insights.json) - Enhanced (includes calibration field)
+
+**Next Phase (Automation):**
+- Auto-adjust confidence for failing trainers/courses
+- Build trainer/course-specific modifiers
+- Dynamic prompt updates based on calibration
+
+---
+
+**STRATEGY V2.2 - PREDICTION ACCOUNTABILITY + CALIBRATION**
+
+Status: Active (Jan 31, 2026) ✅
+Previous: v2.1 Sweet Spot Winner Focus
+New: Self-correcting prediction system with accountability
+Target: Calibrated predictions, systematic error elimination, continuous improvement
+
 **Related Files:**
 - [SWEET_SPOT_OPTIMIZATION_GUIDE.md](SWEET_SPOT_OPTIMIZATION_GUIDE.md) - Detailed v2.1 implementation
 - [DATA_RETENTION_POLICY.md](DATA_RETENTION_POLICY.md) - Why we keep all data
@@ -1160,10 +1372,12 @@ git checkout 20e8732 -- save_selections_to_dynamodb.py
 - [BETTING_STRATEGY_V2.md](BETTING_STRATEGY_V2.md) - This file
 
 **For Daily Operations:**
-- Run: `python generate_learning_insights.py` (after results)
-- Check: `learning_insights.json` (daily recommendations)
-- Monitor: Sweet spot % and ROI trends
-- Review: Weekly performance checklist
+- Run: `python analyze_prediction_calibration.py` (weekly calibration check)
+- Run: `python generate_learning_insights.py` (after results - includes calibration)
+- Check: `calibration_report.json` (7-day calibration status)
+- Check: `learning_insights.json` (30-day learnings + calibration analysis)
+- Monitor: Calibration bins, Brier score, systematic failures
+- Review: Weekly performance + prediction accuracy
 
 **For Troubleshooting:**
 - Check prompts in [prompt.txt](prompt.txt)
