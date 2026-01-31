@@ -579,15 +579,14 @@ function App() {
             </div>
             </div>
 
-            {/* Detailed picks list - compact table format */}
+            {/* Detailed picks list - mobile-friendly card layout */}
             {results.picks && results.picks.length > 0 && (
               <div style={{ marginTop: '24px' }}>
                 <h3 style={{ fontSize: '18px', marginBottom: '12px', color: '#333' }}>Detailed Results</h3>
                 <div style={{ 
-                  background: 'white', 
-                  borderRadius: '8px', 
-                  overflow: 'hidden',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))',
+                  gap: '12px'
                 }}>
                   {results.picks.map((pick, index) => {
                     const outcome = pick.outcome || 'PENDING';
@@ -619,44 +618,79 @@ function App() {
 
                     return (
                       <div key={index} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        padding: '8px 12px',
+                        background: 'white',
+                        borderRadius: '12px',
+                        padding: '16px',
                         borderLeft: `4px solid ${outcomeColor}`,
-                        borderBottom: index < results.picks.length - 1 ? '1px solid #e5e7eb' : 'none',
-                        fontSize: '13px'
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                        transition: 'transform 0.2s, box-shadow 0.2s'
                       }}>
-                        <div style={{ width: '24px', flexShrink: 0 }}>{outcomeIcon}</div>
-                        <div style={{ flex: '1 1 200px', fontWeight: '600', color: '#111' }}>
-                          {pick.horse || 'Unknown Horse'}
-                        </div>
-                        <div style={{ flex: '0 0 100px', color: '#6b7280' }}>
-                          {pick.course}
-                        </div>
-                        <div style={{ flex: '0 0 70px', color: '#6b7280' }}>
-                          {formatTime(pick.race_time)}
-                        </div>
-                        <div style={{ flex: '0 0 50px', color: '#6b7280' }}>
-                          {pick.bet_type}
-                        </div>
-                        <div style={{ flex: '0 0 50px', color: '#6b7280' }}>
-                          {pick.odds}
-                        </div>
+                        {/* Header: Horse name and outcome */}
                         <div style={{ 
-                          flex: '0 0 70px', 
-                          fontWeight: '600',
-                          color: outcomeColor,
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          marginBottom: '12px'
+                        }}>
+                          <div style={{ 
+                            fontSize: '16px', 
+                            fontWeight: 'bold', 
+                            color: '#111',
+                            flex: 1
+                          }}>
+                            {outcomeIcon} {pick.horse || 'Unknown Horse'}
+                          </div>
+                          <div style={{
+                            background: outcomeColor,
+                            color: 'white',
+                            padding: '4px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 'bold'
+                          }}>
+                            {outcome}
+                          </div>
+                        </div>
+
+                        {/* Race Details */}
+                        <div style={{ 
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '8px',
+                          marginBottom: '12px',
+                          fontSize: '13px',
+                          color: '#6b7280'
+                        }}>
+                          <div>
+                            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '2px' }}>VENUE</div>
+                            <div style={{ fontWeight: '500', color: '#374151' }}>{pick.course}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '2px' }}>TIME</div>
+                            <div style={{ fontWeight: '500', color: '#374151' }}>{formatTime(pick.race_time)}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '2px' }}>BET TYPE</div>
+                            <div style={{ fontWeight: '500', color: '#374151' }}>{pick.bet_type || 'WIN'}</div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '2px' }}>ODDS</div>
+                            <div style={{ fontWeight: '500', color: '#374151' }}>{pick.odds}</div>
+                          </div>
+                        </div>
+
+                        {/* P/L Banner */}
+                        <div style={{
+                          background: pl >= 0 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                          color: 'white',
+                          padding: '10px',
+                          borderRadius: '8px',
                           textAlign: 'center'
                         }}>
-                          {outcome}
-                        </div>
-                        <div style={{ 
-                          flex: '0 0 80px', 
-                          fontWeight: '700',
-                          color: pl >= 0 ? '#10b981' : '#ef4444',
-                          textAlign: 'right'
-                        }}>
-                          {pl >= 0 ? '+' : ''}€{pl.toFixed(2)}
+                          <div style={{ fontSize: '11px', opacity: 0.9, marginBottom: '2px' }}>PROFIT/LOSS</div>
+                          <div style={{ fontSize: '20px', fontWeight: 'bold' }}>
+                            {pl >= 0 ? '+' : ''}€{pl.toFixed(2)}
+                          </div>
                         </div>
                       </div>
                     );
