@@ -100,6 +100,18 @@ ANALYSIS FRAMEWORK:
 
 OUTPUT AS JSON:
 {{
+  "all_horses": [
+    {{
+      "runner_name": "Horse Name",
+      "selection_id": "12345",
+      "odds": 5.0,
+      "implied_probability": 0.20,
+      "true_probability": 0.28,
+      "edge_percentage": 40.0,
+      "value_score": 8,
+      "reasoning": "Brief reason - 1 sentence"
+    }}
+  ],
   "selections": [
     {{
       "runner_name": "Horse Name",
@@ -115,7 +127,7 @@ OUTPUT AS JSON:
   "thinking": "Your chain of thought analysis - explain how you identified value"
 }}
 
-Return 2-4 value selections ranked by edge_percentage."""
+Return ALL horses in 'all_horses' array (rated 1-10) and top 2-4 value selections in 'selections' array."""
         
         response = self._call_claude(prompt, max_tokens=3000)
         return self._parse_json_response(response)
@@ -149,6 +161,17 @@ ANALYSIS FRAMEWORK:
 
 OUTPUT AS JSON:
 {{
+  "all_horses": [
+    {{
+      "runner_name": "Horse Name",
+      "selection_id": "12345",
+      "form_score": 9,
+      "last_3_runs": "1-2-1",
+      "days_since_run": 14,
+      "trend": "improving",
+      "reasoning": "Brief reason - 1 sentence"
+    }}
+  ],
   "selections": [
     {{
       "runner_name": "Horse Name",
@@ -163,7 +186,7 @@ OUTPUT AS JSON:
   "thinking": "Your chain of thought - explain form patterns you identified"
 }}
 
-Return 2-4 horses with best current form."""
+Return ALL horses in 'all_horses' array (rated 1-10) and top 2-4 with best form in 'selections' array."""
         
         response = self._call_claude(prompt, max_tokens=3000)
         return self._parse_json_response(response)
@@ -196,6 +219,17 @@ ANALYSIS FRAMEWORK:
 
 OUTPUT AS JSON:
 {{
+  "all_horses": [
+    {{
+      "runner_name": "Horse Name",
+      "selection_id": "12345",
+      "class_advantage": true,
+      "course_wins": 2,
+      "going_match": "perfect",
+      "advantage_score": 8,
+      "reasoning": "Brief reason - 1 sentence"
+    }}
+  ],
   "selections": [
     {{
       "runner_name": "Horse Name",
@@ -210,7 +244,7 @@ OUTPUT AS JSON:
   "thinking": "Your chain of thought - explain advantages you identified"
 }}
 
-Return 2-4 horses with best situational edges."""
+Return ALL horses in 'all_horses' array (rated 1-10) and top 2-4 with best situational edges in 'selections' array."""
         
         response = self._call_claude(prompt, max_tokens=3000)
         return self._parse_json_response(response)
@@ -407,6 +441,13 @@ NOTE: Real performance data will replace these placeholders after 30+ days of se
         print("     -> Class/conditions analysis...")
         class_result = self.analyze_class_drop_angle(race_info, historical_insights)
         
+        # Collect all horses analyzed from each expert
+        all_horses_data = {
+            'value_analysis': value_result.get('all_horses', []),
+            'form_analysis': form_result.get('all_horses', []),
+            'class_analysis': class_result.get('all_horses', [])
+        }
+        
         # Combine ensemble picks
         ensemble_picks = []
         for result in [value_result, form_result, class_result]:
@@ -420,7 +461,7 @@ NOTE: Real performance data will replace these placeholders after 30+ days of se
         
         print(f"     [OK] {len(final_selections)} selections finalized")
         
-        # Add metadata
+        # Add metadata to selections
         for sel in final_selections:
             sel['market_id'] = race_data_dict.get('market_id', '')
             sel['market_name'] = race_data_dict.get('market_name', '')
@@ -428,6 +469,9 @@ NOTE: Real performance data will replace these placeholders after 30+ days of se
             sel['start_time_dublin'] = race_data_dict.get('start_time', '')
             sel['analysis_method'] = 'enhanced_ensemble'
             sel['timestamp'] = datetime.utcnow().isoformat()
+            
+            # CRITICAL: Store all horses analyzed for this race
+            sel['all_horses_analyzed'] = all_horses_data
         
         return final_selections
     

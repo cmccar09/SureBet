@@ -560,6 +560,209 @@ def print_calibration_report(report: Dict[str, Any]):
     print("\n" + "="*80)
 
 
+def compare_pick_vs_winner(pick: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Compare our selected horse vs the actual winner for losses.
+    
+    Requires pick to have:
+    - outcome: 'loss'
+    - all_horses_analyzed: dict with value/form/class analyses
+    - actual_winner: name of horse that won the race
+    
+    Returns comparison insights showing why we picked wrong horse.
+    """
+    
+    # Validate required fields
+    if not pick.get('all_horses_analyzed'):
+        return {
+            'error': 'No all_horses_analyzed data available',
+            'recommendation': 'Update system to store all horses analyzed'
+        }
+    
+    outcome = pick.get('outcome', '').lower()
+    if outcome != 'loss':
+        return {'message': 'Pick was not a loss - comparison only applies to losses'}
+    
+    actual_winner = pick.get('actual_winner', pick.get('winner_name', ''))
+    if not actual_winner:
+        return {'error': 'Actual winner not recorded in pick'}
+    
+    our_pick = pick.get('horse', pick.get('dog', ''))
+    all_horses = pick.get('all_horses_analyzed', {})
+    
+    # Find winner and our pick in each expert analysis
+    comparison = {
+        'race_id': pick.get('market_id', ''),
+        'race_name': pick.get('course', '') + ' ' + pick.get('race_time', ''),
+        'our_pick': our_pick,
+        'actual_winner': actual_winner,
+        'analyses': {}
+    }
+    
+    # Value analysis comparison
+    value_horses = all_horses.get('value_analysis', [])
+    our_value = next((h for h in value_horses if h.get('runner_name') == our_pick), None)
+    winner_value = next((h for h in value_horses if h.get('runner_name') == actual_winner), None)
+    
+    if our_value and winner_value:
+        comparison['analyses']['value'] = {
+            'our_pick': {
+                'true_probability': our_value.get('true_probability', 0),
+                'value_score': our_value.get('value_score', 0),
+                'edge_percentage': our_value.get('edge_percentage', 0),
+                'reasoning': our_value.get('reasoning', '')
+            },
+            'winner': {
+                'true_probability': winner_value.get('true_probability', 0),
+                'value_score': winner_value.get('value_score', 0),
+                'edge_percentage': winner_value.get('edge_percentage', 0),
+                'reasoning': winner_value.get('reasoning', '')
+            },
+            'differential': {
+                'probability_gap': our_value.get('true_probability', 0) - winner_value.get('true_probability', 0),
+                'value_gap': our_value.get('value_score', 0) - winner_value.get('value_score', 0)
+            }
+        }
+    
+    # Form analysis comparison
+    form_horses = all_horses.get('form_analysis', [])
+    our_form = next((h for h in form_horses if h.get('runner_name') == our_pick), None)
+    winner_form = next((h for h in form_horses if h.get('runner_name') == actual_winner), None)
+    
+    if our_form and winner_form:
+        comparison['analyses']['form'] = {
+            'our_pick': {
+                'form_score': our_form.get('form_score', 0),
+                'trend': our_form.get('trend', ''),
+                'last_3_runs': our_form.get('last_3_runs', ''),
+                'reasoning': our_form.get('reasoning', '')
+            },
+            'winner': {
+                'form_score': winner_form.get('form_score', 0),
+                'trend': winner_form.get('trend', ''),
+                'last_3_runs': winner_form.get('last_3_runs', ''),
+                'reasoning': winner_form.get('reasoning', '')
+            },
+            'differential': {
+                'form_gap': our_form.get('form_score', 0) - winner_form.get('form_score', 0)
+            }
+        }
+    
+    # Class analysis comparison
+    class_horses = all_horses.get('class_analysis', [])
+    our_class = next((h for h in class_horses if h.get('runner_name') == our_pick), None)
+    winner_class = next((h for h in class_horses if h.get('runner_name') == actual_winner), None)
+    
+    if our_class and winner_class:
+        comparison['analyses']['class'] = {
+            'our_pick': {
+                'advantage_score': our_class.get('advantage_score', 0),
+                'course_wins': our_class.get('course_wins', 0),
+                'going_match': our_class.get('going_match', ''),
+                'reasoning': our_class.get('reasoning', '')
+            },
+            'winner': {
+                'advantage_score': winner_class.get('advantage_score', 0),
+                'course_wins': winner_class.get('course_wins', 0),
+                'going_match': winner_class.get('going_match', ''),
+                'reasoning': winner_class.get('reasoning', '')
+            },
+            'differential': {
+                'advantage_gap': our_class.get('advantage_score', 0) - winner_class.get('advantage_score', 0)
+            }
+        }
+    
+    # Generate insights
+    insights = []
+    
+    # Check value analysis
+    if 'value' in comparison['analyses']:
+        val_diff = comparison['analyses']['value']['differential']
+        if val_diff['probability_gap'] > 0.10:
+            insights.append(f"Significantly overestimated {our_pick} probability by {val_diff['probability_gap']:.1%}")
+        if val_diff['value_gap'] > 3:
+            insights.append(f"Rated {our_pick} as much better value (+{val_diff['value_gap']} points) than winner")
+    
+    # Check form analysis
+    if 'form' in comparison['analyses']:
+        form_diff = comparison['analyses']['form']['differential']
+        if form_diff['form_gap'] > 2:
+            insights.append(f"Overweighted {our_pick}'s form (rated {form_diff['form_gap']} points higher)")
+    
+    # Check class analysis
+    if 'class' in comparison['analyses']:
+        class_diff = comparison['analyses']['class']['differential']
+        if class_diff['advantage_gap'] > 3:
+            insights.append(f"Missed {actual_winner}'s class advantage (underrated by {abs(class_diff['advantage_gap'])} points)")
+    
+    comparison['insights'] = insights
+    comparison['summary'] = f"Picked {our_pick} over winner {actual_winner}. " + "; ".join(insights) if insights else "No clear differential pattern"
+    
+    return comparison
+
+
+def analyze_all_losses_vs_winners(days_back: int = 7) -> Dict[str, Any]:
+    """
+    Analyze all losing bets comparing our picks vs actual winners.
+    
+    Returns systematic patterns of why we pick wrong horses.
+    """
+    
+    df = load_picks_with_results(days_back=days_back)
+    
+    # Filter to losses only
+    losses = df[df['outcome'] == 'loss'].to_dict('records')
+    
+    comparisons = []
+    error_count = 0
+    
+    for pick in losses:
+        comparison = compare_pick_vs_winner(pick)
+        
+        if 'error' in comparison:
+            error_count += 1
+            continue
+        
+        comparisons.append(comparison)
+    
+    # Aggregate patterns
+    patterns = {
+        'total_losses_analyzed': len(comparisons),
+        'losses_without_data': error_count,
+        'common_mistakes': defaultdict(int),
+        'comparisons': comparisons
+    }
+    
+    # Count insight patterns
+    for comp in comparisons:
+        for insight in comp.get('insights', []):
+            if 'overestimated' in insight.lower():
+                patterns['common_mistakes']['probability_overestimation'] += 1
+            if 'overweighted' in insight.lower() and 'form' in insight.lower():
+                patterns['common_mistakes']['form_overweight'] += 1
+            if 'missed' in insight.lower() and 'class' in insight.lower():
+                patterns['common_mistakes']['class_underweight'] += 1
+            if 'better value' in insight.lower():
+                patterns['common_mistakes']['value_misjudgment'] += 1
+    
+    # Generate recommendations
+    recommendations = []
+    
+    if patterns['common_mistakes']['probability_overestimation'] >= 3:
+        recommendations.append("CRITICAL: Consistently overestimating win probabilities - recalibrate downward")
+    
+    if patterns['common_mistakes']['form_overweight'] >= 3:
+        recommendations.append("WARNING: Over-relying on recent form - increase weight on class/conditions")
+    
+    if patterns['common_mistakes']['class_underweight'] >= 3:
+        recommendations.append("WARNING: Missing class advantages - improve class analysis scoring")
+    
+    patterns['recommendations'] = recommendations
+    patterns['analysis_date'] = datetime.now().isoformat()
+    
+    return patterns
+
+
 def main():
     """Run calibration analysis"""
     
@@ -584,6 +787,34 @@ def main():
     
     # Print report
     print_calibration_report(report)
+    
+    # NEW: Analyze losses vs winners
+    print("\n" + "="*80)
+    print("🔍 ANALYZING LOSSES VS WINNERS (Comparative Learning)")
+    print("="*80)
+    
+    loss_analysis = analyze_all_losses_vs_winners(days_back=7)
+    
+    # Save loss analysis
+    loss_output_file = Path(__file__).parent / "loss_comparison_analysis.json"
+    with open(loss_output_file, 'w') as f:
+        json.dump(loss_analysis, f, indent=2)
+    
+    print(f"\n📊 Loss Comparison Analysis:")
+    print(f"   • Losses analyzed: {loss_analysis['total_losses_analyzed']}")
+    print(f"   • Losses without all-horses data: {loss_analysis['losses_without_data']}")
+    
+    if loss_analysis['common_mistakes']:
+        print(f"\n❌ COMMON MISTAKES:")
+        for mistake, count in loss_analysis['common_mistakes'].items():
+            print(f"   • {mistake.replace('_', ' ').title()}: {count} occurrences")
+    
+    if loss_analysis['recommendations']:
+        print(f"\n💡 RECOMMENDATIONS:")
+        for i, rec in enumerate(loss_analysis['recommendations'], 1):
+            print(f"   {i}. {rec}")
+    
+    print(f"\nSaved loss comparison to: {loss_output_file}")
     
     print(f"\n✅ Calibration analysis complete")
 
