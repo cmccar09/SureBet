@@ -248,6 +248,320 @@ generate_prompt_guidance(learnings) → str
 
 **Learning Output** → Updates `learning_insights.json` daily
 
+### Layer 4: Prediction Accountability & Calibration (New - v2.2)
+
+**Purpose**: Track every prediction, analyze failures, improve accuracy
+
+**Prediction Tracking Table (DynamoDB or CSV):**
+```
+Fields Stored Per Pick:
+- pick_id (unique identifier)
+- date (race date)
+- horse_name
+- race_venue
+- race_time
+- predicted_p_win (our AI's win probability %)
+- predicted_confidence (combined confidence score)
+- actual_odds (Betfair odds at bet time)
+- implied_probability (1/odds - market's view)
+- our_edge (predicted_p_win - implied_probability)
+- actual_outcome (win/loss/placed)
+- actual_position (finishing position)
+- reasons_for_pick (AI's justification)
+- tags (form_winner, course_experience, etc.)
+```
+
+**Post-Race Analysis (Automated):**
+
+**For LOSSES (predicted win but lost):**
+```python
+def analyze_failed_prediction(pick):
+    """
+    Question: Why did we think this would win?
+    
+    Analysis:
+    1. Prediction vs Reality Gap
+       - Predicted: 50% win probability
+       - Actual: Lost (finished 4th)
+       - Gap: 50% overconfidence
+    
+    2. What We Missed
+       - Check: Did horse show fitness issues in race?
+       - Check: Was going changed (soft to heavy)?
+       - Check: Did jockey ride poorly?
+       - Check: Was field stronger than analyzed?
+       - Check: Did winner have unknown advantage?
+    
+    3. Pattern Detection
+       - Is this trainer's form misleading?
+       - Does this course favor different style?
+       - Are odds at this range reliable here?
+       - Was our "recent winner" tag valid?
+    
+    4. Learning Update
+       - If trainer pattern: Reduce confidence for trainer
+       - If course pattern: Adjust course-specific model
+       - If odds range issue: Recalibrate sweet spot
+       - If tag failing: Deprecate or refine tag
+    ```
+
+**For WINS (predicted win and won):**
+```python
+def validate_successful_prediction(pick):
+    """
+    Question: Why were we right? Can we replicate?
+    
+    Analysis:
+    1. Prediction Accuracy
+       - Predicted: 40% win probability
+       - Actual: Won
+       - Confidence: Appropriate (not overconfident)
+    
+    2. What Worked
+       - Recent winner tag: CONFIRMED working
+       - Sweet spot odds: CONFIRMED (4.5 odds)
+       - Trainer form: CONFIRMED valuable signal
+       - Course experience: CONFIRMED important
+    
+    3. Pattern Reinforcement
+       - This trainer at this course: High success
+       - Recent winners in 4-5 odds: Sweet spot
+       - Jockey X on horse type Y: Pattern emerging
+    
+    4. Learning Update
+       - Increase confidence in similar scenarios
+       - Boost "recent winner" tag value
+       - Track trainer/course combination
+       - Reinforce sweet spot in this sub-range
+    ```
+
+**Calibration Metrics (Calculated Daily):**
+
+```python
+# Calibration Score - Are we accurate?
+predicted_bins = [0-20%, 20-40%, 40-60%, 60-80%, 80-100%]
+
+For each bin:
+  - Count predictions in bin
+  - Count actual wins in bin
+  - Calculate actual_win_rate
+  - Compare to predicted_win_rate
+  
+Example:
+  40-60% Bin:
+    Predictions: 25 horses
+    Predicted avg: 50% win rate
+    Actual wins: 10 horses
+    Actual rate: 40% 
+    Calibration error: -10% (overconfident)
+    
+  Action: Reduce confidence scores by 10% for this range
+
+# Brier Score - Overall prediction quality
+brier_score = mean((predicted_p_win - actual_outcome)²)
+  - Lower is better (0 = perfect, 0.25 = random)
+  - Target: < 0.20 (good calibration)
+  - Track trend: Should decrease over time
+
+# Expected vs Actual (ROI validation)
+expected_wins = sum(p_win for all picks)
+actual_wins = count(wins)
+calibration_ratio = actual_wins / expected_wins
+  - 1.0 = perfectly calibrated
+  - >1.0 = underconfident (winning more than predicted)
+  - <1.0 = overconfident (winning less than predicted)
+```
+
+**Integration with Learning System:**
+
+```python
+# In generate_learning_insights.py - NEW SECTION
+
+def analyze_prediction_calibration(df):
+    """Analyze how accurate our predictions are"""
+    
+    # Group by confidence bins
+    df['confidence_bin'] = pd.cut(df['p_win'], 
+                                   bins=[0, 0.2, 0.4, 0.6, 0.8, 1.0],
+                                   labels=['0-20%', '20-40%', '40-60%', '60-80%', '80-100%'])
+    
+    calibration_analysis = {}
+    
+    for bin_name in df['confidence_bin'].unique():
+        bin_df = df[df['confidence_bin'] == bin_name]
+        
+        predicted_avg = bin_df['p_win'].mean()
+        actual_rate = bin_df['won'].mean()
+        sample_size = len(bin_df)
+        
+        calibration_error = actual_rate - predicted_avg
+        
+        calibration_analysis[bin_name] = {
+            'predicted': predicted_avg,
+            'actual': actual_rate,
+            'calibration_error': calibration_error,
+            'sample_size': sample_size,
+            'verdict': 'OVERCONFIDENT' if calibration_error < -0.1 else 
+                      'UNDERCONFIDENT' if calibration_error > 0.1 else 'CALIBRATED'
+        }
+    
+    return calibration_analysis
+
+def analyze_failed_predictions(df):
+    """Deep dive into losses to find patterns"""
+    
+    # Get high confidence losses (predicted well, lost badly)
+    high_conf_losses = df[(df['p_win'] >= 0.4) & (df['won'] == False)]
+    
+    failure_patterns = {
+        'by_trainer': high_conf_losses.groupby('trainer')['won'].count(),
+        'by_course': high_conf_losses.groupby('course')['won'].count(),
+        'by_odds_range': high_conf_losses.groupby(pd.cut(high_conf_losses['odds'], 
+                                                          bins=[3, 4, 5, 6, 9]))['won'].count(),
+        'by_tags': analyze_tag_failures(high_conf_losses)
+    }
+    
+    # Find systematic issues
+    recommendations = []
+    
+    # If specific trainer failing consistently
+    for trainer, count in failure_patterns['by_trainer'].items():
+        if count >= 5:  # 5+ failures
+            recommendations.append(
+                f"⚠️ TRAINER ISSUE: {trainer} has {count} high-confidence losses. "
+                f"Reduce confidence for this trainer by 20%."
+            )
+    
+    # If specific course problematic
+    for course, count in failure_patterns['by_course'].items():
+        if count >= 5:
+            recommendations.append(
+                f"⚠️ COURSE ISSUE: {course} has {count} high-confidence losses. "
+                f"Our model may not understand this track. Review course-specific factors."
+            )
+    
+    return {
+        'patterns': failure_patterns,
+        'recommendations': recommendations,
+        'total_high_conf_losses': len(high_conf_losses)
+    }
+```
+
+**Daily Workflow with Accountability:**
+
+```
+Morning:
+1. Generate today's picks with p_win predictions
+2. Store picks in prediction_tracking table
+3. Record: horse, p_win, confidence, odds, reasons
+
+Evening (After Results):
+4. Fetch race results
+5. Update prediction_tracking with outcomes
+6. Run calibration analysis:
+   → For each loss: "Why were we wrong?"
+   → For each win: "Why were we right?"
+   → Calculate calibration error per bin
+   → Identify systematic failures
+7. Generate learning insights with:
+   → Calibration report
+   → Failed prediction analysis
+   → Pattern discoveries
+   → Confidence adjustments needed
+8. Update prompts with findings
+
+Next Morning:
+9. AI reads yesterday's learnings
+10. Adjusts confidence for problematic patterns
+11. Avoids repeating systematic errors
+12. Reinforces successful patterns
+```
+
+**Example Learning Output:**
+
+```
+🎯 PREDICTION CALIBRATION ANALYSIS
+
+Confidence Bins:
+  20-40% predictions:
+    ✅ Predicted: 30% | Actual: 28% | Error: -2% | CALIBRATED
+    Sample: 15 picks
+  
+  40-60% predictions:
+    ⚠️ Predicted: 50% | Actual: 35% | Error: -15% | OVERCONFIDENT
+    Sample: 20 picks
+    Action: Reduce mid-range confidence by 15%
+  
+  60-80% predictions:
+    ✅ Predicted: 70% | Actual: 67% | Error: -3% | CALIBRATED
+    Sample: 9 picks
+
+Overall Calibration:
+  Brier Score: 0.18 (Good - target <0.20)
+  Expected wins: 23.5 | Actual wins: 19 | Ratio: 0.81
+  Verdict: SLIGHTLY OVERCONFIDENT (reduce confidence 5-10%)
+
+❌ HIGH CONFIDENCE FAILURES (Last 7 days):
+
+1. Thunder Strike @ Ascot (Predicted: 55%, Lost - 4th place)
+   Why wrong: Going changed to heavy, horse prefers good
+   Learning: Check going changes before race time
+   
+2. Quick Step @ Kempton (Predicted: 60%, Lost - 6th place)
+   Why wrong: Drawn wide (stall 12), wide draws losing at Kempton
+   Learning: Factor in draw bias at Kempton (favor low draws)
+   
+3. Star Performer @ Wolverhampton (Predicted: 50%, Lost - 5th)
+   Why wrong: Trainer form false positive (1 win from 20 recent)
+   Learning: Require 3+ wins in last 20 for "in-form trainer" tag
+
+⚠️ SYSTEMATIC PATTERNS:
+
+• Trainer J. Smith: 6 high-confidence losses in sweet spot
+  Action: Reduce confidence for this trainer by 25%
+  Reason: Recent form not translating to wins
+
+• Kempton course: 5 losses with wide draws (stalls 10+)
+  Action: Penalize wide draws at Kempton (-15 confidence)
+  Reason: Clear track bias favoring low draws
+
+• "Recent winner" tag at 9.0+ odds: 0/5 wins
+  Action: Require odds <9.0 for recent winner boost
+  Reason: Longshot recent winners are flukes, not form
+```
+
+**Benefits of Prediction Accountability:**
+
+1. **Forces Honesty**: Can't hide from bad predictions
+2. **Identifies Blind Spots**: Systematic errors become visible
+3. **Calibrates Confidence**: Adjusts overconfidence automatically
+4. **Learns Faster**: Each failure teaches multiple lessons
+5. **Builds Trust**: When calibrated, predictions are reliable
+6. **Prevents Repeats**: Same mistake won't happen twice
+7. **Finds Edges**: Discovers what actually works vs theory
+
+**Implementation Priority:**
+
+**Phase 1 (Immediate):**
+- Store p_win with every pick in DynamoDB
+- Add actual_outcome field after results
+- Basic calibration: predicted vs actual by confidence bin
+
+**Phase 2 (Week 2):**
+- Add failure analysis for high-confidence losses
+- Track patterns (trainer, course, tags)
+- Generate "why wrong" reports
+
+**Phase 3 (Week 3-4):**
+- Automated confidence adjustments
+- Trainer/course specific confidence modifiers
+- Brier score tracking
+
+**Phase 4 (Month 2):**
+- Predictive "autopsy" AI that analyzes each failure
+- Course-specific models
+- Jockey-trainer-horse combination patterns
+
 ### Layer 4: System Prompt (Legacy Support)
 **File**: `prompt.txt` (also used by older scripts)
 - Contains odds guidance for any scripts that load it
