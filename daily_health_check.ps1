@@ -145,16 +145,17 @@ try {
         $created_field = if ($creds.token_created) { $creds.token_created } else { $creds.last_refresh }
         
         if ($created_field) {
-            $created = [DateTime]::Parse($created_field)
-            $age_hours = ((Get-Date).ToUniversalTime() - $created).TotalHours
+            # Parse ISO 8601 format properly
+            $created = [DateTime]::Parse($created_field, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind)
+            $age_hours = ((Get-Date).ToUniversalTime() - $created.ToUniversalTime()).TotalHours
             
             if ($age_hours -gt 23) {
                 Write-Log "  ⚠ WARNING: Betfair token is $([math]::Round($age_hours, 1)) hours old (expires at 24h)" "Yellow"
-            } elseif ($age_hours -gt 0) {
+            } elseif ($age_hours -gt 0 -and $age_hours -le 23) {
                 Write-Log "  ✓ PASS: Betfair token is $([math]::Round($age_hours, 1)) hours old" "Green"
             } else {
-                $issues += "Betfair token missing or invalid"
-                Write-Log "  ✗ FAIL: Token missing" "Red"
+                $issues += "Betfair token has invalid age: $([math]::Round($age_hours, 1)) hours"
+                Write-Log "  ✗ FAIL: Token age invalid ($([math]::Round($age_hours, 1)) hours)" "Red"
             }
         } else {
             Write-Log "  ⚠ WARNING: No token timestamp found" "Yellow"
