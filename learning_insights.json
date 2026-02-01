@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-01-31T19:08:00.806686",
-  "sample_size": 200,
-  "date_range": "20260103 to 20260130",
+  "generated_at": "2026-02-01T17:30:06.085489",
+  "sample_size": 226,
+  "date_range": "20260103 to 20260131",
   "overall_stats": {
-    "total_bets": 200,
+    "total_bets": 226,
     "wins": 39,
-    "win_rate": 0.195,
+    "win_rate": 0.17256637168141592,
     "places": 39,
-    "place_rate": 0.195,
-    "avg_p_win": 0.21885
+    "place_rate": 0.17256637168141592,
+    "avg_p_win": 0.2180973451327434
   },
   "odds_performance": {},
   "sweet_spot_analysis": {},
@@ -22,9 +22,9 @@
     },
     {
       "pattern": "Consistent recent form",
-      "win_rate": "50.0%",
-      "expected": "29.6%",
-      "sample_size": 12,
+      "win_rate": "40.0%",
+      "expected": "30.1%",
+      "sample_size": 15,
       "action": "KEEP - this strategy is working"
     },
     {
@@ -49,24 +49,32 @@
       "action": "KEEP - this strategy is working"
     }
   ],
-  "failing_patterns": [],
-  "recommendations": [
-    "EW bets: 167 bets, 13.8% place rate"
+  "failing_patterns": [
+    {
+      "pattern": "potential for improvement",
+      "win_rate": "0.0%",
+      "expected": "15.0%",
+      "sample_size": 5,
+      "action": "REDUCE - underperforming expectations"
+    }
   ],
-  "prompt_guidance": "\n=== PERFORMANCE-DRIVEN INSIGHTS (200 bets analyzed) ===\n\n\ud83c\udfaf SWEET SPOT PERFORMANCE (3.0-9.0 odds / 2/1-8/1):\n\n\u2705 WORKING STRATEGIES:\n  \u2022 BELOW_THRESHOLD: 27.3% actual vs 28.0% expected (n=11)\n  \u2022 Consistent recent form: 50.0% actual vs 29.6% expected (n=12)\n  \u2022 Recent win: 42.9% actual vs 34.4% expected (n=7)\n  \u2022 Decent recent form: 20.0% actual vs 22.8% expected (n=5)\n  \u2022 Consistent placer: 20.0% actual vs 17.4% expected (n=5)\n\n\ud83d\udd11 KEY ACTIONS:\n  \u2022 EW bets: 167 bets, 13.8% place rate\n\n\u26a1 FOCUS MANDATE: \n  - Prioritize 3.0-9.0 odds range (especially 3.5-6.0)\n  - Look for RECENT WINNERS (won in last 3 races)\n  - In-form trainers/jockeys\n  - Value quality over quantity - better 3 great picks than 10 mediocre\n",
+  "recommendations": [
+    "EW bets: 188 bets, 12.2% place rate"
+  ],
+  "prompt_guidance": "\n=== PERFORMANCE-DRIVEN INSIGHTS (226 bets analyzed) ===\n\n\ud83c\udfaf SWEET SPOT PERFORMANCE (3.0-9.0 odds / 2/1-8/1):\n\n\u2705 WORKING STRATEGIES:\n  \u2022 BELOW_THRESHOLD: 27.3% actual vs 28.0% expected (n=11)\n  \u2022 Consistent recent form: 40.0% actual vs 30.1% expected (n=15)\n  \u2022 Recent win: 42.9% actual vs 34.4% expected (n=7)\n  \u2022 Decent recent form: 20.0% actual vs 22.8% expected (n=5)\n  \u2022 Consistent placer: 20.0% actual vs 17.4% expected (n=5)\n\n\u274c UNDERPERFORMING STRATEGIES (AVOID):\n  \u2022 potential for improvement: 0.0% actual vs 15.0% expected (n=5)\n\n\ud83d\udd11 KEY ACTIONS:\n  \u2022 EW bets: 188 bets, 12.2% place rate\n\n\u26a1 FOCUS MANDATE: \n  - Prioritize 3.0-9.0 odds range (especially 3.5-6.0)\n  - Look for RECENT WINNERS (won in last 3 races)\n  - In-form trainers/jockeys\n  - Value quality over quantity - better 3 great picks than 10 mediocre\n",
   "calibration_analysis": {
     "0-20%": {
-      "predicted": 0.142,
-      "actual": 0.078,
-      "error": -0.063,
-      "sample_size": 102,
+      "predicted": 0.145,
+      "actual": 0.068,
+      "error": -0.076,
+      "sample_size": 117,
       "verdict": "CALIBRATED"
     },
     "20-40%": {
-      "predicted": 0.288,
-      "actual": 0.304,
-      "error": 0.017,
-      "sample_size": 92,
+      "predicted": 0.287,
+      "actual": 0.272,
+      "error": -0.015,
+      "sample_size": 103,
       "verdict": "CALIBRATED"
     },
     "40-60%": {

@@ -183,6 +183,33 @@ def get_today_picks(headers):
     
     print(f"Total picks: {len(items)}, Horse picks: {len(horse_items)}, Future picks: {len(future_picks)}")
     
+    # Calculate workflow schedule (runs every 30 min at :15 and :45)
+    now = datetime.utcnow()
+    current_minute = now.minute
+    
+    # Determine last run time
+    if current_minute >= 45:
+        last_run_minute = 45
+    elif current_minute >= 15:
+        last_run_minute = 15
+    else:
+        # Last run was previous hour at :45
+        last_run_minute = 45
+        now = now - timedelta(hours=1)
+    
+    last_run = now.replace(minute=last_run_minute, second=0, microsecond=0)
+    if current_minute < 15:
+        last_run = last_run - timedelta(hours=1)
+    
+    # Determine next run time
+    if current_minute < 15:
+        next_run = now.replace(minute=15, second=0, microsecond=0)
+    elif current_minute < 45:
+        next_run = now.replace(minute=45, second=0, microsecond=0)
+    else:
+        # Next run is next hour at :15
+        next_run = (now + timedelta(hours=1)).replace(minute=15, second=0, microsecond=0)
+    
     return {
         'statusCode': 200,
         'headers': headers,
@@ -190,7 +217,10 @@ def get_today_picks(headers):
             'success': True,
             'picks': future_picks,
             'count': len(future_picks),
-            'date': today
+            'date': today,
+            'last_run': last_run.isoformat() + 'Z',
+            'next_run': next_run.isoformat() + 'Z',
+            'message': 'No selections met the criteria' if len(future_picks) == 0 else f'{len(future_picks)} upcoming races'
         })
     }
 

@@ -1,0 +1,163 @@
+[
+  {
+    "confidence_explanation": "Acceptable bet - proceed with caution",
+    "p_place": "0.65",
+    "bankroll_pct": "1.8",
+    "selection_id": "44215151",
+    "learning_notes": null,
+    "rating_color": "red",
+    "all_horses_analyzed": {},
+    "why_now": "Consistent performer showing steady improvement. Well positioned to capitalize on current form.",
+    "fallback_reason": "Best available pick (does not meet quality criteria)",
+    "date": "2026-01-31",
+    "confidence_grade": "FAIR",
+    "confidence_color": "#FF8C00",
+    "bet_type": "WIN",
+    "confidence": "32",
+    "dog": null,
+    "outcome": null,
+    "stake_units": "1.8",
+    "tags": [
+      "enhanced_analysis",
+      "Strong recent form with a win and multiple places. Odds in sweet spot range."
+    ],
+    "horse": "Relevant Range",
+    "decision_score": "43.5",
+    "p_win": "0.32",
+    "decision_rating": "NOT GREAT",
+    "quality_score": "31.34400000000001",
+    "stake": "18",
+    "odds": "4.4",
+    "timestamp": "2026-01-31T17:45:44.996587",
+    "roi": "40.80000000000001",
+    "source": "learning_workflow",
+    "ew_fraction": "0.2",
+    "bet_id": "2026-01-31T182500.000Z_Newcastle_Relevant_Range",
+    "sport": "horses",
+    "recommendation": "BACK",
+    "bet": {
+      "horse": "Relevant Range",
+      "bet_type": "WIN",
+      "race_time": "2026-01-31T18:25:00.000Z",
+      "odds": "4.4",
+      "course": "Newcastle",
+      "p_win": "0.32",
+      "p_place": "0.65",
+      "why_now": "Consistent performer showing steady improvement. Well positioned to capitalize on current form.",
+      "tags": [
+        "enhanced_analysis",
+        "Strong recent form with a win and multiple places. Odds in sweet spot range."
+      ]
+    },
+    "race_time": "2026-01-31T18:25:00.000Z",
+    "feedback_processed": false,
+    "confidence_breakdown": {
+      "edge_component": "0",
+      "win_component": "12.8",
+      "place_component": "13",
+      "consistency_component": "8.4",
+      "raw_signals": {
+        "p_win": "0.32",
+        "p_place": "0.65",
+        "market_edge": "0",
+        "consistency_score": "0.42"
+      }
+    },
+    "prompt_version": "prompt.txt",
+    "course": "Newcastle",
+    "bet_date": "2026-01-31",
+    "is_fallback": true,
+    "audit": {
+      "created_by": "learning_workflow",
+      "created_at": "2026-01-31T17:45:44.996626",
+      "status": "pending_outcome"
+    },
+    "ew_places": "3",
+    "market_id": "1.253344248",
+    "actual_position": null,
+    "combined_confidence": "34.2"
+  },
+  {
+    "confidence_explanation": "Acceptable bet - proceed with caution",
+    "p_place": "0.6",
+    "bankroll_pct": "0.96",
+    "selection_id": "83242546",
+    "force_display": true,
+    "learning_notes": null,
+    "rating_color": "red",
+    "all_horses_analyzed": {},
+    "why_now": "Clear improvement trend and favorable odds suggest this could be the breakthrough run",
+    "fallback_reason": "System active indicator - best available pick",
+    "date": "2026-01-31",
+    "confidence_grade": "FAIR",
+    "confidence_color": "#FF8C00",
+    "bet_type": "WIN",
+    "confidence": "32",
+    "dog": null,
+    "outcome": null,
+    "stake_units": "0.96",
+    "tags": [
+      "enhanced_analysis",
+      "Consistent recent form",
+      "improving trend",
+      "odds within optimal range"
+    ],
+    "horse": "Faithful Dream",
+    "decision_score": "23.5",
+    "p_win": "0.32",
+    "decision_rating": "NOT GREAT",
+    "quality_score": "19.023999999999997",
+    "stake": "9.6",
+    "odds": "3.65",
+    "timestamp": "2026-01-31T17:29:00.138395",
+    "roi": "16.799999999999994",
+    "source": "learning_workflow",
+    "ew_fraction": "0.2",
+    "bet_id": "2026-01-31T185500Z_Newcastle_Faithful_Dream",
+    "sport": "horses",
+    "recommendation": "BACK",
+    "bet": {
+      "horse": "Faithful Dream",
+      "bet_type": "WIN",
+      "race_time": "2026-01-31T18:55:00Z",
+      "odds": "3.65",
+      "course": "Newcastle",
+      "p_win": "0.32",
+      "p_place": "0.6",
+      "why_now": "Clear improvement trend and favorable odds suggest this could be the breakthrough run",
+      "tags": [
+        "enhanced_analysis",
+        "Consistent recent form",
+        "improving trend",
+        "odds within optimal range"
+      ]
+    },
+    "race_time": "2026-01-31T18:55:00Z",
+    "feedback_processed": false,
+    "confidence_breakdown": {
+      "edge_component": "0",
+      "win_component": "12.8",
+      "place_component": "12",
+      "consistency_component": "8.4",
+      "raw_signals": {
+        "p_win": "0.32",
+        "p_place": "0.6",
+        "market_edge": "0",
+        "consistency_score": "0.42"
+      }
+    },
+    "prompt_version": "prompt.txt",
+    "course": "Newcastle",
+    "bet_date": "2026-01-31",
+    "is_fallback": true,
+    "audit": {
+      "created_by": "learning_workflow",
+      "created_at": "2026-01-31T17:29:00.138423",
+      "status": "pending_outcome"
+    },
+    "ew_places": "3",
+    "market_id": "1.253344269",
+    "actual_position": null,
+    "combined_confidence": "33.2"
+  }
+]

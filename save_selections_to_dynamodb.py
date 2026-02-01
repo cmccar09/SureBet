@@ -20,6 +20,22 @@ try:
 except ImportError:
     HAS_BOTO3 = False
 
+def _deserialize_all_horses(value):
+    """
+    Deserialize all_horses_analyzed field from CSV
+    Handles both JSON strings and dict objects
+    """
+    if isinstance(value, str):
+        try:
+            return json.loads(value) if value else {}
+        except json.JSONDecodeError:
+            print(f"WARNING: Failed to parse all_horses_analyzed JSON: {value[:100]}")
+            return {}
+    elif isinstance(value, dict):
+        return value
+    else:
+        return {}
+
 def filter_races_by_time(df, min_lead_time_minutes=10, max_future_hours=24):
     """
     Filter out races that are too close to start time or too far in the future
@@ -577,7 +593,8 @@ def format_bet_for_dynamodb(row: pd.Series, market_odds: dict = None, sport: str
         'feedback_processed': False,
         
         # ALL HORSES ANALYZED (for comparative learning)
-        'all_horses_analyzed': row.get('all_horses_analyzed', {}),
+        # V2.3: Deserialize JSON string from CSV if needed
+        'all_horses_analyzed': _deserialize_all_horses(row.get('all_horses_analyzed', '{}')),
         
         # Full bet object for reference
         'bet': {
@@ -765,6 +782,13 @@ def save_to_dynamodb(bets: list[dict], table_name: str = None, region: str = 'eu
     
     print(f"Connecting to DynamoDB table: {table_name} (region: {region})")
     
+    # Import WhatsApp notifier
+    try:
+        from whatsapp_notifier import notify_new_pick
+        whatsapp_enabled = True
+    except ImportError:
+        whatsapp_enabled = False
+    
     try:
         dynamodb = boto3.resource("dynamodb", region_name=region)
         table = dynamodb.Table(table_name)
@@ -796,6 +820,14 @@ def save_to_dynamodb(bets: list[dict], table_name: str = None, region: str = 'eu
                 
                 success_count += 1
                 print(f"[OK] Saved: {bet['horse']} at {bet['course']} ({bet['bet_type']})")
+                
+                # Send WhatsApp notification for new pick
+                if whatsapp_enabled:
+                    try:
+                        if notify_new_pick(bet):
+                            print(f"  ✓ WhatsApp notification sent")
+                    except Exception as e:
+                        print(f"  ⚠ WhatsApp notification failed: {e}")
                 
             except Exception as e:
                 error_count += 1

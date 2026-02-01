@@ -228,9 +228,9 @@ if (Test-Path $outputCsv) {
     if ($pickCount -gt 0) {
         Write-Log "  Generated $pickCount pick(s)" "Green"
         
-        # STEP 3: Save to DynamoDB (EU-WEST-1, breakeven threshold, 30-min minimum lead time)
-        Write-Log "`nSTEP 3: Saving to DynamoDB EU-WEST-1 (ROI: 0%+, Lead time: 30+ min)..." "Cyan"
-        & $pythonExe "$PSScriptRoot\save_selections_to_dynamodb.py" --selections $outputCsv --min_roi 0.0 --region eu-west-1 --min_lead_time 30 --max_future_hours 24 2>&1 | Tee-Object -Append -FilePath $logFile
+        # STEP 3: Save to DynamoDB (EU-WEST-1, breakeven threshold, 10-min minimum lead time)
+        Write-Log "`nSTEP 3: Saving to DynamoDB EU-WEST-1 (ROI: 0%+, Lead time: 10+ min)..." "Cyan"
+        & $pythonExe "$PSScriptRoot\save_selections_to_dynamodb.py" --selections $outputCsv --min_roi 0.0 --region eu-west-1 --min_lead_time 10 --max_future_hours 24 2>&1 | Tee-Object -Append -FilePath $logFile
         
         if ($LASTEXITCODE -eq 0) {
             Write-Log "  Successfully saved to database" "Green"

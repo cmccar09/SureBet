@@ -39,11 +39,11 @@ def save_selections_csv(selections: list, output_path: str):
         print("No selections to save")
         return
     
-    # Required columns
+    # Required columns - ADDED all_horses_analyzed for v2.3
     columns = [
         "runner_name", "selection_id", "market_id", "market_name", "venue",
         "start_time_dublin", "p_win", "p_place", "bet_type", "ew_places", "ew_fraction",
-        "tags", "why_now"
+        "tags", "why_now", "all_horses_analyzed"
     ]
     
     with open(output_path, 'w', newline='', encoding='utf-8') as f:
@@ -65,7 +65,8 @@ def save_selections_csv(selections: list, output_path: str):
                 "ew_places": sel.get('ew_places', 3),  # Default 3 places
                 "ew_fraction": sel.get('ew_fraction', 0.2),  # Default 1/5 odds
                 "tags": "enhanced_analysis," + sel.get('strengths', ''),
-                "why_now": sel.get('why_now', sel.get('reasoning', ''))
+                "why_now": sel.get('why_now', sel.get('reasoning', '')),
+                "all_horses_analyzed": json.dumps(sel.get('all_horses_analyzed', {}))  # V2.3: Store all horses data
             }
             writer.writerow(row)
     

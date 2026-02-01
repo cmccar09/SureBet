@@ -1,16 +1,16 @@
 {
-  "generated_at": "2026-01-31T17:29:20.068915",
-  "sample_size": 61,
+  "generated_at": "2026-01-31T19:25:46.742289",
+  "sample_size": 64,
   "date_range": {
     "start": "2026-01-25",
-    "end": "2026-01-30"
+    "end": "2026-01-31"
   },
   "overall": {
-    "total_picks": 61,
+    "total_picks": 64,
     "wins": 11,
-    "win_rate": 0.18,
-    "avg_predicted_p_win": 0.25,
-    "avg_confidence": 25.0
+    "win_rate": 0.172,
+    "avg_predicted_p_win": 0.252,
+    "avg_confidence": 25.2
   },
   "calibration_bins": {
     "0-20%": {
@@ -22,10 +22,10 @@
       "verdict": "CALIBRATED \u2705"
     },
     "20-40%": {
-      "predicted": 0.322,
-      "actual": 0.207,
-      "calibration_error": -0.116,
-      "sample_size": 29,
+      "predicted": 0.32,
+      "actual": 0.188,
+      "calibration_error": -0.132,
+      "sample_size": 32,
       "wins": 6,
       "verdict": "OVERCONFIDENT \u26a0\ufe0f"
     },
@@ -47,14 +47,14 @@
     }
   },
   "brier_score": {
-    "score": 0.1163,
+    "score": 0.1149,
     "interpretation": "Good",
     "target": "< 0.20"
   },
   "expected_vs_actual": {
-    "expected_wins": 15.27,
+    "expected_wins": 16.15,
     "actual_wins": 11,
-    "calibration_ratio": 0.72,
+    "calibration_ratio": 0.681,
     "verdict": "OVERCONFIDENT"
   },
   "failures": {
@@ -140,7 +140,7 @@
       "TAG_WORKING: 2 wins - this signal is working"
     ],
     "priority_actions": [
-      "Reduce overall confidence by 28%",
+      "Reduce overall confidence by 31%",
       "Reduce confidence boost for 'enhanced_analysis' tag by 10-15 points"
     ]
   }

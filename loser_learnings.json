@@ -1,46 +1,90 @@
 [
   {
-    "our_pick": "Sams Hope",
+    "our_pick": "Relevant Range",
     "our_odds": 0,
     "our_p_win": 0.32,
     "actual_winner": "Unknown",
-    "winner_selection_id": "39597129",
-    "market_id": "1.253314688",
-    "venue": "Wolverhampton",
-    "race_time": "2026-01-30T20:30:00.000Z",
-    "lesson": "Picked Sams Hope but None won - need to analyze winner's characteristics"
+    "winner_selection_id": "65732735",
+    "market_id": "1.253344248",
+    "venue": "Newcastle",
+    "race_time": "2026-01-31T18:25:00.000Z",
+    "lesson": "Picked Relevant Range but None won - need to analyze winner's characteristics"
   },
   {
-    "our_pick": "Water Of Leith",
-    "our_odds": 0,
-    "our_p_win": 0.25,
-    "actual_winner": "Unknown",
-    "winner_selection_id": "39597129",
-    "market_id": "1.253314688",
-    "venue": "Wolverhampton",
-    "race_time": "2026-01-30T20:30:00.000Z",
-    "lesson": "Picked Water Of Leith but None won - need to analyze winner's characteristics"
-  },
-  {
-    "our_pick": "Expert Agent",
-    "our_odds": 0,
-    "our_p_win": 0.24,
-    "actual_winner": "Unknown",
-    "winner_selection_id": "39597129",
-    "market_id": "1.253314688",
-    "venue": "Wolverhampton",
-    "race_time": "2026-01-30T20:30:00.000Z",
-    "lesson": "Picked Expert Agent but None won - need to analyze winner's characteristics"
-  },
-  {
-    "our_pick": "Em Four",
+    "our_pick": "Wyvern",
     "our_odds": 0,
     "our_p_win": 0.22,
     "actual_winner": "Unknown",
-    "winner_selection_id": "39597129",
-    "market_id": "1.253314688",
-    "venue": "Wolverhampton",
-    "race_time": "2026-01-30T20:30:00.000Z",
-    "lesson": "Picked Em Four but None won - need to analyze winner's characteristics"
+    "winner_selection_id": "65732735",
+    "market_id": "1.253344248",
+    "venue": "Newcastle",
+    "race_time": "2026-01-31T18:25:00.000Z",
+    "lesson": "Picked Wyvern but None won - need to analyze winner's characteristics"
+  },
+  {
+    "our_pick": "Springbok",
+    "our_odds": 0,
+    "our_p_win": 0.18,
+    "actual_winner": "Unknown",
+    "winner_selection_id": "65732735",
+    "market_id": "1.253344248",
+    "venue": "Newcastle",
+    "race_time": "2026-01-31T18:25:00.000Z",
+    "lesson": "Picked Springbok but None won - need to analyze winner's characteristics"
+  },
+  {
+    "our_pick": "Alpine Sierra",
+    "our_odds": 0,
+    "our_p_win": 0.16,
+    "actual_winner": "Unknown",
+    "winner_selection_id": "65732735",
+    "market_id": "1.253344248",
+    "venue": "Newcastle",
+    "race_time": "2026-01-31T18:25:00.000Z",
+    "lesson": "Picked Alpine Sierra but None won - need to analyze winner's characteristics"
+  },
+  {
+    "our_pick": "Faithful Dream",
+    "our_odds": 0,
+    "our_p_win": 0.32,
+    "actual_winner": "Unknown",
+    "winner_selection_id": "90190174",
+    "market_id": "1.253344269",
+    "venue": "Newcastle",
+    "race_time": "2026-01-31T18:55:00.000Z",
+    "lesson": "Picked Faithful Dream but None won - need to analyze winner's characteristics"
+  },
+  {
+    "our_pick": "Surgeon Commander",
+    "our_odds": 0,
+    "our_p_win": 0.16,
+    "actual_winner": "Unknown",
+    "winner_selection_id": "90190174",
+    "market_id": "1.253344269",
+    "venue": "Newcastle",
+    "race_time": "2026-01-31T18:55:00.000Z",
+    "lesson": "Picked Surgeon Commander but None won - need to analyze winner's characteristics"
+  },
+  {
+    "our_pick": "Evolve",
+    "our_odds": 0,
+    "our_p_win": 0.18,
+    "actual_winner": "Unknown",
+    "winner_selection_id": "90190174",
+    "market_id": "1.253344269",
+    "venue": "Newcastle",
+    "race_time": "2026-01-31T18:55:00.000Z",
+    "lesson": "Picked Evolve but None won - need to analyze winner's characteristics"
+  },
+  {
+    "our_pick": "Full Gas",
+    "our_odds": 0,
+    "our_p_win": 0.14,
+    "actual_winner": "Unknown",
+    "winner_selection_id": "90190174",
+    "market_id": "1.253344269",
+    "venue": "Newcastle",
+    "race_time": "2026-01-31T18:55:00.000Z",
+    "lesson": "Picked Full Gas but None won - need to analyze winner's characteristics"
   }
 ]

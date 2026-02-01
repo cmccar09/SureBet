@@ -1,6 +1,6 @@
 {
   "total_losses_analyzed": 0,
-  "losses_without_data": 46,
+  "losses_without_data": 49,
   "common_mistakes": {
     "probability_overestimation": 0,
     "form_overweight": 0,
@@ -8,5 +8,5 @@
   },
   "comparisons": [],
   "recommendations": [],
-  "analysis_date": "2026-01-31T17:29:20.679481"
+  "analysis_date": "2026-01-31T19:25:47.517138"
 }
