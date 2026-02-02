@@ -14,6 +14,58 @@ import boto3
 from decimal import Decimal
 from datetime import datetime
 
+# Default weights (fallback if DynamoDB not available)
+DEFAULT_WEIGHTS = {
+    'sweet_spot': 30,
+    'optimal_odds': 20,
+    'recent_win': 25,
+    'total_wins': 5,
+    'consistency': 2,
+    'course_bonus': 10,
+    'database_history': 15
+}
+
+# Cache for weights (reload every 5 minutes)
+_weights_cache = {'weights': None, 'timestamp': None}
+
+def get_dynamic_weights():
+    """Load current weights from DynamoDB (auto-adjusted by learning system)"""
+    global _weights_cache
+    
+    # Check cache (5 minute TTL)
+    if _weights_cache['weights'] and _weights_cache['timestamp']:
+        age = (datetime.now() - _weights_cache['timestamp']).total_seconds()
+        if age < 300:  # 5 minutes
+            return _weights_cache['weights']
+    
+    try:
+        dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
+        table = dynamodb.Table('SureBetBets')
+        
+        response = table.get_item(
+            Key={
+                'bet_id': 'SYSTEM_WEIGHTS',
+                'bet_date': 'CONFIG'
+            }
+        )
+        
+        if 'Item' in response:
+            weights = response['Item'].get('weights', {})
+            # Convert Decimal to float
+            weights_dict = {k: float(v) for k, v in weights.items()}
+            
+            # Update cache
+            _weights_cache['weights'] = weights_dict
+            _weights_cache['timestamp'] = datetime.now()
+            
+            return weights_dict
+        else:
+            return DEFAULT_WEIGHTS.copy()
+    except Exception as e:
+        print(f"Warning: Could not load dynamic weights, using defaults: {e}")
+        return DEFAULT_WEIGHTS.copy()
+
+
 def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course_winners_today=0):
     """
     Comprehensive scoring system for horses
@@ -24,6 +76,9 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     form = horse_data.get('form', '')
     trainer = horse_data.get('trainer', '')
     
+    # Load dynamic weights (auto-adjusted by learning system)
+    weights = get_dynamic_weights()
+    
     score = 0
     breakdown = {}
     reasons = []
@@ -32,20 +87,23 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     if not (3.0 <= odds <= 9.0):
         return 0, {}, ["Outside sweet spot range"]
     
-    score += 30
-    breakdown['sweet_spot'] = 30
-    reasons.append(f"Sweet spot (3-9 odds): 30pts")
+    sweet_spot_pts = int(weights['sweet_spot'])
+    score += sweet_spot_pts
+    breakdown['sweet_spot'] = sweet_spot_pts
+    reasons.append(f"Sweet spot (3-9 odds): {sweet_spot_pts}pts")
     
     # 2. OPTIMAL ODDS POSITION
     odds_distance = abs(odds - avg_winner_odds)
     if odds_distance < 1.0:
-        score += 20
-        breakdown['optimal_odds'] = 20
-        reasons.append(f"Near optimal odds ({avg_winner_odds}): 20pts")
+        optimal_pts = int(weights['optimal_odds'])
+        score += optimal_pts
+        breakdown['optimal_odds'] = optimal_pts
+        reasons.append(f"Near optimal odds ({avg_winner_odds}): {optimal_pts}pts")
     elif odds_distance < 2.0:
-        score += 10
-        breakdown['optimal_odds'] = 10
-        reasons.append(f"Good odds position: 10pts")
+        optimal_pts = int(weights['optimal_odds'] / 2)
+        score += optimal_pts
+        breakdown['optimal_odds'] = optimal_pts
+        reasons.append(f"Good odds position: {optimal_pts}pts")
     else:
         breakdown['optimal_odds'] = 0
     
@@ -55,33 +113,36 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     recent_win = form.split('-')[-1] == '1' if '-' in form else False
     
     # Recent win bonus
+    recent_win_pts = int(weights['recent_win'])
     if recent_win:
-        score += 25
-        breakdown['recent_win'] = 25
-        reasons.append("Recent win (last race): 25pts")
+        score += recent_win_pts
+        breakdown['recent_win'] = recent_win_pts
+        reasons.append(f"Recent win (last race): {recent_win_pts}pts")
     else:
         breakdown['recent_win'] = 0
     
     # Total wins
-    win_points = wins * 5
+    win_pts_each = int(weights['total_wins'])
+    win_points = wins * win_pts_each
     score += win_points
     breakdown['total_wins'] = win_points
     if wins > 0:
         reasons.append(f"{wins} total wins: {win_points}pts")
     
     # Consistency (places)
-    place_points = places * 2
+    place_pts_each = int(weights['consistency'])
+    place_points = places * place_pts_each
     score += place_points
     breakdown['consistency'] = place_points
     if places > 0:
         reasons.append(f"{places} places (2nd/3rd): {place_points}pts")
     
     # 4. COURSE BONUS
+    course_bonus_pts = int(weights['course_bonus'])
     if course_winners_today > 0:
-        course_bonus = 10
-        score += course_bonus
-        breakdown['course_performance'] = course_bonus
-        reasons.append(f"{course} validated ({course_winners_today} today): {course_bonus}pts")
+        score += course_bonus_pts
+        breakdown['course_performance'] = course_bonus_pts
+        reasons.append(f"{course} validated ({course_winners_today} today): {course_bonus_pts}pts")
     else:
         breakdown['course_performance'] = 0
     
