@@ -191,7 +191,8 @@ def get_horse_history(horse_name):
             last_date = None
         
         # Calculate average odds when picked
-        odds_records = [float(r.get('odds', 0)) for r in previous_records if r.get('odds')]
+        odds_records = [float(r.get('odds', 0)) if isinstance(r.get('odds'), (int, float, str)) else 0 
+                        for r in previous_records if r.get('odds')]
         avg_odds = sum(odds_records) / len(odds_records) if odds_records else 0
         
         # Calculate win rate
