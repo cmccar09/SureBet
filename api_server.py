@@ -185,41 +185,14 @@ def get_today_results():
         picks = [decimal_to_float(item) for item in picks]
         
         # Filter: show only items with show_in_ui=True explicitly set
+        # If show_in_ui is True, display it regardless of score (the score filter was already applied when setting show_in_ui)
         picks = [item for item in picks 
                  if item.get('course') and item.get('course') != 'Unknown' 
                  and item.get('horse') and item.get('horse') != 'Unknown'
                  and item.get('show_in_ui') == True]
         
-        # Filter for HIGH confidence picks only (comprehensive_score >= 75)
-        high_confidence_picks = []
-        for item in picks:
-            comp_score = item.get('comprehensive_score') or item.get('analysis_score') or 0
-            if float(comp_score) >= 75:
-                high_confidence_picks.append(item)
-        picks = high_confidence_picks
-        
-        # Filter to only show races that haven't started yet (future races)
-        from datetime import timezone
-        now = datetime.now(timezone.utc)
-        future_picks = []
-        for item in picks:
-            race_time_str = item.get('race_time', '')
-            if race_time_str:
-                try:
-                    # Parse ISO format: "2026-02-02T19:00:00.000Z"
-                    race_dt = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
-                    if race_dt > now:
-                        future_picks.append(item)
-                except Exception as e:
-                    try:
-                        # Try alternative format: "02/02/2026 19:00:00"
-                        race_dt = datetime.strptime(race_time_str, '%d/%m/%Y %H:%M:%S')
-                        if race_dt > now.replace(tzinfo=None):
-                            future_picks.append(item)
-                    except:
-                        # If both parsing attempts fail, exclude it to be safe
-                        pass
-        picks = future_picks
+        # Don't filter by time - show ALL today's picks (past and future)
+        # This is the RESULTS page, not the upcoming picks page
         
         # Sort by comprehensive score (highest first) and limit to 10 per day
         for item in picks:
