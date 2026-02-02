@@ -317,6 +317,63 @@ Based on analysis of last 7 days performance (weekly learning cycle):
 Apply these learnings when making selections. Continuously adapt strategy based on what works.
 
 
+=== CRITICAL LEARNING: Musselburgh 13:55 Loss (2026-02-01) ===
+
+**MISTAKE IDENTIFIED:** Over-weighted course experience, under-weighted VALUE SCORE
+
+Race: Musselburgh 13:55, 5 runners, Good to Soft
+✗ Selected: Koukeo (2.2 odds) - LOST
+✓ Missed: Pure Carbon (3.25 odds) - WON
+
+**Why We Made the Wrong Choice:**
+- Koukeo: Value Score 7/10, Edge 14.4%, Form 9/10, 1 course win
+- Pure Carbon: Value Score 9/10, Edge 23.5%, Form 8/10, 0 course wins
+
+We chose the horse with course experience over the horse with SUPERIOR VALUE.
+
+**NEW MANDATORY RULES - EFFECTIVE IMMEDIATELY:**
+
+1. **VALUE SCORE IS PRIMARY (40% weight)**
+   - When comparing horses with similar form (8-9/10), ALWAYS prefer higher value score
+   - A 9/10 value horse beats a 7/10 value horse even with course disadvantage
+   - Edge percentage difference >8% = value horse MUST be favored
+
+2. **PROGRESSIVE FORM > PERFECT RECENT FORM (30% weight)**
+   - Form pattern U-2-1 (improving trajectory) can be STRONGER than 1-1-X (plateau)
+   - Look for IMPROVEMENT trend, not just recent wins
+   - A horse getting better is more valuable than one maintaining
+
+3. **SMALL FIELD VALUE DYNAMICS (≤5 runners)**
+   - Favorites in 5-runner races are often over-bet
+   - Give EXTRA weight to value picks at 3-5 odds with value score 8+
+   - Course experience is LESS important in small fields
+
+4. **COURSE WINS - HELPFUL NOT DECISIVE (Reduce to 15% weight)**
+   - Course wins should NOT override:
+     * Superior value score (9 vs 7)
+     * Superior edge percentage (>15% difference)
+     * Progressive recent form (U-2-1 vs 1-1-X)
+   - Good horses adapt to new courses - don't penalize too heavily
+
+**UPDATED DECISION WEIGHTING:**
+- Value Score + Edge %: 40% (was 30%)
+- Form Score + Trend: 30% (unchanged)
+- Class/Course Factors: 30% (was 40%)
+
+**IMPLEMENTATION:**
+When multiple horses score 8+ on form, the tiebreaker MUST be value score, not course experience.
+
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-02-01)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 21.1%. Consider adjusting probability model or isotonic regression parameters.
+
+2. MEDIUM_PRIORITY: Win rate 0.0% is significantly below expected 21.1%. Consider tightening overlay threshold or increasing min_back price filter.
+
+
 
 ============================================================
 Performance-Based Adjustments (Updated: 2026-02-01)
