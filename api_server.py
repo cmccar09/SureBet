@@ -265,6 +265,30 @@ def get_today_results():
         # Sort picks by race time
         picks.sort(key=lambda x: x.get('race_time', ''))
         
+        # Get learning/all races data (like Wolverhampton)
+        learning_response = table.query(
+            KeyConditionExpression='bet_date = :today',
+            FilterExpression='is_learning_pick = :learning AND attribute_exists(course) AND attribute_exists(horse)',
+            ExpressionAttributeValues={
+                ':today': today,
+                ':learning': True
+            }
+        )
+        
+        learning_picks = learning_response.get('Items', [])
+        learning_picks = [decimal_to_float(item) for item in learning_picks]
+        
+        # Group learning picks by course
+        from collections import defaultdict
+        learning_by_course = defaultdict(list)
+        for pick in learning_picks:
+            course = pick.get('course', 'Unknown')
+            learning_by_course[course].append(pick)
+        
+        # Sort each course's horses by odds
+        for course in learning_by_course:
+            learning_by_course[course].sort(key=lambda x: float(x.get('odds', 999)))
+        
         # Get system run times
         run_times = get_system_run_times()
         
@@ -286,7 +310,8 @@ def get_today_results():
                 'roi': round(roi, 2),
                 'strike_rate': round(strike_rate, 2)
             },
-            'picks': picks
+            'picks': picks,
+            'all_races': dict(learning_by_course)  # All races data grouped by course
         })
     except Exception as e:
         return jsonify({
