@@ -165,19 +165,23 @@ def get_today_picks(headers):
     try:
         response = table.query(
             KeyConditionExpression='bet_date = :today',
+            FilterExpression='attribute_exists(course) AND attribute_exists(horse)',
             ExpressionAttributeValues={':today': today}
         )
     except Exception as e:
         print(f"Query failed, falling back to scan: {e}")
         # Fallback to scan if query fails
         response = table.scan(
-            FilterExpression='(#d = :today OR bet_date = :today)',
+            FilterExpression='(#d = :today OR bet_date = :today) AND attribute_exists(course) AND attribute_exists(horse)',
             ExpressionAttributeNames={'#d': 'date'},
             ExpressionAttributeValues={':today': today}
         )
     
     items = response.get('Items', [])
     items = [decimal_to_float(item) for item in items]
+    
+    # Additional filter: remove Unknown items
+    items = [item for item in items if item.get('course') and item.get('course') != 'Unknown' and item.get('horse') and item.get('horse') != 'Unknown']
     
     # Filter out greyhounds - only show horses
     horse_items = [item for item in items if item.get('sport', 'horses') == 'horses']
@@ -231,7 +235,7 @@ def get_greyhound_picks(headers):
     
     # Get today's picks and filter for greyhounds
     response = table.scan(
-        FilterExpression='(#d = :today OR bet_date = :today) AND sport = :sport',
+        FilterExpression='(#d = :today OR bet_date = :today) AND sport = :sport AND attribute_exists(course) AND attribute_exists(horse)',
         ExpressionAttributeNames={'#d': 'date'},
         ExpressionAttributeValues={
             ':today': today,
