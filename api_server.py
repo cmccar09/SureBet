@@ -16,6 +16,53 @@ CORS(app)  # Allow React app to call this API
 dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
 table = dynamodb.Table('SureBetBets')
 
+def get_system_run_times():
+    """Get last run and next run times from scheduled task or estimates"""
+    try:
+        import subprocess
+        import platform
+        
+        if platform.system() == 'Windows':
+            # Get scheduled task info
+            result = subprocess.run(
+                ['powershell', '-Command', 
+                 'Get-ScheduledTask -TaskName "BettingWorkflow_AutoLearning" -ErrorAction SilentlyContinue | Get-ScheduledTaskInfo | Select-Object -Property LastRunTime, NextRunTime | ConvertTo-Json'],
+                capture_output=True, text=True, timeout=5
+            )
+            
+            if result.returncode == 0 and result.stdout.strip():
+                import json
+                task_info = json.loads(result.stdout)
+                last_run = task_info.get('LastRunTime', '')
+                next_run = task_info.get('NextRunTime', '')
+                
+                if last_run and next_run:
+                    return {
+                        'last_run': last_run,
+                        'next_run': next_run
+                    }
+    except Exception as e:
+        print(f"Could not get task info: {e}")
+    
+    # Fallback: estimate based on 8:00 AM daily schedule
+    from datetime import timedelta
+    now = datetime.now()
+    today_8am = now.replace(hour=8, minute=0, second=0, microsecond=0)
+    
+    if now < today_8am:
+        # Before today's run
+        last_run = (today_8am - timedelta(days=1)).isoformat()
+        next_run = today_8am.isoformat()
+    else:
+        # After today's run
+        last_run = today_8am.isoformat()
+        next_run = (today_8am + timedelta(days=1)).isoformat()
+    
+    return {
+        'last_run': last_run,
+        'next_run': next_run
+    }
+
 def decimal_to_float(obj):
     """Convert Decimal objects to float for JSON serialization"""
     if isinstance(obj, Decimal):
@@ -100,11 +147,17 @@ def get_today_picks():
         for item in future_items:
             item.pop('_sort_score', None)
         
+        # Get system run times
+        run_times = get_system_run_times()
+        
         return jsonify({
             'success': True,
             'picks': future_items,
             'count': len(future_items),
-            'date': today
+            'date': today,
+            'last_run': run_times['last_run'],
+            'next_run': run_times['next_run'],
+            'message': f"System runs daily at 8:00 AM. {len(future_items)} picks available for today."
         })
     except Exception as e:
         return jsonify({
@@ -212,9 +265,15 @@ def get_today_results():
         # Sort picks by race time
         picks.sort(key=lambda x: x.get('race_time', ''))
         
+        # Get system run times
+        run_times = get_system_run_times()
+        
         return jsonify({
             'success': True,
             'date': today,
+            'last_run': run_times['last_run'],
+            'next_run': run_times['next_run'],
+            'message': f"Next picks will be generated at 8:00 AM tomorrow." if len(picks) == 0 else f"{len(picks)} picks for today.",
             'summary': {
                 'total_picks': len(picks),
                 'wins': wins,

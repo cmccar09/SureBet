@@ -63,6 +63,12 @@ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         f"python betfair_results_fetcher_v2.py --date {yesterday}"
     )
     
+    # STEP 1a: Store all races for learning (before results come in)
+    run_step(
+        "Store all today's races for learning",
+        "python complete_race_learning.py store"
+    )
+    
     # STEP 2: Auto-adjust weights based on results
     success = run_step(
         "Auto-adjust scoring weights based on performance",
@@ -71,6 +77,12 @@ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     
     if success:
         print("\n🎯 Weights have been automatically optimized based on yesterday's results")
+    
+    # STEP 2a: Compare all races with winners and learn patterns
+    run_step(
+        "Check winners and learn from ALL races",
+        "python complete_race_learning.py learn"
+    )
     
     # STEP 3: Fetch today's races
     run_step(
@@ -93,10 +105,12 @@ Completed: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
 WHAT HAPPENED:
 1. ✓ Fetched yesterday's results
-2. ✓ Analyzed performance patterns
-3. ✓ Automatically adjusted scoring weights
-4. ✓ Fetched today's races
-5. ✓ Generated picks using optimized weights
+2. ✓ Stored ALL today's races for learning
+3. ✓ Analyzed performance patterns
+4. ✓ Automatically adjusted scoring weights
+5. ✓ Learned from ALL race winners (not just our picks)
+6. ✓ Fetched updated race data
+7. ✓ Generated picks using optimized weights
 
 NEXT STEPS:
 - Picks are now in DynamoDB with updated confidence scores
@@ -104,8 +118,13 @@ NEXT STEPS:
 - System will repeat tomorrow with further optimized weights
 
 CONTINUOUS IMPROVEMENT:
-The system learns from every day's results and automatically
-adjusts its scoring algorithm to improve future predictions.
+The system learns from EVERY race (not just our picks):
+1. Stores all horses from all UK/Ireland races
+2. Checks actual winners when results come in
+3. Compares winners vs our selection criteria
+4. Identifies patterns (sweet spot%, form%, etc.)
+5. Adjusts weights automatically
+6. Uses learned weights for next day's picks
 {'='*80}
 """)
 
