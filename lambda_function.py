@@ -330,18 +330,24 @@ def get_health(headers):
     }
 
 def check_today_results(headers):
-    """Check results for today's picks - ALL picks separated by sport"""
+    """Check results for today's picks - ONLY actual betting picks (not training, analyses, or learning records)"""
     today = datetime.now().strftime('%Y-%m-%d')
     
-    # Get ALL today's picks
-    response = table.scan(
-        FilterExpression='#d = :today',
-        ExpressionAttributeNames={'#d': 'date'},
-        ExpressionAttributeValues={':today': today}
+    # Get ONLY actual betting picks (exclude training, analyses, and learning records)
+    response = table.query(
+        KeyConditionExpression='bet_date = :today',
+        FilterExpression='(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) AND attribute_not_exists(analysis_type) AND attribute_not_exists(learning_type) AND attribute_exists(course) AND attribute_exists(horse)',
+        ExpressionAttributeValues={
+            ':today': today,
+            ':not_learning': False
+        }
     )
     
     all_picks = response.get('Items', [])
     all_picks = [decimal_to_float(item) for item in all_picks]
+    
+    # Additional filter: ensure course and horse are not empty/Unknown
+    all_picks = [item for item in all_picks if item.get('course') and item.get('course') != 'Unknown' and item.get('horse') and item.get('horse') != 'Unknown']
     
     # DEBUG: Check raw DynamoDB response
     print(f"Raw Items count: {len(all_picks)}")

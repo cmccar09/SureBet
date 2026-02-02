@@ -52,18 +52,25 @@ def get_picks():
 
 @app.route('/api/picks/today', methods=['GET'])
 def get_today_picks():
-    """Get today's picks only (races happening today or later)"""
+    """Get today's RECOMMENDED picks only (excludes training data, analyses, and learning records)"""
     try:
         today = datetime.now().strftime('%Y-%m-%d')
         
-        # Query using bet_date partition key
+        # Get ONLY actual betting picks (exclude training, analyses, and learning records)
         response = table.query(
             KeyConditionExpression='bet_date = :today',
-            ExpressionAttributeValues={':today': today}
+            FilterExpression='(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) AND attribute_not_exists(analysis_type) AND attribute_not_exists(learning_type) AND attribute_exists(course) AND attribute_exists(horse)',
+            ExpressionAttributeValues={
+                ':today': today,
+                ':not_learning': False
+            }
         )
         
         items = response.get('Items', [])
         items = [decimal_to_float(item) for item in items]
+        
+        # Additional filter: ensure course and horse are not empty/Unknown
+        items = [item for item in items if item.get('course') and item.get('course') != 'Unknown' and item.get('horse') and item.get('horse') != 'Unknown']
         
         # Filter to only show races that haven't started yet
         now = datetime.now().isoformat()
@@ -85,18 +92,25 @@ def get_today_picks():
 
 @app.route('/api/results/today', methods=['GET'])
 def get_today_results():
-    """Get ALL today's picks with results summary"""
+    """Get today's RECOMMENDED PICKS with results summary (excludes training, analyses, and learning records)"""
     try:
         today = datetime.now().strftime('%Y-%m-%d')
         
-        # Get ALL picks for today (don't filter by race time)
+        # Get ONLY actual betting picks (exclude training, analyses, and learning records)
         response = table.query(
             KeyConditionExpression='bet_date = :today',
-            ExpressionAttributeValues={':today': today}
+            FilterExpression='(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) AND attribute_not_exists(analysis_type) AND attribute_not_exists(learning_type) AND attribute_exists(course) AND attribute_exists(horse)',
+            ExpressionAttributeValues={
+                ':today': today,
+                ':not_learning': False
+            }
         )
         
         picks = response.get('Items', [])
         picks = [decimal_to_float(item) for item in picks]
+        
+        # Additional filter: ensure course and horse are not empty/Unknown
+        picks = [item for item in picks if item.get('course') and item.get('course') != 'Unknown' and item.get('horse') and item.get('horse') != 'Unknown']
         
         # Calculate summary stats from outcomes
         wins = sum(1 for p in picks if p.get('outcome') == 'win')
