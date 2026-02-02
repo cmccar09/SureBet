@@ -75,11 +75,30 @@ def get_today_picks():
                  and item.get('horse') and item.get('horse') != 'Unknown'
                  and item.get('show_in_ui') == True]
         
+        # Filter for HIGH confidence picks only (comprehensive_score >= 75)
+        high_confidence_items = []
+        for item in items:
+            comp_score = item.get('comprehensive_score') or item.get('analysis_score') or 0
+            if float(comp_score) >= 75:
+                high_confidence_items.append(item)
+        items = high_confidence_items
+        
         # Filter to only show races that haven't started yet
         now = datetime.now().isoformat()
         future_items = [item for item in items if item.get('race_time', '') >= now or item.get('race_time', '').startswith(today)]
         
-        future_items.sort(key=lambda x: x.get('race_time', ''))
+        # Sort by comprehensive score (highest first)
+        for item in future_items:
+            comp_score = item.get('comprehensive_score') or item.get('analysis_score') or 0
+            item['_sort_score'] = float(comp_score)
+        future_items.sort(key=lambda x: x.get('_sort_score', 0), reverse=True)
+        
+        # Limit to maximum 10 picks per day
+        future_items = future_items[:10]
+        
+        # Remove temporary sort field
+        for item in future_items:
+            item.pop('_sort_score', None)
         
         return jsonify({
             'success': True,
@@ -117,6 +136,48 @@ def get_today_results():
                  if item.get('course') and item.get('course') != 'Unknown' 
                  and item.get('horse') and item.get('horse') != 'Unknown'
                  and item.get('show_in_ui') == True]
+        
+        # Filter for HIGH confidence picks only (comprehensive_score >= 75)
+        high_confidence_picks = []
+        for item in picks:
+            comp_score = item.get('comprehensive_score') or item.get('analysis_score') or 0
+            if float(comp_score) >= 75:
+                high_confidence_picks.append(item)
+        picks = high_confidence_picks
+        
+        # Filter to only show races that haven't started yet (future races)
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
+        future_picks = []
+        for item in picks:
+            race_time_str = item.get('race_time', '')
+            if race_time_str:
+                try:
+                    # Parse ISO format: "2026-02-02T19:00:00.000Z"
+                    race_dt = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
+                    if race_dt > now:
+                        future_picks.append(item)
+                except Exception as e:
+                    try:
+                        # Try alternative format: "02/02/2026 19:00:00"
+                        race_dt = datetime.strptime(race_time_str, '%d/%m/%Y %H:%M:%S')
+                        if race_dt > now.replace(tzinfo=None):
+                            future_picks.append(item)
+                    except:
+                        # If both parsing attempts fail, exclude it to be safe
+                        pass
+        picks = future_picks
+        
+        # Sort by comprehensive score (highest first) and limit to 10 per day
+        for item in picks:
+            comp_score = item.get('comprehensive_score') or item.get('analysis_score') or 0
+            item['_sort_score'] = float(comp_score)
+        picks.sort(key=lambda x: x.get('_sort_score', 0), reverse=True)
+        picks = picks[:10]  # Maximum 10 picks per day
+        
+        # Remove temporary sort field
+        for item in picks:
+            item.pop('_sort_score', None)
         
         # Calculate summary stats from outcomes
         wins = sum(1 for p in picks if p.get('outcome') == 'win')

@@ -1,39 +1,17 @@
 {
-  "generated_at": "2026-02-02T19:07:47.279966",
-  "sample_size": 223,
-  "date_range": "20260104 to 20260202",
+  "generated_at": "2026-02-02T19:30:08.452819",
+  "sample_size": 218,
+  "date_range": "20260104 to 20260201",
   "overall_stats": {
-    "total_bets": 223,
-    "wins": 41,
-    "win_rate": 0.18385650224215247,
+    "total_bets": 218,
+    "wins": 37,
+    "win_rate": 0.16972477064220184,
     "places": 37,
     "place_rate": 0.16972477064220184,
     "avg_p_win": 0.21495412844036696
   },
   "odds_performance": {},
-  "sweet_spot_analysis": {
-    "range": "3.0-9.0",
-    "total_picks": 5,
-    "wins": 4,
-    "win_rate": 0.8,
-    "validation_date": "2026-02-02",
-    "notes": "All 5 picks in sweet spot range. 4/5 winners. Winner of loss (Law Supreme @ 8.8) also in sweet spot.",
-    "course_performance": {
-      "Wolverhampton": {
-        "picks": 5,
-        "wins": 4,
-        "win_rate": 0.8,
-        "winning_odds": [
-          4.0,
-          4.0,
-          5.0,
-          6.0
-        ],
-        "avg_winning_odds": 4.75,
-        "pattern": "Consistent performance in 4-6 odds range"
-      }
-    }
-  },
+  "sweet_spot_analysis": {},
   "winning_patterns": [
     {
       "pattern": "Consistent recent form",
@@ -76,7 +54,7 @@
   "recommendations": [
     "EW bets: 180 bets, 11.7% place rate"
   ],
-  "prompt_guidance": "\n=== UPDATED PERFORMANCE INSIGHTS (223 bets analyzed) ===\n\n\ud83c\udfaf SWEET SPOT BREAKTHROUGH (Feb 2, 2026):\n\n\u2705 WOLVERHAMPTON VALIDATION:\n  \u2022 5 picks, 4 wins (80% win rate)\n  \u2022 All picks in 3-9 odds range\n  \u2022 Winning odds: 4.0, 4.0, 5.0, 6.0 (avg: 4.75)\n  \u2022 Loss was also in sweet spot range (Dark Baron @ 5.1, beaten by Law Supreme @ 8.8)\n\n\ud83d\udd11 KEY FINDINGS:\n  \u2022 Sweet spot range VALIDATED: Even the losing pick's winner was in range\n  \u2022 Wolverhampton shows strong pattern: 4-6 odds optimal\n  \u2022 Comprehensive analysis: First test showed preference for optimal odds position\n  \u2022 Consistency matters: Recent form and places valuable\n\n\u26a1 CURRENT STRATEGY:\n  - FOCUS on 3.0-9.0 odds range (PROVEN 80% today)\n  - Target 4-6 odds for highest confidence\n  - Wolverhampton performing exceptionally well\n  - Test comprehensive analysis across more races\n  - Quality over quantity: 5 picks, 4 wins better than 20 picks, 8 wins\n\n\ud83d\udcca OVERALL PERFORMANCE:\n  - Total bets: 223\n  - Wins: 41\n  - Win rate: 18.4%\n  - Sweet spot validated: 80% (4/5) on Feb 2\n",
+  "prompt_guidance": "\n=== PERFORMANCE-DRIVEN INSIGHTS (218 bets analyzed) ===\n\n\ud83c\udfaf SWEET SPOT PERFORMANCE (3.0-9.0 odds / 2/1-8/1):\n\n\u2705 WORKING STRATEGIES:\n  \u2022 Consistent recent form: 37.5% actual vs 29.9% expected (n=16)\n  \u2022 Recent win: 42.9% actual vs 34.4% expected (n=7)\n  \u2022 Decent recent form: 20.0% actual vs 22.8% expected (n=5)\n  \u2022 Consistent placer: 20.0% actual vs 17.4% expected (n=5)\n\n\u274c UNDERPERFORMING STRATEGIES (AVOID):\n  \u2022 potential for improvement: 0.0% actual vs 15.0% expected (n=5)\n\n\ud83d\udd11 KEY ACTIONS:\n  \u2022 EW bets: 180 bets, 11.7% place rate\n\n\u26a1 FOCUS MANDATE: \n  - Prioritize 3.0-9.0 odds range (especially 3.5-6.0)\n  - Look for RECENT WINNERS (won in last 3 races)\n  - In-form trainers/jockeys\n  - Value quality over quantity - better 3 great picks than 10 mediocre\n",
   "calibration_analysis": {
     "0-20%": {
       "predicted": 0.145,
@@ -108,39 +86,5 @@
     }
   },
   "systematic_failures": [],
-  "success_patterns": [],
-  "comprehensive_analysis": {
-    "first_test": {
-      "date": "2026-02-02",
-      "race": "Wolverhampton 19:00",
-      "pick": "The Dark Baron",
-      "odds": 5.1,
-      "score": 73,
-      "outcome": "loss",
-      "winner": "Law Supreme",
-      "winner_odds": 8.8,
-      "winner_score": 45,
-      "learning": "Comprehensive analysis favored optimal odds (5.1 near 4.65) and consistency. Winner was at edge of sweet spot (8.8). Both horses in valid sweet spot range.",
-      "factors_tested": [
-        "Sweet spot (30pts)",
-        "Optimal odds position (20pts)",
-        "Total wins (5pts each)",
-        "Consistency/places (2pts each)",
-        "Course performance (10pts)",
-        "Database history (15pts)"
-      ],
-      "next_steps": "Continue testing comprehensive analysis. May need to adjust weighting as more data collected."
-    }
-  },
-  "daily_performance": [
-    {
-      "date": "2026-02-02",
-      "picks": 5,
-      "wins": 4,
-      "win_rate": 0.8,
-      "course": "Wolverhampton",
-      "strategy": "Sweet spot (3-9 odds)",
-      "notes": "4/5 wins. All picks in sweet spot range. Comprehensive analysis tested on final race (loss)."
-    }
-  ]
+  "success_patterns": []
 }

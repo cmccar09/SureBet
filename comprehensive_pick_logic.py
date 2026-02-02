@@ -155,6 +155,20 @@ def format_pick_for_database(pick_data, race_data):
     horse = pick_data['horse']
     race_time = race_data.get('start_time', '')
     course = race_data.get('venue') or race_data.get('course')
+    score = pick_data['score']
+    
+    # Determine confidence level based on score
+    if score >= 90:
+        confidence_level = "VERY_HIGH"
+    elif score >= 75:
+        confidence_level = "HIGH"
+    elif score >= 60:
+        confidence_level = "MEDIUM"
+    else:
+        confidence_level = "LOW"
+    
+    # Only show HIGH and VERY HIGH confidence picks on UI
+    show_on_ui = (score >= 75)
     
     # Create bet_id
     bet_id = f"{race_time}_" + course + "_" + horse.get('name', '').replace(' ', '_')
@@ -168,21 +182,23 @@ def format_pick_for_database(pick_data, race_data):
         'race_time': race_time,
         'sport': 'Horse Racing',
         'race_type': race_data.get('market_name', 'Unknown'),
-        'confidence': Decimal(str(pick_data['score'])),
-        'show_in_ui': True,
+        'confidence': Decimal(str(score)),
+        'confidence_level': confidence_level,
+        'show_in_ui': show_on_ui,
         
         # Comprehensive analysis
         'analysis_method': 'COMPREHENSIVE',
-        'analysis_score': Decimal(str(pick_data['score'])),
+        'analysis_score': Decimal(str(score)),
+        'comprehensive_score': Decimal(str(score)),
         'form': horse.get('form', ''),
         'trainer': horse.get('trainer', ''),
         'selection_id': str(horse.get('selectionId', '')),
         
-        'reasoning': f"Comprehensive analysis ({pick_data['score']}pts): " + ", ".join(pick_data['reasons'][:3]),
+        'reasoning': f"Comprehensive analysis ({score}pts - {confidence_level}): " + ", ".join(pick_data['reasons'][:3]),
         'why_selected': pick_data['reasons'],
         'analysis_breakdown': {k: int(v) for k, v in pick_data['breakdown'].items()},
         
-        'tags': ['comprehensive_analysis', 'sweet_spot'],
+        'tags': ['comprehensive_analysis', 'sweet_spot', confidence_level.lower()],
         'created_at': datetime.now().isoformat(),
         'updated_at': datetime.now().isoformat(),
         'source': 'comprehensive_learnings'
