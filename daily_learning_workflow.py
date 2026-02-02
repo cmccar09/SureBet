@@ -89,6 +89,11 @@ Apply Updates: {args.apply_updates}
             cmd = f"python evaluate_performance.py --selections {selections_file} --results {results_file} --report {report_file} {apply_flag}"
             if not run_command(cmd, f"Evaluate performance for {date_str}"):
                 sys.exit(1)
+            
+            # STEP 2a: Auto-adjust weights based on results
+            cmd = "python auto_adjust_weights.py"
+            if not run_command(cmd, "Auto-adjust scoring weights based on results"):
+                print("⚠️  Weight adjustment failed but continuing...")
     else:
         print(f"\n⏭️  Skipping evaluation (--skip_evaluation)")
     

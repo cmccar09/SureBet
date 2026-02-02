@@ -56,6 +56,10 @@ class ContinuousLearningSystem:
                 if new_results > 0:
                     print("\n📚 Step 4: Generating learnings...")
                     self.generate_learnings()
+                    
+                    # Step 4a: Auto-adjust weights based on results
+                    print("\n🎯 Step 4a: Auto-adjusting scoring weights...")
+                    self.auto_adjust_weights()
                 
                 # Step 5: Update selection logic if enough data
                 if self.results_processed > 0 and self.results_processed % 20 == 0:
@@ -344,6 +348,30 @@ class ContinuousLearningSystem:
             f.write(f"Favorite success: {favorite_pct:.1f}%\n")
             f.write(f"LTO winner success: {form_1_pct:.1f}%\n")
             f.write(f"{'='*80}\n")
+    
+    def auto_adjust_weights(self):
+        """Auto-adjust scoring weights based on recent results"""
+        try:
+            result = subprocess.run(
+                ['python', 'auto_adjust_weights.py'],
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            
+            if result.returncode == 0:
+                print("   ✓ Weights automatically adjusted based on results")
+                # Print key output lines
+                for line in result.stdout.split('\n'):
+                    if 'optimal_odds' in line or 'recent_win' in line or 'WEIGHTS UPDATED' in line:
+                        print(f"      {line.strip()}")
+                return True
+            else:
+                print(f"   ℹ️  Weight adjustment: {result.stdout}")
+                return False
+        except Exception as e:
+            print(f"   ⚠️  Could not adjust weights: {str(e)}")
+            return False
     
     def generate_daily_report(self):
         """Generate summary of today's learning"""
