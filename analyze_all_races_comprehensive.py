@@ -148,12 +148,91 @@ def analyze_all_uk_ireland_races():
     
     return new_analyses
 
+def get_horse_history(horse_name):
+    """Check if horse has been analyzed/picked before and get outcomes"""
+    try:
+        # Search for previous picks/analyses with this horse
+        response = table.scan(
+            FilterExpression='horse = :name',
+            ExpressionAttributeValues={
+                ':name': horse_name
+            }
+        )
+        
+        previous_records = response.get('Items', [])
+        
+        if not previous_records:
+            return {
+                'has_history': False,
+                'total_picks': 0,
+                'wins': 0,
+                'losses': 0,
+                'pending': 0,
+                'win_rate': 0,
+                'last_outcome': None,
+                'last_picked_date': None,
+                'avg_odds_when_picked': 0
+            }
+        
+        # Calculate statistics
+        wins = sum(1 for r in previous_records if r.get('outcome') == 'win')
+        losses = sum(1 for r in previous_records if r.get('outcome') == 'loss')
+        pending = sum(1 for r in previous_records if r.get('outcome') in ['pending', None])
+        
+        # Sort by date to get most recent
+        dated_records = [r for r in previous_records if r.get('bet_date') or r.get('analyzed_at')]
+        if dated_records:
+            dated_records.sort(key=lambda x: x.get('bet_date') or x.get('analyzed_at', ''), reverse=True)
+            last_record = dated_records[0]
+            last_outcome = last_record.get('outcome', 'unknown')
+            last_date = last_record.get('bet_date') or last_record.get('analyzed_at', '')[:10]
+        else:
+            last_outcome = None
+            last_date = None
+        
+        # Calculate average odds when picked
+        odds_records = [float(r.get('odds', 0)) for r in previous_records if r.get('odds')]
+        avg_odds = sum(odds_records) / len(odds_records) if odds_records else 0
+        
+        # Calculate win rate
+        total_completed = wins + losses
+        win_rate = (wins / total_completed * 100) if total_completed > 0 else 0
+        
+        return {
+            'has_history': True,
+            'total_picks': len(previous_records),
+            'wins': wins,
+            'losses': losses,
+            'pending': pending,
+            'win_rate': round(win_rate, 1),
+            'last_outcome': last_outcome,
+            'last_picked_date': last_date,
+            'avg_odds_when_picked': round(avg_odds, 2)
+        }
+        
+    except Exception as e:
+        print(f"   Warning: Could not retrieve history for {horse_name}: {str(e)}")
+        return {
+            'has_history': False,
+            'total_picks': 0,
+            'wins': 0,
+            'losses': 0,
+            'pending': 0,
+            'win_rate': 0,
+            'last_outcome': None,
+            'last_picked_date': None,
+            'avg_odds_when_picked': 0
+        }
+
 def create_comprehensive_analysis(race, runner):
     """Create detailed analysis for a single horse"""
     
     horse_name = runner.get('name', runner.get('runnerName', 'Unknown'))
     selection_id = runner.get('selectionId', 0)
     market_id = race.get('marketId', 'unknown')
+    
+    # Check horse history FIRST
+    history = get_horse_history(horse_name)
     
     # Build comprehensive analysis
     analysis = {
@@ -168,6 +247,7 @@ def create_comprehensive_analysis(race, runner):
         
         # Race information
         'venue': race.get('venue', 'Unknown'),
+        'course': race.get('venue', 'Unknown'),  # Add course field for API compatibility
         'race_time': race.get('start_time', 'Unknown'),
         'market_id': market_id,
         'market_name': race.get('marketName', 'Unknown'),
@@ -199,6 +279,16 @@ def create_comprehensive_analysis(race, runner):
         'trap': str(runner.get('trap', runner.get('clothNumber', 'Unknown'))),
         'draw': str(runner.get('stall', 'Unknown')),
         
+        # Horse History (from previous picks/analyses)
+        'horse_history': history,
+        'has_history': history['has_history'],
+        'previous_picks': history['total_picks'],
+        'history_wins': history['wins'],
+        'history_losses': history['losses'],
+        'history_win_rate': history['win_rate'],
+        'last_outcome': history['last_outcome'],
+        'last_picked_date': history['last_picked_date'],
+        
         # Enhanced analysis (if available)
         'value_score': 0,
         'form_score': 0,
@@ -216,6 +306,10 @@ def create_comprehensive_analysis(race, runner):
         analysis['edge_percentage'] = to_decimal(ea.get('edge_percentage', 0))
         analysis['trend'] = ea.get('trend', 'Unknown')
         analysis['reasoning'] = ea.get('reasoning', '')
+    
+    # Log history if found
+    if history['has_history']:
+        print(f"      📊 HISTORY: {horse_name} - {history['total_picks']} picks, {history['wins']}W-{history['losses']}L ({history['win_rate']}%), Last: {history['last_outcome']} on {history['last_picked_date']}")
     
     # Calculate simple metrics with robust form parsing
     form_str = str(analysis['form']) if analysis['form'] else ''
@@ -364,6 +458,28 @@ def evaluate_as_pick(analysis, odds_val):
         score += 10
     elif edge > 0:
         score += 5
+    
+    # HORSE HISTORY ADJUSTMENTS
+    history = analysis.get('horse_history', {})
+    if history.get('has_history'):
+        total_picks = history.get('total_picks', 0)
+        win_rate = history.get('win_rate', 0)
+        last_outcome = history.get('last_outcome')
+        
+        # Boost for horses with good track record when picked
+        if total_picks >= 3:  # At least 3 previous picks
+            if win_rate >= 50:
+                score += 15  # 50%+ win rate = strong boost
+            elif win_rate >= 33:
+                score += 10  # 33-50% win rate = moderate boost
+            elif win_rate < 20:
+                score -= 10  # <20% win rate = penalty
+        
+        # Recent outcome matters
+        if last_outcome == 'win':
+            score += 5  # Last time we picked them, they won
+        elif last_outcome == 'loss' and total_picks == 1:
+            score -= 5  # Only picked once and lost = caution
     
     # GOING-SPECIFIC MINIMUM THRESHOLDS
     if is_heavy:
