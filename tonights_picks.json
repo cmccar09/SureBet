@@ -1,0 +1,61 @@
+{
+  "date": "2026-02-02",
+  "venue": "Wolverhampton",
+  "strategy": "Sweet Spot (80% validated today)",
+  "todays_performance": "4/5 wins (80%)",
+  "picks": [
+    {
+      "race_time": "2026-02-02T19:00:00.000Z",
+      "horse": "Skycutter",
+      "odds": 3.35,
+      "form": "97769-3",
+      "race_name": "1m6f Hcap",
+      "confidence": "MEDIUM",
+      "reasoning": "Edge of sweet spot (3.35). Recent 3rd place shows form. No horses in optimal 4-6 zone.",
+      "why_selected": [
+        "In sweet spot range (3-9 odds)",
+        "Recent form shows 3rd place",
+        "Best available in this race",
+        "Based on 80% win rate today"
+      ],
+      "show_in_ui": true,
+      "outcome": "pending"
+    },
+    {
+      "race_time": "2026-02-02T19:30:00.000Z",
+      "horse": "Market House",
+      "odds": 5.9,
+      "form": "112215-",
+      "trainer": "James Owen",
+      "race_name": "2m Hcap",
+      "confidence": "HIGH",
+      "reasoning": "EXCELLENT form: 1st, 1st, 2nd, 2nd, 1st, 5th. Only 1.15 away from optimal 4.75. In perfect sweet spot zone.",
+      "why_selected": [
+        "In optimal zone (4-6 odds) - only 1.15 from 4.75",
+        "Exceptional recent form: multiple wins and places",
+        "Matches today's 80% success pattern",
+        "James Owen trainer"
+      ],
+      "show_in_ui": true,
+      "outcome": "pending"
+    },
+    {
+      "race_time": "2026-02-02T20:00:00.000Z",
+      "horse": "Crimson Rambler",
+      "odds": 4.0,
+      "form": "0876-",
+      "trainer": "George Scott",
+      "race_name": "7f Hcap",
+      "confidence": "HIGH",
+      "reasoning": "PERFECT match to today's winners (4.0, 4.0, 5.0, 6.0). Only 0.75 from optimal 4.75. Exact odds as 2 winners today.",
+      "why_selected": [
+        "Exact match to today's winning odds (4.0)",
+        "Only 0.75 from optimal (4.75)",
+        "In optimal zone (4-6 odds)",
+        "Today had TWO winners @ 4.0"
+      ],
+      "show_in_ui": true,
+      "outcome": "pending"
+    }
+  ]
+}
