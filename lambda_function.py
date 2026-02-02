@@ -180,8 +180,11 @@ def get_today_picks(headers):
     items = response.get('Items', [])
     items = [decimal_to_float(item) for item in items]
     
-    # Additional filter: remove Unknown items
-    items = [item for item in items if item.get('course') and item.get('course') != 'Unknown' and item.get('horse') and item.get('horse') != 'Unknown']
+    # Filter: remove Unknown items and only show items with show_in_ui=True
+    items = [item for item in items 
+             if item.get('course') and item.get('course') != 'Unknown' 
+             and item.get('horse') and item.get('horse') != 'Unknown'
+             and item.get('show_in_ui') == True]
     
     # Filter out greyhounds - only show horses
     horse_items = [item for item in items if item.get('sport', 'horses') == 'horses']
@@ -350,8 +353,11 @@ def check_today_results(headers):
     all_picks = response.get('Items', [])
     all_picks = [decimal_to_float(item) for item in all_picks]
     
-    # Additional filter: ensure course and horse are not empty/Unknown
-    all_picks = [item for item in all_picks if item.get('course') and item.get('course') != 'Unknown' and item.get('horse') and item.get('horse') != 'Unknown']
+    # Filter: remove Unknown items and only show items with show_in_ui=True
+    all_picks = [item for item in all_picks 
+                 if item.get('course') and item.get('course') != 'Unknown' 
+                 and item.get('horse') and item.get('horse') != 'Unknown'
+                 and item.get('show_in_ui') == True]
     
     # DEBUG: Check raw DynamoDB response
     print(f"Raw Items count: {len(all_picks)}")

@@ -69,8 +69,11 @@ def get_today_picks():
         items = response.get('Items', [])
         items = [decimal_to_float(item) for item in items]
         
-        # Additional filter: ensure course and horse are not empty/Unknown
-        items = [item for item in items if item.get('course') and item.get('course') != 'Unknown' and item.get('horse') and item.get('horse') != 'Unknown']
+        # Filter: show only items with show_in_ui=True explicitly set
+        items = [item for item in items 
+                 if item.get('course') and item.get('course') != 'Unknown' 
+                 and item.get('horse') and item.get('horse') != 'Unknown'
+                 and item.get('show_in_ui') == True]
         
         # Filter to only show races that haven't started yet
         now = datetime.now().isoformat()
@@ -109,8 +112,11 @@ def get_today_results():
         picks = response.get('Items', [])
         picks = [decimal_to_float(item) for item in picks]
         
-        # Additional filter: ensure course and horse are not empty/Unknown
-        picks = [item for item in picks if item.get('course') and item.get('course') != 'Unknown' and item.get('horse') and item.get('horse') != 'Unknown']
+        # Filter: show only items with show_in_ui=True explicitly set
+        picks = [item for item in picks 
+                 if item.get('course') and item.get('course') != 'Unknown' 
+                 and item.get('horse') and item.get('horse') != 'Unknown'
+                 and item.get('show_in_ui') == True]
         
         # Calculate summary stats from outcomes
         wins = sum(1 for p in picks if p.get('outcome') == 'win')
