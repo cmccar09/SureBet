@@ -12,7 +12,7 @@ db = boto3.resource('dynamodb', region_name='eu-west-1')
 table = db.Table('SureBetBets')
 
 def score_horse(horse, race):
-    """Realistic scoring - max ~70 for exceptional horses"""
+    """Conservative scoring - max ~50 for exceptional horses"""
     odds = horse.get('odds', 0)
     form = horse.get('form', '')
     
@@ -23,37 +23,37 @@ def score_horse(horse, race):
     score = 0
     reasons = []
     
-    # Base sweet spot points (reduced from 30)
-    score += 20
+    # Base sweet spot points (reduced from 20 to 15)
+    score += 15
     reasons.append(f"Sweet spot odds ({odds})")
     
-    # Form scoring (reduced from 25/15)
+    # Form scoring (reduced from 18/10 to 12/6)
     if '1' in form[:2]:  # Win in last 2 races
-        score += 18
+        score += 12
         reasons.append("Recent win")
     elif '1' in form:  # Win anywhere
-        score += 10
+        score += 6
         reasons.append("Has won before")
     
-    # Place scoring (reduced from 15/8)
+    # Place scoring (reduced from 12/6 to 8/4)
     places = form.count('2') + form.count('3')
     if places >= 2:
-        score += 12
+        score += 8
         reasons.append(f"{places} place finishes")
     elif places == 1:
-        score += 6
+        score += 4
     
-    # Consistency (reduced from 10)
+    # Consistency (reduced from 8 to 5)
     if len(form) >= 5 and form.count('0') == 0 and form.count('P') == 0:
-        score += 8
+        score += 5
         reasons.append("Consistent performer")
     
-    # Optimal odds range (reduced from 15/10)
+    # Optimal odds range (reduced from 12/8 to 10/5)
     if 4.0 <= odds <= 6.0:
-        score += 12
+        score += 10
         reasons.append("Optimal odds range")
     elif 3.0 <= odds <= 7.0:
-        score += 8
+        score += 5
     
     return score, reasons
 
@@ -94,7 +94,7 @@ def generate_ui_picks():
                 best_horse = runner
                 best_reasons = reasons
         
-        if best_score >= 55:  # UI threshold - lowered to match realistic scoring
+        if best_score >= 40:  # UI threshold - lowered for conservative scoring (max ~50)
             horse_name = best_horse.get('name', best_horse.get('runnerName', 'Unknown'))
             odds = best_horse.get('odds', 0)
             form = best_horse.get('form', '')
