@@ -1,16 +1,16 @@
 """
-Daily Automated Learning - Complete Workflow with 4-Tier Grading
+Daily Automated Learning - Complete Workflow with Realistic Win Probability Grading
 Runs automatically every day to:
 1. Fetch yesterday's results
 2. Analyze performance
 3. Auto-adjust weights
-4. Generate today's picks with 4-tier grading validation
+4. Generate today's picks with realistic probability validation
 
-4-TIER GRADING SYSTEM (Default):
-- EXCELLENT: 75+ points (Green)       - 2.0x stake
-- GOOD:      60-74 points (Light amber) - 1.5x stake
-- FAIR:      45-59 points (Dark amber)  - 1.0x stake
-- POOR:      <45 points (Red)         - 0.5x stake
+REALISTIC WIN PROBABILITY GRADING SYSTEM:
+- EXCELLENT: 85+ points (Green)       - 40-50% win chance - 2.0x stake
+- GOOD:      70-84 points (Light amber) - 25-35% win chance - 1.5x stake
+- FAIR:      55-69 points (Dark amber)  - 15-25% win chance - 1.0x stake
+- POOR:      <55 points (Red)          - <15% win chance   - 0.5x stake
 
 CRITICAL REQUIREMENT:
 - ALL horses in ALL races MUST be analyzed before racing
