@@ -113,10 +113,13 @@ def generate_results_summary():
         if form and form != 'N/A':
             print(f"     Form: {form}")
         
-        # Show analysis quality
+        # Show analysis quality and coverage
         analysis_type = pick.get('analysis_type', 'N/A')
+        coverage = pick.get('race_coverage_pct', 'N/A')
         if analysis_type == 'PRE_RACE_COMPLETE' or analysis_type == 'COMPLETE_ANALYSIS':
             print(f"     Analysis: Complete [OK]")
+            if coverage != 'N/A':
+                print(f"     Coverage: {coverage}% of field analyzed")
     
     # Summary
     print("\n" + "="*80)

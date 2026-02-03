@@ -10,8 +10,11 @@ Confidence Grading (4-tier system):
 - FAIR (45-59): Dark amber - 1.0x stake
 - POOR (<45): Red - 0.5x stake
 
-Only picks meeting threshold (45+ for normal fields, 55+ for small fields) appear on UI
-REQUIRES: >=75% race analysis completion before betting (Carlisle 14:00 fix)
+CRITICAL REQUIREMENTS:
+- ALL horses in race MUST be analyzed (100% coverage preferred)
+- Minimum 90% coverage required - races below this are REJECTED
+- NEVER show picks when full field not analyzed (Carlisle 15:35 lesson)
+- Coverage % displayed on all picks
 """
 
 import subprocess

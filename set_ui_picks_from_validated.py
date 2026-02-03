@@ -58,6 +58,9 @@ for race_key, picks in races.items():
         print(f"[SKIP] {course} {time_str} - Validation failed")
         continue
     
+    # Calculate coverage percentage
+    coverage = (num_analyzed / total_horses) * 100 if total_horses > 0 else 0
+    
     # Get number of runners for threshold
     num_runners = total_horses
     threshold = 55 if num_runners < 6 else 45
@@ -104,22 +107,25 @@ for race_key, picks in races.items():
                     'bet_date': bet_date,
                     'bet_id': bet_id
                 },
-                UpdateExpression='SET show_in_ui = :true, combined_confidence = :conf, confidence_level = :level, confidence_grade = :grade, confidence_color = :color',
+                UpdateExpression='SET show_in_ui = :true, combined_confidence = :conf, confidence_level = :level, confidence_grade = :grade, confidence_color = :color, race_coverage_pct = :coverage, race_analyzed_count = :analyzed, race_total_count = :total',
                 ExpressionAttributeValues={
                     ':true': True,
                     ':conf': Decimal(str(best_score)),
                     ':level': 'HIGH' if best_score >= 75 else 'MEDIUM' if best_score >= 60 else 'LOW',
                     ':grade': 'EXCELLENT' if best_score >= 75 else 'GOOD' if best_score >= 60 else 'FAIR' if best_score >= 45 else 'POOR',
-                    ':color': 'green' if best_score >= 75 else '#FFB84D' if best_score >= 60 else '#FF8C00' if best_score >= 45 else 'red'
+                    ':color': 'green' if best_score >= 75 else '#FFB84D' if best_score >= 60 else '#FF8C00' if best_score >= 45 else 'red',
+                    ':coverage': Decimal(str(int(coverage))),
+                    ':analyzed': num_analyzed,
+                    ':total': num_runners
                 }
             )
             
             print(f"[UI PICK] {course} {time_str}")
             print(f"  {horse}")
             print(f"  Score: {best_score:.0f}/100 (base: {best_pick['data'].get('confidence', 0)}, form adj: {best_pick.get('form_adjustment', 0):+d})")
-            print(f"  Threshold: {threshold}/100 ({'small field' if num_runners < 6 else 'normal'})")
+            print(f"  Threshold: {threshold}/100 (90% minimum coverage required)")
             print(f"  Form: {best_pick['data'].get('form', '')}")
-            print(f"  Analysis: {num_analyzed}/{num_runners} horses ({num_analyzed/num_runners*100:.0f}%)")
+            print(f"  Analysis: {num_analyzed}/{num_runners} horses ({coverage:.0f}%) [OK]")
             print()
             
             ui_picks_set += 1

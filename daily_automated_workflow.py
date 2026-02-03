@@ -11,6 +11,12 @@ Runs automatically every day to:
 - GOOD:      60-74 points (Light amber) - 1.5x stake
 - FAIR:      45-59 points (Dark amber)  - 1.0x stake
 - POOR:      <45 points (Red)         - 0.5x stake
+
+CRITICAL REQUIREMENT:
+- ALL horses in ALL races MUST be analyzed before racing
+- Minimum 90% coverage required (100% preferred)
+- Races with <90% coverage will NOT appear on UI
+- Never show picks when we haven't analyzed the full field
 """
 
 import subprocess

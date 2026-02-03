@@ -13,6 +13,12 @@ This script:
 - GOOD:      60-74 points (Light amber) - 1.5x stake
 - FAIR:      45-59 points (Dark amber)  - 1.0x stake
 - POOR:      <45 points (Red)         - 0.5x stake
+
+MANDATORY COVERAGE:
+- Analyze ALL horses in ALL races (100% target)
+- Minimum 90% coverage - races below this are SKIPPED
+- Lesson from Carlisle 15:35: 9% coverage = system failure
+- Never make picks without analyzing the full field
 """
 
 import json

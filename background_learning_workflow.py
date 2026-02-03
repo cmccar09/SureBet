@@ -9,8 +9,11 @@ Confidence Scoring (4-tier system applied to all horses):
 - FAIR (45-59): Dark amber - 1.0x stake
 - POOR (<45): Red - 0.5x stake
 
-Everything saved to database with show_in_ui=False (NOT visible on UI)
-Only validated picks (>=75% race completion) appear on UI
+CRITICAL COVERAGE RULES:
+- ALL horses must be analyzed (target 100% coverage)
+- Minimum 90% required - below this = race REJECTED
+- Everything saved to database with show_in_ui=False
+- Only fully analyzed races (>=90% coverage) can appear on UI
 """
 
 import subprocess
