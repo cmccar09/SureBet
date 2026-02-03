@@ -93,8 +93,19 @@ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     # STEP 4: Analyze races with NEW weights
     run_step(
         "Analyze races using updated weights",
-        "python comprehensive_workflow.py"
+        "python analyze_all_races_comprehensive.py"
     )
+    
+    # STEP 5: Comprehensive historical learning (weekly)
+    from datetime import datetime
+    if datetime.now().weekday() == 0:  # Monday only
+        print("\n" + "="*80)
+        print("WEEKLY: Running comprehensive historical analysis...")
+        print("="*80)
+        run_step(
+            "Comprehensive historical learning (all races, all time)",
+            "python analyze_and_learn_all.py"
+        )
     
     # Summary
     print(f"""
