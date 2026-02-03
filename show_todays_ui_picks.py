@@ -105,7 +105,15 @@ def generate_results_summary():
         # Display pick
         validation_mark = "[OK]" if is_valid else "[FAIL]"
         
+        # Get coverage info
+        coverage = pick.get('race_coverage_pct', 'N/A')
+        analyzed = pick.get('race_analyzed_count', '?')
+        total = pick.get('race_total_count', '?')
+        
         print(f"\n{race_key}")
+        if coverage != 'N/A':
+            coverage_status = "[OK]" if float(coverage) >= 90 else "[LOW]"
+            print(f"  Coverage: {analyzed}/{total} horses ({coverage}%) {coverage_status}")
         print(f"  {validation_mark} {pick['horse']:30} {score:5.1f}/100 {grade:10}")
         
         # Show form
