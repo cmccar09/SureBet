@@ -753,8 +753,8 @@ function App() {
                   💰 Daily Budget Management
                 </span>
                 {picks.length > 0 && picks[0].created_at && (
-                  <span style={{fontSize: '11px', opacity: 0.8, fontWeight: 'normal'}}>
-                    Last updated: {new Date(picks[0].created_at).toLocaleString('en-GB', {
+                  <span style={{fontSize: '14px', opacity: 0.95, fontWeight: 'normal'}}>
+                    Last run time: {new Date(picks[0].created_at).toLocaleString('en-GB', {
                       hour: '2-digit',
                       minute: '2-digit'
                     })}
