@@ -9,10 +9,10 @@ This script:
 4. Only shows picks passing validation on UI
 
 4-TIER GRADING SYSTEM (Default):
-- EXCELLENT: 70+ points (Green)       - 2.0x stake
-- GOOD:      55-69 points (Light amber) - 1.5x stake
-- FAIR:      40-54 points (Dark amber)  - 1.0x stake
-- POOR:      <40 points (Red)         - 0.5x stake
+- EXCELLENT: 75+ points (Green)       - 2.0x stake
+- GOOD:      60-74 points (Light amber) - 1.5x stake
+- FAIR:      45-59 points (Dark amber)  - 1.0x stake
+- POOR:      <45 points (Red)         - 0.5x stake
 """
 
 import json

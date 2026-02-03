@@ -82,7 +82,7 @@ def generate_results_summary():
         pick = race_picks[0]  # Should only be 1 per race
         
         if len(race_picks) > 1:
-            print(f"\n⚠️  WARNING: {race_key} has {len(race_picks)} picks (should be 1)")
+            print(f"\nWARNING: {race_key} has {len(race_picks)} picks (should be 1)")
         
         score = float(pick.get('combined_confidence', 0))
         grade = pick.get('confidence_grade', 'N/A')
@@ -163,10 +163,10 @@ def generate_results_summary():
     print("\n" + "="*80)
     print("4-TIER GRADING THRESHOLDS")
     print("="*80)
-    print("EXCELLENT: 70+ points  (Green)       2.0x stake")
-    print("GOOD:      55-69 points (Light amber) 1.5x stake")
-    print("FAIR:      40-54 points (Dark amber)  1.0x stake")
-    print("POOR:      <40 points   (Red)         0.5x stake")
+    print("EXCELLENT: 75+ points  (Green)       2.0x stake")
+    print("GOOD:      60-74 points (Light amber) 1.5x stake")
+    print("FAIR:      45-59 points (Dark amber)  1.0x stake")
+    print("POOR:      <45 points   (Red)         0.5x stake")
     
     print("\n" + "="*80)
     print("VALIDATION REQUIREMENTS")

@@ -172,9 +172,9 @@ for race_key, horses in races.items():
                 UpdateExpression='SET confidence = :conf, combined_confidence = :conf, confidence_level = :level, confidence_grade = :grade, confidence_color = :color',
                 ExpressionAttributeValues={
                     ':conf': Decimal(str(confidence)),
-                    ':level': 'HIGH' if confidence >= 70 else 'MEDIUM' if confidence >= 55 else 'LOW',
-                    ':grade': 'EXCELLENT' if confidence >= 70 else 'GOOD' if confidence >= 55 else 'FAIR' if confidence >= 40 else 'POOR',
-                    ':color': 'green' if confidence >= 70 else '#FFB84D' if confidence >= 55 else '#FF8C00' if confidence >= 40 else 'red'
+                    ':level': 'HIGH' if confidence >= 75 else 'MEDIUM' if confidence >= 60 else 'LOW',
+                    ':grade': 'EXCELLENT' if confidence >= 75 else 'GOOD' if confidence >= 60 else 'FAIR' if confidence >= 45 else 'POOR',
+                    ':color': 'green' if confidence >= 75 else '#FFB84D' if confidence >= 60 else '#FF8C00' if confidence >= 45 else 'red'
                 }
             )
             

@@ -8,10 +8,10 @@ This script:
 4. Generates performance report
 
 4-TIER GRADING SYSTEM:
-- EXCELLENT: 70+ points (Green)       - 2.0x stake
-- GOOD:      55-69 points (Light amber) - 1.5x stake
-- FAIR:      40-54 points (Dark amber)  - 1.0x stake
-- POOR:      <40 points (Red)         - 0.5x stake
+- EXCELLENT: 75+ points (Green)       - 2.0x stake
+- GOOD:      60-74 points (Light amber) - 1.5x stake
+- FAIR:      45-59 points (Dark amber)  - 1.0x stake
+- POOR:      <45 points (Red)         - 0.5x stake
 """
 
 import boto3
@@ -22,11 +22,11 @@ from decimal import Decimal
 
 def validate_4tier_grading(score, grade):
     """Validate that grade matches score threshold"""
-    if score >= 70:
+    if score >= 75:
         return grade == 'EXCELLENT'
-    elif score >= 55:
+    elif score >= 60:
         return grade == 'GOOD'
-    elif score >= 40:
+    elif score >= 45:
         return grade == 'FAIR'
     else:
         return grade == 'POOR'

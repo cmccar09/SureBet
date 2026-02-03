@@ -108,9 +108,9 @@ for race_key, picks in races.items():
                 ExpressionAttributeValues={
                     ':true': True,
                     ':conf': Decimal(str(best_score)),
-                    ':level': 'HIGH' if best_score >= 70 else 'MEDIUM' if best_score >= 55 else 'LOW',
-                    ':grade': 'EXCELLENT' if best_score >= 70 else 'GOOD' if best_score >= 55 else 'FAIR' if best_score >= 40 else 'POOR',
-                    ':color': 'green' if best_score >= 70 else '#FFB84D' if best_score >= 55 else '#FF8C00' if best_score >= 40 else 'red'
+                    ':level': 'HIGH' if best_score >= 75 else 'MEDIUM' if best_score >= 60 else 'LOW',
+                    ':grade': 'EXCELLENT' if best_score >= 75 else 'GOOD' if best_score >= 60 else 'FAIR' if best_score >= 45 else 'POOR',
+                    ':color': 'green' if best_score >= 75 else '#FFB84D' if best_score >= 60 else '#FF8C00' if best_score >= 45 else 'red'
                 }
             )
             

@@ -4,10 +4,10 @@ Runs 11am-7pm on 30min cycles
 Analyzes ALL races, stores ALL horses, learns from winners
 
 Confidence Scoring (4-tier system applied to all horses):
-- EXCELLENT (70+): Green - 2.0x stake
-- GOOD (55-69): Light amber - 1.5x stake
-- FAIR (40-54): Dark amber - 1.0x stake
-- POOR (<40): Red - 0.5x stake
+- EXCELLENT (75+): Green - 2.0x stake
+- GOOD (60-74): Light amber - 1.5x stake
+- FAIR (45-59): Dark amber - 1.0x stake
+- POOR (<45): Red - 0.5x stake
 
 Everything saved to database with show_in_ui=False (NOT visible on UI)
 Only validated picks (>=75% race completion) appear on UI

@@ -7,10 +7,10 @@ Runs automatically every day to:
 4. Generate today's picks with 4-tier grading validation
 
 4-TIER GRADING SYSTEM (Default):
-- EXCELLENT: 70+ points (Green)       - 2.0x stake
-- GOOD:      55-69 points (Light amber) - 1.5x stake
-- FAIR:      40-54 points (Dark amber)  - 1.0x stake
-- POOR:      <40 points (Red)         - 0.5x stake
+- EXCELLENT: 75+ points (Green)       - 2.0x stake
+- GOOD:      60-74 points (Light amber) - 1.5x stake
+- FAIR:      45-59 points (Dark amber)  - 1.0x stake
+- POOR:      <45 points (Red)         - 0.5x stake
 """
 
 import subprocess
@@ -115,7 +115,6 @@ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     )
     
     # STEP 7: Comprehensive historical learning (weekly)
-    from datetime import datetime
     if datetime.now().weekday() == 0:  # Monday only
         print("\n" + "="*80)
         print("WEEKLY: Running comprehensive historical analysis...")
@@ -146,7 +145,7 @@ WHAT HAPPENED:
 NEXT STEPS:
 - View picks: python show_todays_ui_picks.py
 - UI shows only validated picks with 4-tier grading
-- EXCELLENT (70+) gets 2.0x stake, GOOD (55-69) gets 1.5x stake
+- EXCELLENT (75+) gets 2.0x stake, GOOD (60-74) gets 1.5x stake
 
 CONTINUOUS IMPROVEMENT:
 The system learns from EVERY race (not just our picks):
