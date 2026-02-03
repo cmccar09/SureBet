@@ -14,20 +14,41 @@ db = boto3.resource('dynamodb', region_name='eu-west-1')
 table = db.Table('SureBetBets')
 
 def score_horse(horse, race, going_adjustment=0, going_info=None):
-    """Conservative scoring - max ~50 for exceptional horses + going adjustment + horse suitability"""
+    """Conservative scoring - max ~50 for exceptional horses + going adjustment + horse suitability
+    
+    Updated Feb 3: Added quality favorite exception based on Its Top/Dunsy Rock analysis
+    """
     odds = horse.get('odds', 0)
     form = horse.get('form', '')
-    
-    # Sweet spot check (3-9 odds)
-    if not (3.0 <= odds <= 9.0):
-        return 0, []
     
     score = 0
     reasons = []
     
-    # Base sweet spot points
-    score += 15
-    reasons.append(f"Sweet spot odds ({odds})")
+    # Quality favorite exception (NEW - based on today's winners)
+    # Favorites (1.5-3.0) with exceptional form can score
+    is_quality_favorite = False
+    if 1.5 <= odds < 3.0:
+        # Check for quality indicators
+        lto_winner = form and form[0] == '1'  # Last time out winner
+        places_count = sum(1 for c in form[:6] if c.isdigit() and 1 <= int(c) <= 3)
+        wins_count = form[:6].count('1')
+        
+        # Quality criteria: LTO winner OR (2+ wins AND 3+ places in last 6)
+        if lto_winner or (wins_count >= 2 and places_count >= 3):
+            is_quality_favorite = True
+            score += 20  # Increased bonus for quality favorite (was 10)
+            reasons.append(f"Quality favorite ({odds})")
+            if lto_winner:
+                reasons.append("LTO winner")
+    
+    # Sweet spot check (3-9 odds) OR quality favorite
+    if not (3.0 <= odds <= 9.0 or is_quality_favorite):
+        return 0, []
+    
+    # Base sweet spot points (only for 3-9 odds, favorites already scored)
+    if 3.0 <= odds <= 9.0:
+        score += 15
+        reasons.append(f"Sweet spot odds ({odds})")
     
     # Form scoring
     if '1' in form[:2]:  # Win in last 2 races
