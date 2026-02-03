@@ -1,10 +1,16 @@
 """
-Daily Automated Learning - Complete Workflow
+Daily Automated Learning - Complete Workflow with 4-Tier Grading
 Runs automatically every day to:
 1. Fetch yesterday's results
 2. Analyze performance
 3. Auto-adjust weights
-4. Generate today's picks
+4. Generate today's picks with 4-tier grading validation
+
+4-TIER GRADING SYSTEM (Default):
+- EXCELLENT: 70+ points (Green)       - 2.0x stake
+- GOOD:      55-69 points (Light amber) - 1.5x stake
+- FAIR:      40-54 points (Dark amber)  - 1.0x stake
+- POOR:      <40 points (Red)         - 0.5x stake
 """
 
 import subprocess
@@ -96,7 +102,19 @@ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         "python analyze_all_races_comprehensive.py"
     )
     
-    # STEP 5: Comprehensive historical learning (weekly)
+    # STEP 5: Calculate 4-tier confidence scores
+    run_step(
+        "Calculate 4-tier confidence scores for all horses",
+        "python calculate_all_confidence_scores.py"
+    )
+    
+    # STEP 6: Set UI picks from validated races
+    run_step(
+        "Set UI picks (one per validated race)",
+        "python set_ui_picks_from_validated.py"
+    )
+    
+    # STEP 7: Comprehensive historical learning (weekly)
     from datetime import datetime
     if datetime.now().weekday() == 0:  # Monday only
         print("\n" + "="*80)
@@ -122,11 +140,13 @@ WHAT HAPPENED:
 5. ✓ Learned from ALL race winners (not just our picks)
 6. ✓ Fetched updated race data
 7. ✓ Generated picks using optimized weights
+8. ✓ Applied 4-tier grading (EXCELLENT/GOOD/FAIR/POOR)
+9. ✓ Set UI picks (one per validated race)
 
 NEXT STEPS:
-- Picks are now in DynamoDB with updated confidence scores
-- Lambda/API will show only validated picks (GOOD 55+ or EXCELLENT 70+ grades)
-- System will repeat tomorrow with further optimized weights
+- View picks: python show_todays_ui_picks.py
+- UI shows only validated picks with 4-tier grading
+- EXCELLENT (70+) gets 2.0x stake, GOOD (55-69) gets 1.5x stake
 
 CONTINUOUS IMPROVEMENT:
 The system learns from EVERY race (not just our picks):

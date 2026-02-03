@@ -1,12 +1,18 @@
 """
-COMPREHENSIVE BETTING WORKFLOW
+COMPREHENSIVE BETTING WORKFLOW with 4-Tier Grading
 Replaces odds-only analysis with full 7-factor comprehensive analysis
 
 This script:
 1. Fetches races from Betfair
 2. Analyzes each race using comprehensive_pick_logic.py
-3. Only adds picks with score >= 60/100 to database
-4. All picks shown on UI must pass comprehensive validation
+3. Applies 4-tier grading validation
+4. Only shows picks passing validation on UI
+
+4-TIER GRADING SYSTEM (Default):
+- EXCELLENT: 70+ points (Green)       - 2.0x stake
+- GOOD:      55-69 points (Light amber) - 1.5x stake
+- FAIR:      40-54 points (Dark amber)  - 1.0x stake
+- POOR:      <40 points (Red)         - 0.5x stake
 """
 
 import json
