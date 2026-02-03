@@ -1,0 +1,271 @@
+{
+  "timestamp": "2026-02-03T13:32:16.394614",
+  "total_races": 30,
+  "issues_found": 33,
+  "issues": [
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Fairyhouse 2026-02-03T13:50",
+      "market": "2m Mdn Hrd",
+      "runners": 15,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "HIGH_AVERAGE_ODDS",
+      "race": "Fairyhouse 2026-02-03T13:50",
+      "market": "2m Mdn Hrd",
+      "avg_odds": 85.73933333333333,
+      "severity": "WARNING",
+      "message": "Average odds 85.7 suspiciously high (incomplete market?)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Carlisle 2026-02-03T14:00",
+      "market": "2m5f Beg Chs",
+      "runners": 4,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Taunton 2026-02-03T14:12",
+      "market": "2m3f Nov Hrd",
+      "runners": 7,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Fairyhouse 2026-02-03T14:25",
+      "market": "2m2f Nov Hrd",
+      "runners": 6,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "HIGH_AVERAGE_ODDS",
+      "race": "Fairyhouse 2026-02-03T14:25",
+      "market": "2m2f Nov Hrd",
+      "avg_odds": 192.70833333333334,
+      "severity": "WARNING",
+      "message": "Average odds 192.7 suspiciously high (incomplete market?)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Carlisle 2026-02-03T14:35",
+      "market": "2m3f Nov Hrd",
+      "runners": 7,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "HIGH_AVERAGE_ODDS",
+      "race": "Carlisle 2026-02-03T14:35",
+      "market": "2m3f Nov Hrd",
+      "avg_odds": 223.35142857142858,
+      "severity": "WARNING",
+      "message": "Average odds 223.4 suspiciously high (incomplete market?)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Taunton 2026-02-03T14:45",
+      "market": "2m Nov Hrd",
+      "runners": 7,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Fairyhouse 2026-02-03T14:55",
+      "market": "2m4f Mdn Hrd",
+      "runners": 14,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Carlisle 2026-02-03T15:05",
+      "market": "2m5f Hcap Chs",
+      "runners": 6,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Taunton 2026-02-03T15:15",
+      "market": "2m Hcap Hrd",
+      "runners": 7,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Fairyhouse 2026-02-03T15:30",
+      "market": "2m4f Hcap Hrd",
+      "runners": 11,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Carlisle 2026-02-03T15:35",
+      "market": "2m1f Hcap Hrd",
+      "runners": 11,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Taunton 2026-02-03T15:45",
+      "market": "2m7f Hcap Chs",
+      "runners": 4,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Carlisle 2026-02-03T16:04",
+      "market": "3m Hcap Chs",
+      "runners": 14,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Fairyhouse 2026-02-03T16:05",
+      "market": "2m Hcap Hrd",
+      "runners": 12,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Taunton 2026-02-03T16:15",
+      "market": "2m2f Nov Hcap Chs",
+      "runners": 8,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Carlisle 2026-02-03T16:34",
+      "market": "2m1f NHF",
+      "runners": 7,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Fairyhouse 2026-02-03T16:40",
+      "market": "2m INHF",
+      "runners": 7,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Taunton 2026-02-03T16:45",
+      "market": "2m3f Hcap Hrd",
+      "runners": 10,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Wolverhampton 2026-02-03T17:30",
+      "market": "7f Hcap",
+      "runners": 9,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Wolverhampton 2026-02-03T18:00",
+      "market": "6f Hcap",
+      "runners": 7,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Wolverhampton 2026-02-03T18:30",
+      "market": "6f Mdn Stks",
+      "runners": 7,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Wolverhampton 2026-02-03T19:00",
+      "market": "1m6f Hcap",
+      "runners": 9,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Wolverhampton 2026-02-03T19:30",
+      "market": "1m1f Hcap",
+      "runners": 7,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Wolverhampton 2026-02-03T20:00",
+      "market": "5f Hcap",
+      "runners": 7,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Wolverhampton 2026-02-03T20:30",
+      "market": "1m Hcap",
+      "runners": 10,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Punchestown 2026-02-04T12:28",
+      "market": "3m1f XC Chs",
+      "runners": 11,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Kempton 2026-02-04T12:50",
+      "market": "1m Hcap",
+      "runners": 10,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Punchestown 2026-02-04T13:03",
+      "market": "2m6f Hcap Chs",
+      "runners": 7,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Ludlow 2026-02-04T13:13",
+      "market": "2m Juv Hrd",
+      "runners": 8,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    },
+    {
+      "type": "MISSING_STATUS_FIELD",
+      "race": "Kempton 2026-02-04T13:25",
+      "market": "1m Nov Stks",
+      "runners": 12,
+      "severity": "INFO",
+      "message": "All runners missing status field (API limitation)"
+    }
+  ]
+}

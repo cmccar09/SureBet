@@ -24,6 +24,28 @@ def is_within_trading_hours():
     return start_hour <= now.hour < end_hour
 
 
+def check_data_quality():
+    """Check data quality before processing"""
+    print("\n" + "="*80)
+    print("DATA QUALITY CHECK")
+    print("="*80)
+    
+    result = subprocess.run(
+        ['python', 'data_quality_monitor.py'],
+        capture_output=True,
+        text=True,
+        timeout=120
+    )
+    
+    # Show critical issues and warnings
+    lines = result.stdout.split('\n')
+    for line in lines:
+        if '🔴' in line or '⚠️' in line or 'CRITICAL' in line or 'WARNING' in line:
+            print(line)
+    
+    return True  # Continue even if issues found (for learning)
+
+
 def store_all_races_for_learning():
     """Store ALL horses from ALL races - this is LEARNING data, not picks"""
     print("\n" + "="*80)
@@ -151,6 +173,9 @@ def run_background_learning():
             # Step 1: Fetch latest race data
             print("\n📥 Fetching latest race data...")
             subprocess.run(['python', 'betfair_odds_fetcher.py'], timeout=300)
+            
+            # Step 1.5: Check data quality
+            check_data_quality()
             
             # Step 2: Store ALL horses from ALL races for learning
             print("\n📊 Storing all horses for learning analysis...")
