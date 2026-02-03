@@ -146,8 +146,8 @@ for race_key, horses in races.items():
                 ExpressionAttributeValues={
                     ':conf': Decimal(str(confidence)),
                     ':level': 'HIGH' if confidence >= 70 else 'MEDIUM' if confidence >= 55 else 'LOW',
-                    ':grade': 'EXCELLENT' if confidence >= 85 else 'VERY GOOD' if confidence >= 70 else 'GOOD' if confidence >= 55 else 'MODERATE' if confidence >= 45 else 'POOR',
-                    ':color': 'green' if confidence >= 85 else '#90EE90' if confidence >= 70 else '#FFB84D' if confidence >= 55 else '#FF8C00' if confidence >= 45 else 'red'
+                    ':grade': 'EXCELLENT' if confidence >= 70 else 'GOOD' if confidence >= 55 else 'FAIR' if confidence >= 40 else 'POOR',
+                    ':color': 'green' if confidence >= 70 else '#FFB84D' if confidence >= 55 else '#FF8C00' if confidence >= 40 else 'red'
                 }
             )
             

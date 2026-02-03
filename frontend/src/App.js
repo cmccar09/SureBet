@@ -515,18 +515,16 @@ function App() {
                 {(() => {
                   const getConfidenceLevel = (conf) => {
                     const c = parseFloat(conf) || 0;
-                    if (c >= 85) return 'Excellent';
-                    if (c >= 70) return 'Very Good';
+                    if (c >= 70) return 'Excellent';
                     if (c >= 55) return 'Good';
-                    if (c >= 45) return 'Moderate';
+                    if (c >= 40) return 'Fair';
                     return 'Poor';
                   };
                   
                   const confidenceBuckets = {
-                    'Excellent': { count: 0, color: '#10b981', min: 85 },
-                    'Very Good': { count: 0, color: '#90EE90', min: 70 },
+                    'Excellent': { count: 0, color: '#10b981', min: 70 },
                     'Good': { count: 0, color: '#FFB84D', min: 55 },
-                    'Moderate': { count: 0, color: '#FF8C00', min: 45 },
+                    'Fair': { count: 0, color: '#FF8C00', min: 40 },
                     'Poor': { count: 0, color: '#ef4444', min: 0 }
                   };
                   
@@ -782,7 +780,7 @@ function App() {
                 </div>
               </div>
               <div style={{marginTop: '12px', fontSize: '12px', opacity: 0.9, lineHeight: '1.5'}}>
-                Stakes: EXCELLENT (85+) = 2.5x, VERY GOOD (70-84) = 2.0x, GOOD (55-69) = 1.5x, MODERATE (45-54) = 1.0x, POOR (under 45) = 0.5x. ROI bonus: 150%+ = 1.5x, 100-149% = 1.25x
+                Stakes: EXCELLENT (70+) = 2.0x, GOOD (55-69) = 1.5x, FAIR (40-54) = 1.0x, POOR (under 40) = 0.5x. ROI bonus: 150%+ = 1.5x, 100-149% = 1.25x
               </div>
             </div>
 
@@ -827,31 +825,26 @@ function App() {
               const decisionRating = pick.decision_rating || 'RISKY';
               
               // Confidence multiplier: Higher confidence = bigger stake
-              // EXCELLENT (85+): 2.5x - GREEN (exceptional)
-              // VERY GOOD (70-84): 2.0x - LIGHT GREEN (strong)
-              // GOOD (55-69): 1.5x - LIGHT AMBER (solid)
-              // MODERATE (45-54): 1.0x - DARK AMBER (marginal)
-              // POOR (under 45): 0.5x - RED (avoid)
+              // EXCELLENT (70+): 2.0x - GREEN
+              // GOOD (55-69): 1.5x - LIGHT AMBER
+              // FAIR (40-54): 1.0x - DARK AMBER
+              // POOR (under 40): 0.5x - RED
               let confidenceMultiplier = 1.0;
               let confColor = '#FF8C00'; // Default dark amber
-              let confLabel = 'MODERATE';
+              let confLabel = 'FAIR';
               
-              if (confidence >= 85) {
-                confidenceMultiplier = 2.5;
+              if (confidence >= 70) {
+                confidenceMultiplier = 2.0;
                 confColor = '#10b981'; // Green
                 confLabel = 'EXCELLENT';
-              } else if (confidence >= 70) {
-                confidenceMultiplier = 2.0;
-                confColor = '#90EE90'; // Light green
-                confLabel = 'VERY GOOD';
               } else if (confidence >= 55) {
                 confidenceMultiplier = 1.5;
                 confColor = '#FFB84D'; // Light amber
                 confLabel = 'GOOD';
-              } else if (confidence >= 45) {
+              } else if (confidence >= 40) {
                 confidenceMultiplier = 1.0;
                 confColor = '#FF8C00'; // Dark amber
-                confLabel = 'MODERATE';
+                confLabel = 'FAIR';
               } else {
                 confidenceMultiplier = 0.5;
                 confColor = '#ef4444'; // Red

@@ -1,6 +1,7 @@
 """
 Generate UI picks with comprehensive scoring
 Includes weather-based going inference + horse going suitability
+Updated Feb 3 PM: Weighted form analysis + complete race validation
 """
 
 import json
@@ -9,14 +10,18 @@ from datetime import datetime
 from decimal import Decimal
 from weather_going_inference import check_all_tracks_going
 from horse_going_performance import get_going_suitability_bonus
+from weighted_form_analyzer import get_form_adjustment_for_confidence
 
 db = boto3.resource('dynamodb', region_name='eu-west-1')
 table = db.Table('SureBetBets')
 
-def score_horse(horse, race, going_adjustment=0, going_info=None):
-    """Conservative scoring - max ~50 for exceptional horses + going adjustment + horse suitability
+def score_horse(horse, race, going_adjustment=0, going_info=None, num_runners=0):
+    """Conservative scoring with weighted form analysis
     
-    Updated Feb 3: Added quality favorite exception based on Its Top/Dunsy Rock analysis
+    Updated Feb 3 PM:
+    - Added weighted form analysis (last run = 50% weight)
+    - Small field threshold adjustment (<6 runners = higher threshold)
+    - LTO winner prioritization
     """
     odds = horse.get('odds', 0)
     form = horse.get('form', '')
@@ -78,6 +83,20 @@ def score_horse(horse, race, going_adjustment=0, going_info=None):
     elif 3.0 <= odds <= 7.0:
         score += 5
     
+    # WEIGHTED FORM ANALYSIS (NEW - Feb 3 PM)
+    # Heavily weight recent runs (last run = 50%, second-last = 30%)
+    form_adjustment, form_analysis = get_form_adjustment_for_confidence(form)
+    if form_adjustment != 0:
+        score += form_adjustment
+        if form_adjustment > 0:
+            reasons.append(f"Strong recent form (+{form_adjustment})")
+        else:
+            reasons.append(f"Weak recent form ({form_adjustment})")
+            
+        # Add specific warnings
+        if 'warning' in form_analysis:
+            reasons.append(f"[WARNING] {form_analysis['warning']}")
+    
     # WEATHER-BASED GOING ADJUSTMENT
     # Track going adjustment
     if going_adjustment != 0:
@@ -121,15 +140,21 @@ def generate_ui_picks():
     all_picks = []
     
     for race in races:
-        venue = race.get('venue', race.get('course', 'Unknown'))
-        race_time = race.get('start_time', 'Unknown')
-        market_name = race.get('market_name', race.get('marketName', 'Unknown'))
-        runners = race.get('runners', [])
+        num_runners = len(runners)
         
-        # Get going adjustment for this track
-        track_going = going_data.get(venue, {})
-        going_adjustment = track_going.get('adjustment', 0)
-        going_description = track_going.get('going', 'Unknown')
+        for runner in runners:
+            score, reasons = score_horse(runner, race, going_adjustment, track_going, num_runners)
+            
+            if score > best_score:
+                best_score = score
+                best_horse = runner
+                best_reasons = reasons
+        
+        # Adjust threshold for small fields (Carlisle 14:00 lesson)
+        # Small fields (<6 runners) need higher confidence
+        threshold = 55 if num_runners < 6 else 45
+        
+        if best_score >= threshold:  # Dynamic threshold based on field size
         
         best_score = 0
         best_horse = None
@@ -190,13 +215,20 @@ def generate_ui_picks():
                 'trainer': best_horse.get('trainer', 'Unknown'),
                 'selection_id': str(best_horse.get('selectionId', '')),
                 
+                # Timestamps
                 'created_at': datetime.now().isoformat(),
-                'source': 'comprehensive_scoring'
+                'bet_placed_at': datetime.now().isoformat()
             }
             
             all_picks.append(pick)
             
-            print(f"\n✓ HIGH CONFIDENCE PICK")
+            print(f"\n[PICK] HIGH CONFIDENCE")
+            print(f"  {venue} - {race_time} | Going: {going_description}")
+            print(f"  {horse_name} @ {odds}")
+            print(f"  Score: {best_score}/100 (threshold: {threshold}/100)")
+            print(f"  Runners: {num_runners} | Form: {form}")
+            print(f"  ROI: {expected_roi*100:.1f}% | Edge: {edge*100:.1f}%")
+            print(f"  Reasons: {', '.join(best_reasons[:5]
             print(f"  {venue} - {race_time} | Going: {going_description}")
             print(f"  {horse_name} @ {odds}")
             print(f"  Score: {best_score}/100 (adjustment: {going_adjustment:+d})")
@@ -217,11 +249,18 @@ def generate_ui_picks():
         print(f"\n✓ All picks saved with show_in_ui=TRUE")
         print(f"✓ These will now appear on the UI")
     else:
-        print(f"\n❌ No horses scored >= 75")
+        print(f"\n[NO PICKS] No horses scored >= threshold")
         print("   No UI picks generated")
     
     print(f"\n{'='*100}\n")
     return all_picks
 
 if __name__ == "__main__":
+    print("\n[IMPORTANT] Running with ENHANCED scoring:")
+    print("  1. Weighted form analysis (last run = 50% weight)")
+    print("  2. Small field threshold adjustment (<6 runners = 55/100)")
+    print("  3. LTO winner prioritization")
+    print("  4. Weather-based going adjustments")
+    print()
+    
     generate_ui_picks()
