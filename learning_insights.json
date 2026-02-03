@@ -1,30 +1,30 @@
 {
-  "generated_at": "2026-02-02T19:30:08.452819",
-  "sample_size": 218,
-  "date_range": "20260104 to 20260201",
+  "generated_at": "2026-02-03T11:30:05.758174",
+  "sample_size": 216,
+  "date_range": "20260107 to 20260202",
   "overall_stats": {
-    "total_bets": 218,
+    "total_bets": 216,
     "wins": 37,
-    "win_rate": 0.16972477064220184,
+    "win_rate": 0.1712962962962963,
     "places": 37,
-    "place_rate": 0.16972477064220184,
-    "avg_p_win": 0.21495412844036696
+    "place_rate": 0.1712962962962963,
+    "avg_p_win": 0.21178240740740742
   },
   "odds_performance": {},
   "sweet_spot_analysis": {},
   "winning_patterns": [
     {
       "pattern": "Consistent recent form",
-      "win_rate": "37.5%",
-      "expected": "29.9%",
-      "sample_size": 16,
+      "win_rate": "33.3%",
+      "expected": "30.4%",
+      "sample_size": 18,
       "action": "KEEP - this strategy is working"
     },
     {
       "pattern": "Recent win",
-      "win_rate": "42.9%",
-      "expected": "34.4%",
-      "sample_size": 7,
+      "win_rate": "37.5%",
+      "expected": "33.2%",
+      "sample_size": 8,
       "action": "KEEP - this strategy is working"
     },
     {
@@ -36,9 +36,9 @@
     },
     {
       "pattern": "Consistent placer",
-      "win_rate": "20.0%",
-      "expected": "17.4%",
-      "sample_size": 5,
+      "win_rate": "16.7%",
+      "expected": "20.3%",
+      "sample_size": 6,
       "action": "KEEP - this strategy is working"
     }
   ],
@@ -54,28 +54,28 @@
   "recommendations": [
     "EW bets: 180 bets, 11.7% place rate"
   ],
-  "prompt_guidance": "\n=== PERFORMANCE-DRIVEN INSIGHTS (218 bets analyzed) ===\n\n\ud83c\udfaf SWEET SPOT PERFORMANCE (3.0-9.0 odds / 2/1-8/1):\n\n\u2705 WORKING STRATEGIES:\n  \u2022 Consistent recent form: 37.5% actual vs 29.9% expected (n=16)\n  \u2022 Recent win: 42.9% actual vs 34.4% expected (n=7)\n  \u2022 Decent recent form: 20.0% actual vs 22.8% expected (n=5)\n  \u2022 Consistent placer: 20.0% actual vs 17.4% expected (n=5)\n\n\u274c UNDERPERFORMING STRATEGIES (AVOID):\n  \u2022 potential for improvement: 0.0% actual vs 15.0% expected (n=5)\n\n\ud83d\udd11 KEY ACTIONS:\n  \u2022 EW bets: 180 bets, 11.7% place rate\n\n\u26a1 FOCUS MANDATE: \n  - Prioritize 3.0-9.0 odds range (especially 3.5-6.0)\n  - Look for RECENT WINNERS (won in last 3 races)\n  - In-form trainers/jockeys\n  - Value quality over quantity - better 3 great picks than 10 mediocre\n",
+  "prompt_guidance": "\n=== PERFORMANCE-DRIVEN INSIGHTS (216 bets analyzed) ===\n\n\ud83c\udfaf SWEET SPOT PERFORMANCE (3.0-9.0 odds / 2/1-8/1):\n\n\u2705 WORKING STRATEGIES:\n  \u2022 Consistent recent form: 33.3% actual vs 30.4% expected (n=18)\n  \u2022 Recent win: 37.5% actual vs 33.2% expected (n=8)\n  \u2022 Decent recent form: 20.0% actual vs 22.8% expected (n=5)\n  \u2022 Consistent placer: 16.7% actual vs 20.3% expected (n=6)\n\n\u274c UNDERPERFORMING STRATEGIES (AVOID):\n  \u2022 potential for improvement: 0.0% actual vs 15.0% expected (n=5)\n\n\ud83d\udd11 KEY ACTIONS:\n  \u2022 EW bets: 180 bets, 11.7% place rate\n\n\u26a1 FOCUS MANDATE: \n  - Prioritize 3.0-9.0 odds range (especially 3.5-6.0)\n  - Look for RECENT WINNERS (won in last 3 races)\n  - In-form trainers/jockeys\n  - Value quality over quantity - better 3 great picks than 10 mediocre\n",
   "calibration_analysis": {
     "0-20%": {
       "predicted": 0.145,
-      "actual": 0.068,
-      "error": -0.077,
-      "sample_size": 118,
+      "actual": 0.067,
+      "error": -0.079,
+      "sample_size": 120,
       "verdict": "CALIBRATED"
     },
     "20-40%": {
       "predicted": 0.286,
-      "actual": 0.277,
-      "error": -0.01,
-      "sample_size": 94,
+      "actual": 0.283,
+      "error": -0.003,
+      "sample_size": 92,
       "verdict": "CALIBRATED"
     },
     "40-60%": {
-      "predicted": 0.438,
-      "actual": 0.4,
-      "error": -0.038,
-      "sample_size": 5,
-      "verdict": "CALIBRATED"
+      "predicted": 0.45,
+      "actual": 0.667,
+      "error": 0.217,
+      "sample_size": 3,
+      "verdict": "UNDERCONFIDENT"
     },
     "60-80%": {
       "predicted": 0.65,

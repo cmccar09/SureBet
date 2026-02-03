@@ -1,35 +1,35 @@
 [
   {
-    "our_pick": "We Got Your Back",
+    "our_pick": "Stipulation",
     "our_odds": 0,
-    "our_p_win": 0.22,
+    "our_p_win": 0.38,
     "actual_winner": "Unknown",
-    "winner_selection_id": "53986810",
-    "market_id": "1.253375474",
-    "venue": "Market Rasen",
-    "race_time": "2026-02-01T12:47:00.000Z",
-    "lesson": "Picked We Got Your Back but None won - need to analyze winner's characteristics"
+    "winner_selection_id": "43155514",
+    "market_id": "1.253428953",
+    "venue": "Wolverhampton",
+    "race_time": "2026-02-02T19:00:00.000Z",
+    "lesson": "Picked Stipulation but None won - need to analyze winner's characteristics"
   },
   {
-    "our_pick": "Wind Your Neck In",
+    "our_pick": "The Dark Baron",
     "our_odds": 0,
-    "our_p_win": 0.28,
+    "our_p_win": 0.25,
     "actual_winner": "Unknown",
-    "winner_selection_id": "53986810",
-    "market_id": "1.253375474",
-    "venue": "Market Rasen",
-    "race_time": "2026-02-01T12:47:00.000Z",
-    "lesson": "Picked Wind Your Neck In but None won - need to analyze winner's characteristics"
+    "winner_selection_id": "43155514",
+    "market_id": "1.253428953",
+    "venue": "Wolverhampton",
+    "race_time": "2026-02-02T19:00:00.000Z",
+    "lesson": "Picked The Dark Baron but None won - need to analyze winner's characteristics"
   },
   {
-    "our_pick": "River Rider",
+    "our_pick": "Powerful Response",
     "our_odds": 0,
-    "our_p_win": 0.18,
+    "our_p_win": 0.2,
     "actual_winner": "Unknown",
-    "winner_selection_id": "53986810",
-    "market_id": "1.253375474",
-    "venue": "Market Rasen",
-    "race_time": "2026-02-01T12:47:00.000Z",
-    "lesson": "Picked River Rider but None won - need to analyze winner's characteristics"
+    "winner_selection_id": "43155514",
+    "market_id": "1.253428953",
+    "venue": "Wolverhampton",
+    "race_time": "2026-02-02T19:00:00.000Z",
+    "lesson": "Picked Powerful Response but None won - need to analyze winner's characteristics"
   }
 ]

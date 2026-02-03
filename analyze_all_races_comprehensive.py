@@ -72,10 +72,10 @@ def analyze_all_uk_ireland_races():
     good_bets = []
     
     for race in uk_ireland_races:
-        market_id = race.get('marketId', 'unknown')
+        market_id = race.get('market_id', race.get('marketId', 'unknown'))
         venue = race.get('venue', 'Unknown')
         start_time = race.get('start_time', 'Unknown')
-        market_name = race.get('marketName', 'Unknown')
+        market_name = race.get('market_name', race.get('marketName', 'Unknown'))
         runners = race.get('runners', [])
         
         # Check if race already analyzed

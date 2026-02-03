@@ -770,7 +770,7 @@ function App() {
                 </div>
               </div>
               <div style={{marginTop: '12px', fontSize: '12px', opacity: 0.9, lineHeight: '1.5'}}>
-                Stakes adjusted by confidence: EXCELLENT (60%+) = 2.0x, GOOD (40-60%) = 1.3x, FAIR (25-40%) = 0.8x, POOR under 25% = 0.4x. ROI bonus: 20%+ = 1.5x, 15-20% = 1.25x
+                Stakes adjusted by confidence: EXCELLENT (85%+) = 2.0x, GOOD (70-84%) = 1.3x, FAIR (50-69%) = 0.8x, POOR under 50% = 0.4x. ROI bonus: 150%+ = 1.5x, 100-149% = 1.25x
               </div>
             </div>
 
@@ -815,23 +815,23 @@ function App() {
               const decisionRating = pick.decision_rating || 'RISKY';
               
               // Confidence multiplier: Higher confidence = bigger stake
-              // EXCELLENT (60%+ conf): 2.0x - GREEN
-              // GOOD (40-59% conf): 1.3x - LIGHT AMBER
-              // FAIR (25-39% conf): 0.8x - DARK AMBER
-              // POOR (<25% conf): 0.4x - RED
+              // EXCELLENT (85%+ conf): 2.0x - GREEN
+              // GOOD (70-84% conf): 1.3x - LIGHT AMBER
+              // FAIR (50-69% conf): 0.8x - DARK AMBER
+              // POOR (<50% conf): 0.4x - RED
               let confidenceMultiplier = 1.0;
               let confColor = '#FF8C00'; // Default dark amber
               let confLabel = 'FAIR';
               
-              if (confidence >= 60) {
+              if (confidence >= 85) {
                 confidenceMultiplier = 2.0;
                 confColor = '#10b981'; // Green
                 confLabel = 'EXCELLENT';
-              } else if (confidence >= 40) {
+              } else if (confidence >= 70) {
                 confidenceMultiplier = 1.3;
                 confColor = '#FFB84D'; // Light amber
                 confLabel = 'GOOD';
-              } else if (confidence >= 25) {
+              } else if (confidence >= 50) {
                 confidenceMultiplier = 0.8;
                 confColor = '#FF8C00'; // Dark amber
                 confLabel = 'FAIR';
@@ -842,16 +842,16 @@ function App() {
               }
               
               // ROI multiplier: Better value = bigger stake
-              // 20%+ ROI: 1.5x
-              // 15-19% ROI: 1.25x
-              // 10-14% ROI: 1.0x
-              // <10% ROI: 0.75x
+              // 150%+ ROI: 1.5x
+              // 100-149% ROI: 1.25x
+              // 50-99% ROI: 1.0x
+              // <50% ROI: 0.75x
               let roiMultiplier = 1.0;
-              if (roi >= 20) {
+              if (roi >= 1.5) {
                 roiMultiplier = 1.5;
-              } else if (roi >= 15) {
+              } else if (roi >= 1.0) {
                 roiMultiplier = 1.25;
-              } else if (roi < 10) {
+              } else if (roi < 0.5) {
                 roiMultiplier = 0.75;
               }
               

@@ -82,17 +82,17 @@ def process_race_comprehensive(race):
         is_valid, score, reason = validate_pick_for_ui(pick)
         
         if is_valid:
-            print(f"\n✅ APPROVED: {pick['horse']} @ {pick['odds']}")
+            print(f"\n[APPROVED] {pick['horse']} @ {pick['odds']}")
             print(f"   Score: {score}/100")
             print(f"   Confidence: {pick['confidence']}")
             print(f"   Reasoning: {pick['reasoning'][:100]}...")
             return pick
         else:
-            print(f"\n❌ REJECTED: {pick.get('horse', 'Unknown')}")
+            print(f"\n[REJECTED] {pick.get('horse', 'Unknown')}")
             print(f"   {reason}")
             return None
     else:
-        print(f"\n⏭️  SKIPPED: No horses meet comprehensive criteria")
+        print(f"\n[SKIPPED] No horses meet comprehensive criteria")
         return None
 
 def run_comprehensive_workflow():

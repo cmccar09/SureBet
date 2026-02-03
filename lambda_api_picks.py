@@ -148,8 +148,11 @@ def get_today_picks(headers):
     items = response.get('Items', [])
     items = [decimal_to_float(item) for item in items]
     
-    # Filter out greyhounds - only show horses
-    horse_items = [item for item in items if item.get('sport', 'horses') == 'horses']
+    # Filter out greyhounds - only show horses (accept both 'horses' and 'Horse Racing')
+    horse_items = [item for item in items if item.get('sport', 'horses') in ['horses', 'Horse Racing', 'horse racing']]
+    
+    # CRITICAL: Only show items explicitly marked for UI display
+    horse_items = [item for item in horse_items if item.get('show_in_ui') == True]
     
     # DEMO MODE: On Jan 20, 2026, show ALL picks regardless of time
     # This allows showing past races during the demo
