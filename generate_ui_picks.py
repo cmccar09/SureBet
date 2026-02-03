@@ -94,7 +94,7 @@ def generate_ui_picks():
                 best_horse = runner
                 best_reasons = reasons
         
-        if best_score >= 40:  # UI threshold - lowered for conservative scoring (max ~50)
+        if best_score >= 45:  # UI threshold - raised to limit to 7-10 picks per day
             horse_name = best_horse.get('name', best_horse.get('runnerName', 'Unknown'))
             odds = best_horse.get('odds', 0)
             form = best_horse.get('form', '')
