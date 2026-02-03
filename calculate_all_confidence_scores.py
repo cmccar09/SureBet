@@ -84,6 +84,32 @@ def calculate_confidence_score(horse_data):
         elif any(pos == 0 for pos in last_3):
             score -= 8
     
+    # IMPROVEMENT PATTERN DETECTION - detect upward trends
+    if cleaned_form and len(cleaned_form) >= 4:
+        positions_trend = [int(c) for c in cleaned_form[:4] if int(c) > 0]  # Exclude unplaced (0)
+        
+        if len(positions_trend) >= 4:
+            # Check if positions are improving (getting smaller numbers = better)
+            # e.g., 7→6→5→2 or 6→5→2→2
+            improvements = 0
+            for i in range(len(positions_trend) - 1):
+                if positions_trend[i] > positions_trend[i + 1]:  # Got better (lower position number)
+                    improvements += 1
+            
+            # Strong upward trend (3+ improvements in last 4 runs)
+            if improvements >= 3:
+                score += 15  # Significant bonus for clear improvement trajectory
+            # Moderate upward trend (2 improvements)
+            elif improvements == 2:
+                score += 8
+            
+            # Recent form surge - check if last 2 runs are BOTH better than previous 2
+            if len(positions_trend) >= 4:
+                recent_avg = (positions_trend[0] + positions_trend[1]) / 2
+                older_avg = (positions_trend[2] + positions_trend[3]) / 2
+                if recent_avg < older_avg - 2:  # Recent runs at least 2 positions better on average
+                    score += 10  # Horse is hitting form
+    
     return round(max(0, min(100, score)))
 
 print("="*80)
