@@ -99,8 +99,9 @@ response = table.query(
 
 items = response.get('Items', [])
 
-# Filter to only horses with analysis_type = PRE_RACE_COMPLETE (from comprehensive analyzer)
-horses_to_score = [item for item in items if item.get('analysis_type') == 'PRE_RACE_COMPLETE']
+# Filter to horses with analysis_type set (from comprehensive analyzer)
+# Supports both PRE_RACE_COMPLETE (value_betting_workflow) and COMPLETE_ANALYSIS (force_complete_analysis)
+horses_to_score = [item for item in items if item.get('analysis_type') in ['PRE_RACE_COMPLETE', 'COMPLETE_ANALYSIS']]
 
 print(f"\nFound {len(horses_to_score)} horses to score\n")
 
