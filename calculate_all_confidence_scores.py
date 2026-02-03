@@ -13,9 +13,9 @@ table = dynamodb.Table('SureBetBets')
 def calculate_confidence_score(horse_data):
     """
     Calculate confidence score based on form, odds, and other factors
-    Simplified scoring logic - can be enhanced
+    More conservative scoring - 100/100 should be RARE
     """
-    score = 0
+    score = 30  # Start lower - must EARN confidence
     
     # Form scoring (most important)
     form = str(horse_data.get('form', ''))
@@ -26,42 +26,63 @@ def calculate_confidence_score(horse_data):
         if cleaned_form:
             positions = [int(c) for c in cleaned_form[:5]]  # Last 5 runs
             
-            # Position scores
-            position_scores = {1: 100, 2: 60, 3: 40, 4: 20, 5: 10, 6: 5, 7: -10, 8: -15, 9: -20, 0: -40}
+            # More balanced position scores
+            position_scores = {1: 30, 2: 20, 3: 10, 4: 5, 5: 0, 6: -5, 7: -10, 8: -15, 9: -20, 0: -25}
             
             total_weighted = 0
             weights = [0.50, 0.30, 0.15, 0.03, 0.02]  # Heavy weighting on recent
             
             for idx, pos in enumerate(positions):
                 if idx < len(weights):
-                    pos_score = position_scores.get(pos, -30)
+                    pos_score = position_scores.get(pos, -20)
                     total_weighted += pos_score * weights[idx]
             
-            # Normalize to 0-100
-            score = max(0, min(100, 50 + total_weighted))
+            score += total_weighted
+    else:
+        # No form = penalty
+        score -= 10
     
-    # Odds adjustment (value betting)
+    # Odds adjustment (value betting) - smaller impact
     try:
         odds = float(horse_data.get('odds', 0))
         if odds > 0:
-            # Favor horses at 2-8 odds (value zone)
-            if 2.0 <= odds <= 8.0:
-                score += 10
+            # Favor horses at 3-7 odds (value zone)
+            if 3.0 <= odds <= 7.0:
+                score += 8
+            elif 2.0 <= odds < 3.0:
+                score += 5
             elif odds < 2.0:
-                score += 5  # Favorites still okay
+                score += 3  # Favorites can be over-bet
             elif odds > 15:
-                score -= 10  # Long shots less reliable
+                score -= 8  # Long shots less reliable
     except:
         pass
     
-    # LTO winner bonus
+    # LTO winner bonus - only if form is decent
     if form and len(form) > 0 and form[0] == '1':
-        score += 15
+        # Check 2nd last run - if also good, bigger bonus
+        if len(cleaned_form) > 1 and cleaned_form[1] in '123':
+            score += 12  # Consistent performer
+        else:
+            score += 8  # Won last time but inconsistent
     
     # Trainer bonus (Paul Nicholls, Willie Mullins, etc.)
     trainer = str(horse_data.get('trainer', '')).lower()
     if any(name in trainer for name in ['nicholls', 'mullins', 'elliott', 'henderson']):
-        score += 5
+        score += 3
+    
+    # Recent consistency bonus - check last 3 runs
+    if cleaned_form and len(cleaned_form) >= 3:
+        last_3 = [int(c) for c in cleaned_form[:3]]
+        # All top-3 finishes
+        if all(pos <= 3 for pos in last_3):
+            score += 10
+        # All top-5 finishes
+        elif all(pos <= 5 for pos in last_3):
+            score += 5
+        # Any zeros/unplaced
+        elif any(pos == 0 for pos in last_3):
+            score -= 8
     
     return round(max(0, min(100, score)))
 
@@ -121,10 +142,12 @@ for race_key, horses in races.items():
                     'bet_date': bet_date,
                     'bet_id': bet_id
                 },
-                UpdateExpression='SET confidence = :conf, combined_confidence = :conf, confidence_level = :level',
+                UpdateExpression='SET confidence = :conf, combined_confidence = :conf, confidence_level = :level, confidence_grade = :grade, confidence_color = :color',
                 ExpressionAttributeValues={
                     ':conf': Decimal(str(confidence)),
-                    ':level': 'HIGH' if confidence >= 60 else 'MEDIUM' if confidence >= 45 else 'LOW'
+                    ':level': 'HIGH' if confidence >= 70 else 'MEDIUM' if confidence >= 55 else 'LOW',
+                    ':grade': 'EXCELLENT' if confidence >= 85 else 'VERY GOOD' if confidence >= 70 else 'GOOD' if confidence >= 55 else 'MODERATE' if confidence >= 45 else 'POOR',
+                    ':color': 'green' if confidence >= 85 else '#90EE90' if confidence >= 70 else '#FFB84D' if confidence >= 55 else '#FF8C00' if confidence >= 45 else 'red'
                 }
             )
             

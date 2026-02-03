@@ -356,17 +356,21 @@ def calculate_combined_confidence(row: pd.Series, race_type: str = 'horse') -> t
     combined_confidence = win_component + place_component + edge_component + consistency_component
     combined_confidence = max(0, min(100, combined_confidence))  # Clamp to 0-100
     
-    # Grade the confidence
-    if combined_confidence >= 60:
+    # Grade the confidence - UPDATED for realistic scoring (most horses 30-70 range)
+    if combined_confidence >= 85:
         confidence_grade = "EXCELLENT"
         grade_color = "green"
+        explanation = "Exceptional bet - rare high confidence across all signals"
+    elif combined_confidence >= 70:
+        confidence_grade = "VERY GOOD"
+        grade_color = "#90EE90"  # Light green
         explanation = "Strong conviction bet - multiple signals align"
-    elif combined_confidence >= 40:
+    elif combined_confidence >= 55:
         confidence_grade = "GOOD"
         grade_color = "#FFB84D"  # Light amber
         explanation = "Solid bet - good value with reasonable confidence"
-    elif combined_confidence >= 25:
-        confidence_grade = "FAIR"
+    elif combined_confidence >= 45:
+        confidence_grade = "MODERATE"
         grade_color = "#FF8C00"  # Dark amber
         explanation = "Acceptable bet - proceed with caution"
     else:

@@ -104,11 +104,13 @@ for race_key, picks in races.items():
                     'bet_date': bet_date,
                     'bet_id': bet_id
                 },
-                UpdateExpression='SET show_in_ui = :true, combined_confidence = :conf, confidence_level = :level',
+                UpdateExpression='SET show_in_ui = :true, combined_confidence = :conf, confidence_level = :level, confidence_grade = :grade, confidence_color = :color',
                 ExpressionAttributeValues={
                     ':true': True,
                     ':conf': Decimal(str(best_score)),
-                    ':level': 'HIGH' if best_score >= 60 else 'MEDIUM'
+                    ':level': 'HIGH' if best_score >= 70 else 'MEDIUM' if best_score >= 55 else 'LOW',
+                    ':grade': 'EXCELLENT' if best_score >= 85 else 'VERY GOOD' if best_score >= 70 else 'GOOD' if best_score >= 55 else 'MODERATE',
+                    ':color': 'green' if best_score >= 85 else '#90EE90' if best_score >= 70 else '#FFB84D' if best_score >= 55 else '#FF8C00'
                 }
             )
             
