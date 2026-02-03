@@ -3,7 +3,14 @@ WORKFLOW 2: Value Betting System
 Runs 11am-7pm on 30min cycles
 Looks for high-confidence VALUE bets using weather-integrated scoring
 Weather-based going inference for grass tracks
-Only HIGH confidence picks (score >= 45) appear on UI
+
+Confidence Grading (4-tier system):
+- EXCELLENT (70+): Green - 2.0x stake
+- GOOD (55-69): Light amber - 1.5x stake
+- FAIR (40-54): Dark amber - 1.0x stake
+- POOR (<40): Red - 0.5x stake
+
+Only picks meeting threshold (45+ for normal fields, 55+ for small fields) appear on UI
 REQUIRES: >=75% race analysis completion before betting (Carlisle 14:00 fix)
 """
 

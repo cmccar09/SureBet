@@ -125,7 +125,7 @@ WHAT HAPPENED:
 
 NEXT STEPS:
 - Picks are now in DynamoDB with updated confidence scores
-- Lambda/API will show only HIGH confidence picks (score >= 75)
+- Lambda/API will show only validated picks (GOOD 55+ or EXCELLENT 70+ grades)
 - System will repeat tomorrow with further optimized weights
 
 CONTINUOUS IMPROVEMENT:

@@ -70,7 +70,7 @@ def start_both_workflows():
     print("  • Close the PowerShell windows")
     print("  • Or press Ctrl+C in each window")
     print()
-    print("Check the UI to see high-confidence picks (score >= 75)")
+    print("Check the UI to see validated picks (GOOD 55+ or EXCELLENT 70+)")
     print("Check DynamoDB to see learning analysis (show_in_ui=False)")
     print("="*80)
 
