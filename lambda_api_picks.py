@@ -332,7 +332,7 @@ def get_health(headers):
     }
 
 def check_yesterday_results(headers):
-    """Check results for yesterday's picks - ALL picks separated by sport"""
+    """Check results for yesterday's UI picks only (show_in_ui=True)"""
     from boto3.dynamodb.conditions import Key
     from datetime import timedelta
     yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
@@ -344,9 +344,11 @@ def check_yesterday_results(headers):
     
     all_picks = response.get('Items', [])
     all_picks = [decimal_to_float(item) for item in all_picks]
-    picks = all_picks
     
-    print(f"Yesterday ({yesterday}) - Total picks retrieved: {len(picks)}")
+    # Filter for UI picks only - keep others in database for learning
+    picks = [item for item in all_picks if item.get('show_in_ui') == True]
+    
+    print(f"Yesterday ({yesterday}) - Total picks: {len(all_picks)}, UI picks: {len(picks)}")
     
     if not picks:
         return {
@@ -437,7 +439,7 @@ def check_yesterday_results(headers):
     }
 
 def check_today_results(headers):
-    """Check results for today's picks - ALL picks separated by sport"""
+    """Check results for today's UI picks only (show_in_ui=True)"""
     from boto3.dynamodb.conditions import Key
     today = datetime.now().strftime('%Y-%m-%d')
     
@@ -449,11 +451,11 @@ def check_today_results(headers):
     all_picks = response.get('Items', [])
     all_picks = [decimal_to_float(item) for item in all_picks]
     
-    # No filtering - use ALL picks
-    picks = all_picks
+    # Filter for UI picks only - keep others in database for learning
+    picks = [item for item in all_picks if item.get('show_in_ui') == True]
     
     # Debug logging
-    print(f"Total picks retrieved: {len(picks)}")
+    print(f"Total picks retrieved: {len(all_picks)}, UI picks: {len(picks)}")
     
     if not picks:
         print("NO PICKS for today - returning empty")
