@@ -770,7 +770,7 @@ function App() {
                 </div>
               </div>
               <div style={{marginTop: '12px', fontSize: '12px', opacity: 0.9, lineHeight: '1.5'}}>
-                Stakes: EXCELLENT (95%+ quality) = 2.0x, GOOD (85-94%) = 1.3x, FAIR (75-84%) = 1.0x, POOR under 75% = 0.5x. ROI bonus: 150%+ = 1.5x, 100-149% = 1.25x
+                Stakes: EXCELLENT (80+) = 2.0x, GOOD (60-79) = 1.3x, FAIR (40-59) = 1.0x, POOR (under 40) = 0.5x. ROI bonus: 150%+ = 1.5x, 100-149% = 1.25x
               </div>
             </div>
 
@@ -815,23 +815,23 @@ function App() {
               const decisionRating = pick.decision_rating || 'RISKY';
               
               // Confidence multiplier: Higher confidence = bigger stake
-              // EXCELLENT (95%+ quality): 2.0x - GREEN (extremely rare, top 1%)
-              // GOOD (85-94% quality): 1.3x - LIGHT AMBER (strong value)
-              // FAIR (75-84% quality): 1.0x - DARK AMBER (decent value)
-              // POOR (<75% quality): 0.5x - RED (weak value)
+              // EXCELLENT (80+): 2.0x - GREEN (exceptional value)
+              // GOOD (60-79): 1.3x - LIGHT AMBER (strong value)
+              // FAIR (40-59): 1.0x - DARK AMBER (decent value)
+              // POOR (<40): 0.5x - RED (weak value)
               let confidenceMultiplier = 1.0;
               let confColor = '#FF8C00'; // Default dark amber
               let confLabel = 'FAIR';
               
-              if (confidence >= 95) {
+              if (confidence >= 80) {
                 confidenceMultiplier = 2.0;
                 confColor = '#10b981'; // Green
                 confLabel = 'EXCELLENT';
-              } else if (confidence >= 85) {
+              } else if (confidence >= 60) {
                 confidenceMultiplier = 1.3;
                 confColor = '#FFB84D'; // Light amber
                 confLabel = 'GOOD';
-              } else if (confidence >= 75) {
+              } else if (confidence >= 40) {
                 confidenceMultiplier = 1.0;
                 confColor = '#FF8C00'; // Dark amber
                 confLabel = 'FAIR';
