@@ -748,8 +748,18 @@ function App() {
               maxWidth: '900px',
               boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
             }}>
-              <div style={{fontSize: '16px', fontWeight: 'bold', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px'}}>
-                💰 Daily Budget Management
+              <div style={{fontSize: '16px', fontWeight: 'bold', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
+                <span style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                  💰 Daily Budget Management
+                </span>
+                {picks.length > 0 && picks[0].created_at && (
+                  <span style={{fontSize: '11px', opacity: 0.8, fontWeight: 'normal'}}>
+                    Last updated: {new Date(picks[0].created_at).toLocaleString('en-GB', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                )}
               </div>
               <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', fontSize: '14px'}}>
                 <div>
