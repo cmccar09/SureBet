@@ -1,18 +1,20 @@
 """
 Generate UI picks with comprehensive scoring
-Simple, direct approach - no complex workflows
+Includes weather-based going inference + horse going suitability
 """
 
 import json
 import boto3
 from datetime import datetime
 from decimal import Decimal
+from weather_going_inference import check_all_tracks_going
+from horse_going_performance import get_going_suitability_bonus
 
 db = boto3.resource('dynamodb', region_name='eu-west-1')
 table = db.Table('SureBetBets')
 
-def score_horse(horse, race):
-    """Conservative scoring - max ~50 for exceptional horses"""
+def score_horse(horse, race, going_adjustment=0, going_info=None):
+    """Conservative scoring - max ~50 for exceptional horses + going adjustment + horse suitability"""
     odds = horse.get('odds', 0)
     form = horse.get('form', '')
     
@@ -23,11 +25,11 @@ def score_horse(horse, race):
     score = 0
     reasons = []
     
-    # Base sweet spot points (reduced from 20 to 15)
+    # Base sweet spot points
     score += 15
     reasons.append(f"Sweet spot odds ({odds})")
     
-    # Form scoring (reduced from 18/10 to 12/6)
+    # Form scoring
     if '1' in form[:2]:  # Win in last 2 races
         score += 12
         reasons.append("Recent win")
@@ -35,7 +37,7 @@ def score_horse(horse, race):
         score += 6
         reasons.append("Has won before")
     
-    # Place scoring (reduced from 12/6 to 8/4)
+    # Place scoring
     places = form.count('2') + form.count('3')
     if places >= 2:
         score += 8
@@ -43,22 +45,38 @@ def score_horse(horse, race):
     elif places == 1:
         score += 4
     
-    # Consistency (reduced from 8 to 5)
+    # Consistency
     if len(form) >= 5 and form.count('0') == 0 and form.count('P') == 0:
         score += 5
         reasons.append("Consistent performer")
     
-    # Optimal odds range (reduced from 12/8 to 10/5)
+    # Optimal odds range
     if 4.0 <= odds <= 6.0:
         score += 10
         reasons.append("Optimal odds range")
     elif 3.0 <= odds <= 7.0:
         score += 5
     
+    # WEATHER-BASED GOING ADJUSTMENT
+    # Track going adjustment
+    if going_adjustment != 0:
+        score += going_adjustment
+        if going_adjustment > 0:
+            reasons.append(f"Good ground (+{going_adjustment})")
+        else:
+            reasons.append(f"Soft ground ({going_adjustment})")
+    
+    # Horse suitability to going conditions
+    if going_info:
+        suitability_adj, suitability_reason = get_going_suitability_bonus(horse, going_info)
+        if suitability_adj != 0:
+            score += suitability_adj
+            reasons.append(suitability_reason)
+    
     return score, reasons
 
 def generate_ui_picks():
-    """Generate picks that should appear on UI (score >= 75)"""
+    """Generate picks that should appear on UI (score >= 45) with weather-based going adjustments"""
     
     try:
         with open('response_horses.json', 'r') as f:
@@ -71,8 +89,13 @@ def generate_ui_picks():
     today = datetime.now().strftime('%Y-%m-%d')
     
     print(f"\n{'='*100}")
-    print(f"GENERATING UI PICKS - Comprehensive Scoring")
+    print(f"GENERATING UI PICKS - Comprehensive Scoring with Weather-Based Going")
     print(f"{'='*100}\n")
+    
+    # Fetch weather/going data once for all tracks
+    print("Checking weather and ground conditions...")
+    going_data = check_all_tracks_going()
+    print()
     
     all_picks = []
     
@@ -82,12 +105,17 @@ def generate_ui_picks():
         market_name = race.get('market_name', race.get('marketName', 'Unknown'))
         runners = race.get('runners', [])
         
+        # Get going adjustment for this track
+        track_going = going_data.get(venue, {})
+        going_adjustment = track_going.get('adjustment', 0)
+        going_description = track_going.get('going', 'Unknown')
+        
         best_score = 0
         best_horse = None
         best_reasons = []
         
         for runner in runners:
-            score, reasons = score_horse(runner, race)
+            score, reasons = score_horse(runner, race, going_adjustment, track_going)
             
             if score > best_score:
                 best_score = score
@@ -148,9 +176,9 @@ def generate_ui_picks():
             all_picks.append(pick)
             
             print(f"\n✓ HIGH CONFIDENCE PICK")
-            print(f"  {venue} - {race_time}")
+            print(f"  {venue} - {race_time} | Going: {going_description}")
             print(f"  {horse_name} @ {odds}")
-            print(f"  Score: {best_score}/100")
+            print(f"  Score: {best_score}/100 (adjustment: {going_adjustment:+d})")
             print(f"  Form: {form}")
             print(f"  ROI: {expected_roi*100:.1f}% | Edge: {edge*100:.1f}%")
             print(f"  Reasons: {', '.join(best_reasons)}")

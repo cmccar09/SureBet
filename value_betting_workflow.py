@@ -1,8 +1,9 @@
 """
-WORKFLOW 2: Value Betting System
+WORKFLOW 2: Value Betting System  
 Runs 11am-7pm on 30min cycles
-Looks for high-confidence VALUE bets using optimized logic
-Only HIGH confidence picks (score >= 75) appear on UI
+Looks for high-confidence VALUE bets using weather-integrated scoring
+Weather-based going inference for grass tracks
+Only HIGH confidence picks (score >= 45) appear on UI
 """
 
 import subprocess
@@ -34,7 +35,7 @@ def fetch_races():
 
 def analyze_and_generate_picks():
     """Analyze races with optimized logic and generate HIGH confidence picks"""
-    print("\n🔍 Analyzing races for value bets (using learned weights)...")
+    print("\n🔍 Analyzing races comprehensively...")
     result = subprocess.run(
         ['python', 'analyze_all_races_comprehensive.py'],
         capture_output=True,
@@ -42,13 +43,28 @@ def analyze_and_generate_picks():
         timeout=600
     )
     
-    # Parse output to show high-confidence picks
+    # Parse output
     lines = result.stdout.split('\n')
     for line in lines:
-        if 'HIGH CONFIDENCE' in line or 'show_in_ui' in line or 'Score:' in line:
+        if 'saved' in line.lower() or 'analyzed' in line.lower():
             print(line)
     
-    return result.returncode == 0
+    # Generate UI picks with weather-based going adjustments
+    print("\n🎯 Generating UI picks (weather-integrated scoring)...")
+    result2 = subprocess.run(
+        ['python', 'generate_ui_picks.py'],
+        capture_output=True,
+        text=True,
+        timeout=300
+    )
+    
+    # Show picks output
+    lines = result2.stdout.split('\n')
+    for line in lines:
+        if 'HIGH CONFIDENCE' in line or 'Going:' in line or 'Score:' in line or 'Saved:' in line:
+            print(line)
+    
+    return result.returncode == 0 and result2.returncode == 0
 
 
 def run_value_betting():
@@ -59,7 +75,8 @@ def run_value_betting():
     print("Trading Hours: 11:00 AM - 7:00 PM")
     print("Cycle Frequency: Every 30 minutes")
     print("Purpose: Find high-confidence value bets")
-    print("UI Visibility: Only picks with score >= 75")
+    print("Weather Integration: Automatic going inference from rainfall")
+    print("UI Visibility: Only picks with score >= 45")
     print("="*80)
     
     cycle_count = 0
@@ -92,7 +109,7 @@ def run_value_betting():
             # Wait 30 minutes
             next_run = datetime.now() + timedelta(minutes=30)
             print(f"\n⏳ Betting cycle complete. Next run at {next_run.strftime('%H:%M:%S')}")
-            print(f"   Picks with score >= 75 are now visible on UI")
+            print(f"   Picks with score >= 45 are now visible on UI (weather-adjusted)")
             print(f"   Sleeping for 30 minutes...")
             time.sleep(1800)
             
