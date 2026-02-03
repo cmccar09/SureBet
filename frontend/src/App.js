@@ -515,16 +515,18 @@ function App() {
                 {(() => {
                   const getConfidenceLevel = (conf) => {
                     const c = parseFloat(conf) || 0;
-                    if (c >= 80) return 'Excellent';
-                    if (c >= 70) return 'Good';
-                    if (c >= 60) return 'Fair';
+                    if (c >= 85) return 'Excellent';
+                    if (c >= 70) return 'Very Good';
+                    if (c >= 55) return 'Good';
+                    if (c >= 45) return 'Moderate';
                     return 'Poor';
                   };
                   
                   const confidenceBuckets = {
-                    'Excellent': { count: 0, color: '#10b981', min: 80 },
-                    'Good': { count: 0, color: '#3b82f6', min: 70 },
-                    'Fair': { count: 0, color: '#f59e0b', min: 60 },
+                    'Excellent': { count: 0, color: '#10b981', min: 85 },
+                    'Very Good': { count: 0, color: '#90EE90', min: 70 },
+                    'Good': { count: 0, color: '#FFB84D', min: 55 },
+                    'Moderate': { count: 0, color: '#FF8C00', min: 45 },
                     'Poor': { count: 0, color: '#ef4444', min: 0 }
                   };
                   
@@ -780,7 +782,7 @@ function App() {
                 </div>
               </div>
               <div style={{marginTop: '12px', fontSize: '12px', opacity: 0.9, lineHeight: '1.5'}}>
-                Stakes: EXCELLENT (50+ very good) = 2.0x, GOOD (40-49) = 1.3x, FAIR (30-39) = 1.0x, POOR (under 30 bad) = 0.5x. ROI bonus: 150%+ = 1.5x, 100-149% = 1.25x
+                Stakes: EXCELLENT (85+) = 2.5x, VERY GOOD (70-84) = 2.0x, GOOD (55-69) = 1.5x, MODERATE (45-54) = 1.0x, POOR (under 45) = 0.5x. ROI bonus: 150%+ = 1.5x, 100-149% = 1.25x
               </div>
             </div>
 
@@ -825,26 +827,31 @@ function App() {
               const decisionRating = pick.decision_rating || 'RISKY';
               
               // Confidence multiplier: Higher confidence = bigger stake
-              // EXCELLENT (50+): 2.0x - GREEN (very good)
-              // GOOD (40-49): 1.3x - LIGHT AMBER (good)
-              // FAIR (30-39): 1.0x - DARK AMBER (fair)
-              // POOR (under 30): 0.5x - RED (bad/very bad)
+              // EXCELLENT (85+): 2.5x - GREEN (exceptional)
+              // VERY GOOD (70-84): 2.0x - LIGHT GREEN (strong)
+              // GOOD (55-69): 1.5x - LIGHT AMBER (solid)
+              // MODERATE (45-54): 1.0x - DARK AMBER (marginal)
+              // POOR (under 45): 0.5x - RED (avoid)
               let confidenceMultiplier = 1.0;
               let confColor = '#FF8C00'; // Default dark amber
-              let confLabel = 'FAIR';
+              let confLabel = 'MODERATE';
               
-              if (confidence >= 50) {
-                confidenceMultiplier = 2.0;
+              if (confidence >= 85) {
+                confidenceMultiplier = 2.5;
                 confColor = '#10b981'; // Green
                 confLabel = 'EXCELLENT';
-              } else if (confidence >= 40) {
-                confidenceMultiplier = 1.3;
+              } else if (confidence >= 70) {
+                confidenceMultiplier = 2.0;
+                confColor = '#90EE90'; // Light green
+                confLabel = 'VERY GOOD';
+              } else if (confidence >= 55) {
+                confidenceMultiplier = 1.5;
                 confColor = '#FFB84D'; // Light amber
                 confLabel = 'GOOD';
-              } else if (confidence >= 30) {
+              } else if (confidence >= 45) {
                 confidenceMultiplier = 1.0;
                 confColor = '#FF8C00'; // Dark amber
-                confLabel = 'FAIR';
+                confLabel = 'MODERATE';
               } else {
                 confidenceMultiplier = 0.5;
                 confColor = '#ef4444'; // Red
