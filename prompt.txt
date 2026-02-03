@@ -651,3 +651,13 @@ Performance-Based Adjustments (Updated: 2026-02-03)
 
 2. MEDIUM_PRIORITY: Win rate 0.0% is significantly below expected 27.7%. Consider tightening overlay threshold or increasing min_back price filter.
 
+
+
+============================================================
+Performance-Based Adjustments (Updated: 2026-02-03)
+============================================================
+
+1. HIGH_PRIORITY: Calibration error is 27.7%. Consider adjusting probability model or isotonic regression parameters.
+
+2. MEDIUM_PRIORITY: Win rate 0.0% is significantly below expected 27.7%. Consider tightening overlay threshold or increasing min_back price filter.
+

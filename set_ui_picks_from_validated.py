@@ -62,7 +62,7 @@ for race_key, picks in races.items():
     
     # Calculate coverage percentage
     coverage = (num_analyzed / total_horses) * 100 if total_horses > 0 else 0
-    threshold = 45  # FAIR minimum
+    threshold = 55  # FAIR minimum (15-25% win probability)
     
     # Evaluate ALL horses in this race
     for pick in picks:
@@ -122,9 +122,9 @@ for pick in top_picks:
             ExpressionAttributeValues={
                 ':true': True,
                 ':conf': Decimal(str(pick['adjusted_score'])),
-                ':level': 'HIGH' if pick['adjusted_score'] >= 75 else 'MEDIUM' if pick['adjusted_score'] >= 60 else 'LOW',
-                ':grade': 'EXCELLENT' if pick['adjusted_score'] >= 75 else 'GOOD' if pick['adjusted_score'] >= 60 else 'FAIR' if pick['adjusted_score'] >= 45 else 'POOR',
-                ':color': 'green' if pick['adjusted_score'] >= 75 else '#FFB84D' if pick['adjusted_score'] >= 60 else '#FF8C00' if pick['adjusted_score'] >= 45 else 'red',
+                ':level': 'HIGH' if pick['adjusted_score'] >= 85 else 'MEDIUM' if pick['adjusted_score'] >= 70 else 'LOW',
+                ':grade': 'EXCELLENT' if pick['adjusted_score'] >= 85 else 'GOOD' if pick['adjusted_score'] >= 70 else 'FAIR' if pick['adjusted_score'] >= 55 else 'POOR',
+                ':color': 'green' if pick['adjusted_score'] >= 85 else '#FFB84D' if pick['adjusted_score'] >= 70 else '#FF8C00' if pick['adjusted_score'] >= 55 else 'red',
                 ':coverage': Decimal(str(int(pick['coverage']))),
                 ':analyzed': pick['num_analyzed'],
                 ':total': pick['total_horses']

@@ -515,16 +515,16 @@ function App() {
                 {(() => {
                   const getConfidenceLevel = (conf) => {
                     const c = parseFloat(conf) || 0;
-                    if (c >= 75) return 'Excellent';
-                    if (c >= 60) return 'Good';
-                    if (c >= 45) return 'Fair';
+                    if (c >= 85) return 'Excellent';
+                    if (c >= 70) return 'Good';
+                    if (c >= 55) return 'Fair';
                     return 'Poor';
                   };
                   
                   const confidenceBuckets = {
-                    'Excellent': { count: 0, color: '#10b981', min: 75 },
-                    'Good': { count: 0, color: '#FFB84D', min: 60 },
-                    'Fair': { count: 0, color: '#FF8C00', min: 45 },
+                    'Excellent': { count: 0, color: '#10b981', min: 85 },
+                    'Good': { count: 0, color: '#FFB84D', min: 70 },
+                    'Fair': { count: 0, color: '#FF8C00', min: 55 },
                     'Poor': { count: 0, color: '#ef4444', min: 0 }
                   };
                   
@@ -834,23 +834,23 @@ function App() {
               const decisionRating = pick.decision_rating || 'RISKY';
               
               // Confidence multiplier: Higher confidence = bigger stake
-              // EXCELLENT (75+): 2.0x - GREEN
-              // GOOD (60-74): 1.5x - LIGHT AMBER
-              // FAIR (45-59): 1.0x - DARK AMBER
-              // POOR (under 45): 0.5x - RED
+              // EXCELLENT (85+): 40-50% win chance - 2.0x - GREEN
+              // GOOD (70-84): 25-35% win chance - 1.5x - LIGHT AMBER
+              // FAIR (55-69): 15-25% win chance - 1.0x - DARK AMBER
+              // POOR (under 55): <15% win chance - 0.5x - RED
               let confidenceMultiplier = 1.0;
               let confColor = '#FF8C00'; // Default dark amber
               let confLabel = 'FAIR';
               
-              if (confidence >= 75) {
+              if (confidence >= 85) {
                 confidenceMultiplier = 2.0;
                 confColor = '#10b981'; // Green
                 confLabel = 'EXCELLENT';
-              } else if (confidence >= 60) {
+              } else if (confidence >= 70) {
                 confidenceMultiplier = 1.5;
                 confColor = '#FFB84D'; // Light amber
                 confLabel = 'GOOD';
-              } else if (confidence >= 45) {
+              } else if (confidence >= 55) {
                 confidenceMultiplier = 1.0;
                 confColor = '#FF8C00'; // Dark amber
                 confLabel = 'FAIR';
