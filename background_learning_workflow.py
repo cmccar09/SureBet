@@ -49,17 +49,23 @@ def check_data_quality():
 def store_all_races_for_learning():
     """Store ALL horses from ALL races - this is LEARNING data, not picks"""
     print("\n" + "="*80)
-    print("STORING ALL RACES FOR LEARNING (Background Analysis)")
+    print("ANALYZING ALL RACES - Complete Horse Analysis")
     print("="*80)
     
+    # Use the comprehensive analyzer to ensure 100% race coverage
     result = subprocess.run(
-        ['python', 'complete_race_learning.py', 'store'],
+        ['python', 'analyze_all_races_comprehensive.py'],
         capture_output=True,
         text=True,
-        timeout=300
+        timeout=600
     )
     
-    print(result.stdout)
+    # Show summary
+    lines = result.stdout.split('\n')
+    for line in lines:
+        if 'Total picks:' in line or 'Background analysis:' in line or 'analyzed' in line.lower():
+            print(line)
+    
     return result.returncode == 0
 
 
@@ -171,26 +177,39 @@ def run_background_learning():
         
         try:
             # Step 1: Fetch latest race data
-            print("\n📥 Fetching latest race data...")
+            print("\n[1/6] Fetching latest race data...")
             subprocess.run(['python', 'betfair_odds_fetcher.py'], timeout=300)
             
             # Step 1.5: Check data quality
             check_data_quality()
             
-            # Step 2: Store ALL horses from ALL races for learning
-            print("\n📊 Storing all horses for learning analysis...")
+            # Step 2: ANALYZE ALL horses from ALL races (100% coverage)
+            print("\n[2/6] Analyzing ALL horses in ALL races...")
             stored = store_all_races_for_learning()
             
+            # Step 2.5: Calculate confidence scores for all horses
+            print("\n[2.5/6] Calculating confidence scores...")
+            result_conf = subprocess.run(
+                ['python', 'calculate_all_confidence_scores.py'],
+                capture_output=True,
+                text=True,
+                timeout=300
+            )
+            conf_lines = result_conf.stdout.split('\n')
+            for line in conf_lines:
+                if 'Horses scored:' in line:
+                    print(f"  {line}")
+            
             # Step 3: Fetch results for completed races
-            print("\n🏁 Fetching results...")
+            print("\n[3/6] Fetching results...")
             fetch_latest_results()
             
             # Step 4: Analyze winners - learn WHY they won
-            print("\n🧠 Analyzing winners and learning patterns...")
+            print("\n[4/6] Analyzing winners and learning patterns...")
             learned = analyze_winners_and_learn()
             
             # Step 5: Auto-adjust scoring logic based on learnings
-            print("\n⚙️ Auto-adjusting scoring weights...")
+            print("\n[5/6] Auto-adjusting scoring weights...")
             adjusted = auto_adjust_logic()
             
             # Step 6: Log this cycle

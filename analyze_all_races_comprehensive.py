@@ -205,10 +205,10 @@ def get_horse_history(horse_name):
             'wins': wins,
             'losses': losses,
             'pending': pending,
-            'win_rate': round(win_rate, 1),
+            'win_rate': to_decimal(round(win_rate, 1)),
             'last_outcome': last_outcome,
             'last_picked_date': last_date,
-            'avg_odds_when_picked': round(avg_odds, 2)
+            'avg_odds_when_picked': to_decimal(round(avg_odds, 2))
         }
         
     except Exception as e:
@@ -219,10 +219,10 @@ def get_horse_history(horse_name):
             'wins': 0,
             'losses': 0,
             'pending': 0,
-            'win_rate': 0,
+            'win_rate': to_decimal(0),
             'last_outcome': None,
             'last_picked_date': None,
-            'avg_odds_when_picked': 0
+            'avg_odds_when_picked': to_decimal(0)
         }
 
 def create_comprehensive_analysis(race, runner):
@@ -287,8 +287,8 @@ def create_comprehensive_analysis(race, runner):
         'history_wins': history['wins'],
         'history_losses': history['losses'],
         'history_win_rate': history['win_rate'],
-        'last_outcome': history['last_outcome'],
-        'last_picked_date': history['last_picked_date'],
+        'last_outcome': str(history['last_outcome']) if history['last_outcome'] else 'Unknown',
+        'last_picked_date': str(history['last_picked_date']) if history['last_picked_date'] else 'Unknown',
         
         # Enhanced analysis (if available)
         'value_score': 0,
@@ -310,7 +310,7 @@ def create_comprehensive_analysis(race, runner):
     
     # Log history if found
     if history['has_history']:
-        print(f"      📊 HISTORY: {horse_name} - {history['total_picks']} picks, {history['wins']}W-{history['losses']}L ({history['win_rate']}%), Last: {history['last_outcome']} on {history['last_picked_date']}")
+        print(f"      HISTORY: {horse_name} - {history['total_picks']} picks, {history['wins']}W-{history['losses']}L ({history['win_rate']}%), Last: {history['last_outcome']} on {history['last_picked_date']}")
     
     # Calculate simple metrics with robust form parsing
     form_str = str(analysis['form']) if analysis['form'] else ''
@@ -532,7 +532,7 @@ def save_as_pick(analysis):
             'trainer': analysis.get('trainer', 'Unknown'),
             'jockey': analysis.get('jockey', 'Unknown'),
             'is_learning_pick': True,
-            'edge_percentage': analysis.get('edge_percentage', 0)
+            'edge_percentage': to_decimal(analysis.get('edge_percentage', 0))
         }
         
         table.put_item(Item=pick)
@@ -591,7 +591,7 @@ def main():
     new_analyses = analyze_all_uk_ireland_races()
     
     if new_analyses == 0:
-        print("ℹ️  No new races to analyze (all current races already analyzed)")
+        print("INFO: No new races to analyze (all current races already analyzed)")
     
     return new_analyses
 

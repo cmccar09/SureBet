@@ -4,6 +4,7 @@ Runs 11am-7pm on 30min cycles
 Looks for high-confidence VALUE bets using weather-integrated scoring
 Weather-based going inference for grass tracks
 Only HIGH confidence picks (score >= 45) appear on UI
+REQUIRES: >=75% race analysis completion before betting (Carlisle 14:00 fix)
 """
 
 import subprocess
@@ -35,7 +36,7 @@ def fetch_races():
 
 def analyze_and_generate_picks():
     """Analyze races with optimized logic and generate HIGH confidence picks"""
-    print("\n🔍 Analyzing races comprehensively...")
+    print("\n[1/4] Analyzing ALL horses comprehensively (100% coverage)...")
     result = subprocess.run(
         ['python', 'analyze_all_races_comprehensive.py'],
         capture_output=True,
@@ -46,13 +47,43 @@ def analyze_and_generate_picks():
     # Parse output
     lines = result.stdout.split('\n')
     for line in lines:
-        if 'saved' in line.lower() or 'analyzed' in line.lower():
-            print(line)
+        if 'Total picks:' in line or 'Background analysis:' in line or 'analyzed' in line.lower():
+            print(f"  {line}")
+    
+    # CRITICAL: Calculate confidence scores for all horses
+    print("\n[2/4] Calculating confidence scores for all horses...")
+    result_conf = subprocess.run(
+        ['python', 'calculate_all_confidence_scores.py'],
+        capture_output=True,
+        text=True,
+        timeout=300
+    )
+    
+    # Show scoring summary
+    conf_lines = result_conf.stdout.split('\n')
+    for line in conf_lines:
+        if 'Horses scored:' in line or 'SUMMARY' in line:
+            print(f"  {line}")
+    
+    # CRITICAL: Validate race analysis completion before generating picks
+    print("\n[3/4] Validating race analysis completion (>=75% required)...")
+    result_val = subprocess.run(
+        ['python', 'race_analysis_validator.py'],
+        capture_output=True,
+        text=True,
+        timeout=300
+    )
+    
+    # Show validation summary
+    val_lines = result_val.stdout.split('\n')
+    for line in val_lines:
+        if 'VALIDATED PICKS:' in line or '[FAIL]' in line[:6]:
+            print(f"  {line}")
     
     # Generate UI picks with weather-based going adjustments
-    print("\n🎯 Generating UI picks (weather-integrated scoring)...")
+    print("\n[4/4] Generating validated UI picks...")
     result2 = subprocess.run(
-        ['python', 'generate_ui_picks.py'],
+        ['python', 'set_ui_picks_from_validated.py'],
         capture_output=True,
         text=True,
         timeout=300
