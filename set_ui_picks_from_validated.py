@@ -14,6 +14,8 @@ table = dynamodb.Table('SureBetBets')
 print("="*80)
 print("GENERATING UI PICKS FROM VALIDATED RACES")
 print("="*80)
+print("Strategy: Pick TOP 10 best horses across ALL races (not 1 per race)")
+print("="*80)
 
 # Get all validated picks
 bet_date = '2026-02-03'
@@ -31,8 +33,9 @@ for pick in validated_picks:
 
 print(f"Across {len(races)} races\n")
 
-ui_picks_set = 0
-total_processed = 0
+# NEW STRATEGY: Instead of 1 pick per race, find BEST horses across ALL races
+all_candidates = []
+MAX_UI_PICKS = 10  # Only show top 10 picks per day
 
 for race_key, picks in races.items():
     if not picks:
@@ -55,20 +58,13 @@ for race_key, picks in races.items():
     )
     
     if not is_valid:
-        print(f"[SKIP] {course} {time_str} - Validation failed")
-        continue
+        continue  # Skip invalid races silently
     
     # Calculate coverage percentage
     coverage = (num_analyzed / total_horses) * 100 if total_horses > 0 else 0
+    threshold = 45  # FAIR minimum
     
-    # Get number of runners for threshold
-    num_runners = total_horses
-    threshold = 55 if num_runners < 6 else 45
-    
-    # Find best horse in this race
-    best_pick = None
-    best_score = 0
-    
+    # Evaluate ALL horses in this race
     for pick in picks:
         try:
             base_conf = float(pick.get('confidence', 0))
@@ -84,62 +80,72 @@ for race_key, picks in races.items():
         
         adjusted_score = base_conf + form_adj
         
-        if adjusted_score > best_score:
-            best_score = adjusted_score
-            best_pick = pick
-            best_pick['adjusted_confidence'] = adjusted_score
-            best_pick['form_adjustment'] = form_adj
-    
-    # Only add to UI if meets threshold
-    if best_pick and best_score >= threshold:
-        horse = best_pick['data'].get('horse', '')
-        bet_id = best_pick['data'].get('bet_id', '')
-        
-        # Skip if no bet_id (corrupted data)
-        if not bet_id or bet_id == '':
-            print(f"[SKIP] {course} {time_str} - {horse} has no bet_id")
-            continue
-        
-        # Update to show on UI
-        try:
-            table.update_item(
-                Key={
-                    'bet_date': bet_date,
-                    'bet_id': bet_id
-                },
-                UpdateExpression='SET show_in_ui = :true, combined_confidence = :conf, confidence_level = :level, confidence_grade = :grade, confidence_color = :color, race_coverage_pct = :coverage, race_analyzed_count = :analyzed, race_total_count = :total',
-                ExpressionAttributeValues={
-                    ':true': True,
-                    ':conf': Decimal(str(best_score)),
-                    ':level': 'HIGH' if best_score >= 75 else 'MEDIUM' if best_score >= 60 else 'LOW',
-                    ':grade': 'EXCELLENT' if best_score >= 75 else 'GOOD' if best_score >= 60 else 'FAIR' if best_score >= 45 else 'POOR',
-                    ':color': 'green' if best_score >= 75 else '#FFB84D' if best_score >= 60 else '#FF8C00' if best_score >= 45 else 'red',
-                    ':coverage': Decimal(str(int(coverage))),
-                    ':analyzed': num_analyzed,
-                    ':total': num_runners
-                }
-            )
+        # Only consider horses above threshold
+        if adjusted_score >= threshold:
+            horse = pick['data'].get('horse', '')
+            bet_id = pick['data'].get('bet_id', '')
             
-            print(f"[UI PICK] {course} {time_str}")
-            print(f"  {horse}")
-            print(f"  Score: {best_score:.0f}/100 (base: {best_pick['data'].get('confidence', 0)}, form adj: {best_pick.get('form_adjustment', 0):+d})")
-            print(f"  Threshold: {threshold}/100 (90% minimum coverage required)")
-            print(f"  Form: {best_pick['data'].get('form', '')}")
-            print(f"  Analysis: {num_analyzed}/{num_runners} horses ({coverage:.0f}%) [OK]")
-            print()
-            
-            ui_picks_set += 1
-        except Exception as e:
-            print(f"  ERROR updating {horse}: {str(e)}")
-    else:
-        if best_pick:
-            print(f"[SKIP] {course} {time_str} - Best score {best_score:.0f} below threshold {threshold}")
-    
-    total_processed += 1
+            if bet_id:  # Valid bet_id
+                all_candidates.append({
+                    'bet_id': bet_id,
+                    'horse': horse,
+                    'course': course,
+                    'race_time': race_time,
+                    'adjusted_score': adjusted_score,
+                    'base_confidence': base_conf,
+                    'form_adjustment': form_adj,
+                    'form': form,
+                    'coverage': coverage,
+                    'num_analyzed': num_analyzed,
+                    'total_horses': total_horses
+                })
+
+# Sort all candidates by adjusted score (highest first)
+all_candidates.sort(key=lambda x: x['adjusted_score'], reverse=True)
+
+# Take only top MAX_UI_PICKS
+top_picks = all_candidates[:MAX_UI_PICKS]
+
+print(f"\nEvaluated {len(all_candidates)} horses above threshold across all races")
+print(f"Selecting TOP {MAX_UI_PICKS} for UI display\n")
+
+# Set show_in_ui for the top picks
+ui_picks_set = 0
+for pick in top_picks:
+    try:
+        table.update_item(
+            Key={
+                'bet_date': bet_date,
+                'bet_id': pick['bet_id']
+            },
+            UpdateExpression='SET show_in_ui = :true, combined_confidence = :conf, confidence_level = :level, confidence_grade = :grade, confidence_color = :color, race_coverage_pct = :coverage, race_analyzed_count = :analyzed, race_total_count = :total',
+            ExpressionAttributeValues={
+                ':true': True,
+                ':conf': Decimal(str(pick['adjusted_score'])),
+                ':level': 'HIGH' if pick['adjusted_score'] >= 75 else 'MEDIUM' if pick['adjusted_score'] >= 60 else 'LOW',
+                ':grade': 'EXCELLENT' if pick['adjusted_score'] >= 75 else 'GOOD' if pick['adjusted_score'] >= 60 else 'FAIR' if pick['adjusted_score'] >= 45 else 'POOR',
+                ':color': 'green' if pick['adjusted_score'] >= 75 else '#FFB84D' if pick['adjusted_score'] >= 60 else '#FF8C00' if pick['adjusted_score'] >= 45 else 'red',
+                ':coverage': Decimal(str(int(pick['coverage']))),
+                ':analyzed': pick['num_analyzed'],
+                ':total': pick['total_horses']
+            }
+        )
+        
+        print(f"[UI PICK #{ui_picks_set + 1}] {pick['course']} {pick['race_time']}")
+        print(f"  {pick['horse']}")
+        print(f"  Score: {pick['adjusted_score']:.0f}/100 (base: {pick['base_confidence']:.0f}, form adj: {pick['form_adjustment']:+.0f})")
+        print(f"  Form: {pick['form']}")
+        print(f"  Coverage: {pick['coverage']:.0f}% ({pick['num_analyzed']}/{pick['total_horses']} horses)")
+        print()
+        
+        ui_picks_set += 1
+    except Exception as e:
+        print(f"  ERROR updating {pick['horse']}: {str(e)}")
 
 print("="*80)
 print("SUMMARY")
 print("="*80)
-print(f"Races processed: {total_processed}")
-print(f"UI picks set: {ui_picks_set}")
+print(f"Total candidates evaluated: {len(all_candidates)}")
+print(f"UI picks set: {ui_picks_set} (max {MAX_UI_PICKS})")
+print(f"Remaining horses: {len(all_candidates) - ui_picks_set} (for learning/training)")
 print(f"\nPicks now visible on UI!")

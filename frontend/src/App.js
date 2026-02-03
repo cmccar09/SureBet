@@ -806,20 +806,29 @@ function App() {
                 return timeA - timeB;
               })
               .slice(0, 5).map((pick, index) => {
-              const roi = parseFloat(pick.roi || 0);
-              const belowThreshold = roi < 0.05;
-              
               // Safely extract values, handling objects
               const horseName = typeof pick.horse === 'string' ? pick.horse : 'Unknown';
               const courseName = typeof pick.course === 'string' ? pick.course : 'Unknown';
               
-              // BUDGET-BASED STAKE CALCULATION
-              // Use global budget constants - only top 5 picks get budget allocation
-              const baseBudgetPerPick = DAILY_BUDGET / MAX_PICKS_PER_DAY;
-              
+              // Extract probabilities and odds first
               const odds = parseFloat(pick.odds || 0);
               const pWin = parseFloat(pick.p_win || 0);
               const pPlace = parseFloat(pick.p_place || 0);
+              
+              // Calculate ROI from odds and win probability
+              // ROI = (Expected Return - Stake) / Stake
+              // For WIN bets: Expected Return = odds * p_win
+              // ROI% = ((odds * p_win) - 1) * 100
+              let roi = 0;
+              if (odds > 0 && pWin > 0) {
+                roi = ((odds * pWin) - 1);  // Decimal ROI (e.g., 0.25 = 25%)
+              }
+              
+              const belowThreshold = roi < 0.05;  // Less than 5% ROI
+              
+              // BUDGET-BASED STAKE CALCULATION
+              // Use global budget constants - only top 5 picks get budget allocation
+              const baseBudgetPerPick = DAILY_BUDGET / MAX_PICKS_PER_DAY;
               const betType = (pick.bet_type || 'WIN').toUpperCase();
               const confidence = parseFloat(pick.combined_confidence || 0);
               const decisionRating = pick.decision_rating || 'RISKY';
@@ -947,6 +956,45 @@ function App() {
                 <div className="pick-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', padding: '0 16px'}}>
                   <div>
                     <h2 style={{margin: 0}}>{horseName}</h2>
+                    {/* ANALYSIS STATUS BADGE */}
+                    {(() => {
+                      const coverage = pick.race_coverage_pct || 0;
+                      const isComplete = coverage >= 90;
+                      const confScore = pick.comprehensive_score || pick.combined_confidence || 0;
+                      const hasScore = confScore > 0;
+                      
+                      return (
+                        <div style={{display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap'}}>
+                          {/* Race Coverage Badge */}
+                          <div style={{
+                            display: 'inline-block',
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            background: isComplete ? '#dcfce7' : '#fee2e2',
+                            color: isComplete ? '#166534' : '#991b1b',
+                            border: isComplete ? '1px solid #86efac' : '1px solid #fca5a5'
+                          }}>
+                            {isComplete ? '✓ Analysis' : '⚠ Analysis'} ({coverage.toFixed(0)}% coverage)
+                          </div>
+                          
+                          {/* Confidence Scoring Badge */}
+                          <div style={{
+                            display: 'inline-block',
+                            padding: '4px 10px',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            background: hasScore ? '#dbeafe' : '#fee2e2',
+                            color: hasScore ? '#1e40af' : '#991b1b',
+                            border: hasScore ? '1px solid #93c5fd' : '1px solid #fca5a5'
+                          }}>
+                            {hasScore ? '✓ Scored' : '⚠ Not Scored'} ({confScore.toFixed(0)}/100)
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                   <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
                     {getBetTypeBadge(pick.bet_type)}

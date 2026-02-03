@@ -22,6 +22,7 @@ def get_todays_ui_picks():
     
     today = datetime.now().strftime('%Y-%m-%d')
     
+    # Query only picks that passed validation and were set as UI picks
     response = table.query(
         KeyConditionExpression='bet_date = :today',
         FilterExpression='show_in_ui = :true',
@@ -36,9 +37,9 @@ def get_todays_ui_picks():
 def validate_4tier_grading(score, grade):
     """Validate that grade matches 4-tier system"""
     expected_grade = (
-        'EXCELLENT' if score >= 70 else
-        'GOOD' if score >= 55 else
-        'FAIR' if score >= 40 else
+        'EXCELLENT' if score >= 75 else
+        'GOOD' if score >= 60 else
+        'FAIR' if score >= 45 else
         'POOR'
     )
     return grade == expected_grade

@@ -42,29 +42,43 @@ def calculate_confidence_score(horse_data):
         # No form = penalty
         score -= 10
     
-    # Odds adjustment (value betting) - smaller impact
+    # Odds adjustment (value betting) - CRITICAL for finding value
     try:
         odds = float(horse_data.get('odds', 0))
         if odds > 0:
-            # Favor horses at 3-7 odds (value zone)
-            if 3.0 <= odds <= 7.0:
-                score += 8
+            # Favor horses at 3-9 odds (sweet spot for value)
+            if 3.0 <= odds <= 9.0:
+                score += 8  # Sweet spot bonus
             elif 2.0 <= odds < 3.0:
-                score += 5
+                score += 4  # Short prices
             elif odds < 2.0:
                 score += 3  # Favorites can be over-bet
             elif odds > 15:
-                score -= 8  # Long shots less reliable
+                score -= 10  # Very long shots - heavily penalize
+            elif odds >= 10:
+                score -= 5  # Long shots (10-15) - moderate penalty
     except:
         pass
     
-    # LTO winner bonus - only if form is decent
-    if form and len(form) > 0 and form[0] == '1':
-        # Check 2nd last run - if also good, bigger bonus
-        if len(cleaned_form) > 1 and cleaned_form[1] in '123':
-            score += 12  # Consistent performer
-        else:
-            score += 8  # Won last time but inconsistent
+    # Recent win bonus - check last 5 runs, not just LTO
+    if form and cleaned_form:
+        # Last time out winner
+        if form[0] == '1':
+            # Check 2nd last run - if also good, bigger bonus
+            if len(cleaned_form) > 1 and cleaned_form[1] in '123':
+                score += 8  # Consistent performer
+            else:
+                score += 6  # Won last time but inconsistent
+        # Win in last 5 runs (not LTO)
+        elif '1' in cleaned_form[:5]:
+            win_position = cleaned_form.index('1')
+            # Closer wins worth more
+            if win_position == 1:  # 2nd last race
+                score += 5
+            elif win_position == 2:  # 3rd last race
+                score += 3  # Like Many A Star!
+            elif win_position in [3, 4]:  # 4th or 5th last
+                score += 2
     
     # Trainer bonus (Paul Nicholls, Willie Mullins, etc.)
     trainer = str(horse_data.get('trainer', '')).lower()
@@ -76,10 +90,10 @@ def calculate_confidence_score(horse_data):
         last_3 = [int(c) for c in cleaned_form[:3]]
         # All top-3 finishes
         if all(pos <= 3 for pos in last_3):
-            score += 10
+            score += 6
         # All top-5 finishes
         elif all(pos <= 5 for pos in last_3):
-            score += 5
+            score += 3
         # Any zeros/unplaced
         elif any(pos == 0 for pos in last_3):
             score -= 8
@@ -98,17 +112,17 @@ def calculate_confidence_score(horse_data):
             
             # Strong upward trend (3+ improvements in last 4 runs)
             if improvements >= 3:
-                score += 15  # Significant bonus for clear improvement trajectory
+                score += 8  # Bonus for improvement trajectory
             # Moderate upward trend (2 improvements)
             elif improvements == 2:
-                score += 8
+                score += 4
             
             # Recent form surge - check if last 2 runs are BOTH better than previous 2
             if len(positions_trend) >= 4:
                 recent_avg = (positions_trend[0] + positions_trend[1]) / 2
                 older_avg = (positions_trend[2] + positions_trend[3]) / 2
                 if recent_avg < older_avg - 2:  # Recent runs at least 2 positions better on average
-                    score += 10  # Horse is hitting form
+                    score += 5  # Horse is hitting form
     
     return round(max(0, min(100, score)))
 
@@ -162,14 +176,14 @@ for race_key, horses in races.items():
         # Calculate confidence
         confidence = calculate_confidence_score(horse)
         
-        # Update database
+        # Update database with BOTH comprehensive_score AND combined_confidence for compatibility
         try:
             table.update_item(
                 Key={
                     'bet_date': bet_date,
                     'bet_id': bet_id
                 },
-                UpdateExpression='SET confidence = :conf, combined_confidence = :conf, confidence_level = :level, confidence_grade = :grade, confidence_color = :color',
+                UpdateExpression='SET confidence = :conf, combined_confidence = :conf, comprehensive_score = :conf, confidence_level = :level, confidence_grade = :grade, confidence_color = :color',
                 ExpressionAttributeValues={
                     ':conf': Decimal(str(confidence)),
                     ':level': 'HIGH' if confidence >= 75 else 'MEDIUM' if confidence >= 60 else 'LOW',
