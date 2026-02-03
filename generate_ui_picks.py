@@ -12,7 +12,7 @@ db = boto3.resource('dynamodb', region_name='eu-west-1')
 table = db.Table('SureBetBets')
 
 def score_horse(horse, race):
-    """Simple but effective scoring"""
+    """Realistic scoring - max ~70 for exceptional horses"""
     odds = horse.get('odds', 0)
     form = horse.get('form', '')
     
@@ -23,37 +23,37 @@ def score_horse(horse, race):
     score = 0
     reasons = []
     
-    # Base sweet spot points
-    score += 30
+    # Base sweet spot points (reduced from 30)
+    score += 20
     reasons.append(f"Sweet spot odds ({odds})")
     
-    # Form scoring
+    # Form scoring (reduced from 25/15)
     if '1' in form[:2]:  # Win in last 2 races
-        score += 25
+        score += 18
         reasons.append("Recent win")
     elif '1' in form:  # Win anywhere
-        score += 15
+        score += 10
         reasons.append("Has won before")
     
-    # Place scoring
+    # Place scoring (reduced from 15/8)
     places = form.count('2') + form.count('3')
     if places >= 2:
-        score += 15
+        score += 12
         reasons.append(f"{places} place finishes")
     elif places == 1:
-        score += 8
+        score += 6
     
-    # Consistency
+    # Consistency (reduced from 10)
     if len(form) >= 5 and form.count('0') == 0 and form.count('P') == 0:
-        score += 10
+        score += 8
         reasons.append("Consistent performer")
     
-    # Optimal odds range
+    # Optimal odds range (reduced from 15/10)
     if 4.0 <= odds <= 6.0:
-        score += 15
+        score += 12
         reasons.append("Optimal odds range")
     elif 3.0 <= odds <= 7.0:
-        score += 10
+        score += 8
     
     return score, reasons
 
@@ -94,7 +94,7 @@ def generate_ui_picks():
                 best_horse = runner
                 best_reasons = reasons
         
-        if best_score >= 75:  # UI threshold
+        if best_score >= 55:  # UI threshold - lowered to match realistic scoring
             horse_name = best_horse.get('name', best_horse.get('runnerName', 'Unknown'))
             odds = best_horse.get('odds', 0)
             form = best_horse.get('form', '')
