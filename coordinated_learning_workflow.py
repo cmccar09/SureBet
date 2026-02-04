@@ -59,6 +59,23 @@ def step1_analyze_all_races():
         
         if result.returncode == 0:
             print("✓ All races analyzed and saved for learning")
+            
+            # Save top tips for all races (for end-of-day report)
+            try:
+                print("\nSaving top tips for performance tracking...")
+                tips_result = subprocess.run(
+                    ['python', 'save_all_race_tips.py'],
+                    capture_output=True,
+                    text=True,
+                    timeout=60
+                )
+                if tips_result.returncode == 0:
+                    print("✓ Tips saved for daily performance report")
+                else:
+                    print("  (Tips save had issues - non-critical)")
+            except Exception as e:
+                print(f"  (Could not save tips: {e})")
+            
             return True
         else:
             print(f"⚠️ Analysis had issues: {result.stderr[:200]}")

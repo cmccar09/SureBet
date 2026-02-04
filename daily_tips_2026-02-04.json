@@ -1,0 +1,5642 @@
+{
+  "date": "2026-02-04",
+  "generated_at": "2026-02-04T12:49:03.316646",
+  "total_races": 260,
+  "tips": [
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T17:47:08Z",
+      "tip": "Lucky Bolt",
+      "odds": 3.6,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Lucky Bolt",
+          "score": 0.0,
+          "odds": 3.6
+        },
+        {
+          "name": "Thunder Runner",
+          "score": 0.0,
+          "odds": 4.3
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T17:50:23Z",
+      "tip": "Swift Demon",
+      "odds": 4.8,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Swift Demon",
+          "score": 0.0,
+          "odds": 4.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T18:30:23Z",
+      "tip": "Dark Bolt",
+      "odds": 4.4,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Dark Bolt",
+          "score": 0.0,
+          "odds": 4.4
+        },
+        {
+          "name": "Lucky Star",
+          "score": 0.0,
+          "odds": 2.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T19:00:21Z",
+      "tip": "Noble King",
+      "odds": 11.9,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Noble King",
+          "score": 0.0,
+          "odds": 11.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T19:20:21Z",
+      "tip": "Dark King",
+      "odds": 6.3,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Dark King",
+          "score": 0.0,
+          "odds": 6.3
+        },
+        {
+          "name": "Swift Flash",
+          "score": 0.0,
+          "odds": 3.3
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T19:35:21Z",
+      "tip": "Speed Demon",
+      "odds": 4.4,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Speed Demon",
+          "score": 0.0,
+          "odds": 4.4
+        },
+        {
+          "name": "Thunder Bolt",
+          "score": 0.0,
+          "odds": 3.1
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T20:22:05Z",
+      "tip": "Golden Arrow",
+      "odds": 4.3,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Golden Arrow",
+          "score": 0.0,
+          "odds": 4.3
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T20:36:18Z",
+      "tip": "Royal Bolt",
+      "odds": 5.7,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Royal Bolt",
+          "score": 0.0,
+          "odds": 5.7
+        },
+        {
+          "name": "Royal Dream",
+          "score": 0.0,
+          "odds": 5.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T20:37:25Z",
+      "tip": "Lucky Dream",
+      "odds": 3.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Lucky Dream",
+          "score": 0.0,
+          "odds": 3.0
+        },
+        {
+          "name": "Thunder Arrow",
+          "score": 0.0,
+          "odds": 4.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T21:02:25Z",
+      "tip": "Thunder Strike",
+      "odds": 3.7,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Thunder Strike",
+          "score": 0.0,
+          "odds": 3.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-09T15:30:23Z",
+      "tip": "Noble King",
+      "odds": 3.2,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Noble King",
+          "score": 0.0,
+          "odds": 3.2
+        },
+        {
+          "name": "Swift Arrow",
+          "score": 0.0,
+          "odds": 8.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-09T16:30:24Z",
+      "tip": "Golden Runner",
+      "odds": 11.5,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Golden Runner",
+          "score": 0.0,
+          "odds": 11.5
+        },
+        {
+          "name": "Lucky King",
+          "score": 0.0,
+          "odds": 2.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-09T16:35:21Z",
+      "tip": "Golden Bolt",
+      "odds": 6.3,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Golden Bolt",
+          "score": 0.0,
+          "odds": 6.3
+        },
+        {
+          "name": "Noble Spirit",
+          "score": 0.0,
+          "odds": 6.3
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-09T19:20:22Z",
+      "tip": "Lucky Runner",
+      "odds": 8.9,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Lucky Runner",
+          "score": 0.0,
+          "odds": 8.9
+        },
+        {
+          "name": "Royal Flash",
+          "score": 0.0,
+          "odds": 2.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Carlisle",
+      "time": "2026-02-03T13:30:00.000Z",
+      "tip": "Swingforthefence",
+      "odds": 65.0,
+      "score": 22.0,
+      "grade": "POOR",
+      "runners": 3,
+      "top_5": [
+        {
+          "name": "Swingforthefence",
+          "score": 22.0,
+          "odds": 65.0
+        },
+        {
+          "name": "Takeyoutotheisland",
+          "score": 18.0,
+          "odds": 180.0
+        },
+        {
+          "name": "Blazing Echo",
+          "score": 12.0,
+          "odds": 1000.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Carlisle",
+      "time": "2026-02-03T14:35:00.000Z",
+      "tip": "Sevarana",
+      "odds": 2.74,
+      "score": 67.0,
+      "grade": "FAIR",
+      "runners": 4,
+      "top_5": [
+        {
+          "name": "Sevarana",
+          "score": 67.0,
+          "odds": 2.74
+        },
+        {
+          "name": "Oh Clare",
+          "score": 44.0,
+          "odds": 3.3
+        },
+        {
+          "name": "Strathcatcha",
+          "score": 10.0,
+          "odds": 1000.0
+        },
+        {
+          "name": "Am I Bovvered",
+          "score": 5.0,
+          "odds": 1000.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Carlisle",
+      "time": "2026-02-03T15:35:00.000Z",
+      "tip": "Gintime",
+      "odds": 12.0,
+      "score": 43.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Gintime",
+          "score": 43.0,
+          "odds": 12.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Carlisle",
+      "time": "2026-02-03T16:04:00.000Z",
+      "tip": "Carrhill",
+      "odds": 16.5,
+      "score": 0.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Carrhill",
+          "score": 0.0,
+          "odds": 16.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Carlisle",
+      "time": "2026-02-03T16:34:00.000Z",
+      "tip": "Marvel Magic",
+      "odds": 18.0,
+      "score": 21.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Marvel Magic",
+          "score": 21.0,
+          "odds": 18.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Catterick",
+      "time": "2026-01-21T13:17:00.000Z",
+      "tip": "Dotties Promise",
+      "odds": 200.0,
+      "score": 2.4,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Dotties Promise",
+          "score": 2.4,
+          "odds": 200.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Catterick",
+      "time": "2026-01-21T13:47:00.000Z",
+      "tip": "Huit Reflets",
+      "odds": 4.4,
+      "score": 30.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Huit Reflets",
+          "score": 30.2,
+          "odds": 4.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Catterick",
+      "time": "2026-01-21T14:20:00.000Z",
+      "tip": "Jack Hoola",
+      "odds": 4.0,
+      "score": 26.9,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Jack Hoola",
+          "score": 26.9,
+          "odds": 4.0
+        },
+        {
+          "name": "Inferno Sacree",
+          "score": 15.9,
+          "odds": 10.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Chelmsford City",
+      "time": "2026-01-08T17:30:00.000Z",
+      "tip": "Sparksmith",
+      "odds": 3.65,
+      "score": 47.6,
+      "grade": "MODERATE",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Sparksmith",
+          "score": 47.6,
+          "odds": 3.65
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Chelmsford City",
+      "time": "2026-01-08T18:00:00.000Z",
+      "tip": "Poetic Jack",
+      "odds": 4.1,
+      "score": 46.1,
+      "grade": "MODERATE",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Poetic Jack",
+          "score": 46.1,
+          "odds": 4.1
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Chelmsford City",
+      "time": "2026-01-08T19:00:00.000Z",
+      "tip": "Haliphon",
+      "odds": 3.85,
+      "score": 44.4,
+      "grade": "LOW",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Haliphon",
+          "score": 44.4,
+          "odds": 3.85
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Chelmsford City",
+      "time": "2026-01-11T16:12:00.000Z",
+      "tip": "Secret Road",
+      "odds": 4.2,
+      "score": 29.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Secret Road",
+          "score": 29.2,
+          "odds": 4.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Chelmsford City",
+      "time": "2026-01-11T16:42:00.000Z",
+      "tip": "Brinton",
+      "odds": 11.5,
+      "score": 15.9,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Brinton",
+          "score": 15.9,
+          "odds": 11.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T19:05:23Z",
+      "tip": "Mighty Dream",
+      "odds": 3.7,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Mighty Dream",
+          "score": 0.0,
+          "odds": 3.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T20:00:21Z",
+      "tip": "Mighty Runner",
+      "odds": 2.9,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Mighty Runner",
+          "score": 0.0,
+          "odds": 2.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T20:18:48Z",
+      "tip": "Mighty Spirit",
+      "odds": 2.7,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Mighty Spirit",
+          "score": 0.0,
+          "odds": 2.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T20:38:13Z",
+      "tip": "Noble Demon",
+      "odds": 3.3,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Noble Demon",
+          "score": 0.0,
+          "odds": 3.3
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T20:39:35Z",
+      "tip": "Royal Demon",
+      "odds": 3.2,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Royal Demon",
+          "score": 0.0,
+          "odds": 3.2
+        },
+        {
+          "name": "Royal King",
+          "score": 0.0,
+          "odds": 7.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T20:53:13Z",
+      "tip": "Lucky Demon",
+      "odds": 3.1,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Lucky Demon",
+          "score": 0.0,
+          "odds": 3.1
+        },
+        {
+          "name": "Swift Runner",
+          "score": 0.0,
+          "odds": 5.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T20:54:21Z",
+      "tip": "Mighty King",
+      "odds": 11.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Mighty King",
+          "score": 0.0,
+          "odds": 11.0
+        },
+        {
+          "name": "Swift Star",
+          "score": 0.0,
+          "odds": 3.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T14:35:22Z",
+      "tip": "Royal King",
+      "odds": 6.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Royal King",
+          "score": 0.0,
+          "odds": 6.0
+        },
+        {
+          "name": "Speed Runner",
+          "score": 0.0,
+          "odds": 2.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T15:05:23Z",
+      "tip": "Lucky Bolt",
+      "odds": 3.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Lucky Bolt",
+          "score": 0.0,
+          "odds": 3.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T15:35:21Z",
+      "tip": "Swift Bolt",
+      "odds": 2.7,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Swift Bolt",
+          "score": 0.0,
+          "odds": 2.7
+        },
+        {
+          "name": "Thunder Dream",
+          "score": 0.0,
+          "odds": 4.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T17:00:21Z",
+      "tip": "Speed Flash",
+      "odds": 6.2,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Speed Flash",
+          "score": 0.0,
+          "odds": 6.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T17:20:22Z",
+      "tip": "Golden Strike",
+      "odds": 4.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Golden Strike",
+          "score": 0.0,
+          "odds": 4.0
+        },
+        {
+          "name": "Mighty Spirit",
+          "score": 0.0,
+          "odds": 3.1
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T17:50:23Z",
+      "tip": "Thunder King",
+      "odds": 2.7,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Thunder King",
+          "score": 0.0,
+          "odds": 2.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T18:20:22Z",
+      "tip": "Golden Spirit",
+      "odds": 4.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Golden Spirit",
+          "score": 0.0,
+          "odds": 4.0
+        },
+        {
+          "name": "Royal Strike",
+          "score": 0.0,
+          "odds": 3.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T18:30:23Z",
+      "tip": "Lucky Flash",
+      "odds": 2.8,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Lucky Flash",
+          "score": 0.0,
+          "odds": 2.8
+        },
+        {
+          "name": "Mighty Bolt",
+          "score": 0.0,
+          "odds": 6.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T18:35:22Z",
+      "tip": "Dark Dream",
+      "odds": 4.3,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Dark Dream",
+          "score": 0.0,
+          "odds": 4.3
+        },
+        {
+          "name": "Noble Star",
+          "score": 0.0,
+          "odds": 2.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T19:00:22Z",
+      "tip": "Dark Spirit",
+      "odds": 4.6,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Dark Spirit",
+          "score": 0.0,
+          "odds": 4.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T19:05:23Z",
+      "tip": "Lucky Spirit",
+      "odds": 6.7,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Lucky Spirit",
+          "score": 0.0,
+          "odds": 6.7
+        },
+        {
+          "name": "Royal Star",
+          "score": 0.0,
+          "odds": 7.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Chepstow",
+      "time": "2026-01-27T14:02:00.000Z",
+      "tip": "French Emperor",
+      "odds": 6.8,
+      "score": 25.9,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "French Emperor",
+          "score": 25.9,
+          "odds": 6.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Chepstow",
+      "time": "2026-01-27T14:37:00.000Z",
+      "tip": "Storming Nelson",
+      "odds": 190.0,
+      "score": 5.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Storming Nelson",
+          "score": 5.0,
+          "odds": 190.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Chepstow",
+      "time": "2026-01-27T15:12:00.000Z",
+      "tip": "Daring To Dream",
+      "odds": 90.0,
+      "score": 5.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Daring To Dream",
+          "score": 5.0,
+          "odds": 90.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Chepstow",
+      "time": "2026-01-27T15:47:00.000Z",
+      "tip": "Fat Faced Columbo",
+      "odds": 3.5,
+      "score": 35.0,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Fat Faced Columbo",
+          "score": 35.0,
+          "odds": 3.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Doncaster",
+      "time": "2026-01-19T17:21:00.000Z",
+      "tip": "Dannys Flyer",
+      "odds": 1.7985611510791366,
+      "score": 54.5,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Dannys Flyer",
+          "score": 54.5,
+          "odds": 1.7985611510791366
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Doncaster",
+      "time": "2026-01-23T12:45:00.000Z",
+      "tip": "West Hill Verde",
+      "odds": 3.85,
+      "score": 32.8,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "West Hill Verde",
+          "score": 32.8,
+          "odds": 3.85
+        },
+        {
+          "name": "Mulinas",
+          "score": 15.9,
+          "odds": 12.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Doncaster",
+      "time": "2026-01-23T13:45:00.000Z",
+      "tip": "Minella Jury",
+      "odds": 2.86,
+      "score": 37.4,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Minella Jury",
+          "score": 37.4,
+          "odds": 2.86
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Doncaster",
+      "time": "2026-01-23T16:00:00.000Z",
+      "tip": "Mask Of Zorro",
+      "odds": 3.3,
+      "score": 37.4,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Mask Of Zorro",
+          "score": 37.4,
+          "odds": 3.3
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Dunstall Park",
+      "time": "2026-01-15T17:18:00.000Z",
+      "tip": "Blazeaway Bruvas",
+      "odds": 2.0,
+      "score": 50.3,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Blazeaway Bruvas",
+          "score": 50.3,
+          "odds": 2.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Exeter",
+      "time": "2026-01-09T13:02:00.000Z",
+      "tip": "Call Me Legend",
+      "odds": 4.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Call Me Legend",
+          "score": 0.0,
+          "odds": 4.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Exeter",
+      "time": "2026-01-09T13:32:00.000Z",
+      "tip": "Johnnys Jury",
+      "odds": 2.52,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Johnnys Jury",
+          "score": 0.0,
+          "odds": 2.52
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Exeter",
+      "time": "2026-01-09T16:05:00.000Z",
+      "tip": "Blackswan Doroux",
+      "odds": 2.96,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Blackswan Doroux",
+          "score": 0.0,
+          "odds": 2.96
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-01-14T12:45:00Z",
+      "tip": "Macho Man",
+      "odds": 2.6315789473684212,
+      "score": 39.6,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Macho Man",
+          "score": 39.6,
+          "odds": 2.6315789473684212
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-01-14T13:15:00Z",
+      "tip": "Bambino Fever",
+      "odds": 1.3333333333333333,
+      "score": 67.4,
+      "grade": "EXCELLENT",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Bambino Fever",
+          "score": 67.4,
+          "odds": 1.3333333333333333
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-01-14T14:15:00Z",
+      "tip": "Blood Destiny",
+      "odds": 5.8,
+      "score": 30.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Blood Destiny",
+          "score": 30.2,
+          "odds": 5.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-01-15T14:43:00Z",
+      "tip": "Ersudaly",
+      "odds": 44.0,
+      "score": 4.6,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Ersudaly",
+          "score": 4.6,
+          "odds": 44.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-01-15T15:52:00Z",
+      "tip": "Not So Proper",
+      "odds": 42.0,
+      "score": 14.9,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Not So Proper",
+          "score": 14.9,
+          "odds": 42.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-02-03T13:50:00.000Z",
+      "tip": "Springhill Warrior",
+      "odds": 2.0,
+      "score": 53.0,
+      "grade": "POOR",
+      "runners": 3,
+      "top_5": [
+        {
+          "name": "Springhill Warrior",
+          "score": 53.0,
+          "odds": 2.0
+        },
+        {
+          "name": "Grandy Lane",
+          "score": 50.0,
+          "odds": 9.6
+        },
+        {
+          "name": "Colins Friend",
+          "score": 6.0,
+          "odds": 120.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-02-03T14:25:00.000Z",
+      "tip": "Oldschool Outlaw",
+      "odds": 1.78,
+      "score": 51.0,
+      "grade": "POOR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Oldschool Outlaw",
+          "score": 51.0,
+          "odds": 1.78
+        },
+        {
+          "name": "Carry On Heidi",
+          "score": 30.0,
+          "odds": 44.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-02-03T14:55:00.000Z",
+      "tip": "Moorish Castle",
+      "odds": 42.0,
+      "score": 13.0,
+      "grade": "POOR",
+      "runners": 7,
+      "top_5": [
+        {
+          "name": "Moorish Castle",
+          "score": 13.0,
+          "odds": 42.0
+        },
+        {
+          "name": "Listentomewillya",
+          "score": 11.0,
+          "odds": 100.0
+        },
+        {
+          "name": "Silver Salute",
+          "score": 10.0,
+          "odds": 19.0
+        },
+        {
+          "name": "Dark Lieutenant",
+          "score": 9.0,
+          "odds": 30.0
+        },
+        {
+          "name": "Don Jefe",
+          "score": 8.0,
+          "odds": 22.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-02-03T15:30:00.000Z",
+      "tip": "Themanintheanorak",
+      "odds": 7.4,
+      "score": 60.0,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Themanintheanorak",
+          "score": 60.0,
+          "odds": 7.4
+        },
+        {
+          "name": "Sarandon",
+          "score": 21.0,
+          "odds": 24.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-02-03T16:05:00.000Z",
+      "tip": "Ready For Road",
+      "odds": 14.0,
+      "score": 22.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Ready For Road",
+          "score": 22.0,
+          "odds": 14.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-02-03T16:40:00.000Z",
+      "tip": "Green Hint",
+      "odds": 1.54,
+      "score": 46.0,
+      "grade": "POOR",
+      "runners": 3,
+      "top_5": [
+        {
+          "name": "Green Hint",
+          "score": 46.0,
+          "odds": 1.54
+        },
+        {
+          "name": "Desmond George",
+          "score": 16.0,
+          "odds": 60.0
+        },
+        {
+          "name": "Layenda",
+          "score": 2.0,
+          "odds": 260.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Fakenham",
+      "time": "2026-01-18T15:45:00.000Z",
+      "tip": "Lultimatom",
+      "odds": 1.67,
+      "score": 45.4,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Lultimatom",
+          "score": 45.4,
+          "odds": 1.67
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ffos Las",
+      "time": "2026-01-08T15:40:00.000Z",
+      "tip": "Out Of Focus",
+      "odds": 5.0,
+      "score": 35.0,
+      "grade": "LOW",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Out Of Focus",
+          "score": 35.0,
+          "odds": 5.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Hereford",
+      "time": "2026-01-26T15:00:00.000Z",
+      "tip": "Royal Mer",
+      "odds": 2.86,
+      "score": 39.6,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Royal Mer",
+          "score": 39.6,
+          "odds": 2.86
+        },
+        {
+          "name": "Wewillgowithplanb",
+          "score": 8.2,
+          "odds": 21.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Hereford",
+      "time": "2026-01-26T15:30:00.000Z",
+      "tip": "Lastroboy",
+      "odds": 8.2,
+      "score": 21.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Lastroboy",
+          "score": 21.0,
+          "odds": 8.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Hereford",
+      "time": "2026-01-26T16:30:00.000Z",
+      "tip": "Princess Keri",
+      "odds": 1.55,
+      "score": 59.9,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Princess Keri",
+          "score": 59.9,
+          "odds": 1.55
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T18:35:21Z",
+      "tip": "Silver Strike",
+      "odds": 7.4,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Silver Strike",
+          "score": 0.0,
+          "odds": 7.4
+        },
+        {
+          "name": "Swift Spirit",
+          "score": 0.0,
+          "odds": 11.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T19:30:23Z",
+      "tip": "Dark Dream",
+      "odds": 3.1,
+      "score": 0.0,
+      "grade": "",
+      "runners": 3,
+      "top_5": [
+        {
+          "name": "Dark Dream",
+          "score": 0.0,
+          "odds": 3.1
+        },
+        {
+          "name": "Noble Spirit",
+          "score": 0.0,
+          "odds": 2.9
+        },
+        {
+          "name": "Silver Runner",
+          "score": 0.0,
+          "odds": 4.1
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T20:05:23Z",
+      "tip": "Lucky Runner",
+      "odds": 4.2,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Lucky Runner",
+          "score": 0.0,
+          "odds": 4.2
+        },
+        {
+          "name": "Royal Runner",
+          "score": 0.0,
+          "odds": 3.1
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T20:21:43Z",
+      "tip": "Golden Strike",
+      "odds": 3.8,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Golden Strike",
+          "score": 0.0,
+          "odds": 3.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T20:35:20Z",
+      "tip": "Thunder Star",
+      "odds": 3.8,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Thunder Star",
+          "score": 0.0,
+          "odds": 3.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T20:59:11Z",
+      "tip": "Speed King",
+      "odds": 3.8,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Speed King",
+          "score": 0.0,
+          "odds": 3.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T21:00:20Z",
+      "tip": "Noble Bolt",
+      "odds": 3.1,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Noble Bolt",
+          "score": 0.0,
+          "odds": 3.1
+        },
+        {
+          "name": "Speed Spirit",
+          "score": 0.0,
+          "odds": 2.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T21:02:05Z",
+      "tip": "Golden Bolt",
+      "odds": 3.7,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Golden Bolt",
+          "score": 0.0,
+          "odds": 3.7
+        },
+        {
+          "name": "Royal Demon",
+          "score": 0.0,
+          "odds": 6.1
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T21:19:35Z",
+      "tip": "Thunder Strike",
+      "odds": 2.7,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Thunder Strike",
+          "score": 0.0,
+          "odds": 2.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T14:50:23Z",
+      "tip": "Silver Strike",
+      "odds": 3.6,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Silver Strike",
+          "score": 0.0,
+          "odds": 3.6
+        },
+        {
+          "name": "Thunder Runner",
+          "score": 0.0,
+          "odds": 6.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T16:20:21Z",
+      "tip": "Lucky Dream",
+      "odds": 5.2,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Lucky Dream",
+          "score": 0.0,
+          "odds": 5.2
+        },
+        {
+          "name": "Thunder Flash",
+          "score": 0.0,
+          "odds": 4.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T16:50:24Z",
+      "tip": "Dark Star",
+      "odds": 2.6,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Dark Star",
+          "score": 0.0,
+          "odds": 2.6
+        },
+        {
+          "name": "Noble King",
+          "score": 0.0,
+          "odds": 3.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T17:30:24Z",
+      "tip": "Golden Dream",
+      "odds": 2.7,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Golden Dream",
+          "score": 0.0,
+          "odds": 2.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T17:35:22Z",
+      "tip": "Speed Spirit",
+      "odds": 5.8,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Speed Spirit",
+          "score": 0.0,
+          "odds": 5.8
+        },
+        {
+          "name": "Thunder Arrow",
+          "score": 0.0,
+          "odds": 4.3
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T20:00:22Z",
+      "tip": "Thunder Arrow",
+      "odds": 2.5,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Thunder Arrow",
+          "score": 0.0,
+          "odds": 2.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T21:00:21Z",
+      "tip": "Lucky Dream",
+      "odds": 3.6,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Lucky Dream",
+          "score": 0.0,
+          "odds": 3.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-01-14T17:30:00Z",
+      "tip": "Rising Force",
+      "odds": 2.6315789473684212,
+      "score": 39.6,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Rising Force",
+          "score": 39.6,
+          "odds": 2.6315789473684212
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-01-14T18:00:00Z",
+      "tip": "Homme De Fer",
+      "odds": 3.3333333333333335,
+      "score": 31.8,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Homme De Fer",
+          "score": 31.8,
+          "odds": 3.3333333333333335
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-01-14T18:30:00Z",
+      "tip": "Church Wedding",
+      "odds": 2.857142857142857,
+      "score": 37.4,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Church Wedding",
+          "score": 37.4,
+          "odds": 2.857142857142857
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-01-19T13:08:00.000Z",
+      "tip": "Villalobos",
+      "odds": 13.5,
+      "score": 14.9,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Villalobos",
+          "score": 14.9,
+          "odds": 13.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-01-19T13:38:00.000Z",
+      "tip": "Magna",
+      "odds": 2.857142857142857,
+      "score": 37.4,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Magna",
+          "score": 37.4,
+          "odds": 2.857142857142857
+        },
+        {
+          "name": "Dr Ali",
+          "score": 10.0,
+          "odds": 16.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-01-21T18:00:00.000Z",
+      "tip": "Appier",
+      "odds": 6.6,
+      "score": 26.9,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Appier",
+          "score": 26.9,
+          "odds": 6.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T12:50:00.000Z",
+      "tip": "Age Of Time",
+      "odds": 7.2,
+      "score": 65.0,
+      "grade": "FAIR",
+      "runners": 10,
+      "top_5": [
+        {
+          "name": "Age Of Time",
+          "score": 65.0,
+          "odds": 7.2
+        },
+        {
+          "name": "Johnjay",
+          "score": 63.0,
+          "odds": 9.0
+        },
+        {
+          "name": "Berning Hot",
+          "score": 51.0,
+          "odds": 8.0
+        },
+        {
+          "name": "Brinton",
+          "score": 50.0,
+          "odds": 5.7
+        },
+        {
+          "name": "Mbappe",
+          "score": 49.0,
+          "odds": 3.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T13:25:00.000Z",
+      "tip": "Glistening",
+      "odds": 4.8,
+      "score": 63.0,
+      "grade": "FAIR",
+      "runners": 6,
+      "top_5": [
+        {
+          "name": "Glistening",
+          "score": 63.0,
+          "odds": 4.8
+        },
+        {
+          "name": "Nuptown Girl",
+          "score": 44.0,
+          "odds": 5.2
+        },
+        {
+          "name": "Too Hot To Tango",
+          "score": 41.0,
+          "odds": 3.35
+        },
+        {
+          "name": "Bronte Beach",
+          "score": 40.0,
+          "odds": 5.2
+        },
+        {
+          "name": "Naanas Crystal",
+          "score": 18.0,
+          "odds": 10.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T14:00:00.000Z",
+      "tip": "Unassuming",
+      "odds": 9.0,
+      "score": 76.0,
+      "grade": "GOOD",
+      "runners": 10,
+      "top_5": [
+        {
+          "name": "Unassuming",
+          "score": 76.0,
+          "odds": 9.0
+        },
+        {
+          "name": "High On Hope",
+          "score": 60.0,
+          "odds": 2.72
+        },
+        {
+          "name": "Sovereign Sea",
+          "score": 56.0,
+          "odds": 6.0
+        },
+        {
+          "name": "James Mchenry",
+          "score": 54.0,
+          "odds": 2.76
+        },
+        {
+          "name": "Harvey",
+          "score": 52.0,
+          "odds": 18.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T14:35:00.000Z",
+      "tip": "Pure Artistry",
+      "odds": 2.2,
+      "score": 56.0,
+      "grade": "FAIR",
+      "runners": 11,
+      "top_5": [
+        {
+          "name": "Pure Artistry",
+          "score": 56.0,
+          "odds": 2.2
+        },
+        {
+          "name": "Bullington Bry",
+          "score": 52.0,
+          "odds": 2.22
+        },
+        {
+          "name": "Portoro",
+          "score": 51.0,
+          "odds": 2.2
+        },
+        {
+          "name": "Adace",
+          "score": 42.0,
+          "odds": 2.2
+        },
+        {
+          "name": "Prefer The Sister",
+          "score": 41.0,
+          "odds": 2.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T15:10:00.000Z",
+      "tip": "Valley Ofthe Kings",
+      "odds": 3.4,
+      "score": 67.0,
+      "grade": "FAIR",
+      "runners": 10,
+      "top_5": [
+        {
+          "name": "Valley Ofthe Kings",
+          "score": 67.0,
+          "odds": 3.4
+        },
+        {
+          "name": "Mumayaz",
+          "score": 66.0,
+          "odds": 3.2
+        },
+        {
+          "name": "Cherry Cobbler",
+          "score": 59.0,
+          "odds": 3.35
+        },
+        {
+          "name": "Mythical Composer",
+          "score": 53.0,
+          "odds": 4.3
+        },
+        {
+          "name": "Robbo",
+          "score": 48.0,
+          "odds": 3.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T15:45:00.000Z",
+      "tip": "Fiddlers Green",
+      "odds": 3.2,
+      "score": 86.0,
+      "grade": "EXCELLENT",
+      "runners": 13,
+      "top_5": [
+        {
+          "name": "Fiddlers Green",
+          "score": 86.0,
+          "odds": 3.2
+        },
+        {
+          "name": "Golden Circet",
+          "score": 59.0,
+          "odds": 3.2
+        },
+        {
+          "name": "Something",
+          "score": 54.0,
+          "odds": 7.0
+        },
+        {
+          "name": "Must Believe",
+          "score": 53.0,
+          "odds": 3.2
+        },
+        {
+          "name": "Atlantic Sunset",
+          "score": 41.0,
+          "odds": 3.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T16:15:00.000Z",
+      "tip": "Magna",
+      "odds": 3.25,
+      "score": 54.0,
+      "grade": "POOR",
+      "runners": 11,
+      "top_5": [
+        {
+          "name": "Magna",
+          "score": 54.0,
+          "odds": 3.25
+        },
+        {
+          "name": "Liricist",
+          "score": 54.0,
+          "odds": 2.5
+        },
+        {
+          "name": "Friday Again",
+          "score": 48.0,
+          "odds": 2.5
+        },
+        {
+          "name": "Man On A Mission",
+          "score": 42.0,
+          "odds": 3.35
+        },
+        {
+          "name": "Porfin",
+          "score": 41.0,
+          "odds": 8.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Kinsley",
+      "time": "2026-01-19T18:08:00.000Z",
+      "tip": "Drumdoit Lass",
+      "odds": 2.0408163265306123,
+      "score": 48.1,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Drumdoit Lass",
+          "score": 48.1,
+          "odds": 2.0408163265306123
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T18:12:08Z",
+      "tip": "Golden King",
+      "odds": 2.5,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Golden King",
+          "score": 0.0,
+          "odds": 2.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T18:20:21Z",
+      "tip": "Mighty Demon",
+      "odds": 6.6,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Mighty Demon",
+          "score": 0.0,
+          "odds": 6.6
+        },
+        {
+          "name": "Speed Star",
+          "score": 0.0,
+          "odds": 9.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T20:20:20Z",
+      "tip": "Lucky Star",
+      "odds": 3.4,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Lucky Star",
+          "score": 0.0,
+          "odds": 3.4
+        },
+        {
+          "name": "Speed Strike",
+          "score": 0.0,
+          "odds": 3.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T20:22:25Z",
+      "tip": "Speed Arrow",
+      "odds": 2.6,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Speed Arrow",
+          "score": 0.0,
+          "odds": 2.6
+        },
+        {
+          "name": "Swift Arrow",
+          "score": 0.0,
+          "odds": 3.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T20:36:43Z",
+      "tip": "Silver Dream",
+      "odds": 4.3,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Silver Dream",
+          "score": 0.0,
+          "odds": 4.3
+        },
+        {
+          "name": "Speed Demon",
+          "score": 0.0,
+          "odds": 6.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T20:37:05Z",
+      "tip": "Lucky Spirit",
+      "odds": 5.1,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Lucky Spirit",
+          "score": 0.0,
+          "odds": 5.1
+        },
+        {
+          "name": "Swift Spirit",
+          "score": 0.0,
+          "odds": 6.1
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T21:01:43Z",
+      "tip": "Dark Star",
+      "odds": 3.3,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Dark Star",
+          "score": 0.0,
+          "odds": 3.3
+        },
+        {
+          "name": "Silver Demon",
+          "score": 0.0,
+          "odds": 3.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T21:19:21Z",
+      "tip": "Dark Flash",
+      "odds": 3.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Dark Flash",
+          "score": 0.0,
+          "odds": 3.0
+        },
+        {
+          "name": "Mighty Star",
+          "score": 0.0,
+          "odds": 5.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-09T15:50:24Z",
+      "tip": "Silver Flash",
+      "odds": 3.2,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Silver Flash",
+          "score": 0.0,
+          "odds": 3.2
+        },
+        {
+          "name": "Thunder Spirit",
+          "score": 0.0,
+          "odds": 3.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-09T18:50:23Z",
+      "tip": "Golden Bolt",
+      "odds": 7.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Golden Bolt",
+          "score": 0.0,
+          "odds": 7.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-09T19:30:23Z",
+      "tip": "Royal Spirit",
+      "odds": 5.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Royal Spirit",
+          "score": 0.0,
+          "odds": 5.0
+        },
+        {
+          "name": "Thunder Strike",
+          "score": 0.0,
+          "odds": 8.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-09T20:20:21Z",
+      "tip": "Royal King",
+      "odds": 4.4,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Royal King",
+          "score": 0.0,
+          "odds": 4.4
+        },
+        {
+          "name": "Silver Strike",
+          "score": 0.0,
+          "odds": 4.1
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-14T13:25:00Z",
+      "tip": "Giles Glory",
+      "odds": 2.857142857142857,
+      "score": 37.4,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Giles Glory",
+          "score": 37.4,
+          "odds": 2.857142857142857
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-14T15:05:00Z",
+      "tip": "Krissy",
+      "odds": 3.4,
+      "score": 34.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Krissy",
+          "score": 34.2,
+          "odds": 3.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-19T13:20:00.000Z",
+      "tip": "Zamek",
+      "odds": 4.2,
+      "score": 33.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Zamek",
+          "score": 33.2,
+          "odds": 4.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-19T15:50:00.000Z",
+      "tip": "Begin The Luck",
+      "odds": 3.571428571428571,
+      "score": 29.2,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Begin The Luck",
+          "score": 29.2,
+          "odds": 3.571428571428571
+        },
+        {
+          "name": "Jackeline",
+          "score": 14.9,
+          "odds": 27.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-21T13:05:00.000Z",
+      "tip": "Evenepoel",
+      "odds": 3.95,
+      "score": 33.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Evenepoel",
+          "score": 33.2,
+          "odds": 3.95
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-21T15:08:00.000Z",
+      "tip": "Hardstyle",
+      "odds": 2.2222222222222223,
+      "score": 45.4,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Hardstyle",
+          "score": 45.4,
+          "odds": 2.2222222222222223
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-21T15:38:00.000Z",
+      "tip": "Far Too Fizzy",
+      "odds": 3.45,
+      "score": 33.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Far Too Fizzy",
+          "score": 33.2,
+          "odds": 3.45
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-01-15T14:52:00Z",
+      "tip": "Demoiselle Kap",
+      "odds": 11.0,
+      "score": 15.9,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Demoiselle Kap",
+          "score": 15.9,
+          "odds": 11.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-01-15T15:27:00Z",
+      "tip": "Take All",
+      "odds": 8.2,
+      "score": 15.9,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Take All",
+          "score": 15.9,
+          "odds": 8.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-01-15T16:02:00Z",
+      "tip": "The Procrastinator",
+      "odds": 6.4,
+      "score": 22.6,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "The Procrastinator",
+          "score": 22.6,
+          "odds": 6.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T13:13:00.000Z",
+      "tip": "Wolf Rayet",
+      "odds": 4.7,
+      "score": 50.0,
+      "grade": "POOR",
+      "runners": 8,
+      "top_5": [
+        {
+          "name": "Wolf Rayet",
+          "score": 50.0,
+          "odds": 4.7
+        },
+        {
+          "name": "Gallivanted",
+          "score": 46.0,
+          "odds": 6.4
+        },
+        {
+          "name": "Down To Business",
+          "score": 44.0,
+          "odds": 7.2
+        },
+        {
+          "name": "King Al",
+          "score": 44.0,
+          "odds": 3.55
+        },
+        {
+          "name": "Talakan",
+          "score": 43.0,
+          "odds": 6.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T13:48:00.000Z",
+      "tip": "Catwalk Girl",
+      "odds": 2.0,
+      "score": 57.0,
+      "grade": "FAIR",
+      "runners": 9,
+      "top_5": [
+        {
+          "name": "Catwalk Girl",
+          "score": 57.0,
+          "odds": 2.0
+        },
+        {
+          "name": "No Flies On Her",
+          "score": 55.0,
+          "odds": 2.0
+        },
+        {
+          "name": "Borna Gem",
+          "score": 50.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Diamond Du Berlais",
+          "score": 44.0,
+          "odds": 1.34
+        },
+        {
+          "name": "Warrioress",
+          "score": 43.0,
+          "odds": 1.22
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T14:23:00.000Z",
+      "tip": "Sherminator",
+      "odds": 2.6,
+      "score": 58.0,
+      "grade": "FAIR",
+      "runners": 9,
+      "top_5": [
+        {
+          "name": "Sherminator",
+          "score": 58.0,
+          "odds": 2.6
+        },
+        {
+          "name": "Kiwi Rush",
+          "score": 51.0,
+          "odds": 2.44
+        },
+        {
+          "name": "First Candidate",
+          "score": 48.0,
+          "odds": 1.8
+        },
+        {
+          "name": "Drakaris",
+          "score": 46.0,
+          "odds": 1.8
+        },
+        {
+          "name": "Emerald Time",
+          "score": 42.0,
+          "odds": 1.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T14:58:00.000Z",
+      "tip": "Rodney",
+      "odds": 2.7,
+      "score": 88.0,
+      "grade": "EXCELLENT",
+      "runners": 8,
+      "top_5": [
+        {
+          "name": "Rodney",
+          "score": 88.0,
+          "odds": 2.7
+        },
+        {
+          "name": "Toothless",
+          "score": 87.0,
+          "odds": 3.0
+        },
+        {
+          "name": "Joker De Mai",
+          "score": 61.0,
+          "odds": 2.36
+        },
+        {
+          "name": "Palamon",
+          "score": 45.0,
+          "odds": 2.0
+        },
+        {
+          "name": "Charles Ritz",
+          "score": 40.0,
+          "odds": 1.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T15:33:00.000Z",
+      "tip": "Sallyville Lady",
+      "odds": 4.4,
+      "score": 73.0,
+      "grade": "GOOD",
+      "runners": 11,
+      "top_5": [
+        {
+          "name": "Sallyville Lady",
+          "score": 73.0,
+          "odds": 4.4
+        },
+        {
+          "name": "Greyval",
+          "score": 65.0,
+          "odds": 14.0
+        },
+        {
+          "name": "Hard Dealt",
+          "score": 61.0,
+          "odds": 6.2
+        },
+        {
+          "name": "Pismo Beach",
+          "score": 58.0,
+          "odds": 7.0
+        },
+        {
+          "name": "Hellfire Princess",
+          "score": 52.0,
+          "odds": 5.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T16:07:00.000Z",
+      "tip": "Shuil Ceoil",
+      "odds": 2.0,
+      "score": 65.0,
+      "grade": "FAIR",
+      "runners": 12,
+      "top_5": [
+        {
+          "name": "Shuil Ceoil",
+          "score": 65.0,
+          "odds": 2.0
+        },
+        {
+          "name": "Ocean Walz",
+          "score": 63.0,
+          "odds": 2.0
+        },
+        {
+          "name": "Moorland Rambler",
+          "score": 58.0,
+          "odds": 2.0
+        },
+        {
+          "name": "Unleash The Beast",
+          "score": 41.0,
+          "odds": 8.0
+        },
+        {
+          "name": "Windsor Blue",
+          "score": 40.0,
+          "odds": 2.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T16:42:00.000Z",
+      "tip": "Barton Snow",
+      "odds": 1.71,
+      "score": 92.0,
+      "grade": "EXCELLENT",
+      "runners": 6,
+      "top_5": [
+        {
+          "name": "Barton Snow",
+          "score": 92.0,
+          "odds": 1.71
+        },
+        {
+          "name": "What A Glance",
+          "score": 79.0,
+          "odds": 7.8
+        },
+        {
+          "name": "Jefferys Cross",
+          "score": 75.0,
+          "odds": 3.5
+        },
+        {
+          "name": "Rewritetherules",
+          "score": 74.0,
+          "odds": 1.35
+        },
+        {
+          "name": "Bardenstown Lad",
+          "score": 67.0,
+          "odds": 1.35
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Market Rasen",
+      "time": "2026-01-16T14:05:00Z",
+      "tip": "Doyen Du Bar",
+      "odds": 3.55,
+      "score": 36.0,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Doyen Du Bar",
+          "score": 36.0,
+          "odds": 3.55
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Market Rasen",
+      "time": "2026-01-16T14:40:00.000Z",
+      "tip": "The Flaggy Shore",
+      "odds": 3.9,
+      "score": 31.8,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "The Flaggy Shore",
+          "score": 31.8,
+          "odds": 3.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Naas",
+      "time": "2026-01-09T13:13:00.000Z",
+      "tip": "Run For Cover",
+      "odds": 2.6,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Run For Cover",
+          "score": 0.0,
+          "odds": 2.6
+        },
+        {
+          "name": "Cumberland River",
+          "score": 0.0,
+          "odds": 4.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Naas",
+      "time": "2026-01-09T13:43:00.000Z",
+      "tip": "Saint Baco",
+      "odds": 3.45,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Saint Baco",
+          "score": 0.0,
+          "odds": 3.45
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Naas",
+      "time": "2026-01-09T14:13:00.000Z",
+      "tip": "Hartford",
+      "odds": 3.65,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Hartford",
+          "score": 0.0,
+          "odds": 3.65
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Naas",
+      "time": "2026-01-09T14:43:00.000Z",
+      "tip": "Kurasso Blue",
+      "odds": 2.38,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Kurasso Blue",
+          "score": 0.0,
+          "odds": 2.38
+        },
+        {
+          "name": "Kurasso Blue",
+          "score": 0.0,
+          "odds": 2.08
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Naas",
+      "time": "2026-01-09T15:13:00.000Z",
+      "tip": "Karamoja",
+      "odds": 2.3,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Karamoja",
+          "score": 0.0,
+          "odds": 2.3
+        },
+        {
+          "name": "Karamoja",
+          "score": 0.0,
+          "odds": 2.02
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newbury",
+      "time": "2026-01-14T12:35:00Z",
+      "tip": "Sober Glory",
+      "odds": 1.4285714285714286,
+      "score": 63.8,
+      "grade": "EXCELLENT",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Sober Glory",
+          "score": 63.8,
+          "odds": 1.4285714285714286
+        },
+        {
+          "name": "Mescalero",
+          "score": 8.2,
+          "odds": 50.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-09T13:27:00.000Z",
+      "tip": "Cardinal Point",
+      "odds": 2.2,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Cardinal Point",
+          "score": 0.0,
+          "odds": 2.2
+        },
+        {
+          "name": "King Chaos",
+          "score": 0.0,
+          "odds": 3.05
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-09T13:57:00.000Z",
+      "tip": "Asia Force",
+      "odds": 1.91,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Asia Force",
+          "score": 0.0,
+          "odds": 1.91
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-09T14:57:00.000Z",
+      "tip": "Alba Gu Brath",
+      "odds": 1.51,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Alba Gu Brath",
+          "score": 0.0,
+          "odds": 1.51
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-15T11:45:00Z",
+      "tip": "So Proud",
+      "odds": 4.9,
+      "score": 26.9,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "So Proud",
+          "score": 26.9,
+          "odds": 4.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-15T12:50:00Z",
+      "tip": "Fat Harry",
+      "odds": 3.7,
+      "score": 33.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Fat Harry",
+          "score": 33.2,
+          "odds": 3.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-15T14:35:00Z",
+      "tip": "Scairp Dubh",
+      "odds": 11.5,
+      "score": 15.9,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Scairp Dubh",
+          "score": 15.9,
+          "odds": 11.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-15T15:45:00Z",
+      "tip": "Kilaro",
+      "odds": 3.4,
+      "score": 33.2,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Kilaro",
+          "score": 33.2,
+          "odds": 3.4
+        },
+        {
+          "name": "Royal Maggs",
+          "score": 8.2,
+          "odds": 32.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-16T13:05:00.000Z",
+      "tip": "Judgment Call",
+      "odds": 5.4,
+      "score": 33.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Judgment Call",
+          "score": 33.2,
+          "odds": 5.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-16T13:40:00.000Z",
+      "tip": "Nikki Swango",
+      "odds": 9.6,
+      "score": 33.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Nikki Swango",
+          "score": 33.2,
+          "odds": 9.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-27T12:45:00.000Z",
+      "tip": "I C U In My Dreams",
+      "odds": 2.7,
+      "score": 37.4,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "I C U In My Dreams",
+          "score": 37.4,
+          "odds": 2.7
+        },
+        {
+          "name": "Aristelle",
+          "score": 5.0,
+          "odds": 30.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-27T15:00:00.000Z",
+      "tip": "Just Call Me Lucy",
+      "odds": 3.35,
+      "score": 33.2,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Just Call Me Lucy",
+          "score": 33.2,
+          "odds": 3.35
+        },
+        {
+          "name": "Pitwood Road",
+          "score": 33.2,
+          "odds": 4.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-27T15:35:00.000Z",
+      "tip": "The Big Breac",
+      "odds": 2.68,
+      "score": 42.0,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "The Big Breac",
+          "score": 42.0,
+          "odds": 2.68
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-27T16:10:00.000Z",
+      "tip": "Quickasican",
+      "odds": 50.0,
+      "score": 10.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Quickasican",
+          "score": 10.0,
+          "odds": 50.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-02-04T16:23:00.000Z",
+      "tip": "Onyeisi",
+      "odds": 4.1,
+      "score": 56.0,
+      "grade": "FAIR",
+      "runners": 9,
+      "top_5": [
+        {
+          "name": "Onyeisi",
+          "score": 56.0,
+          "odds": 4.1
+        },
+        {
+          "name": "Trust No One",
+          "score": 50.0,
+          "odds": 5.4
+        },
+        {
+          "name": "Mr Nippy",
+          "score": 36.0,
+          "odds": 9.0
+        },
+        {
+          "name": "Lope Harswell",
+          "score": 35.0,
+          "odds": 8.2
+        },
+        {
+          "name": "Very Demure",
+          "score": 31.0,
+          "odds": 2.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-02-04T17:00:00.000Z",
+      "tip": "Captain Vallo",
+      "odds": 7.8,
+      "score": 66.0,
+      "grade": "FAIR",
+      "runners": 8,
+      "top_5": [
+        {
+          "name": "Captain Vallo",
+          "score": 66.0,
+          "odds": 7.8
+        },
+        {
+          "name": "Teardrops",
+          "score": 64.0,
+          "odds": 2.0
+        },
+        {
+          "name": "Asadjumeirah",
+          "score": 55.0,
+          "odds": 2.02
+        },
+        {
+          "name": "Howzak",
+          "score": 49.0,
+          "odds": 2.0
+        },
+        {
+          "name": "East Tyrone",
+          "score": 34.0,
+          "odds": 1.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-02-04T17:30:00.000Z",
+      "tip": "Yorkshire Glory",
+      "odds": 2.0,
+      "score": 87.0,
+      "grade": "EXCELLENT",
+      "runners": 8,
+      "top_5": [
+        {
+          "name": "Yorkshire Glory",
+          "score": 87.0,
+          "odds": 2.0
+        },
+        {
+          "name": "Spartan Fighter",
+          "score": 68.0,
+          "odds": 3.05
+        },
+        {
+          "name": "Flash The Dash",
+          "score": 58.0,
+          "odds": 8.2
+        },
+        {
+          "name": "Atomic Mass",
+          "score": 43.0,
+          "odds": 1.6
+        },
+        {
+          "name": "Pit Boss",
+          "score": 42.0,
+          "odds": 5.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-02-04T18:00:00.000Z",
+      "tip": "Spun To Gold",
+      "odds": 2.0,
+      "score": 70.0,
+      "grade": "GOOD",
+      "runners": 7,
+      "top_5": [
+        {
+          "name": "Spun To Gold",
+          "score": 70.0,
+          "odds": 2.0
+        },
+        {
+          "name": "Bibendum",
+          "score": 48.0,
+          "odds": 2.14
+        },
+        {
+          "name": "Yaahobby",
+          "score": 30.0,
+          "odds": 1.9
+        },
+        {
+          "name": "Rajstar",
+          "score": 30.0,
+          "odds": 1.9
+        },
+        {
+          "name": "Pebble Dash",
+          "score": 29.0,
+          "odds": 1.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T17:32:08Z",
+      "tip": "Thunder Runner",
+      "odds": 6.3,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Thunder Runner",
+          "score": 0.0,
+          "odds": 6.3
+        },
+        {
+          "name": "Thunder Strike",
+          "score": 0.0,
+          "odds": 4.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T19:50:23Z",
+      "tip": "Golden Strike",
+      "odds": 3.2,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Golden Strike",
+          "score": 0.0,
+          "odds": 3.2
+        },
+        {
+          "name": "Royal Runner",
+          "score": 0.0,
+          "odds": 6.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T20:21:18Z",
+      "tip": "Thunder Arrow",
+      "odds": 2.9,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Thunder Arrow",
+          "score": 0.0,
+          "odds": 2.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T20:30:23Z",
+      "tip": "Dark King",
+      "odds": 7.3,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Dark King",
+          "score": 0.0,
+          "odds": 7.3
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T20:33:48Z",
+      "tip": "Golden King",
+      "odds": 2.7,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Golden King",
+          "score": 0.0,
+          "odds": 2.7
+        },
+        {
+          "name": "Thunder King",
+          "score": 0.0,
+          "odds": 3.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T20:39:21Z",
+      "tip": "Golden Runner",
+      "odds": 2.5,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Golden Runner",
+          "score": 0.0,
+          "odds": 2.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T20:54:35Z",
+      "tip": "Dark Demon",
+      "odds": 6.1,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Dark Demon",
+          "score": 0.0,
+          "odds": 6.1
+        },
+        {
+          "name": "Lucky Runner",
+          "score": 0.0,
+          "odds": 7.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T21:18:13Z",
+      "tip": "Mighty Dream",
+      "odds": 4.1,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Mighty Dream",
+          "score": 0.0,
+          "odds": 4.1
+        },
+        {
+          "name": "Royal Dream",
+          "score": 0.0,
+          "odds": 7.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T21:18:48Z",
+      "tip": "Golden King",
+      "odds": 2.8,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Golden King",
+          "score": 0.0,
+          "odds": 2.8
+        },
+        {
+          "name": "Golden Spirit",
+          "score": 0.0,
+          "odds": 3.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-09T16:00:21Z",
+      "tip": "Noble Strike",
+      "odds": 3.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Noble Strike",
+          "score": 0.0,
+          "odds": 3.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-09T18:00:22Z",
+      "tip": "Silver Arrow",
+      "odds": 3.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Silver Arrow",
+          "score": 0.0,
+          "odds": 3.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-09T18:05:23Z",
+      "tip": "Royal Demon",
+      "odds": 4.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Royal Demon",
+          "score": 0.0,
+          "odds": 4.0
+        },
+        {
+          "name": "Speed Star",
+          "score": 0.0,
+          "odds": 4.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-09T20:30:24Z",
+      "tip": "Silver Runner",
+      "odds": 3.4,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Silver Runner",
+          "score": 0.0,
+          "odds": 3.4
+        },
+        {
+          "name": "Thunder Strike",
+          "score": 0.0,
+          "odds": 7.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Nottingham",
+      "time": "2026-01-19T21:28:00.000Z",
+      "tip": "Saheel Charm",
+      "odds": 1.8181818181818181,
+      "score": 53.9,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Saheel Charm",
+          "score": 53.9,
+          "odds": 1.8181818181818181
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Plumpton",
+      "time": "2026-01-26T13:20:00.000Z",
+      "tip": "Lola De Magny",
+      "odds": 50.0,
+      "score": 3.2,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Lola De Magny",
+          "score": 3.2,
+          "odds": 50.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Plumpton",
+      "time": "2026-01-26T13:50:00.000Z",
+      "tip": "Eddie My Eagle",
+      "odds": 3.75,
+      "score": 36.0,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Eddie My Eagle",
+          "score": 36.0,
+          "odds": 3.75
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Plumpton",
+      "time": "2026-01-26T14:20:00.000Z",
+      "tip": "Superstylin",
+      "odds": 2.96,
+      "score": 39.6,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Superstylin",
+          "score": 39.6,
+          "odds": 2.96
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Plumpton",
+      "time": "2026-01-26T14:50:00.000Z",
+      "tip": "Lucky Manifest",
+      "odds": 4.0,
+      "score": 34.0,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Lucky Manifest",
+          "score": 34.0,
+          "odds": 4.0
+        },
+        {
+          "name": "The Famous Five",
+          "score": 8.2,
+          "odds": 18.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-01-26T13:10:00.000Z",
+      "tip": "Cloudio",
+      "odds": 65.0,
+      "score": 5.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Cloudio",
+          "score": 5.0,
+          "odds": 65.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-01-26T14:10:00.000Z",
+      "tip": "Miss Doyenne",
+      "odds": 3.45,
+      "score": 37.4,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Miss Doyenne",
+          "score": 37.4,
+          "odds": 3.45
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-01-26T15:10:00.000Z",
+      "tip": "Im Slippy",
+      "odds": 2.92,
+      "score": 39.6,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Im Slippy",
+          "score": 39.6,
+          "odds": 2.92
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-01-26T16:10:00.000Z",
+      "tip": "My Friend The Wind",
+      "odds": 32.0,
+      "score": 6.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "My Friend The Wind",
+          "score": 6.0,
+          "odds": 32.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T12:28:00.000Z",
+      "tip": "Vanillier",
+      "odds": 3.8,
+      "score": 66.0,
+      "grade": "FAIR",
+      "runners": 11,
+      "top_5": [
+        {
+          "name": "Vanillier",
+          "score": 66.0,
+          "odds": 3.8
+        },
+        {
+          "name": "Grange Soldier",
+          "score": 50.0,
+          "odds": 2.5
+        },
+        {
+          "name": "The Goffer",
+          "score": 45.0,
+          "odds": 2.5
+        },
+        {
+          "name": "Lough Derg Spirit",
+          "score": 34.0,
+          "odds": 2.5
+        },
+        {
+          "name": "Shannon Royale",
+          "score": 34.0,
+          "odds": 2.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T13:03:00.000Z",
+      "tip": "Nine Graces",
+      "odds": 2.4,
+      "score": 60.0,
+      "grade": "FAIR",
+      "runners": 7,
+      "top_5": [
+        {
+          "name": "Nine Graces",
+          "score": 60.0,
+          "odds": 2.4
+        },
+        {
+          "name": "Hardy Diamond",
+          "score": 57.0,
+          "odds": 2.4
+        },
+        {
+          "name": "Gaoth Chuil",
+          "score": 56.0,
+          "odds": 2.4
+        },
+        {
+          "name": "Sophia Rose",
+          "score": 56.0,
+          "odds": 2.4
+        },
+        {
+          "name": "Miss Pronunciation",
+          "score": 44.0,
+          "odds": 2.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T13:38:00.000Z",
+      "tip": "Mino Des Mottes",
+      "odds": 2.0,
+      "score": 56.0,
+      "grade": "FAIR",
+      "runners": 11,
+      "top_5": [
+        {
+          "name": "Mino Des Mottes",
+          "score": 56.0,
+          "odds": 2.0
+        },
+        {
+          "name": "Forceonmyown",
+          "score": 44.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Too Bossy For Us",
+          "score": 32.0,
+          "odds": 2.1
+        },
+        {
+          "name": "Royal Belief",
+          "score": 28.0,
+          "odds": 2.0
+        },
+        {
+          "name": "Ballet Queen",
+          "score": 20.0,
+          "odds": 1.22
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T14:13:00.000Z",
+      "tip": "Harpy Eagle",
+      "odds": 1.22,
+      "score": 51.0,
+      "grade": "POOR",
+      "runners": 5,
+      "top_5": [
+        {
+          "name": "Harpy Eagle",
+          "score": 51.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Loyal Praetorian",
+          "score": 38.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Can Happen",
+          "score": 33.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Kashchei",
+          "score": 31.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Peppers Corner",
+          "score": 14.0,
+          "odds": 1.22
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T14:48:00.000Z",
+      "tip": "Jacko Star",
+      "odds": 1.22,
+      "score": 40.0,
+      "grade": "POOR",
+      "runners": 7,
+      "top_5": [
+        {
+          "name": "Jacko Star",
+          "score": 40.0,
+          "odds": 1.22
+        },
+        {
+          "name": "James The Brave",
+          "score": 38.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Lough Nigara",
+          "score": 37.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Mojoe",
+          "score": 29.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Needs Must",
+          "score": 29.0,
+          "odds": 1.22
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T15:23:00.000Z",
+      "tip": "That Danny Feeling",
+      "odds": 1.22,
+      "score": 65.0,
+      "grade": "FAIR",
+      "runners": 7,
+      "top_5": [
+        {
+          "name": "That Danny Feeling",
+          "score": 65.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Fillyoureye",
+          "score": 59.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Bergamasquo",
+          "score": 37.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Lord Tobin",
+          "score": 35.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Frankies Freebie",
+          "score": 32.0,
+          "odds": 1.22
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T15:58:00.000Z",
+      "tip": "Magic Boum",
+      "odds": 1.22,
+      "score": 63.0,
+      "grade": "FAIR",
+      "runners": 9,
+      "top_5": [
+        {
+          "name": "Magic Boum",
+          "score": 63.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Lucky Viv",
+          "score": 62.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Pebble Bleu",
+          "score": 48.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Dancing After Dark",
+          "score": 47.0,
+          "odds": 1.22
+        },
+        {
+          "name": "Catchabird",
+          "score": 43.0,
+          "odds": 1.22
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Sedgefield",
+      "time": "2026-02-04T13:32:00.000Z",
+      "tip": "Swingingonthesteel",
+      "odds": 2.52,
+      "score": 72.0,
+      "grade": "GOOD",
+      "runners": 8,
+      "top_5": [
+        {
+          "name": "Swingingonthesteel",
+          "score": 72.0,
+          "odds": 2.52
+        },
+        {
+          "name": "Noble George",
+          "score": 53.0,
+          "odds": 2.1
+        },
+        {
+          "name": "Shinealight",
+          "score": 47.0,
+          "odds": 2.1
+        },
+        {
+          "name": "Tea Boy",
+          "score": 46.0,
+          "odds": 2.1
+        },
+        {
+          "name": "Art Dancer",
+          "score": 44.0,
+          "odds": 2.1
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Sedgefield",
+      "time": "2026-02-04T14:07:00.000Z",
+      "tip": "Huit Reflets",
+      "odds": 3.3,
+      "score": 92.0,
+      "grade": "EXCELLENT",
+      "runners": 8,
+      "top_5": [
+        {
+          "name": "Huit Reflets",
+          "score": 92.0,
+          "odds": 3.3
+        },
+        {
+          "name": "Ideallko",
+          "score": 77.0,
+          "odds": 7.8
+        },
+        {
+          "name": "Paramaribo",
+          "score": 70.0,
+          "odds": 2.4
+        },
+        {
+          "name": "Too Cool Forshrule",
+          "score": 66.0,
+          "odds": 2.4
+        },
+        {
+          "name": "Natural Ability",
+          "score": 58.0,
+          "odds": 2.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Sedgefield",
+      "time": "2026-02-04T14:42:00.000Z",
+      "tip": "Snapius",
+      "odds": 2.46,
+      "score": 50.0,
+      "grade": "POOR",
+      "runners": 8,
+      "top_5": [
+        {
+          "name": "Snapius",
+          "score": 50.0,
+          "odds": 2.46
+        },
+        {
+          "name": "Prized Jet",
+          "score": 50.0,
+          "odds": 5.9
+        },
+        {
+          "name": "Linden Lane",
+          "score": 44.0,
+          "odds": 2.4
+        },
+        {
+          "name": "Animato",
+          "score": 41.0,
+          "odds": 2.4
+        },
+        {
+          "name": "Estate Planning",
+          "score": 35.0,
+          "odds": 2.42
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Sedgefield",
+      "time": "2026-02-04T15:17:00.000Z",
+      "tip": "Double Digits",
+      "odds": 2.9,
+      "score": 69.0,
+      "grade": "FAIR",
+      "runners": 6,
+      "top_5": [
+        {
+          "name": "Double Digits",
+          "score": 69.0,
+          "odds": 2.9
+        },
+        {
+          "name": "Sea Thrift",
+          "score": 65.0,
+          "odds": 3.5
+        },
+        {
+          "name": "Raffles Wonder",
+          "score": 51.0,
+          "odds": 1.9
+        },
+        {
+          "name": "Supreme George",
+          "score": 48.0,
+          "odds": 2.9
+        },
+        {
+          "name": "Treaty Boy",
+          "score": 47.0,
+          "odds": 1.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Sedgefield",
+      "time": "2026-02-04T15:52:00.000Z",
+      "tip": "Honey Im Good",
+      "odds": 2.3,
+      "score": 49.0,
+      "grade": "POOR",
+      "runners": 7,
+      "top_5": [
+        {
+          "name": "Honey Im Good",
+          "score": 49.0,
+          "odds": 2.3
+        },
+        {
+          "name": "Scudamore",
+          "score": 41.0,
+          "odds": 2.3
+        },
+        {
+          "name": "Ballin Bay",
+          "score": 39.0,
+          "odds": 2.3
+        },
+        {
+          "name": "East Eagle",
+          "score": 36.0,
+          "odds": 3.8
+        },
+        {
+          "name": "Topkapi Star",
+          "score": 35.0,
+          "odds": 2.3
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Sedgefield",
+      "time": "2026-02-04T16:28:00.000Z",
+      "tip": "Getaway With You",
+      "odds": 5.0,
+      "score": 111.0,
+      "grade": "EXCELLENT",
+      "runners": 8,
+      "top_5": [
+        {
+          "name": "Getaway With You",
+          "score": 111.0,
+          "odds": 5.0
+        },
+        {
+          "name": "Port Or Starboard",
+          "score": 52.0,
+          "odds": 2.1
+        },
+        {
+          "name": "Peckforton Hills",
+          "score": 49.0,
+          "odds": 5.3
+        },
+        {
+          "name": "Ruler Legend",
+          "score": 41.0,
+          "odds": 6.8
+        },
+        {
+          "name": "Thank You Blue",
+          "score": 37.0,
+          "odds": 2.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Southwell",
+      "time": "2026-01-20T18:00:00Z",
+      "tip": "Si Grass",
+      "odds": 2.5,
+      "score": 41.0,
+      "grade": "GOOD",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Si Grass",
+          "score": 41.0,
+          "odds": 2.5
+        },
+        {
+          "name": "Si Grass",
+          "score": 41.0,
+          "odds": 2.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Southwell",
+      "time": "2026-01-20T18:30:00Z",
+      "tip": "Hows The Guvnor",
+      "odds": 9.0,
+      "score": 15.9,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Hows The Guvnor",
+          "score": 15.9,
+          "odds": 9.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Southwell",
+      "time": "2026-01-23T17:45:00.000Z",
+      "tip": "Miss Mendoza",
+      "odds": 7.8,
+      "score": 26.9,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Miss Mendoza",
+          "score": 26.9,
+          "odds": 7.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Star Pelaw",
+      "time": "2026-01-18T18:46:00.000Z",
+      "tip": "Killieford Goram",
+      "odds": 1.1764705882352942,
+      "score": 72.4,
+      "grade": "EXCELLENT",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Killieford Goram",
+          "score": 72.4,
+          "odds": 1.1764705882352942
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Star Pelaw",
+      "time": "2026-01-18T21:26:00.000Z",
+      "tip": "Leathems Bluey",
+      "odds": 1.7301038062283738,
+      "score": 56.7,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Leathems Bluey",
+          "score": 56.7,
+          "odds": 1.7301038062283738
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Star Pelaw",
+      "time": "2026-01-18T21:41:00.000Z",
+      "tip": "Sunnyside Jayden",
+      "odds": 1.5384615384615383,
+      "score": 59.9,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Sunnyside Jayden",
+          "score": 59.9,
+          "odds": 1.5384615384615383
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Taunton",
+      "time": "2026-01-08T16:00:00.000Z",
+      "tip": "Getmetothemoon",
+      "odds": 4.2,
+      "score": 39.7,
+      "grade": "LOW",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Getmetothemoon",
+          "score": 39.7,
+          "odds": 4.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Taunton",
+      "time": "2026-02-03T13:40:00.000Z",
+      "tip": "Kings Order",
+      "odds": 120.0,
+      "score": 26.0,
+      "grade": "POOR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Kings Order",
+          "score": 26.0,
+          "odds": 120.0
+        },
+        {
+          "name": "Like A Dancer",
+          "score": 10.0,
+          "odds": 130.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Taunton",
+      "time": "2026-02-03T14:12:00.000Z",
+      "tip": "Wandering Ego",
+      "odds": 3.0,
+      "score": 66.0,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Wandering Ego",
+          "score": 66.0,
+          "odds": 3.0
+        },
+        {
+          "name": "Crest Of Valour",
+          "score": 13.0,
+          "odds": 80.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Taunton",
+      "time": "2026-02-03T14:45:00.000Z",
+      "tip": "Beauty In The Park",
+      "odds": 1.93,
+      "score": 49.0,
+      "grade": "POOR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Beauty In The Park",
+          "score": 49.0,
+          "odds": 1.93
+        },
+        {
+          "name": "Yeld To Call",
+          "score": 46.0,
+          "odds": 8.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Taunton",
+      "time": "2026-02-03T16:45:00.000Z",
+      "tip": "Ourbrowneyedgirl",
+      "odds": 4.8,
+      "score": 47.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Ourbrowneyedgirl",
+          "score": 47.0,
+          "odds": 4.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T18:05:23Z",
+      "tip": "Mighty Runner",
+      "odds": 6.5,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Mighty Runner",
+          "score": 0.0,
+          "odds": 6.5
+        },
+        {
+          "name": "Swift Star",
+          "score": 0.0,
+          "odds": 3.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T18:50:23Z",
+      "tip": "Lucky Flash",
+      "odds": 5.7,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Lucky Flash",
+          "score": 0.0,
+          "odds": 5.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T20:19:11Z",
+      "tip": "Dark Runner",
+      "odds": 6.2,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Dark Runner",
+          "score": 0.0,
+          "odds": 6.2
+        },
+        {
+          "name": "Mighty Dream",
+          "score": 0.0,
+          "odds": 4.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T20:34:11Z",
+      "tip": "Mighty Demon",
+      "odds": 10.5,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Mighty Demon",
+          "score": 0.0,
+          "odds": 10.5
+        },
+        {
+          "name": "Swift Flash",
+          "score": 0.0,
+          "odds": 3.3
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T20:38:48Z",
+      "tip": "Lucky Runner",
+      "odds": 4.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Lucky Runner",
+          "score": 0.0,
+          "odds": 4.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T20:53:48Z",
+      "tip": "Dark Star",
+      "odds": 3.2,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Dark Star",
+          "score": 0.0,
+          "odds": 3.2
+        },
+        {
+          "name": "Lucky Runner",
+          "score": 0.0,
+          "odds": 3.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T20:58:48Z",
+      "tip": "Dark Strike",
+      "odds": 4.1,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Dark Strike",
+          "score": 0.0,
+          "odds": 4.1
+        },
+        {
+          "name": "Silver Strike",
+          "score": 0.0,
+          "odds": 4.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T21:01:18Z",
+      "tip": "Golden Dream",
+      "odds": 3.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Golden Dream",
+          "score": 0.0,
+          "odds": 3.0
+        },
+        {
+          "name": "Silver Arrow",
+          "score": 0.0,
+          "odds": 5.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T14:20:22Z",
+      "tip": "Lucky King",
+      "odds": 5.8,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Lucky King",
+          "score": 0.0,
+          "odds": 5.8
+        },
+        {
+          "name": "Swift Flash",
+          "score": 0.0,
+          "odds": 4.1
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T15:00:22Z",
+      "tip": "Speed Spirit",
+      "odds": 6.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Speed Spirit",
+          "score": 0.0,
+          "odds": 6.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T15:20:21Z",
+      "tip": "Dark King",
+      "odds": 2.5,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Dark King",
+          "score": 0.0,
+          "odds": 2.5
+        },
+        {
+          "name": "Speed King",
+          "score": 0.0,
+          "odds": 4.3
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T16:05:24Z",
+      "tip": "Silver Dream",
+      "odds": 5.9,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Silver Dream",
+          "score": 0.0,
+          "odds": 5.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T17:05:24Z",
+      "tip": "Speed Dream",
+      "odds": 3.5,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Speed Dream",
+          "score": 0.0,
+          "odds": 3.5
+        },
+        {
+          "name": "Swift Spirit",
+          "score": 0.0,
+          "odds": 3.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T19:35:22Z",
+      "tip": "Noble Spirit",
+      "odds": 6.1,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Noble Spirit",
+          "score": 0.0,
+          "odds": 6.1
+        },
+        {
+          "name": "Speed Dream",
+          "score": 0.0,
+          "odds": 3.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T19:50:24Z",
+      "tip": "Silver Dream",
+      "odds": 3.4,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Silver Dream",
+          "score": 0.0,
+          "odds": 3.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T20:05:24Z",
+      "tip": "Swift Demon",
+      "odds": 4.0,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Swift Demon",
+          "score": 0.0,
+          "odds": 4.0
+        },
+        {
+          "name": "Swift King",
+          "score": 0.0,
+          "odds": 2.9
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T20:35:21Z",
+      "tip": "Golden Spirit",
+      "odds": 2.6,
+      "score": 0.0,
+      "grade": "",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Golden Spirit",
+          "score": 0.0,
+          "odds": 2.6
+        },
+        {
+          "name": "Thunder Spirit",
+          "score": 0.0,
+          "odds": 3.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Thurles",
+      "time": "2026-01-18T12:40:00.000Z",
+      "tip": "Forty Coats",
+      "odds": 1.49,
+      "score": 52.9,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Forty Coats",
+          "score": 52.9,
+          "odds": 1.49
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Thurles",
+      "time": "2026-01-18T14:50:00.000Z",
+      "tip": "Rising Dust",
+      "odds": 4.4,
+      "score": 30.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Rising Dust",
+          "score": 30.2,
+          "odds": 4.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Thurles",
+      "time": "2026-01-18T15:55:00.000Z",
+      "tip": "Last Round",
+      "odds": 18.0,
+      "score": 12.4,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Last Round",
+          "score": 12.4,
+          "odds": 18.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Warwick",
+      "time": "2026-01-23T13:05:00.000Z",
+      "tip": "Diamond Jim",
+      "odds": 4.7,
+      "score": 30.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Diamond Jim",
+          "score": 30.2,
+          "odds": 4.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Warwick",
+      "time": "2026-01-23T14:37:00.000Z",
+      "tip": "Gwennie May Star",
+      "odds": 4.2,
+      "score": 33.6,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Gwennie May Star",
+          "score": 33.6,
+          "odds": 4.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wincanton",
+      "time": "2026-01-15T12:07:00Z",
+      "tip": "Golan Loop",
+      "odds": 2.98,
+      "score": 39.6,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Golan Loop",
+          "score": 39.6,
+          "odds": 2.98
+        },
+        {
+          "name": "Clotilda",
+          "score": 18.6,
+          "odds": 6.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wincanton",
+      "time": "2026-01-15T13:52:00Z",
+      "tip": "Postponed Legacy",
+      "odds": 6.4,
+      "score": 29.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Postponed Legacy",
+          "score": 29.2,
+          "odds": 6.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wincanton",
+      "time": "2026-01-15T15:37:00Z",
+      "tip": "Our Power",
+      "odds": 14.0,
+      "score": 10.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Our Power",
+          "score": 10.0,
+          "odds": 14.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Windsor",
+      "time": "2026-01-16T14:25:00.000Z",
+      "tip": "Bluey",
+      "odds": 4.7,
+      "score": 30.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Bluey",
+          "score": 30.2,
+          "odds": 4.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Windsor",
+      "time": "2026-01-16T15:35:00.000Z",
+      "tip": "Spectacularsunrise",
+      "odds": 15.5,
+      "score": 15.9,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Spectacularsunrise",
+          "score": 15.9,
+          "odds": 15.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Windsor",
+      "time": "2026-01-18T16:05:00.000Z",
+      "tip": "Timamzel",
+      "odds": 3.0303030303030303,
+      "score": 36.0,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Timamzel",
+          "score": 36.0,
+          "odds": 3.0303030303030303
+        },
+        {
+          "name": "Cantys Cove",
+          "score": 22.0,
+          "odds": 6.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-09T16:25:00.000Z",
+      "tip": "Cargin Bhui",
+      "odds": 2.1,
+      "score": 0.0,
+      "grade": "",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Cargin Bhui",
+          "score": 0.0,
+          "odds": 2.1
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-12T17:00:00.000Z",
+      "tip": "Moon Over The Sea",
+      "odds": 5.2,
+      "score": 25.4,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Moon Over The Sea",
+          "score": 25.4,
+          "odds": 5.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-12T17:30:00.000Z",
+      "tip": "Grey Horizon",
+      "odds": 5.4,
+      "score": 29.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Grey Horizon",
+          "score": 29.2,
+          "odds": 5.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-12T18:00:00.000Z",
+      "tip": "They All Know Me",
+      "odds": 6.6,
+      "score": 22.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "They All Know Me",
+          "score": 22.0,
+          "odds": 6.6
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-12T19:00:00.000Z",
+      "tip": "Sailor Batt",
+      "odds": 3.9,
+      "score": 35.0,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Sailor Batt",
+          "score": 35.0,
+          "odds": 3.9
+        },
+        {
+          "name": "Surgeon Commander",
+          "score": 19.4,
+          "odds": 7.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-12T20:00:00.000Z",
+      "tip": "The Pug",
+      "odds": 21.0,
+      "score": 6.4,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "The Pug",
+          "score": 6.4,
+          "odds": 21.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-19T17:30:00.000Z",
+      "tip": "Ice Opera",
+      "odds": 2.5,
+      "score": 41.0,
+      "grade": "GOOD",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Ice Opera",
+          "score": 41.0,
+          "odds": 2.5
+        },
+        {
+          "name": "Galactic Glow",
+          "score": 9.0,
+          "odds": 55.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-23T13:27:00.000Z",
+      "tip": "Shamacid",
+      "odds": 27.0,
+      "score": 6.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Shamacid",
+          "score": 6.0,
+          "odds": 27.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-23T16:40:00.000Z",
+      "tip": "Nivelles Magic",
+      "odds": 8.2,
+      "score": 26.9,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Nivelles Magic",
+          "score": 26.9,
+          "odds": 8.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T16:25:00.000Z",
+      "tip": "Vitalline",
+      "odds": 4.8,
+      "score": 34.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Vitalline",
+          "score": 34.2,
+          "odds": 4.8
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T17:00:00.000Z",
+      "tip": "Grey Horizon",
+      "odds": 7.0,
+      "score": 26.9,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Grey Horizon",
+          "score": 26.9,
+          "odds": 7.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T18:00:00.000Z",
+      "tip": "Chantelle",
+      "odds": 2.02,
+      "score": 52.9,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Chantelle",
+          "score": 52.9,
+          "odds": 2.02
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T18:30:00.000Z",
+      "tip": "Toussarok",
+      "odds": 12.5,
+      "score": 15.9,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Toussarok",
+          "score": 15.9,
+          "odds": 12.5
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T19:00:00.000Z",
+      "tip": "Monty Beau",
+      "odds": 7.2,
+      "score": 30.2,
+      "grade": "FAIR",
+      "runners": 3,
+      "top_5": [
+        {
+          "name": "Monty Beau",
+          "score": 30.2,
+          "odds": 7.2
+        },
+        {
+          "name": "Oman",
+          "score": 19.4,
+          "odds": 12.5
+        },
+        {
+          "name": "Tortured Soul",
+          "score": 14.9,
+          "odds": 16.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T19:30:00.000Z",
+      "tip": "Welljudged",
+      "odds": 2.92,
+      "score": 34.2,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Welljudged",
+          "score": 34.2,
+          "odds": 2.92
+        },
+        {
+          "name": "Electric Avenue",
+          "score": 30.2,
+          "odds": 5.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T20:00:00.000Z",
+      "tip": "Prince Hector",
+      "odds": 9.2,
+      "score": 15.9,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Prince Hector",
+          "score": 15.9,
+          "odds": 9.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-27T16:28:00.000Z",
+      "tip": "Hows The Guvnor",
+      "odds": 3.15,
+      "score": 37.4,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Hows The Guvnor",
+          "score": 37.4,
+          "odds": 3.15
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-27T17:00:00.000Z",
+      "tip": "Bad Habits",
+      "odds": 5.3,
+      "score": 26.9,
+      "grade": "FAIR",
+      "runners": 2,
+      "top_5": [
+        {
+          "name": "Bad Habits",
+          "score": 26.9,
+          "odds": 5.3
+        },
+        {
+          "name": "Bandello",
+          "score": 25.9,
+          "odds": 6.4
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-27T17:30:00.000Z",
+      "tip": "Horwich",
+      "odds": 2.3,
+      "score": 51.0,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Horwich",
+          "score": 51.0,
+          "odds": 2.3
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-27T18:00:00.000Z",
+      "tip": "Midnight Call",
+      "odds": 1.99,
+      "score": 45.4,
+      "grade": "GOOD",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Midnight Call",
+          "score": 45.4,
+          "odds": 1.99
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-27T18:30:00.000Z",
+      "tip": "Prince Quattro",
+      "odds": 5.7,
+      "score": 29.2,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Prince Quattro",
+          "score": 29.2,
+          "odds": 5.7
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-27T19:30:00.000Z",
+      "tip": "Ghaiyyath Park",
+      "odds": 50.0,
+      "score": 5.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Ghaiyyath Park",
+          "score": 5.0,
+          "odds": 50.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T17:30:00.000Z",
+      "tip": "Roman Emperor",
+      "odds": 25.0,
+      "score": 19.0,
+      "grade": "POOR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Roman Emperor",
+          "score": 19.0,
+          "odds": 25.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T18:00:00.000Z",
+      "tip": "Powdering",
+      "odds": 7.6,
+      "score": 52.0,
+      "grade": "POOR",
+      "runners": 7,
+      "top_5": [
+        {
+          "name": "Powdering",
+          "score": 52.0,
+          "odds": 7.6
+        },
+        {
+          "name": "No Return",
+          "score": 50.0,
+          "odds": 17.0
+        },
+        {
+          "name": "Many A Star",
+          "score": 47.0,
+          "odds": 8.4
+        },
+        {
+          "name": "Dyrholaey",
+          "score": 46.0,
+          "odds": 5.5
+        },
+        {
+          "name": "Betsen",
+          "score": 27.0,
+          "odds": 3.55
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T18:30:00.000Z",
+      "tip": "Lovethiswayagain",
+      "odds": 5.1,
+      "score": 58.0,
+      "grade": "FAIR",
+      "runners": 3,
+      "top_5": [
+        {
+          "name": "Lovethiswayagain",
+          "score": 58.0,
+          "odds": 5.1
+        },
+        {
+          "name": "Harlequin Bay",
+          "score": 50.0,
+          "odds": 4.8
+        },
+        {
+          "name": "Lucky Sevens",
+          "score": 12.0,
+          "odds": 140.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T19:00:00.000Z",
+      "tip": "Prince Quattro",
+      "odds": 8.6,
+      "score": 60.0,
+      "grade": "FAIR",
+      "runners": 9,
+      "top_5": [
+        {
+          "name": "Prince Quattro",
+          "score": 60.0,
+          "odds": 8.6
+        },
+        {
+          "name": "One Cool Dreamer",
+          "score": 53.0,
+          "odds": 7.4
+        },
+        {
+          "name": "Billy Bathgate",
+          "score": 44.0,
+          "odds": 16.0
+        },
+        {
+          "name": "Word Of Mouth",
+          "score": 37.0,
+          "odds": 15.0
+        },
+        {
+          "name": "Parramount",
+          "score": 34.0,
+          "odds": 13.0
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T19:30:00.000Z",
+      "tip": "Towerlands",
+      "odds": 7.0,
+      "score": 61.0,
+      "grade": "FAIR",
+      "runners": 8,
+      "top_5": [
+        {
+          "name": "Towerlands",
+          "score": 61.0,
+          "odds": 7.0
+        },
+        {
+          "name": "Charlies Choice",
+          "score": 60.0,
+          "odds": 6.8
+        },
+        {
+          "name": "Eupator",
+          "score": 47.4,
+          "odds": 2.44
+        },
+        {
+          "name": "Eupator",
+          "score": 41.0,
+          "odds": 2.44
+        },
+        {
+          "name": "Shihoku",
+          "score": 30.0,
+          "odds": 6.2
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T20:00:00.000Z",
+      "tip": "Grey Horizon",
+      "odds": 2.82,
+      "score": 45.4,
+      "grade": "FAIR",
+      "runners": 1,
+      "top_5": [
+        {
+          "name": "Grey Horizon",
+          "score": 45.4,
+          "odds": 2.82
+        }
+      ],
+      "breakdown": {}
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T20:30:00.000Z",
+      "tip": "Thanh Nam",
+      "odds": 5.4,
+      "score": 68.0,
+      "grade": "FAIR",
+      "runners": 10,
+      "top_5": [
+        {
+          "name": "Thanh Nam",
+          "score": 68.0,
+          "odds": 5.4
+        },
+        {
+          "name": "Popty Ping",
+          "score": 64.0,
+          "odds": 8.0
+        },
+        {
+          "name": "Lexington Express",
+          "score": 48.0,
+          "odds": 4.0
+        },
+        {
+          "name": "Flying Macs",
+          "score": 31.0,
+          "odds": 11.0
+        },
+        {
+          "name": "Montu",
+          "score": 26.0,
+          "odds": 9.0
+        }
+      ],
+      "breakdown": {}
+    }
+  ]
+}
