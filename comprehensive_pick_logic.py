@@ -7,12 +7,14 @@ Integrates ALL learnings:
 4. Course-specific performance
 5. Horse history from database
 6. Trainer analysis
+7. Weather & going conditions
 """
 
 import json
 import boto3
 from decimal import Decimal
 from datetime import datetime
+from weather_going_inference import check_all_tracks_going
 
 # Default weights (fallback if DynamoDB not available)
 DEFAULT_WEIGHTS = {
@@ -22,11 +24,15 @@ DEFAULT_WEIGHTS = {
     'total_wins': 5,
     'consistency': 2,
     'course_bonus': 10,
-    'database_history': 15
+    'database_history': 15,
+    'going_suitability': 8
 }
 
 # Cache for weights (reload every 5 minutes)
 _weights_cache = {'weights': None, 'timestamp': None}
+
+# Cache for going conditions (reload every hour)
+_going_cache = {'going_data': None, 'timestamp': None}
 
 def get_dynamic_weights():
     """Load current weights from DynamoDB (auto-adjusted by learning system)"""
@@ -66,6 +72,30 @@ def get_dynamic_weights():
         return DEFAULT_WEIGHTS.copy()
 
 
+def get_going_conditions():
+    """Get current going conditions for all tracks (cached for 1 hour)"""
+    global _going_cache
+    
+    # Check cache (1 hour TTL)
+    if _going_cache['going_data'] and _going_cache['timestamp']:
+        age = (datetime.now() - _going_cache['timestamp']).total_seconds()
+        if age < 3600:  # 1 hour
+            return _going_cache['going_data']
+    
+    try:
+        # Get going data (prioritizes official declarations)
+        going_data = check_all_tracks_going(use_official=True)
+        
+        # Update cache
+        _going_cache['going_data'] = going_data
+        _going_cache['timestamp'] = datetime.now()
+        
+        return going_data
+    except Exception as e:
+        print(f"Warning: Could not load going conditions: {e}")
+        return {}
+
+
 def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course_winners_today=0):
     """
     Comprehensive scoring system for horses
@@ -78,6 +108,9 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     
     # Load dynamic weights (auto-adjusted by learning system)
     weights = get_dynamic_weights()
+    
+    # Load going conditions
+    going_data = get_going_conditions()
     
     score = 0
     breakdown = {}
@@ -146,7 +179,40 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['course_performance'] = 0
     
-    # 5. DATABASE HISTORY
+    # 5. GOING CONDITIONS (Weather & Track)
+    going_suitability_pts = int(weights.get('going_suitability', 8))
+    if course in going_data:
+        going_info = going_data[course]
+        going_adjustment = going_info.get('adjustment', 0)
+        going_description = going_info.get('going', 'Unknown')
+        
+        # Apply going adjustment (negative for soft/heavy, positive for firm)
+        # Horses with good form on similar going get bonus
+        if going_adjustment != 0:
+            # Simple heuristic: horses with recent wins likely suited to conditions
+            if recent_win and abs(going_adjustment) <= 5:
+                # Recent winner gets bonus in moderate conditions
+                score += going_suitability_pts
+                breakdown['going_suitability'] = going_suitability_pts
+                reasons.append(f"Suited to {going_description}: {going_suitability_pts}pts")
+            elif abs(going_adjustment) > 5:
+                # Extreme conditions (Heavy/Firm) - cautious approach
+                # Only give bonus if form shows versatility (multiple wins)
+                if wins >= 2:
+                    bonus_pts = going_suitability_pts // 2
+                    score += bonus_pts
+                    breakdown['going_suitability'] = bonus_pts
+                    reasons.append(f"Proven in varied going ({going_description}): {bonus_pts}pts")
+                else:
+                    breakdown['going_suitability'] = 0
+            else:
+                breakdown['going_suitability'] = 0
+        else:
+            breakdown['going_suitability'] = 0
+    else:
+        breakdown['going_suitability'] = 0
+    
+    # 6. DATABASE HISTORY
     db = boto3.resource('dynamodb', region_name='eu-west-1')
     table = db.Table('SureBetBets')
     

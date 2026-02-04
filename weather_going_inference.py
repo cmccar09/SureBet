@@ -179,7 +179,7 @@ def check_all_tracks_going(tracks=None, use_official=True):
     
     # Check if we have official going declarations for today
     if use_official and current_date in OFFICIAL_GOING:
-        print(f"✅ Using OFFICIAL track declarations for {current_date}")
+        print(f"[OK] Using OFFICIAL track declarations for {current_date}")
     else:
         print(f"Using weather API inference")
     
@@ -187,7 +187,7 @@ def check_all_tracks_going(tracks=None, use_official=True):
     
     for track in tracks:
         if track not in TRACK_LOCATIONS:
-            print(f"  ⚠️ {track} - Location unknown, skipping")
+            print(f"  [!] {track} - Location unknown, skipping")
             continue
         
         location = TRACK_LOCATIONS[track]
@@ -199,8 +199,8 @@ def check_all_tracks_going(tracks=None, use_official=True):
             going = official['going']
             adjustment = official['adjustment']
             
-            print(f"✓ {track} ({surface}) - OFFICIAL DECLARATION")
-            print(f"  📋 Going: {going} (Score: {adjustment:+d})")
+            print(f"[OK] {track} ({surface}) - OFFICIAL DECLARATION")
+            print(f"  [*] Going: {going} (Score: {adjustment:+d})")
             print(f"     Source: Official track report\n")
             
             results[track] = {
@@ -229,10 +229,10 @@ def check_all_tracks_going(tracks=None, use_official=True):
                 'source': 'weather_api'
             }
             
-            emoji = "🌧️" if rainfall > 10 else "☁️" if rainfall > 2 else "☀️"
-            adj_text = f"+{adjustment}" if adjustment > 0 else str(adjustment) if adjustment < 0 else "±0"
+            rain_icon = "[RAIN]" if rainfall > 10 else "[CLOUD]" if rainfall > 2 else "[SUN]"
+            adj_text = f"+{adjustment}" if adjustment > 0 else str(adjustment) if adjustment < 0 else "0"
             
-            print(f"  {emoji} Rainfall: {rainfall:.1f}mm → Going: {going} (Score: {adj_text})")
+            print(f"  {rain_icon} Rainfall: {rainfall:.1f}mm -> Going: {going} (Score: {adj_text})")
             print(f"     {explanation}")
         else:
             results[track] = {
@@ -242,7 +242,7 @@ def check_all_tracks_going(tracks=None, use_official=True):
                 'surface': surface,
                 'source': 'unavailable'
             }
-            print(f"  ⚠️ Unable to fetch weather data")
+            print(f"  [!] Unable to fetch weather data")
         print()
     
     print(f"{'='*80}\n")
@@ -255,5 +255,5 @@ if __name__ == "__main__":
     
     print("Summary:")
     for track, data in going_data.items():
-        source_icon = "📋" if data.get('source') == 'official' else "🌦️"
+        source_icon = "[OFFICIAL]" if data.get('source') == 'official' else "[WEATHER]"
         print(f"  {source_icon} {track:20} {data['going']:35} Adjustment: {data['adjustment']:+3}")
