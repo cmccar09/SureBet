@@ -28,7 +28,8 @@ python verify_all_horses_in_database.py
 
 **Expected Results:**
 - 300-400 horses analyzed across 30-40 races
-- 0-5 UI picks (score 60+)
+- 0-5 UI picks (score 50+, mostly GOOD)
+- EXCELLENT picks very rare (may see 0-2 per week)
 - 100% race coverage on all picks
 - All horses saved for learning (show_in_ui=True/False)
 
@@ -70,37 +71,39 @@ Status:   ✅ Active (Next run: Tomorrow 8:00 AM)
 
 ---
 
-## 🎯 CONSERVATIVE SCORING SYSTEM - LOCKED
+## 🎯 CONSERVATIVE SCORING SYSTEM - LOCKED (ULTRA CONSERVATIVE)
 
 ### Score Adjustment
-**All raw scores reduced by 25 points** for realistic probability assessment.
+**All raw scores reduced by 35 points** for ultra-conservative probability assessment.
 
 ### Threshold Configuration
 ```python
-# In complete_daily_analysis.py (LINE 72-73)
+# In complete_daily_analysis.py (LINE 64-73)
 raw_score = analyze_horse_comprehensive(...)
-score = max(0, raw_score - 25)  # Conservative adjustment
+score = max(0, raw_score - 35)  # Ultra-conservative adjustment
 
-# Thresholds (LINE 78-96)
-show_in_ui = (score >= 60)  # UI promotion threshold
+# Thresholds (LINE 78-100)
+show_in_ui = (score >= 50)  # UI promotion threshold (GOOD+)
 
-if score >= 60:
-    confidence_grade = "EXCELLENT (Best Chance - 50-70% Win Rate)"
-elif score >= 45:
-    confidence_grade = "GOOD (Decent Chance - 30-40% Win Rate)"
-elif score >= 30:
+if score >= 70:
+    confidence_grade = "EXCELLENT (Best Chance - 50-70% Win Rate)"  # VERY RARE
+elif score >= 50:
+    confidence_grade = "GOOD (Decent Chance - 30-40% Win Rate)"  # Most picks
+elif score >= 35:
     confidence_grade = "FAIR (Risky - 15-25% Win Rate)"
 else:
     confidence_grade = "POOR (Very Unlikely - 5-10% Win Rate)"
 ```
 
 ### Win Rate Expectations
-| Grade | Score Range | Win Rate | Action |
-|-------|-------------|----------|--------|
-| EXCELLENT | 60-100 | 50-70% | Bet with confidence |
-| GOOD | 45-59 | 30-40% | Consider carefully |
-| FAIR | 30-44 | 15-25% | High risk |
-| POOR | 0-29 | 5-10% | Don't bet |
+| Grade | Score Range | Win Rate | Frequency | Action |
+|-------|-------------|----------|-----------|--------|
+| EXCELLENT | 70-100 | 50-70% | VERY RARE | Bet with high confidence |
+| GOOD | 50-69 | 30-40% | Most picks | Bet with caution |
+| FAIR | 35-49 | 15-25% | Common | High risk |
+| POOR | 0-34 | 5-10% | Very common | Don't bet |
+
+**Important:** Even EXCELLENT picks lose 30-50% of the time. EXCELLENT ratings are now EXTREMELY rare (may see 0-2 per week).
 
 ---
 
