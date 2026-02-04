@@ -15,6 +15,7 @@ import boto3
 from decimal import Decimal
 from datetime import datetime
 from weather_going_inference import check_all_tracks_going
+from track_daily_insights import get_track_insights
 
 # Default weights (fallback if DynamoDB not available)
 DEFAULT_WEIGHTS = {
@@ -25,7 +26,8 @@ DEFAULT_WEIGHTS = {
     'consistency': 2,
     'course_bonus': 10,
     'database_history': 15,
-    'going_suitability': 8
+    'going_suitability': 8,
+    'track_pattern_bonus': 10  # Bonus based on what's winning today at this track
 }
 
 # Cache for weights (reload every 5 minutes)
@@ -111,6 +113,9 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     
     # Load going conditions
     going_data = get_going_conditions()
+    
+    # Load track insights from earlier races today
+    track_insights = get_track_insights(course)
     
     score = 0
     breakdown = {}
@@ -234,6 +239,29 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
             breakdown['database_history'] = 0
     except:
         breakdown['database_history'] = 0
+    
+    # 7. TRACK PATTERN BONUS (Learning from today's earlier races at this track)
+    if track_insights['has_data'] and track_insights.get('suggested_boost'):
+        pattern_bonus = 0
+        
+        for factor, boost_amount in track_insights['suggested_boost'].items():
+            # Apply boost only if this horse scored in that factor
+            if breakdown.get(factor, 0) > 0:
+                pattern_bonus += boost_amount
+        
+        if pattern_bonus > 0:
+            max_pattern_bonus = int(weights.get('track_pattern_bonus', 10))
+            pattern_bonus = min(pattern_bonus, max_pattern_bonus)  # Cap at max
+            score += pattern_bonus
+            breakdown['track_pattern_bonus'] = pattern_bonus
+            
+            pattern_name = track_insights.get('dominant_pattern', 'pattern')
+            races_analyzed = track_insights.get('races_analyzed', 0)
+            reasons.append(f"Matches {pattern_name} (from {races_analyzed} races today): +{pattern_bonus}pts")
+        else:
+            breakdown['track_pattern_bonus'] = 0
+    else:
+        breakdown['track_pattern_bonus'] = 0
     
     return score, breakdown, reasons
 

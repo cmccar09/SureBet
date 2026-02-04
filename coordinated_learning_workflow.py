@@ -23,6 +23,7 @@ import time
 from datetime import datetime
 import boto3
 from decimal import Decimal
+from track_daily_insights import add_race_insight, print_track_insights
 
 dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
 bets_table = dynamodb.Table('SureBetBets')
@@ -126,6 +127,7 @@ def step3_learn_from_results():
     - Analyzes win/loss patterns
     - Updates scoring weights
     - Improves future predictions
+    - Captures track-specific insights for same-day learning
     """
     print("\n" + "="*80)
     print("STEP 3: LEARN FROM RESULTS")
@@ -133,6 +135,11 @@ def step3_learn_from_results():
     print("Adjusting weights based on actual outcomes...")
     
     try:
+        # First, capture track-specific insights from today's winners
+        print("\nCapturing track-specific insights...")
+        capture_track_insights()
+        
+        # Then adjust global weights
         result = subprocess.run(
             ['python', 'auto_adjust_weights.py'],
             capture_output=True,
@@ -266,6 +273,69 @@ def check_system_status():
         return False
 
 
+def capture_track_insights():
+    """
+    Capture insights from today's race winners at each track
+    Learn what factors are working today at each venue
+    """
+    try:
+        # Get all horses with outcomes from today
+        response = bets_table.scan()
+        items = response.get('Items', [])
+        
+        # Group winners by track
+        track_winners = {}
+        
+        for item in items:
+            if item.get('outcome') == 'WON':
+                course = item.get('course', '')
+                race_time = item.get('race_time', '')
+                
+                if course and race_time:
+                    if course not in track_winners:
+                        track_winners[course] = []
+                    
+                    # Get the breakdown from database
+                    breakdown = {}
+                    for key in ['sweet_spot', 'optimal_odds', 'recent_win', 'total_wins', 
+                               'consistency', 'course_bonus', 'database_history', 'going_suitability']:
+                        if key in item:
+                            breakdown[key] = int(item[key])
+                    
+                    track_winners[course].append({
+                        'winner_data': item,
+                        'breakdown': breakdown,
+                        'race_time': race_time
+                    })
+        
+        # Add insights for each track's winners
+        insights_added = 0
+        for course, winners in track_winners.items():
+            for winner_info in winners:
+                add_race_insight(
+                    course=course,
+                    race_time=winner_info['race_time'],
+                    winner_data=winner_info['winner_data'],
+                    breakdown=winner_info['breakdown']
+                )
+                insights_added += 1
+        
+        if insights_added > 0:
+            print(f"✓ Captured insights from {insights_added} winners across {len(track_winners)} tracks")
+            
+            # Show insights for each track
+            for course in track_winners.keys():
+                print_track_insights(course)
+        else:
+            print("  No winner insights to capture yet")
+        
+        return True
+        
+    except Exception as e:
+        print(f"  Warning: Could not capture track insights: {e}")
+        return False
+
+
 def main():
     """Run complete coordinated workflow"""
     print("\n" + "="*100)
@@ -276,7 +346,8 @@ def main():
     print("  1. Analyzes ALL races for learning")
     print("  2. Matches Racing Post results with predictions")
     print("  3. Learns from outcomes and adjusts weights")
-    print("  4. Promotes high-confidence picks to UI")
+    print("  4. Captures track-specific patterns for same-day learning")
+    print("  5. Promotes high-confidence picks to UI")
     print("="*100)
     
     # System health check
@@ -311,6 +382,7 @@ def main():
     print("  - Check UI for updated high-confidence picks")
     print("  - Monitor learning progress in logs")
     print("  - Racing Post scraper will provide more results")
+    print("  - Track insights improve predictions throughout the day")
     print("="*100 + "\n")
 
 
