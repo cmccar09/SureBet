@@ -1,14 +1,14 @@
 {
-  "generated_at": "2026-02-03T19:30:07.420439",
-  "sample_size": 216,
-  "date_range": "20260107 to 20260202",
+  "generated_at": "2026-02-04T10:30:05.313661",
+  "sample_size": 219,
+  "date_range": "20260107 to 20260203",
   "overall_stats": {
-    "total_bets": 216,
+    "total_bets": 219,
     "wins": 37,
-    "win_rate": 0.1712962962962963,
+    "win_rate": 0.1689497716894977,
     "places": 37,
-    "place_rate": 0.1712962962962963,
-    "avg_p_win": 0.21178240740740742
+    "place_rate": 0.1689497716894977,
+    "avg_p_win": 0.21335616438356167
   },
   "odds_performance": {},
   "sweet_spot_analysis": {},
@@ -52,9 +52,9 @@
     }
   ],
   "recommendations": [
-    "EW bets: 180 bets, 11.7% place rate"
+    "EW bets: 182 bets, 11.5% place rate"
   ],
-  "prompt_guidance": "\n=== PERFORMANCE-DRIVEN INSIGHTS (216 bets analyzed) ===\n\n\ud83c\udfaf SWEET SPOT PERFORMANCE (3.0-9.0 odds / 2/1-8/1):\n\n\u2705 WORKING STRATEGIES:\n  \u2022 Consistent recent form: 33.3% actual vs 30.4% expected (n=18)\n  \u2022 Recent win: 37.5% actual vs 33.2% expected (n=8)\n  \u2022 Decent recent form: 20.0% actual vs 22.8% expected (n=5)\n  \u2022 Consistent placer: 16.7% actual vs 20.3% expected (n=6)\n\n\u274c UNDERPERFORMING STRATEGIES (AVOID):\n  \u2022 potential for improvement: 0.0% actual vs 15.0% expected (n=5)\n\n\ud83d\udd11 KEY ACTIONS:\n  \u2022 EW bets: 180 bets, 11.7% place rate\n\n\u26a1 FOCUS MANDATE: \n  - Prioritize 3.0-9.0 odds range (especially 3.5-6.0)\n  - Look for RECENT WINNERS (won in last 3 races)\n  - In-form trainers/jockeys\n  - Value quality over quantity - better 3 great picks than 10 mediocre\n",
+  "prompt_guidance": "\n=== PERFORMANCE-DRIVEN INSIGHTS (219 bets analyzed) ===\n\n\ud83c\udfaf SWEET SPOT PERFORMANCE (3.0-9.0 odds / 2/1-8/1):\n\n\u2705 WORKING STRATEGIES:\n  \u2022 Consistent recent form: 33.3% actual vs 30.4% expected (n=18)\n  \u2022 Recent win: 37.5% actual vs 33.2% expected (n=8)\n  \u2022 Decent recent form: 20.0% actual vs 22.8% expected (n=5)\n  \u2022 Consistent placer: 16.7% actual vs 20.3% expected (n=6)\n\n\u274c UNDERPERFORMING STRATEGIES (AVOID):\n  \u2022 potential for improvement: 0.0% actual vs 15.0% expected (n=5)\n\n\ud83d\udd11 KEY ACTIONS:\n  \u2022 EW bets: 182 bets, 11.5% place rate\n\n\u26a1 FOCUS MANDATE: \n  - Prioritize 3.0-9.0 odds range (especially 3.5-6.0)\n  - Look for RECENT WINNERS (won in last 3 races)\n  - In-form trainers/jockeys\n  - Value quality over quantity - better 3 great picks than 10 mediocre\n",
   "calibration_analysis": {
     "0-20%": {
       "predicted": 0.145,
@@ -64,18 +64,18 @@
       "verdict": "CALIBRATED"
     },
     "20-40%": {
-      "predicted": 0.286,
-      "actual": 0.283,
-      "error": -0.003,
-      "sample_size": 92,
+      "predicted": 0.285,
+      "actual": 0.277,
+      "error": -0.009,
+      "sample_size": 94,
       "verdict": "CALIBRATED"
     },
     "40-60%": {
       "predicted": 0.45,
-      "actual": 0.667,
-      "error": 0.217,
-      "sample_size": 3,
-      "verdict": "UNDERCONFIDENT"
+      "actual": 0.5,
+      "error": 0.05,
+      "sample_size": 4,
+      "verdict": "CALIBRATED"
     },
     "60-80%": {
       "predicted": 0.65,

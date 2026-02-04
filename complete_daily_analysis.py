@@ -68,28 +68,29 @@ def analyze_and_save_all():
                 course_winners_today=course_stats['winners_today']
             )
             
-            # Apply conservative adjustment: reduce all scores by 25 points
-            # This makes the system more realistic about win probabilities
-            score = max(0, raw_score - 25)  # Ensure score doesn't go below 0
+            # Apply conservative adjustment: reduce all scores by 35 points
+            # This makes scoring very conservative - EXCELLENT should be rare
+            score = max(0, raw_score - 35)  # Ensure score doesn't go below 0
             
             horse_name = runner.get('name', 'Unknown')
             odds = runner.get('odds', 0)
             
             # Determine if this goes to UI or stays as learning data
-            # Thresholds adjusted for -25 point reduction
-            show_in_ui = (score >= 60)  # 60+ after adjustment = top tier picks
+            # Thresholds adjusted for -35 point reduction (very conservative)
+            show_in_ui = (score >= 50)  # 50+ after adjustment = top tier picks
             
-            # Confidence level based on REALISTIC 4-tier system with -25 adjustment
+            # Confidence level based on REALISTIC 4-tier system with -35 adjustment
+            # EXCELLENT is now VERY RARE - most picks should be GOOD
             # IMPORTANT: Even EXCELLENT picks lose 30-50% of the time (target 50-70% win rate)
-            if score >= 60:
+            if score >= 70:
                 confidence_level = "EXCELLENT"
                 confidence_grade = "EXCELLENT (Best Chance - 50-70% Win Rate)"
                 confidence_color = "green"
-            elif score >= 45:
+            elif score >= 50:
                 confidence_level = "GOOD"
                 confidence_grade = "GOOD (Decent Chance - 30-40% Win Rate)"
                 confidence_color = "light-amber"
-            elif score >= 30:
+            elif score >= 35:
                 confidence_level = "FAIR"
                 confidence_grade = "FAIR (Risky - 15-25% Win Rate)"
                 confidence_color = "dark-amber"

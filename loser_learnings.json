@@ -1,35 +1,35 @@
 [
   {
-    "our_pick": "Stipulation",
+    "our_pick": "Grey Horizon",
     "our_odds": 0,
-    "our_p_win": 0.38,
+    "our_p_win": 0.45,
     "actual_winner": "Unknown",
-    "winner_selection_id": "43155514",
-    "market_id": "1.253428953",
+    "winner_selection_id": "68765414",
+    "market_id": "1.253487517",
     "venue": "Wolverhampton",
-    "race_time": "2026-02-02T19:00:00.000Z",
-    "lesson": "Picked Stipulation but None won - need to analyze winner's characteristics"
+    "race_time": "2026-02-03T20:00:00.000Z",
+    "lesson": "Picked Grey Horizon but None won - need to analyze winner's characteristics"
   },
   {
-    "our_pick": "The Dark Baron",
+    "our_pick": "Flash Rascal",
+    "our_odds": 0,
+    "our_p_win": 0.28,
+    "actual_winner": "Unknown",
+    "winner_selection_id": "68765414",
+    "market_id": "1.253487517",
+    "venue": "Wolverhampton",
+    "race_time": "2026-02-03T20:00:00.000Z",
+    "lesson": "Picked Flash Rascal but None won - need to analyze winner's characteristics"
+  },
+  {
+    "our_pick": "Moretons",
     "our_odds": 0,
     "our_p_win": 0.25,
     "actual_winner": "Unknown",
-    "winner_selection_id": "43155514",
-    "market_id": "1.253428953",
+    "winner_selection_id": "68765414",
+    "market_id": "1.253487517",
     "venue": "Wolverhampton",
-    "race_time": "2026-02-02T19:00:00.000Z",
-    "lesson": "Picked The Dark Baron but None won - need to analyze winner's characteristics"
-  },
-  {
-    "our_pick": "Powerful Response",
-    "our_odds": 0,
-    "our_p_win": 0.2,
-    "actual_winner": "Unknown",
-    "winner_selection_id": "43155514",
-    "market_id": "1.253428953",
-    "venue": "Wolverhampton",
-    "race_time": "2026-02-02T19:00:00.000Z",
-    "lesson": "Picked Powerful Response but None won - need to analyze winner's characteristics"
+    "race_time": "2026-02-03T20:00:00.000Z",
+    "lesson": "Picked Moretons but None won - need to analyze winner's characteristics"
   }
 ]

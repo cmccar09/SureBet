@@ -189,13 +189,13 @@ def step4_generate_ui_picks():
         print(f"Learning data: {len(learning_data)}")
         
         # Find high-confidence picks from learning data
-        # Criteria: combined_confidence >= 60 (EXCELLENT tier after -25 adjustment)
+        # Criteria: combined_confidence >= 50 (GOOD+ tier after -35 adjustment)
         candidates = [
             i for i in learning_data 
-            if i.get('combined_confidence', 0) >= 60
+            if i.get('combined_confidence', 0) >= 50
         ]
         
-        print(f"\nHigh-confidence candidates (>=60 EXCELLENT after -25 adjustment): {len(candidates)}")
+        print(f"\nHigh-confidence candidates (>=50 GOOD+ after -35 adjustment): {len(candidates)}")
         
         # Promote top candidates to UI
         promoted = 0
