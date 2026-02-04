@@ -13,6 +13,21 @@ TRACK_LOCATIONS = {
     'Wolverhampton': {'lat': 52.59, 'lon': -2.13, 'surface': 'all-weather'},
     'Kempton': {'lat': 51.42, 'lon': -0.34, 'surface': 'all-weather'},
     'Punchestown': {'lat': 53.19, 'lon': -6.63, 'surface': 'turf'},
+    'Ludlow': {'lat': 52.37, 'lon': -2.72, 'surface': 'turf'},
+    'Newcastle': {'lat': 54.97, 'lon': -1.62, 'surface': 'all-weather'},
+    'Sedgefield': {'lat': 54.66, 'lon': -1.43, 'surface': 'turf'},
+}
+
+# Official track going declarations (when available)
+# Updated manually before analysis
+OFFICIAL_GOING = {
+    '2026-02-04': {
+        'Kempton': {'going': 'Standard / Slow', 'adjustment': -2},
+        'Ludlow': {'going': 'Soft', 'adjustment': -5},
+        'Newcastle': {'going': 'Standard', 'adjustment': 0},
+        'Punchestown': {'going': 'Soft to Heavy (Heavy in places)', 'adjustment': -8},
+        'Sedgefield': {'going': 'Good to Soft (Good in places)', 'adjustment': -3},
+    }
 }
 
 # Seasonal going bias (UK/Ireland climate)
@@ -141,19 +156,33 @@ def infer_going(rainfall_mm, surface_type='turf', month=None):
     
     return final_going, final_adjustment, explanation
 
-def check_all_tracks_going(tracks=None):
-    """Check going for all tracks or specified list with seasonal adjustments"""
+def check_all_tracks_going(tracks=None, use_official=True):
+    """
+    Check going for all tracks or specified list with seasonal adjustments
+    
+    Args:
+        tracks: List of track names (None = all known tracks)
+        use_official: If True, check OFFICIAL_GOING first before using weather API
+    """
     if tracks is None:
         tracks = list(TRACK_LOCATIONS.keys())
     
     results = {}
     current_month = datetime.now().month
+    current_date = datetime.now().strftime('%Y-%m-%d')
     month_name = datetime.now().strftime('%B')
     seasonal_bias = SEASONAL_ADJUSTMENTS.get(current_month, 0)
     
     print(f"\n{'='*80}")
     print(f"WEATHER-BASED GOING INFERENCE (3-Day Rainfall + Seasonal Factor)")
     print(f"Current Month: {month_name} (Seasonal Bias: {seasonal_bias:+d})")
+    
+    # Check if we have official going declarations for today
+    if use_official and current_date in OFFICIAL_GOING:
+        print(f"✅ Using OFFICIAL track declarations for {current_date}")
+    else:
+        print(f"Using weather API inference")
+    
     print(f"{'='*80}\n")
     
     for track in tracks:
@@ -164,7 +193,28 @@ def check_all_tracks_going(tracks=None):
         location = TRACK_LOCATIONS[track]
         surface = location['surface']
         
-        print(f"Checking {track} ({surface})...")
+        # Check official going first
+        if use_official and current_date in OFFICIAL_GOING and track in OFFICIAL_GOING[current_date]:
+            official = OFFICIAL_GOING[current_date][track]
+            going = official['going']
+            adjustment = official['adjustment']
+            
+            print(f"✓ {track} ({surface}) - OFFICIAL DECLARATION")
+            print(f"  📋 Going: {going} (Score: {adjustment:+d})")
+            print(f"     Source: Official track report\n")
+            
+            results[track] = {
+                'going': going,
+                'rainfall_mm': None,
+                'adjustment': adjustment,
+                'surface': surface,
+                'seasonal_explanation': 'Official declaration',
+                'source': 'official'
+            }
+            continue
+        
+        # Fall back to weather API inference
+        print(f"Checking {track} ({surface}) - Weather API...")
         
         rainfall = get_recent_rainfall(location['lat'], location['lon'])
         
@@ -175,7 +225,8 @@ def check_all_tracks_going(tracks=None):
                 'rainfall_mm': rainfall,
                 'adjustment': adjustment,
                 'surface': surface,
-                'seasonal_explanation': explanation
+                'seasonal_explanation': explanation,
+                'source': 'weather_api'
             }
             
             emoji = "🌧️" if rainfall > 10 else "☁️" if rainfall > 2 else "☀️"
@@ -188,7 +239,8 @@ def check_all_tracks_going(tracks=None):
                 'going': 'Unknown',
                 'rainfall_mm': None,
                 'adjustment': 0,
-                'surface': surface
+                'surface': surface,
+                'source': 'unavailable'
             }
             print(f"  ⚠️ Unable to fetch weather data")
         print()
@@ -197,10 +249,11 @@ def check_all_tracks_going(tracks=None):
     return results
 
 if __name__ == "__main__":
-    # Test with today's tracks
-    tracks = ['Carlisle', 'Taunton', 'Fairyhouse', 'Wolverhampton']
-    going_data = check_all_tracks_going(tracks)
+    # Test with today's tracks (prioritize official declarations)
+    tracks = ['Kempton', 'Ludlow', 'Newcastle', 'Punchestown', 'Sedgefield']
+    going_data = check_all_tracks_going(tracks, use_official=True)
     
     print("Summary:")
     for track, data in going_data.items():
-        print(f"  {track:20} {data['going']:25} Adjustment: {data['adjustment']:+3}")
+        source_icon = "📋" if data.get('source') == 'official' else "🌦️"
+        print(f"  {source_icon} {track:20} {data['going']:35} Adjustment: {data['adjustment']:+3}")
