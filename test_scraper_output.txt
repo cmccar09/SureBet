@@ -1,0 +1,33 @@
+================================================================================
+AUTOMATED DAILY RESULTS SCRAPER
+================================================================================
+Date: 2026-02-03
+================================================================================
+
+1. Fetching race list...
+   Found 21 races
+
+2. Scraping 21 races...
+Traceback (most recent call last):
+  File "C:\Users\charl\OneDrive\futuregenAI\Betting\automated_daily_results_scraper.py", line 299, in run
+    print("\u26a0\ufe0f  No data")
+    ~~~~~^^^^^^^^^^^^^^^
+  File "C:\Users\charl\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-1: character maps to <undefined>
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "C:\Users\charl\OneDrive\futuregenAI\Betting\automated_daily_results_scraper.py", line 343, in <module>
+    scraper.run(date_arg)
+    ~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\charl\OneDrive\futuregenAI\Betting\automated_daily_results_scraper.py", line 301, in run
+    print(f"\u274c {str(e)[:50]}")
+    ~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\charl\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u274c' in position 0: character maps to <undefined>
+   [1/21] fairyhouse... 

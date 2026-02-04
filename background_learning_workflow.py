@@ -58,14 +58,13 @@ def check_data_quality():
 
 
 def store_all_races_for_learning():
-    """Store ALL horses from ALL races - this is LEARNING data, not picks"""
-    print("\n" + "="*80)
-    print("ANALYZING ALL RACES - Complete Horse Analysis")
-    print("="*80)
+    \"\"\"Store ALL horses from ALL races - LEARNING data + 85+ UI picks\"\"\"
+    print(\"\\n\" + \"=\"*80)
+    print(\"COMPREHENSIVE DAILY ANALYSIS - 7-Factor Scoring\")\n    print(\"=\"*80)
     
-    # Use the comprehensive analyzer to ensure 100% race coverage
+    # Use complete_daily_analysis.py for 100% coverage + strict 85+ threshold
     result = subprocess.run(
-        ['python', 'analyze_all_races_comprehensive.py'],
+        ['python', 'complete_daily_analysis.py'],
         capture_output=True,
         text=True,
         timeout=600

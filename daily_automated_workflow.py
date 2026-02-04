@@ -102,22 +102,18 @@ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         "python betfair_odds_fetcher.py"
     )
     
-    # STEP 4: Analyze races with NEW weights
+    # STEP 4: Comprehensive analysis with strict thresholds (replaces steps 4-6)
     run_step(
-        "Analyze races using updated weights",
-        "python analyze_all_races_comprehensive.py"
+        "Comprehensive analysis: Learning + UI picks (85+ threshold, 100% coverage)",
+        "python complete_daily_analysis.py"
     )
     
-    # STEP 5: Calculate 4-tier confidence scores
-    run_step(
-        "Calculate 4-tier confidence scores for all horses",
-        "python calculate_all_confidence_scores.py"
-    )
-    
-    # STEP 6: Set UI picks from validated races
-    run_step(
-        "Set UI picks (one per validated race)",
-        "python set_ui_picks_from_validated.py"
+    # Note: complete_daily_analysis.py now handles:
+    # - 7-factor comprehensive scoring for ALL horses
+    # - Automatic UI promotion for 85+ scores (EXCELLENT tier)
+    # - 100% race coverage tracking
+    # - Realistic risk grading (Sure Thing, Dodgy, Risky, Will Lose)
+    # Old steps (calculate_all_confidence_scores.py, set_ui_picks_from_validated.py) are replaced
     )
     
     # STEP 7: Comprehensive historical learning (weekly)

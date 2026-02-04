@@ -46,9 +46,9 @@ def fetch_races():
 
 def analyze_and_generate_picks():
     """Analyze races with optimized logic and generate HIGH confidence picks"""
-    print("\n[1/4] Analyzing ALL horses comprehensively (100% coverage)...")
+    print("\n[1/4] Analyzing ALL horses comprehensively (100% coverage, 85+ UI threshold)...")
     result = subprocess.run(
-        ['python', 'analyze_all_races_comprehensive.py'],
+        ['python', 'complete_daily_analysis.py'],
         capture_output=True,
         text=True,
         timeout=600

@@ -1,0 +1,4 @@
+ok, confirm you are going to a comprehensive review of all races today, confidence , weather checks,  analysis and save to the database, then check as each race finished how you did and update the workflow if it can help improve picks for the next race, these picks do not appear on the UI, separately, pick the horses to bet on today  only top picks that will win there race, also do a health check and compare with the documentation that you have everything in place, 100 % analysis, racingpost data etc. make this a daily check at the start of the workflows
+
+
+all picks are rated = excellent - so there are definatly going to win? also read all the documentation for this project espically the newest ones over last 2 days and link it alltogetger that it all runs automatically
