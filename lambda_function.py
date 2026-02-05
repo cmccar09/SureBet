@@ -239,30 +239,26 @@ def get_today_picks(headers):
     
     print(f"Total picks: {len(items)}, Horse picks: {len(horse_items)}, Future picks: {len(future_picks)}")
     
-    # Calculate next run time (08:00 AM tomorrow Dublin time)
-    from datetime import timedelta
-    import pytz
+    # Calculate next run time (08:00 AM tomorrow UTC)
+    # Approximate Dublin time as UTC+0 or UTC+1 depending on DST
+    now_utc = datetime.utcnow()
     
-    dublin_tz = pytz.timezone('Europe/Dublin')
-    now_dublin = datetime.now(dublin_tz)
-    
-    # Last run was today at 08:00 AM (or earlier if before 08:00)
-    if now_dublin.hour >= 8:
-        last_run = now_dublin.replace(hour=8, minute=0, second=0, microsecond=0)
+    # Assume last run was today at 08:00 (or yesterday if before 08:00)
+    if now_utc.hour >= 8:
+        last_run = now_utc.replace(hour=8, minute=0, second=0, microsecond=0)
     else:
-        # If before 08:00, last run was yesterday
-        last_run = (now_dublin - timedelta(days=1)).replace(hour=8, minute=0, second=0, microsecond=0)
+        last_run = (now_utc - timedelta(days=1)).replace(hour=8, minute=0, second=0, microsecond=0)
     
-    # Next run is tomorrow at 08:00 AM
-    next_run = (now_dublin + timedelta(days=1)).replace(hour=8, minute=0, second=0, microsecond=0)
+    # Next run is tomorrow at 08:00
+    next_run = (now_utc + timedelta(days=1)).replace(hour=8, minute=0, second=0, microsecond=0)
     
     response_data = {
         'success': True,
         'picks': future_picks,
         'count': len(future_picks),
         'date': today,
-        'last_run': last_run.isoformat(),
-        'next_run': next_run.isoformat()
+        'last_run': last_run.isoformat() + 'Z',
+        'next_run': next_run.isoformat() + 'Z'
     }
     
     # Add message if no picks
