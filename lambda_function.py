@@ -239,15 +239,40 @@ def get_today_picks(headers):
     
     print(f"Total picks: {len(items)}, Horse picks: {len(horse_items)}, Future picks: {len(future_picks)}")
     
+    # Calculate next run time (08:00 AM tomorrow Dublin time)
+    from datetime import timedelta
+    import pytz
+    
+    dublin_tz = pytz.timezone('Europe/Dublin')
+    now_dublin = datetime.now(dublin_tz)
+    
+    # Last run was today at 08:00 AM (or earlier if before 08:00)
+    if now_dublin.hour >= 8:
+        last_run = now_dublin.replace(hour=8, minute=0, second=0, microsecond=0)
+    else:
+        # If before 08:00, last run was yesterday
+        last_run = (now_dublin - timedelta(days=1)).replace(hour=8, minute=0, second=0, microsecond=0)
+    
+    # Next run is tomorrow at 08:00 AM
+    next_run = (now_dublin + timedelta(days=1)).replace(hour=8, minute=0, second=0, microsecond=0)
+    
+    response_data = {
+        'success': True,
+        'picks': future_picks,
+        'count': len(future_picks),
+        'date': today,
+        'last_run': last_run.isoformat(),
+        'next_run': next_run.isoformat()
+    }
+    
+    # Add message if no picks
+    if len(future_picks) == 0:
+        response_data['message'] = 'No high-confidence selections available today. The system analyzes races daily at 08:00 AM and only displays picks with 85+ confidence score.'
+    
     return {
         'statusCode': 200,
         'headers': headers,
-        'body': json.dumps({
-            'success': True,
-            'picks': future_picks,
-            'count': len(future_picks),
-            'date': today
-        })
+        'body': json.dumps(response_data)
     }
 
 def get_greyhound_picks(headers):
