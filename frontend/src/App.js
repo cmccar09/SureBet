@@ -110,13 +110,34 @@ function App() {
       const data = await response.json();
 
       if (data.success && data.picks) {
-        // Calculate summary from picks
+        // Use summary from API if available, otherwise calculate from picks
         const picks = data.picks;
-        // Use lowercase outcome values to match database format
-        const wins = picks.filter(p => p.outcome === 'win' || p.outcome === 'placed').length; // Count placed as wins
-        const places = picks.filter(p => p.outcome === 'placed').length;
-        const losses = picks.filter(p => p.outcome === 'loss').length;
-        const pending = picks.filter(p => !p.outcome || p.outcome === 'pending').length;
+        
+        // If API provides summary, use it directly
+        if (data.summary) {
+          setResults({
+            success: true,
+            date: data.date || 'Yesterday',
+            picks: picks,
+            summary: data.summary
+          });
+          setResultsLoading(false);
+          return;
+        }
+        
+        // Fallback: Calculate summary from picks (support both uppercase and lowercase outcomes)
+        const normalizeOutcome = (p) => {
+          const outcome = (p.outcome || p.result || p.status || '').toUpperCase();
+          return outcome;
+        };
+        
+        const wins = picks.filter(p => normalizeOutcome(p) === 'WON').length;
+        const places = picks.filter(p => normalizeOutcome(p) === 'PLACED').length;
+        const losses = picks.filter(p => normalizeOutcome(p) === 'LOST').length;
+        const pending = picks.filter(p => {
+          const outcome = normalizeOutcome(p);
+          return !outcome || outcome === 'PENDING' || outcome === '';
+        }).length;
         
         // Calculate profit/loss based on outcome, stake, and odds
         let totalPL = 0;

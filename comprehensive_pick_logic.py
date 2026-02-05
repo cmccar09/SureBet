@@ -18,16 +18,19 @@ from weather_going_inference import check_all_tracks_going
 from track_daily_insights import get_track_insights
 
 # Default weights (fallback if DynamoDB not available)
+# ADJUSTED 2026-02-04: Reduced odds bonuses, added trainer & favorite corrections
 DEFAULT_WEIGHTS = {
-    'sweet_spot': 30,
-    'optimal_odds': 20,
+    'sweet_spot': 20,  # Reduced from 30 - favorites winning despite lower scores
+    'optimal_odds': 15,  # Reduced from 20 - less weight on odds positioning
     'recent_win': 25,
     'total_wins': 5,
     'consistency': 2,
     'course_bonus': 10,
     'database_history': 15,
     'going_suitability': 8,
-    'track_pattern_bonus': 10  # Bonus based on what's winning today at this track
+    'track_pattern_bonus': 10,  # Bonus based on what's winning today at this track
+    'trainer_reputation': 15,  # NEW: Elite trainers (Mullins, Elliott, Henderson)
+    'favorite_correction': 10  # NEW: Short odds + elite trainer bonus
 }
 
 # Cache for weights (reload every 5 minutes)
@@ -262,6 +265,41 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
             breakdown['track_pattern_bonus'] = 0
     else:
         breakdown['track_pattern_bonus'] = 0
+    
+    # 8. TRAINER REPUTATION BONUS (NEW - learned from today's losses)
+    elite_trainers = [
+        'W P Mullins', 'W. P. Mullins', 'Willie Mullins', 'W Mullins',
+        'Gordon Elliott', 'G Elliott',
+        'Nicky Henderson', 'N Henderson',
+        'Paul Nicholls', 'P Nicholls',
+        'Dan Skelton', 'D Skelton',
+        'Henry De Bromhead', 'H De Bromhead'
+    ]
+    
+    trainer_bonus = 0
+    if trainer:
+        trainer_str = str(trainer)
+        for elite in elite_trainers:
+            if elite.lower() in trainer_str.lower():
+                trainer_bonus = int(weights.get('trainer_reputation', 15))
+                score += trainer_bonus
+                breakdown['trainer_reputation'] = trainer_bonus
+                reasons.append(f"Elite trainer ({trainer}): +{trainer_bonus}pts")
+                break
+    
+    if trainer_bonus == 0:
+        breakdown['trainer_reputation'] = 0
+    
+    # 9. FAVORITE CORRECTION (NEW - short odds + elite trainer)
+    favorite_bonus = 0
+    if odds < 3.0 and trainer_bonus > 0:
+        # Market favorite with elite trainer - likely correct pricing
+        favorite_bonus = int(weights.get('favorite_correction', 10))
+        score += favorite_bonus
+        breakdown['favorite_correction'] = favorite_bonus
+        reasons.append(f"Favorite + elite trainer: +{favorite_bonus}pts")
+    else:
+        breakdown['favorite_correction'] = 0
     
     return score, breakdown, reasons
 

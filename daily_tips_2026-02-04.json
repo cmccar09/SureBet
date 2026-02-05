@@ -1,7 +1,7 @@
 {
   "date": "2026-02-04",
-  "generated_at": "2026-02-04T12:49:03.316646",
-  "total_races": 260,
+  "generated_at": "2026-02-04T16:16:33.207113",
+  "total_races": 259,
   "tips": [
     {
       "course": "Ascot",
@@ -298,17 +298,12 @@
       "odds": 65.0,
       "score": 22.0,
       "grade": "POOR",
-      "runners": 3,
+      "runners": 2,
       "top_5": [
         {
           "name": "Swingforthefence",
           "score": 22.0,
           "odds": 65.0
-        },
-        {
-          "name": "Takeyoutotheisland",
-          "score": 18.0,
-          "odds": 180.0
         },
         {
           "name": "Blazing Echo",
@@ -380,23 +375,6 @@
           "name": "Carrhill",
           "score": 0.0,
           "odds": 16.5
-        }
-      ],
-      "breakdown": {}
-    },
-    {
-      "course": "Carlisle",
-      "time": "2026-02-03T16:34:00.000Z",
-      "tip": "Marvel Magic",
-      "odds": 18.0,
-      "score": 21.0,
-      "grade": "POOR",
-      "runners": 1,
-      "top_5": [
-        {
-          "name": "Marvel Magic",
-          "score": 21.0,
-          "odds": 18.0
         }
       ],
       "breakdown": {}
@@ -3872,7 +3850,7 @@
       "odds": 2.0,
       "score": 56.0,
       "grade": "FAIR",
-      "runners": 11,
+      "runners": 10,
       "top_5": [
         {
           "name": "Mino Des Mottes",

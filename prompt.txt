@@ -415,7 +415,7 @@ Performance-Based Adjustments (Updated: 2026-02-01)
 
 
 
-=== LEARNED INSIGHTS (Updated 2026-02-04) ===
+=== LEARNED INSIGHTS (Updated 2026-02-05) ===
 
 Based on analysis of last 7 days performance (weekly learning cycle):
 
@@ -432,7 +432,7 @@ Apply these learnings when making selections. Continuously adapt strategy based 
 
 
 
-=== LEARNED INSIGHTS (Updated 2026-02-04) ===
+=== LEARNED INSIGHTS (Updated 2026-02-05) ===
 
 Based on analysis of last 7 days performance (weekly learning cycle):
 
@@ -446,52 +446,4 @@ Based on analysis of last 7 days performance (weekly learning cycle):
 • Winning pattern: prioritize enhanced_analysis selections
 
 Apply these learnings when making selections. Continuously adapt strategy based on what works.
-
-
-
-============================================================
-Performance-Based Adjustments (Updated: 2026-02-04)
-============================================================
-
-1. MEDIUM_PRIORITY: Win rate 0.0% is significantly below expected 28.4%. Consider tightening overlay threshold or increasing min_back price filter.
-
-
-
-============================================================
-Performance-Based Adjustments (Updated: 2026-02-04)
-============================================================
-
-1. MEDIUM_PRIORITY: Win rate 0.0% is significantly below expected 28.4%. Consider tightening overlay threshold or increasing min_back price filter.
-
-
-
-============================================================
-Performance-Based Adjustments (Updated: 2026-02-04)
-============================================================
-
-1. MEDIUM_PRIORITY: Win rate 0.0% is significantly below expected 28.4%. Consider tightening overlay threshold or increasing min_back price filter.
-
-
-
-============================================================
-Performance-Based Adjustments (Updated: 2026-02-04)
-============================================================
-
-1. MEDIUM_PRIORITY: Win rate 0.0% is significantly below expected 28.4%. Consider tightening overlay threshold or increasing min_back price filter.
-
-
-
-============================================================
-Performance-Based Adjustments (Updated: 2026-02-04)
-============================================================
-
-1. MEDIUM_PRIORITY: Win rate 0.0% is significantly below expected 28.4%. Consider tightening overlay threshold or increasing min_back price filter.
-
-
-
-============================================================
-Performance-Based Adjustments (Updated: 2026-02-04)
-============================================================
-
-1. MEDIUM_PRIORITY: Win rate 0.0% is significantly below expected 28.4%. Consider tightening overlay threshold or increasing min_back price filter.
 

@@ -169,20 +169,29 @@ def get_today_picks():
 def get_today_results():
     """Get today's RECOMMENDED PICKS with results summary (excludes training, analyses, and learning records)"""
     try:
+        from datetime import datetime, timedelta
         today = datetime.now().strftime('%Y-%m-%d')
+        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
         
-        # Get ONLY actual betting picks (exclude training, analyses, and learning records)
-        response = table.query(
-            KeyConditionExpression='bet_date = :today',
-            FilterExpression='(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) AND attribute_not_exists(analysis_type) AND attribute_not_exists(learning_type) AND attribute_exists(course) AND attribute_exists(horse)',
-            ExpressionAttributeValues={
-                ':today': today,
-                ':not_learning': False
-            }
-        )
+        # Query BOTH today and yesterday (since picks may have yesterday's bet_date but today's race times)
+        all_picks = []
+        for date in [today, yesterday]:
+            response = table.query(
+                KeyConditionExpression='bet_date = :date',
+                FilterExpression='(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) AND attribute_not_exists(analysis_type) AND attribute_not_exists(learning_type) AND attribute_exists(course) AND attribute_exists(horse)',
+                ExpressionAttributeValues={
+                    ':date': date,
+                    ':not_learning': False
+                }
+            )
+            all_picks.extend(response.get('Items', []))
         
-        picks = response.get('Items', [])
+        picks = all_picks
         picks = [decimal_to_float(item) for item in picks]
+        
+        # Filter to only show races with today's date in race_time
+        picks = [item for item in picks 
+                 if item.get('race_time', '').startswith(today)]
         
         # Filter: show only items with show_in_ui=True explicitly set
         # If show_in_ui is True, display it regardless of score (the score filter was already applied when setting show_in_ui)

@@ -314,21 +314,80 @@ def get_yesterday_picks(headers):
     """Get yesterday's picks with results"""
     from datetime import timedelta
     yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    day_before_yesterday = (datetime.now() - timedelta(days=2)).strftime('%Y-%m-%d')
     
-    # Check both 'date' and 'bet_date' fields (schema evolved)
-    response = table.scan(
-        FilterExpression='#d = :yesterday OR bet_date = :yesterday',
-        ExpressionAttributeNames={'#d': 'date'},
-        ExpressionAttributeValues={':yesterday': yesterday}
-    )
+    # Query both yesterday and day before (since picks may have earlier bet_date)
+    all_items = []
+    for date in [yesterday, day_before_yesterday]:
+        response = table.query(
+            KeyConditionExpression='bet_date = :date',
+            FilterExpression='(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) AND attribute_exists(course) AND attribute_exists(horse)',
+            ExpressionAttributeValues={
+                ':date': date,
+                ':not_learning': False
+            }
+        )
+        all_items.extend(response.get('Items', []))
     
-    items = response.get('Items', [])
-    items = [decimal_to_float(item) for item in items]
+    # Convert decimals
+    all_items = [decimal_to_float(item) for item in all_items]
+    
+    # Filter to only show races with yesterday's date in race_time
+    items = [item for item in all_items 
+             if item.get('race_time', '').startswith(yesterday)]
+    
+    # Filter for UI picks only
+    items = [item for item in items 
+             if item.get('show_in_ui') == True 
+             and item.get('course') and item.get('course') != 'Unknown'
+             and item.get('horse') and item.get('horse') != 'Unknown']
+    
+    # Normalize outcome field for frontend compatibility (add lowercase version)
+    for item in items:
+        outcome_upper = str(item.get('outcome', '')).upper()
+        if outcome_upper == 'WON':
+            item['result'] = 'win'
+            item['status'] = 'won'
+        elif outcome_upper == 'PLACED':
+            item['result'] = 'placed'
+            item['status'] = 'placed'
+        elif outcome_upper == 'LOST':
+            item['result'] = 'loss'
+            item['status'] = 'lost'
+        else:
+            item['result'] = 'pending'
+            item['status'] = 'pending'
     
     # Sort by race time
     items.sort(key=lambda x: x.get('race_time', ''))
     
-    print(f"Yesterday's picks: {len(items)}")
+    # Calculate summary stats (outcomes are UPPERCASE)
+    wins = sum(1 for p in items if str(p.get('outcome', '')).upper() == 'WON')
+    places = sum(1 for p in items if str(p.get('outcome', '')).upper() == 'PLACED')
+    losses = sum(1 for p in items if str(p.get('outcome', '')).upper() == 'LOST')
+    pending = sum(1 for p in items if str(p.get('outcome', '')).upper() in ['PENDING', ''] or p.get('outcome') is None)
+    
+    total_stake = sum(float(p.get('stake', 2.0)) for p in items)
+    
+    # Calculate returns
+    total_return = 0
+    for p in items:
+        outcome = str(p.get('outcome', '')).upper()
+        if outcome == 'WON':
+            stake = float(p.get('stake', 2.0))
+            odds = float(p.get('odds', 0))
+            total_return += stake * odds
+        elif outcome == 'PLACED':
+            stake = float(p.get('stake', 2.0))
+            odds = float(p.get('odds', 0))
+            ew_fraction = float(p.get('ew_fraction', 0.2))
+            total_return += (stake/2) * (1 + (odds-1) * ew_fraction)
+    
+    profit = total_return - total_stake
+    roi = (profit / total_stake * 100) if total_stake > 0 else 0
+    strike_rate = (wins / len(items) * 100) if items else 0
+    
+    print(f"Yesterday's UI picks: {len(items)} (W:{wins} P:{places} L:{losses} Pending:{pending})")
     
     return {
         'statusCode': 200,
@@ -337,7 +396,22 @@ def get_yesterday_picks(headers):
             'success': True,
             'picks': items,
             'count': len(items),
-            'date': yesterday
+            'date': yesterday,
+            'summary': {
+                'total_picks': len(items),
+                'wins': wins,
+                'win_count': wins,  # Alternative field name
+                'places': places,
+                'place_count': places,  # Alternative field name
+                'losses': losses,
+                'loss_count': losses,  # Alternative field name
+                'pending': pending,
+                'total_stake': round(total_stake, 2),
+                'total_return': round(total_return, 2),
+                'profit': round(profit, 2),
+                'roi': round(roi, 2),
+                'strike_rate': round(strike_rate, 1)
+            }
         })
     }
 
@@ -357,19 +431,26 @@ def get_health(headers):
 def check_today_results(headers):
     """Check results for today's picks - ONLY actual betting picks (not training, analyses, or learning records)"""
     today = datetime.now().strftime('%Y-%m-%d')
+    yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     
-    # Get ONLY actual betting picks (exclude training, analyses, and learning records)
-    response = table.query(
-        KeyConditionExpression='bet_date = :today',
-        FilterExpression='(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) AND attribute_not_exists(analysis_type) AND attribute_not_exists(learning_type) AND attribute_exists(course) AND attribute_exists(horse)',
-        ExpressionAttributeValues={
-            ':today': today,
-            ':not_learning': False
-        }
-    )
+    # Query BOTH today and yesterday (since picks may have yesterday's bet_date but today's race times)
+    all_picks = []
+    for date in [today, yesterday]:
+        response = table.query(
+            KeyConditionExpression='bet_date = :date',
+            FilterExpression='(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) AND attribute_not_exists(analysis_type) AND attribute_not_exists(learning_type) AND attribute_exists(course) AND attribute_exists(horse)',
+            ExpressionAttributeValues={
+                ':date': date,
+                ':not_learning': False
+            }
+        )
+        all_picks.extend(response.get('Items', []))
     
-    all_picks = response.get('Items', [])
     all_picks = [decimal_to_float(item) for item in all_picks]
+    
+    # Filter to only show races with today's date in race_time
+    all_picks = [item for item in all_picks 
+                 if item.get('race_time', '').startswith(today)]
     
     # Filter: remove Unknown items and only show items with show_in_ui=True
     all_picks = [item for item in all_picks 
@@ -380,33 +461,12 @@ def check_today_results(headers):
     # Filter for HIGH confidence picks only (comprehensive_score >= 75)
     high_confidence_picks = []
     for item in all_picks:
-        comp_score = item.get('comprehensive_score') or item.get('analysis_score') or 0
+        comp_score = item.get('comprehensive_score') or item.get('combined_confidence') or item.get('analysis_score') or 0
         if float(comp_score) >= 75:
             high_confidence_picks.append(item)
     all_picks = high_confidence_picks
     
-    # Filter to only show races that haven't started yet (future races)
-    from datetime import timezone
-    now = datetime.now(timezone.utc)
-    future_picks = []
-    for item in all_picks:
-        race_time_str = item.get('race_time', '')
-        if race_time_str:
-            try:
-                # Parse ISO format: "2026-02-02T19:00:00.000Z"
-                race_dt = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
-                if race_dt > now:
-                    future_picks.append(item)
-            except Exception as e:
-                try:
-                    # Try alternative format: "02/02/2026 19:00:00"
-                    race_dt = datetime.strptime(race_time_str, '%d/%m/%Y %H:%M:%S')
-                    if race_dt > now.replace(tzinfo=None):
-                        future_picks.append(item)
-                except:
-                    # If both parsing attempts fail, exclude it to be safe
-                    pass
-    all_picks = future_picks
+    # NO TIME FILTERING - show ALL today's races (past and future) for results page
     
     # Sort by comprehensive score (highest first) and limit to 10 per day
     for item in all_picks:
@@ -467,26 +527,23 @@ def check_today_results(headers):
     
     # DEBUG: Print outcomes
     for p in picks:
-        print(f"Pick: {p.get('horse_name', 'unknown')} | outcome: '{p.get('outcome')}' | type: {type(p.get('outcome'))}")
+        print(f"Pick: {p.get('horse', 'unknown')} | outcome: '{p.get('outcome')}' | type: {type(p.get('outcome'))}")
     
-    # Calculate overall stats from existing outcomes
-    wins = sum(1 for p in picks if p.get('outcome') == 'win')
-    print(f"DEBUG: Calculated wins={wins}, checking for outcome=='win'")
-    print(f"DEBUG: Outcomes in picks: {[p.get('outcome') for p in picks]}")
-    print(f"DEBUG: Types: {[type(p.get('outcome')) for p in picks]}")
-    print(f"DEBUG: Repr: {[repr(p.get('outcome')) for p in picks]}")
-    print(f"DEBUG: Manual check - first pick outcome: '{picks[0].get('outcome')}' == 'win'? {picks[0].get('outcome') == 'win'}")
-    places = sum(1 for p in picks if p.get('outcome') == 'placed')
-    losses = sum(1 for p in picks if p.get('outcome') == 'loss')
-    pending = sum(1 for p in picks if p.get('outcome') in ['pending', None])
+    # Calculate overall stats from existing outcomes (outcomes are UPPERCASE: WON, PLACED, LOST)
+    wins = sum(1 for p in picks if str(p.get('outcome', '')).upper() == 'WON')
+    places = sum(1 for p in picks if str(p.get('outcome', '')).upper() == 'PLACED')
+    losses = sum(1 for p in picks if str(p.get('outcome', '')).upper() == 'LOST')
+    pending = sum(1 for p in picks if str(p.get('outcome', '')).upper() in ['PENDING', ''] or p.get('outcome') is None)
+    
+    print(f"Stats: {wins}W, {places}P, {losses}L, {pending}Pending")
     
     total_stake = sum(float(p.get('stake', 2.0)) for p in picks)
     
-    # Calculate returns based on outcomes
+    # Calculate returns based on outcomes (outcomes are UPPERCASE)
     total_return = 0
     for p in picks:
-        outcome = p.get('outcome')
-        if outcome == 'win':
+        outcome = str(p.get('outcome', '')).upper()
+        if outcome == 'WON':
             stake = float(p.get('stake', 2.0))
             odds = float(p.get('odds', 0))
             bet_type = p.get('bet_type', 'WIN').upper()
@@ -495,7 +552,7 @@ def check_today_results(headers):
             else:  # EW
                 ew_fraction = float(p.get('ew_fraction', 0.2))
                 total_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
-        elif outcome == 'placed':
+        elif outcome == 'PLACED':
             stake = float(p.get('stake', 2.0))
             odds = float(p.get('odds', 0))
             ew_fraction = float(p.get('ew_fraction', 0.2))

@@ -1,0 +1,2614 @@
+{
+  "date": "2026-02-04",
+  "generated_at": "2026-02-04T12:50:16.875107",
+  "total_races": 260,
+  "completed_races": 9,
+  "wins": 7,
+  "win_rate": 77.77777777777779,
+  "total_stake": 90,
+  "total_return": 252.37022689540674,
+  "profit_loss": 162.37022689540674,
+  "roi": 180.4113632171186,
+  "results": [
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T17:47:08Z",
+      "my_tip": "Lucky Bolt",
+      "score": 0.0,
+      "odds": 3.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T17:50:23Z",
+      "my_tip": "Swift Demon",
+      "score": 0.0,
+      "odds": 4.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T18:30:23Z",
+      "my_tip": "Dark Bolt",
+      "score": 0.0,
+      "odds": 4.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T19:00:21Z",
+      "my_tip": "Noble King",
+      "score": 0.0,
+      "odds": 11.9,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T19:20:21Z",
+      "my_tip": "Dark King",
+      "score": 0.0,
+      "odds": 6.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T19:35:21Z",
+      "my_tip": "Speed Demon",
+      "score": 0.0,
+      "odds": 4.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T20:22:05Z",
+      "my_tip": "Golden Arrow",
+      "score": 0.0,
+      "odds": 4.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T20:36:18Z",
+      "my_tip": "Royal Bolt",
+      "score": 0.0,
+      "odds": 5.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T20:37:25Z",
+      "my_tip": "Lucky Dream",
+      "score": 0.0,
+      "odds": 3.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-08T21:02:25Z",
+      "my_tip": "Thunder Strike",
+      "score": 0.0,
+      "odds": 3.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-09T15:30:23Z",
+      "my_tip": "Noble King",
+      "score": 0.0,
+      "odds": 3.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-09T16:30:24Z",
+      "my_tip": "Golden Runner",
+      "score": 0.0,
+      "odds": 11.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-09T16:35:21Z",
+      "my_tip": "Golden Bolt",
+      "score": 0.0,
+      "odds": 6.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ascot",
+      "time": "2026-01-09T19:20:22Z",
+      "my_tip": "Lucky Runner",
+      "score": 0.0,
+      "odds": 8.9,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Carlisle",
+      "time": "2026-02-03T13:30:00.000Z",
+      "my_tip": "Swingforthefence",
+      "score": 22.0,
+      "odds": 65.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Carlisle",
+      "time": "2026-02-03T14:35:00.000Z",
+      "my_tip": "Sevarana",
+      "score": 67.0,
+      "odds": 2.74,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Carlisle",
+      "time": "2026-02-03T15:35:00.000Z",
+      "my_tip": "Gintime",
+      "score": 43.0,
+      "odds": 12.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Carlisle",
+      "time": "2026-02-03T16:04:00.000Z",
+      "my_tip": "Carrhill",
+      "score": 0.0,
+      "odds": 16.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Carlisle",
+      "time": "2026-02-03T16:34:00.000Z",
+      "my_tip": "Marvel Magic",
+      "score": 21.0,
+      "odds": 18.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Catterick",
+      "time": "2026-01-21T13:17:00.000Z",
+      "my_tip": "Dotties Promise",
+      "score": 2.4,
+      "odds": 200.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Catterick",
+      "time": "2026-01-21T13:47:00.000Z",
+      "my_tip": "Huit Reflets",
+      "score": 30.2,
+      "odds": 4.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Catterick",
+      "time": "2026-01-21T14:20:00.000Z",
+      "my_tip": "Jack Hoola",
+      "score": 26.9,
+      "odds": 4.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Chelmsford City",
+      "time": "2026-01-08T17:30:00.000Z",
+      "my_tip": "Sparksmith",
+      "score": 47.6,
+      "odds": 3.65,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Chelmsford City",
+      "time": "2026-01-08T18:00:00.000Z",
+      "my_tip": "Poetic Jack",
+      "score": 46.1,
+      "odds": 4.1,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Chelmsford City",
+      "time": "2026-01-08T19:00:00.000Z",
+      "my_tip": "Haliphon",
+      "score": 44.4,
+      "odds": 3.85,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Chelmsford City",
+      "time": "2026-01-11T16:12:00.000Z",
+      "my_tip": "Secret Road",
+      "score": 29.2,
+      "odds": 4.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Chelmsford City",
+      "time": "2026-01-11T16:42:00.000Z",
+      "my_tip": "Brinton",
+      "score": 15.9,
+      "odds": 11.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T19:05:23Z",
+      "my_tip": "Mighty Dream",
+      "score": 0.0,
+      "odds": 3.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T20:00:21Z",
+      "my_tip": "Mighty Runner",
+      "score": 0.0,
+      "odds": 2.9,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T20:18:48Z",
+      "my_tip": "Mighty Spirit",
+      "score": 0.0,
+      "odds": 2.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T20:38:13Z",
+      "my_tip": "Noble Demon",
+      "score": 0.0,
+      "odds": 3.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T20:39:35Z",
+      "my_tip": "Royal Demon",
+      "score": 0.0,
+      "odds": 3.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T20:53:13Z",
+      "my_tip": "Lucky Demon",
+      "score": 0.0,
+      "odds": 3.1,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-08T20:54:21Z",
+      "my_tip": "Mighty King",
+      "score": 0.0,
+      "odds": 11.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T14:35:22Z",
+      "my_tip": "Royal King",
+      "score": 0.0,
+      "odds": 6.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T15:05:23Z",
+      "my_tip": "Lucky Bolt",
+      "score": 0.0,
+      "odds": 3.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T15:35:21Z",
+      "my_tip": "Swift Bolt",
+      "score": 0.0,
+      "odds": 2.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T17:00:21Z",
+      "my_tip": "Speed Flash",
+      "score": 0.0,
+      "odds": 6.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T17:20:22Z",
+      "my_tip": "Golden Strike",
+      "score": 0.0,
+      "odds": 4.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T17:50:23Z",
+      "my_tip": "Thunder King",
+      "score": 0.0,
+      "odds": 2.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T18:20:22Z",
+      "my_tip": "Golden Spirit",
+      "score": 0.0,
+      "odds": 4.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T18:30:23Z",
+      "my_tip": "Lucky Flash",
+      "score": 0.0,
+      "odds": 2.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T18:35:22Z",
+      "my_tip": "Dark Dream",
+      "score": 0.0,
+      "odds": 4.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T19:00:22Z",
+      "my_tip": "Dark Spirit",
+      "score": 0.0,
+      "odds": 4.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Cheltenham",
+      "time": "2026-01-09T19:05:23Z",
+      "my_tip": "Lucky Spirit",
+      "score": 0.0,
+      "odds": 6.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Chepstow",
+      "time": "2026-01-27T14:02:00.000Z",
+      "my_tip": "French Emperor",
+      "score": 25.9,
+      "odds": 6.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Chepstow",
+      "time": "2026-01-27T14:37:00.000Z",
+      "my_tip": "Storming Nelson",
+      "score": 5.0,
+      "odds": 190.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Chepstow",
+      "time": "2026-01-27T15:12:00.000Z",
+      "my_tip": "Daring To Dream",
+      "score": 5.0,
+      "odds": 90.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Chepstow",
+      "time": "2026-01-27T15:47:00.000Z",
+      "my_tip": "Fat Faced Columbo",
+      "score": 35.0,
+      "odds": 3.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Doncaster",
+      "time": "2026-01-19T17:21:00.000Z",
+      "my_tip": "Dannys Flyer",
+      "score": 54.5,
+      "odds": 1.7985611510791366,
+      "actual_winner": "Dannys Flyer",
+      "is_win": true,
+      "outcome": "\u2713 WIN  (Return: \u00a317.99)"
+    },
+    {
+      "course": "Doncaster",
+      "time": "2026-01-23T12:45:00.000Z",
+      "my_tip": "West Hill Verde",
+      "score": 32.8,
+      "odds": 3.85,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Doncaster",
+      "time": "2026-01-23T13:45:00.000Z",
+      "my_tip": "Minella Jury",
+      "score": 37.4,
+      "odds": 2.86,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Doncaster",
+      "time": "2026-01-23T16:00:00.000Z",
+      "my_tip": "Mask Of Zorro",
+      "score": 37.4,
+      "odds": 3.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Dunstall Park",
+      "time": "2026-01-15T17:18:00.000Z",
+      "my_tip": "Blazeaway Bruvas",
+      "score": 50.3,
+      "odds": 2.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Exeter",
+      "time": "2026-01-09T13:02:00.000Z",
+      "my_tip": "Call Me Legend",
+      "score": 0.0,
+      "odds": 4.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Exeter",
+      "time": "2026-01-09T13:32:00.000Z",
+      "my_tip": "Johnnys Jury",
+      "score": 0.0,
+      "odds": 2.52,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Exeter",
+      "time": "2026-01-09T16:05:00.000Z",
+      "my_tip": "Blackswan Doroux",
+      "score": 0.0,
+      "odds": 2.96,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-01-14T12:45:00Z",
+      "my_tip": "Macho Man",
+      "score": 39.6,
+      "odds": 2.6315789473684212,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-01-14T13:15:00Z",
+      "my_tip": "Bambino Fever",
+      "score": 67.4,
+      "odds": 1.3333333333333333,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-01-14T14:15:00Z",
+      "my_tip": "Blood Destiny",
+      "score": 30.2,
+      "odds": 5.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-01-15T14:43:00Z",
+      "my_tip": "Ersudaly",
+      "score": 4.6,
+      "odds": 44.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-01-15T15:52:00Z",
+      "my_tip": "Not So Proper",
+      "score": 14.9,
+      "odds": 42.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-02-03T13:50:00.000Z",
+      "my_tip": "Springhill Warrior",
+      "score": 53.0,
+      "odds": 2.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-02-03T14:25:00.000Z",
+      "my_tip": "Oldschool Outlaw",
+      "score": 51.0,
+      "odds": 1.78,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-02-03T14:55:00.000Z",
+      "my_tip": "Moorish Castle",
+      "score": 13.0,
+      "odds": 42.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-02-03T15:30:00.000Z",
+      "my_tip": "Themanintheanorak",
+      "score": 60.0,
+      "odds": 7.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-02-03T16:05:00.000Z",
+      "my_tip": "Ready For Road",
+      "score": 22.0,
+      "odds": 14.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Fairyhouse",
+      "time": "2026-02-03T16:40:00.000Z",
+      "my_tip": "Green Hint",
+      "score": 46.0,
+      "odds": 1.54,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Fakenham",
+      "time": "2026-01-18T15:45:00.000Z",
+      "my_tip": "Lultimatom",
+      "score": 45.4,
+      "odds": 1.67,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ffos Las",
+      "time": "2026-01-08T15:40:00.000Z",
+      "my_tip": "Out Of Focus",
+      "score": 35.0,
+      "odds": 5.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Hereford",
+      "time": "2026-01-26T15:00:00.000Z",
+      "my_tip": "Royal Mer",
+      "score": 39.6,
+      "odds": 2.86,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Hereford",
+      "time": "2026-01-26T15:30:00.000Z",
+      "my_tip": "Lastroboy",
+      "score": 21.0,
+      "odds": 8.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Hereford",
+      "time": "2026-01-26T16:30:00.000Z",
+      "my_tip": "Princess Keri",
+      "score": 59.9,
+      "odds": 1.55,
+      "actual_winner": "Princess Keri",
+      "is_win": true,
+      "outcome": "\u2713 WIN  (Return: \u00a315.50)"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T18:35:21Z",
+      "my_tip": "Silver Strike",
+      "score": 0.0,
+      "odds": 7.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T19:30:23Z",
+      "my_tip": "Dark Dream",
+      "score": 0.0,
+      "odds": 3.1,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T20:05:23Z",
+      "my_tip": "Lucky Runner",
+      "score": 0.0,
+      "odds": 4.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T20:21:43Z",
+      "my_tip": "Golden Strike",
+      "score": 0.0,
+      "odds": 3.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T20:35:20Z",
+      "my_tip": "Thunder Star",
+      "score": 0.0,
+      "odds": 3.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T20:59:11Z",
+      "my_tip": "Speed King",
+      "score": 0.0,
+      "odds": 3.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T21:00:20Z",
+      "my_tip": "Noble Bolt",
+      "score": 0.0,
+      "odds": 3.1,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T21:02:05Z",
+      "my_tip": "Golden Bolt",
+      "score": 0.0,
+      "odds": 3.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-08T21:19:35Z",
+      "my_tip": "Thunder Strike",
+      "score": 0.0,
+      "odds": 2.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T14:50:23Z",
+      "my_tip": "Silver Strike",
+      "score": 0.0,
+      "odds": 3.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T16:20:21Z",
+      "my_tip": "Lucky Dream",
+      "score": 0.0,
+      "odds": 5.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T16:50:24Z",
+      "my_tip": "Dark Star",
+      "score": 0.0,
+      "odds": 2.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T17:30:24Z",
+      "my_tip": "Golden Dream",
+      "score": 0.0,
+      "odds": 2.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T17:35:22Z",
+      "my_tip": "Speed Spirit",
+      "score": 0.0,
+      "odds": 5.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T20:00:22Z",
+      "my_tip": "Thunder Arrow",
+      "score": 0.0,
+      "odds": 2.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton Park",
+      "time": "2026-01-09T21:00:21Z",
+      "my_tip": "Lucky Dream",
+      "score": 0.0,
+      "odds": 3.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-01-14T17:30:00Z",
+      "my_tip": "Rising Force",
+      "score": 39.6,
+      "odds": 2.6315789473684212,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-01-14T18:00:00Z",
+      "my_tip": "Homme De Fer",
+      "score": 31.8,
+      "odds": 3.3333333333333335,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-01-14T18:30:00Z",
+      "my_tip": "Church Wedding",
+      "score": 37.4,
+      "odds": 2.857142857142857,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-01-19T13:08:00.000Z",
+      "my_tip": "Villalobos",
+      "score": 14.9,
+      "odds": 13.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-01-19T13:38:00.000Z",
+      "my_tip": "Magna",
+      "score": 37.4,
+      "odds": 2.857142857142857,
+      "actual_winner": "Dr Ali",
+      "is_win": false,
+      "outcome": "\u2717 LOST"
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-01-21T18:00:00.000Z",
+      "my_tip": "Appier",
+      "score": 26.9,
+      "odds": 6.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T12:50:00.000Z",
+      "my_tip": "Age Of Time",
+      "score": 65.0,
+      "odds": 7.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T13:25:00.000Z",
+      "my_tip": "Glistening",
+      "score": 63.0,
+      "odds": 4.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T14:00:00.000Z",
+      "my_tip": "Unassuming",
+      "score": 76.0,
+      "odds": 9.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T14:35:00.000Z",
+      "my_tip": "Pure Artistry",
+      "score": 56.0,
+      "odds": 2.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T15:10:00.000Z",
+      "my_tip": "Valley Ofthe Kings",
+      "score": 67.0,
+      "odds": 3.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T15:45:00.000Z",
+      "my_tip": "Fiddlers Green",
+      "score": 86.0,
+      "odds": 3.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kempton",
+      "time": "2026-02-04T16:15:00.000Z",
+      "my_tip": "Magna",
+      "score": 54.0,
+      "odds": 3.25,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Kinsley",
+      "time": "2026-01-19T18:08:00.000Z",
+      "my_tip": "Drumdoit Lass",
+      "score": 48.1,
+      "odds": 2.0408163265306123,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T18:12:08Z",
+      "my_tip": "Golden King",
+      "score": 0.0,
+      "odds": 2.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T18:20:21Z",
+      "my_tip": "Mighty Demon",
+      "score": 0.0,
+      "odds": 6.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T20:20:20Z",
+      "my_tip": "Lucky Star",
+      "score": 0.0,
+      "odds": 3.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T20:22:25Z",
+      "my_tip": "Speed Arrow",
+      "score": 0.0,
+      "odds": 2.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T20:36:43Z",
+      "my_tip": "Silver Dream",
+      "score": 0.0,
+      "odds": 4.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T20:37:05Z",
+      "my_tip": "Lucky Spirit",
+      "score": 0.0,
+      "odds": 5.1,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T21:01:43Z",
+      "my_tip": "Dark Star",
+      "score": 0.0,
+      "odds": 3.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-08T21:19:21Z",
+      "my_tip": "Dark Flash",
+      "score": 0.0,
+      "odds": 3.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-09T15:50:24Z",
+      "my_tip": "Silver Flash",
+      "score": 0.0,
+      "odds": 3.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-09T18:50:23Z",
+      "my_tip": "Golden Bolt",
+      "score": 0.0,
+      "odds": 7.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-09T19:30:23Z",
+      "my_tip": "Royal Spirit",
+      "score": 0.0,
+      "odds": 5.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Leopardstown",
+      "time": "2026-01-09T20:20:21Z",
+      "my_tip": "Royal King",
+      "score": 0.0,
+      "odds": 4.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-14T13:25:00Z",
+      "my_tip": "Giles Glory",
+      "score": 37.4,
+      "odds": 2.857142857142857,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-14T15:05:00Z",
+      "my_tip": "Krissy",
+      "score": 34.2,
+      "odds": 3.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-19T13:20:00.000Z",
+      "my_tip": "Zamek",
+      "score": 33.2,
+      "odds": 4.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-19T15:50:00.000Z",
+      "my_tip": "Begin The Luck",
+      "score": 29.2,
+      "odds": 3.571428571428571,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-21T13:05:00.000Z",
+      "my_tip": "Evenepoel",
+      "score": 33.2,
+      "odds": 3.95,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-21T15:08:00.000Z",
+      "my_tip": "Hardstyle",
+      "score": 45.4,
+      "odds": 2.2222222222222223,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Lingfield",
+      "time": "2026-01-21T15:38:00.000Z",
+      "my_tip": "Far Too Fizzy",
+      "score": 33.2,
+      "odds": 3.45,
+      "actual_winner": "Far Too Fizzy",
+      "is_win": true,
+      "outcome": "\u2713 WIN  (Return: \u00a334.50)"
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-01-15T14:52:00Z",
+      "my_tip": "Demoiselle Kap",
+      "score": 15.9,
+      "odds": 11.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-01-15T15:27:00Z",
+      "my_tip": "Take All",
+      "score": 15.9,
+      "odds": 8.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-01-15T16:02:00Z",
+      "my_tip": "The Procrastinator",
+      "score": 22.6,
+      "odds": 6.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T13:13:00.000Z",
+      "my_tip": "Wolf Rayet",
+      "score": 50.0,
+      "odds": 4.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T13:48:00.000Z",
+      "my_tip": "Catwalk Girl",
+      "score": 57.0,
+      "odds": 2.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T14:23:00.000Z",
+      "my_tip": "Sherminator",
+      "score": 58.0,
+      "odds": 2.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T14:58:00.000Z",
+      "my_tip": "Rodney",
+      "score": 88.0,
+      "odds": 2.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T15:33:00.000Z",
+      "my_tip": "Sallyville Lady",
+      "score": 73.0,
+      "odds": 4.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T16:07:00.000Z",
+      "my_tip": "Shuil Ceoil",
+      "score": 65.0,
+      "odds": 2.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Ludlow",
+      "time": "2026-02-04T16:42:00.000Z",
+      "my_tip": "Barton Snow",
+      "score": 92.0,
+      "odds": 1.71,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Market Rasen",
+      "time": "2026-01-16T14:05:00Z",
+      "my_tip": "Doyen Du Bar",
+      "score": 36.0,
+      "odds": 3.55,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Market Rasen",
+      "time": "2026-01-16T14:40:00.000Z",
+      "my_tip": "The Flaggy Shore",
+      "score": 31.8,
+      "odds": 3.9,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Naas",
+      "time": "2026-01-09T13:13:00.000Z",
+      "my_tip": "Run For Cover",
+      "score": 0.0,
+      "odds": 2.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Naas",
+      "time": "2026-01-09T13:43:00.000Z",
+      "my_tip": "Saint Baco",
+      "score": 0.0,
+      "odds": 3.45,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Naas",
+      "time": "2026-01-09T14:13:00.000Z",
+      "my_tip": "Hartford",
+      "score": 0.0,
+      "odds": 3.65,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Naas",
+      "time": "2026-01-09T14:43:00.000Z",
+      "my_tip": "Kurasso Blue",
+      "score": 0.0,
+      "odds": 2.38,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Naas",
+      "time": "2026-01-09T15:13:00.000Z",
+      "my_tip": "Karamoja",
+      "score": 0.0,
+      "odds": 2.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newbury",
+      "time": "2026-01-14T12:35:00Z",
+      "my_tip": "Sober Glory",
+      "score": 63.8,
+      "odds": 1.4285714285714286,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-09T13:27:00.000Z",
+      "my_tip": "Cardinal Point",
+      "score": 0.0,
+      "odds": 2.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-09T13:57:00.000Z",
+      "my_tip": "Asia Force",
+      "score": 0.0,
+      "odds": 1.91,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-09T14:57:00.000Z",
+      "my_tip": "Alba Gu Brath",
+      "score": 0.0,
+      "odds": 1.51,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-15T11:45:00Z",
+      "my_tip": "So Proud",
+      "score": 26.9,
+      "odds": 4.9,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-15T12:50:00Z",
+      "my_tip": "Fat Harry",
+      "score": 33.2,
+      "odds": 3.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-15T14:35:00Z",
+      "my_tip": "Scairp Dubh",
+      "score": 15.9,
+      "odds": 11.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-15T15:45:00Z",
+      "my_tip": "Kilaro",
+      "score": 33.2,
+      "odds": 3.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-16T13:05:00.000Z",
+      "my_tip": "Judgment Call",
+      "score": 33.2,
+      "odds": 5.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-16T13:40:00.000Z",
+      "my_tip": "Nikki Swango",
+      "score": 33.2,
+      "odds": 9.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-27T12:45:00.000Z",
+      "my_tip": "I C U In My Dreams",
+      "score": 37.4,
+      "odds": 2.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-27T15:00:00.000Z",
+      "my_tip": "Just Call Me Lucy",
+      "score": 33.2,
+      "odds": 3.35,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-27T15:35:00.000Z",
+      "my_tip": "The Big Breac",
+      "score": 42.0,
+      "odds": 2.68,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-01-27T16:10:00.000Z",
+      "my_tip": "Quickasican",
+      "score": 10.0,
+      "odds": 50.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-02-04T16:23:00.000Z",
+      "my_tip": "Onyeisi",
+      "score": 56.0,
+      "odds": 4.1,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-02-04T17:00:00.000Z",
+      "my_tip": "Captain Vallo",
+      "score": 66.0,
+      "odds": 7.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-02-04T17:30:00.000Z",
+      "my_tip": "Yorkshire Glory",
+      "score": 87.0,
+      "odds": 2.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newcastle",
+      "time": "2026-02-04T18:00:00.000Z",
+      "my_tip": "Spun To Gold",
+      "score": 70.0,
+      "odds": 2.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T17:32:08Z",
+      "my_tip": "Thunder Runner",
+      "score": 0.0,
+      "odds": 6.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T19:50:23Z",
+      "my_tip": "Golden Strike",
+      "score": 0.0,
+      "odds": 3.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T20:21:18Z",
+      "my_tip": "Thunder Arrow",
+      "score": 0.0,
+      "odds": 2.9,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T20:30:23Z",
+      "my_tip": "Dark King",
+      "score": 0.0,
+      "odds": 7.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T20:33:48Z",
+      "my_tip": "Golden King",
+      "score": 0.0,
+      "odds": 2.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T20:39:21Z",
+      "my_tip": "Golden Runner",
+      "score": 0.0,
+      "odds": 2.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T20:54:35Z",
+      "my_tip": "Dark Demon",
+      "score": 0.0,
+      "odds": 6.1,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T21:18:13Z",
+      "my_tip": "Mighty Dream",
+      "score": 0.0,
+      "odds": 4.1,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-08T21:18:48Z",
+      "my_tip": "Golden King",
+      "score": 0.0,
+      "odds": 2.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-09T16:00:21Z",
+      "my_tip": "Noble Strike",
+      "score": 0.0,
+      "odds": 3.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-09T18:00:22Z",
+      "my_tip": "Silver Arrow",
+      "score": 0.0,
+      "odds": 3.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-09T18:05:23Z",
+      "my_tip": "Royal Demon",
+      "score": 0.0,
+      "odds": 4.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Newmarket",
+      "time": "2026-01-09T20:30:24Z",
+      "my_tip": "Silver Runner",
+      "score": 0.0,
+      "odds": 3.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Nottingham",
+      "time": "2026-01-19T21:28:00.000Z",
+      "my_tip": "Saheel Charm",
+      "score": 53.9,
+      "odds": 1.8181818181818181,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Plumpton",
+      "time": "2026-01-26T13:20:00.000Z",
+      "my_tip": "Lola De Magny",
+      "score": 3.2,
+      "odds": 50.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Plumpton",
+      "time": "2026-01-26T13:50:00.000Z",
+      "my_tip": "Eddie My Eagle",
+      "score": 36.0,
+      "odds": 3.75,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Plumpton",
+      "time": "2026-01-26T14:20:00.000Z",
+      "my_tip": "Superstylin",
+      "score": 39.6,
+      "odds": 2.96,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Plumpton",
+      "time": "2026-01-26T14:50:00.000Z",
+      "my_tip": "Lucky Manifest",
+      "score": 34.0,
+      "odds": 4.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-01-26T13:10:00.000Z",
+      "my_tip": "Cloudio",
+      "score": 5.0,
+      "odds": 65.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-01-26T14:10:00.000Z",
+      "my_tip": "Miss Doyenne",
+      "score": 37.4,
+      "odds": 3.45,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-01-26T15:10:00.000Z",
+      "my_tip": "Im Slippy",
+      "score": 39.6,
+      "odds": 2.92,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-01-26T16:10:00.000Z",
+      "my_tip": "My Friend The Wind",
+      "score": 6.0,
+      "odds": 32.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T12:28:00.000Z",
+      "my_tip": "Vanillier",
+      "score": 66.0,
+      "odds": 3.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T13:03:00.000Z",
+      "my_tip": "Nine Graces",
+      "score": 60.0,
+      "odds": 2.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T13:38:00.000Z",
+      "my_tip": "Mino Des Mottes",
+      "score": 56.0,
+      "odds": 2.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T14:13:00.000Z",
+      "my_tip": "Harpy Eagle",
+      "score": 51.0,
+      "odds": 1.22,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T14:48:00.000Z",
+      "my_tip": "Jacko Star",
+      "score": 40.0,
+      "odds": 1.22,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T15:23:00.000Z",
+      "my_tip": "That Danny Feeling",
+      "score": 65.0,
+      "odds": 1.22,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Punchestown",
+      "time": "2026-02-04T15:58:00.000Z",
+      "my_tip": "Magic Boum",
+      "score": 63.0,
+      "odds": 1.22,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Sedgefield",
+      "time": "2026-02-04T13:32:00.000Z",
+      "my_tip": "Swingingonthesteel",
+      "score": 72.0,
+      "odds": 2.52,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Sedgefield",
+      "time": "2026-02-04T14:07:00.000Z",
+      "my_tip": "Huit Reflets",
+      "score": 92.0,
+      "odds": 3.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Sedgefield",
+      "time": "2026-02-04T14:42:00.000Z",
+      "my_tip": "Snapius",
+      "score": 50.0,
+      "odds": 2.46,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Sedgefield",
+      "time": "2026-02-04T15:17:00.000Z",
+      "my_tip": "Double Digits",
+      "score": 69.0,
+      "odds": 2.9,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Sedgefield",
+      "time": "2026-02-04T15:52:00.000Z",
+      "my_tip": "Honey Im Good",
+      "score": 49.0,
+      "odds": 2.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Sedgefield",
+      "time": "2026-02-04T16:28:00.000Z",
+      "my_tip": "Getaway With You",
+      "score": 111.0,
+      "odds": 5.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Southwell",
+      "time": "2026-01-20T18:00:00Z",
+      "my_tip": "Si Grass",
+      "score": 41.0,
+      "odds": 2.5,
+      "actual_winner": "Si Grass",
+      "is_win": true,
+      "outcome": "\u2713 WIN  (Return: \u00a325.00)"
+    },
+    {
+      "course": "Southwell",
+      "time": "2026-01-20T18:30:00Z",
+      "my_tip": "Hows The Guvnor",
+      "score": 15.9,
+      "odds": 9.0,
+      "actual_winner": "Hows The Guvnor",
+      "is_win": true,
+      "outcome": "\u2713 WIN  (Return: \u00a390.00)"
+    },
+    {
+      "course": "Southwell",
+      "time": "2026-01-23T17:45:00.000Z",
+      "my_tip": "Miss Mendoza",
+      "score": 26.9,
+      "odds": 7.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Star Pelaw",
+      "time": "2026-01-18T18:46:00.000Z",
+      "my_tip": "Killieford Goram",
+      "score": 72.4,
+      "odds": 1.1764705882352942,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Star Pelaw",
+      "time": "2026-01-18T21:26:00.000Z",
+      "my_tip": "Leathems Bluey",
+      "score": 56.7,
+      "odds": 1.7301038062283738,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Star Pelaw",
+      "time": "2026-01-18T21:41:00.000Z",
+      "my_tip": "Sunnyside Jayden",
+      "score": 59.9,
+      "odds": 1.5384615384615383,
+      "actual_winner": "Sunnyside Jayden",
+      "is_win": true,
+      "outcome": "\u2713 WIN  (Return: \u00a315.38)"
+    },
+    {
+      "course": "Taunton",
+      "time": "2026-01-08T16:00:00.000Z",
+      "my_tip": "Getmetothemoon",
+      "score": 39.7,
+      "odds": 4.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Taunton",
+      "time": "2026-02-03T13:40:00.000Z",
+      "my_tip": "Kings Order",
+      "score": 26.0,
+      "odds": 120.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Taunton",
+      "time": "2026-02-03T14:12:00.000Z",
+      "my_tip": "Wandering Ego",
+      "score": 66.0,
+      "odds": 3.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Taunton",
+      "time": "2026-02-03T14:45:00.000Z",
+      "my_tip": "Beauty In The Park",
+      "score": 49.0,
+      "odds": 1.93,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Taunton",
+      "time": "2026-02-03T16:45:00.000Z",
+      "my_tip": "Ourbrowneyedgirl",
+      "score": 47.0,
+      "odds": 4.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T18:05:23Z",
+      "my_tip": "Mighty Runner",
+      "score": 0.0,
+      "odds": 6.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T18:50:23Z",
+      "my_tip": "Lucky Flash",
+      "score": 0.0,
+      "odds": 5.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T20:19:11Z",
+      "my_tip": "Dark Runner",
+      "score": 0.0,
+      "odds": 6.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T20:34:11Z",
+      "my_tip": "Mighty Demon",
+      "score": 0.0,
+      "odds": 10.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T20:38:48Z",
+      "my_tip": "Lucky Runner",
+      "score": 0.0,
+      "odds": 4.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T20:53:48Z",
+      "my_tip": "Dark Star",
+      "score": 0.0,
+      "odds": 3.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T20:58:48Z",
+      "my_tip": "Dark Strike",
+      "score": 0.0,
+      "odds": 4.1,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-08T21:01:18Z",
+      "my_tip": "Golden Dream",
+      "score": 0.0,
+      "odds": 3.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T14:20:22Z",
+      "my_tip": "Lucky King",
+      "score": 0.0,
+      "odds": 5.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T15:00:22Z",
+      "my_tip": "Speed Spirit",
+      "score": 0.0,
+      "odds": 6.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T15:20:21Z",
+      "my_tip": "Dark King",
+      "score": 0.0,
+      "odds": 2.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T16:05:24Z",
+      "my_tip": "Silver Dream",
+      "score": 0.0,
+      "odds": 5.9,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T17:05:24Z",
+      "my_tip": "Speed Dream",
+      "score": 0.0,
+      "odds": 3.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T19:35:22Z",
+      "my_tip": "Noble Spirit",
+      "score": 0.0,
+      "odds": 6.1,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T19:50:24Z",
+      "my_tip": "Silver Dream",
+      "score": 0.0,
+      "odds": 3.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T20:05:24Z",
+      "my_tip": "Swift Demon",
+      "score": 0.0,
+      "odds": 4.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "The Curragh",
+      "time": "2026-01-09T20:35:21Z",
+      "my_tip": "Golden Spirit",
+      "score": 0.0,
+      "odds": 2.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Thurles",
+      "time": "2026-01-18T12:40:00.000Z",
+      "my_tip": "Forty Coats",
+      "score": 52.9,
+      "odds": 1.49,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Thurles",
+      "time": "2026-01-18T14:50:00.000Z",
+      "my_tip": "Rising Dust",
+      "score": 30.2,
+      "odds": 4.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Thurles",
+      "time": "2026-01-18T15:55:00.000Z",
+      "my_tip": "Last Round",
+      "score": 12.4,
+      "odds": 18.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Warwick",
+      "time": "2026-01-23T13:05:00.000Z",
+      "my_tip": "Diamond Jim",
+      "score": 30.2,
+      "odds": 4.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Warwick",
+      "time": "2026-01-23T14:37:00.000Z",
+      "my_tip": "Gwennie May Star",
+      "score": 33.6,
+      "odds": 4.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wincanton",
+      "time": "2026-01-15T12:07:00Z",
+      "my_tip": "Golan Loop",
+      "score": 39.6,
+      "odds": 2.98,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wincanton",
+      "time": "2026-01-15T13:52:00Z",
+      "my_tip": "Postponed Legacy",
+      "score": 29.2,
+      "odds": 6.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wincanton",
+      "time": "2026-01-15T15:37:00Z",
+      "my_tip": "Our Power",
+      "score": 10.0,
+      "odds": 14.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Windsor",
+      "time": "2026-01-16T14:25:00.000Z",
+      "my_tip": "Bluey",
+      "score": 30.2,
+      "odds": 4.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Windsor",
+      "time": "2026-01-16T15:35:00.000Z",
+      "my_tip": "Spectacularsunrise",
+      "score": 15.9,
+      "odds": 15.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Windsor",
+      "time": "2026-01-18T16:05:00.000Z",
+      "my_tip": "Timamzel",
+      "score": 36.0,
+      "odds": 3.0303030303030303,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-09T16:25:00.000Z",
+      "my_tip": "Cargin Bhui",
+      "score": 0.0,
+      "odds": 2.1,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-12T17:00:00.000Z",
+      "my_tip": "Moon Over The Sea",
+      "score": 25.4,
+      "odds": 5.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-12T17:30:00.000Z",
+      "my_tip": "Grey Horizon",
+      "score": 29.2,
+      "odds": 5.4,
+      "actual_winner": "Grey Horizon",
+      "is_win": true,
+      "outcome": "\u2713 WIN  (Return: \u00a354.00)"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-12T18:00:00.000Z",
+      "my_tip": "They All Know Me",
+      "score": 22.0,
+      "odds": 6.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-12T19:00:00.000Z",
+      "my_tip": "Sailor Batt",
+      "score": 35.0,
+      "odds": 3.9,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-12T20:00:00.000Z",
+      "my_tip": "The Pug",
+      "score": 6.4,
+      "odds": 21.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-19T17:30:00.000Z",
+      "my_tip": "Ice Opera",
+      "score": 41.0,
+      "odds": 2.5,
+      "actual_winner": "Galactic Glow",
+      "is_win": false,
+      "outcome": "\u2717 LOST"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-23T13:27:00.000Z",
+      "my_tip": "Shamacid",
+      "score": 6.0,
+      "odds": 27.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-23T16:40:00.000Z",
+      "my_tip": "Nivelles Magic",
+      "score": 26.9,
+      "odds": 8.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T16:25:00.000Z",
+      "my_tip": "Vitalline",
+      "score": 34.2,
+      "odds": 4.8,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T17:00:00.000Z",
+      "my_tip": "Grey Horizon",
+      "score": 26.9,
+      "odds": 7.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T18:00:00.000Z",
+      "my_tip": "Chantelle",
+      "score": 52.9,
+      "odds": 2.02,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T18:30:00.000Z",
+      "my_tip": "Toussarok",
+      "score": 15.9,
+      "odds": 12.5,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T19:00:00.000Z",
+      "my_tip": "Monty Beau",
+      "score": 30.2,
+      "odds": 7.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T19:30:00.000Z",
+      "my_tip": "Welljudged",
+      "score": 34.2,
+      "odds": 2.92,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-26T20:00:00.000Z",
+      "my_tip": "Prince Hector",
+      "score": 15.9,
+      "odds": 9.2,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-27T16:28:00.000Z",
+      "my_tip": "Hows The Guvnor",
+      "score": 37.4,
+      "odds": 3.15,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-27T17:00:00.000Z",
+      "my_tip": "Bad Habits",
+      "score": 26.9,
+      "odds": 5.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-27T17:30:00.000Z",
+      "my_tip": "Horwich",
+      "score": 51.0,
+      "odds": 2.3,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-27T18:00:00.000Z",
+      "my_tip": "Midnight Call",
+      "score": 45.4,
+      "odds": 1.99,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-27T18:30:00.000Z",
+      "my_tip": "Prince Quattro",
+      "score": 29.2,
+      "odds": 5.7,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-01-27T19:30:00.000Z",
+      "my_tip": "Ghaiyyath Park",
+      "score": 5.0,
+      "odds": 50.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T17:30:00.000Z",
+      "my_tip": "Roman Emperor",
+      "score": 19.0,
+      "odds": 25.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T18:00:00.000Z",
+      "my_tip": "Powdering",
+      "score": 52.0,
+      "odds": 7.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T18:30:00.000Z",
+      "my_tip": "Lovethiswayagain",
+      "score": 58.0,
+      "odds": 5.1,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T19:00:00.000Z",
+      "my_tip": "Prince Quattro",
+      "score": 60.0,
+      "odds": 8.6,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T19:30:00.000Z",
+      "my_tip": "Towerlands",
+      "score": 61.0,
+      "odds": 7.0,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T20:00:00.000Z",
+      "my_tip": "Grey Horizon",
+      "score": 45.4,
+      "odds": 2.82,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    },
+    {
+      "course": "Wolverhampton",
+      "time": "2026-02-03T20:30:00.000Z",
+      "my_tip": "Thanh Nam",
+      "score": 68.0,
+      "odds": 5.4,
+      "actual_winner": "PENDING",
+      "is_win": null,
+      "outcome": "Race not finished or result not captured"
+    }
+  ]
+}
