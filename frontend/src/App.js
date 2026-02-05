@@ -951,13 +951,34 @@ function App() {
                 decisionText = 'Skip This';
               }
               
+              // Check if this is a recommended bet (85+ confidence)
+              const isRecommended = pick.recommended_bet === true || confidence >= 85;
+              
               return (
               <div key={pick.bet_id || index} className={`pick-card ${belowThreshold ? 'below-threshold' : ''}`}>
+                {/* RECOMMENDED BET BANNER for 85+ picks */}
+                {isRecommended && (
+                  <div style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    padding: '8px 16px',
+                    fontSize: '12px',
+                    fontWeight: 'bold',
+                    textAlign: 'center',
+                    letterSpacing: '1px',
+                    borderRadius: '8px 8px 0 0',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}>
+                    ⭐ RECOMMENDED BET - Proven 85+ Threshold
+                  </div>
+                )}
+                
                 {/* COMBINED CONFIDENCE RATING - Top Prominent Display */}
                 <div style={{
                   background: confColor,
                   color: 'white',
                   padding: '16px',
+                  borderRadius: isRecommended ? '0 0 0 0' : '8px 8px 0 0',
                   borderRadius: '8px 8px 0 0',
                   marginBottom: '16px',
                   textAlign: 'center',
