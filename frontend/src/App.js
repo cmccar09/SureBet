@@ -18,6 +18,7 @@ function App() {
   const [resultsLoading, setResultsLoading] = useState(false);
   const [todaySummary, setTodaySummary] = useState(null);
   const [systemStatus, setSystemStatus] = useState(null);
+  const [view, setView] = useState('picks'); // 'picks' or 'cheltenham'
 
   useEffect(() => {
     fetchPicks();
@@ -127,13 +128,13 @@ function App() {
         
         // Fallback: Calculate summary from picks (support both uppercase and lowercase outcomes)
         const normalizeOutcome = (p) => {
-          const outcome = (p.outcome || p.result || p.status || '').toUpperCase();
+          const outcome = (p.outcome || p.result || p.status || '').toLowerCase();
           return outcome;
         };
         
-        const wins = picks.filter(p => normalizeOutcome(p) === 'WON').length;
-        const places = picks.filter(p => normalizeOutcome(p) === 'PLACED').length;
-        const losses = picks.filter(p => normalizeOutcome(p) === 'LOST').length;
+        const wins = picks.filter(p => normalizeOutcome(p) === 'win').length;
+        const places = picks.filter(p => normalizeOutcome(p) === 'placed').length;
+        const losses = picks.filter(p => normalizeOutcome(p) === 'loss').length;
         const pending = picks.filter(p => {
           const outcome = normalizeOutcome(p);
           return !outcome || outcome === 'PENDING' || outcome === '';
@@ -274,10 +275,26 @@ function App() {
         
         <div className="filter-buttons">
           <button 
-            className={filter === 'today' ? 'active' : ''} 
-            onClick={() => setFilter('today')}
+            className={view === 'picks' ? 'active' : ''} 
+            onClick={() => setView('picks')}
           >
-            🏇 Horses
+            📅 Today's Picks
+          </button>
+          <button 
+            className={view === 'cheltenham' ? 'active' : ''} 
+            onClick={() => setView('cheltenham')}
+          >
+            🏆 Cheltenham 2026
+          </button>
+        </div>
+
+        {view === 'picks' && (
+          <div className="filter-buttons" style={{ marginTop: '10px' }}>
+            <button 
+              className={filter === 'today' ? 'active' : ''} 
+              onClick={() => setFilter('today')}
+            >
+              🏇 Horses
           </button>
           <button onClick={() => checkResults('today')} className="results-btn" disabled={resultsLoading}>
             {resultsLoading ? '⏳ Checking...' : '📊 Today\'s Results'}
@@ -285,10 +302,15 @@ function App() {
           <button onClick={() => checkResults('yesterday')} className="results-btn" disabled={resultsLoading}>
             {resultsLoading ? '⏳ Checking...' : '📈 Yesterday\'s Results'}
           </button>
-        </div>
+          </div>
+        )}
       </header>
 
       <main className="picks-container">
+        {view === 'cheltenham' ? (
+          <CheltenhamView apiUrl={API_BASE_URL} />
+        ) : (
+          <>
         {/* Results Summary */}
         {results && results.summary && (
           <div className="results-summary">
@@ -1207,9 +1229,236 @@ function App() {
           </div>
         </>
         )}
+        </>
+        )}
       </main>
     </div>
   );
 }
 
+// Cheltenham Festival Component
+function CheltenhamView({ apiUrl }) {
+  const [races, setRaces] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [selectedDay, setSelectedDay] = useState('Tuesday_10_March');
+  const [expandedRace, setExpandedRace] = useState(null);
+  const [raceHorses, setRaceHorses] = useState({});
+
+  useEffect(() => {
+    loadRaces();
+  }, []);
+
+  const loadRaces = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/api/cheltenham/races`);
+      const data = await response.json();
+      if (data.success) {
+        setRaces(data.races || {});
+      }
+    } catch (error) {
+      console.error('Error loading Cheltenham races:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadHorses = async (raceId) => {
+    if (raceHorses[raceId]) {
+      setExpandedRace(expandedRace === raceId ? null : raceId);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${apiUrl}/api/cheltenham/races/${raceId}`);
+      const data = await response.json();
+      if (data.success) {
+        setRaceHorses({ ...raceHorses, [raceId]: data.horses });
+        setExpandedRace(raceId);
+      }
+    } catch (error) {
+      console.error('Error loading horses:', error);
+    }
+  };
+
+  const getDaysUntil = () => {
+    const festivalStart = new Date('2026-03-10T13:30:00');
+    const now = new Date();
+    const diff = Math.floor((festivalStart - now) / (1000 * 60 * 60 * 24));
+    return diff > 0 ? diff : 'LIVE';
+  };
+
+  const dayTabs = [
+    { key: 'Tuesday_10_March', label: 'Tuesday 10', subtitle: 'Champion Hurdle Day' },
+    { key: 'Wednesday_11_March', label: 'Wednesday 11', subtitle: 'Queen Mother Day' },
+    { key: 'Thursday_12_March', label: 'Thursday 12', subtitle: 'Stayers Day' },
+    { key: 'Friday_13_March', label: 'Friday 13', subtitle: 'Gold Cup Day' }
+  ];
+
+  if (loading) {
+    return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Cheltenham Festival...</div>;
+  }
+
+  const currentRaces = races[selectedDay] || [];
+
+  return (
+    <div style={{ padding: '20px' }}>
+      {/* Header */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+        color: 'white',
+        padding: '30px',
+        borderRadius: '12px',
+        marginBottom: '30px',
+        textAlign: 'center'
+      }}>
+        <h2 style={{ fontSize: '32px', marginBottom: '10px' }}>🏆 Cheltenham Festival 2026</h2>
+        <p style={{ fontSize: '16px', opacity: 0.9 }}>Tuesday 10 - Friday 13 March 2026</p>
+        <div style={{ 
+          background: 'rgba(255,255,255,0.2)',
+          padding: '15px',
+          borderRadius: '8px',
+          marginTop: '15px',
+          display: 'inline-block'
+        }}>
+          <strong>{getDaysUntil()}</strong> days until the festival
+        </div>
+      </div>
+
+      {/* Day Tabs */}
+      <div style={{ display: 'flex', gap: '10px', marginBottom: '30px', flexWrap: 'wrap' }}>
+        {dayTabs.map(day => (
+          <button
+            key={day.key}
+            onClick={() => setSelectedDay(day.key)}
+            style={{
+              flex: 1,
+              minWidth: '200px',
+              padding: '15px',
+              background: selectedDay === day.key ? '#10b981' : '#f3f4f6',
+              color: selectedDay === day.key ? 'white' : '#374151',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: '600',
+              transition: 'all 0.3s'
+            }}
+          >
+            <div>{day.label}</div>
+            <div style={{ fontSize: '12px', marginTop: '5px', opacity: 0.8 }}>{day.subtitle}</div>
+          </button>
+        ))}
+      </div>
+
+      {/* Races */}
+      {currentRaces.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px', color: '#9ca3af' }}>
+          No races loaded yet. Run: python cheltenham_festival_schema.py
+        </div>
+      ) : (
+        currentRaces.map(race => (
+          <div key={race.raceId} style={{
+            background: '#f9fafb',
+            border: '2px solid #e5e7eb',
+            borderRadius: '12px',
+            padding: '20px',
+            marginBottom: '20px'
+          }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginBottom: '15px',
+              paddingBottom: '15px',
+              borderBottom: '2px solid #e5e7eb'
+            }}>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: '22px', marginBottom: '8px' }}>{race.raceName}</h3>
+                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  <span style={{ background: 'white', padding: '6px 12px', borderRadius: '6px', fontSize: '14px' }}>
+                    ⏰ {race.raceTime}
+                  </span>
+                  <span style={{ background: '#fbbf24', color: '#92400e', padding: '6px 12px', borderRadius: '6px', fontSize: '14px', fontWeight: '600' }}>
+                    {race.raceGrade}
+                  </span>
+                  <span style={{ background: 'white', padding: '6px 12px', borderRadius: '6px', fontSize: '14px' }}>
+                    📏 {race.raceDistance}
+                  </span>
+                  <span style={{ background: 'white', padding: '6px 12px', borderRadius: '6px', fontSize: '14px' }}>
+                    🐴 {race.totalHorses || 0} horses
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => loadHorses(race.raceId)}
+                style={{
+                  background: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  padding: '10px 20px',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '600'
+                }}
+              >
+                {expandedRace === race.raceId ? 'Hide' : 'View'} Horses
+              </button>
+            </div>
+
+            {expandedRace === race.raceId && (
+              <div style={{ marginTop: '15px' }}>
+                {!raceHorses[race.raceId] || raceHorses[race.raceId].length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '30px', color: '#9ca3af', fontStyle: 'italic' }}>
+                    No horses added yet. Run: python cheltenham_festival_scraper.py --sample
+                  </div>
+                ) : (
+                  raceHorses[race.raceId].map((horse, idx) => (
+                    <div key={idx} style={{
+                      background: 'white',
+                      padding: '15px',
+                      borderRadius: '8px',
+                      marginBottom: '10px',
+                      borderLeft: '4px solid #10b981',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '5px' }}>
+                          {horse.horseName}
+                        </div>
+                        <div style={{ display: 'flex', gap: '15px', fontSize: '14px', color: '#6b7280' }}>
+                          <span>💰 {horse.currentOdds || 'N/A'}</span>
+                          <span>👨‍🏫 {horse.trainer || 'N/A'}</span>
+                          <span>🏇 {horse.jockey || 'N/A'}</span>
+                          <span>📊 Form: {horse.form || 'N/A'}</span>
+                        </div>
+                        {horse.researchNotes && horse.researchNotes.length > 0 && (
+                          <div style={{ marginTop: '10px', padding: '10px', background: '#f9fafb', borderRadius: '6px', fontSize: '14px' }}>
+                            {horse.researchNotes[0]}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        background: horse.confidenceRank >= 75 ? '#10b981' : horse.confidenceRank >= 50 ? '#fbbf24' : '#ef4444',
+                        color: 'white'
+                      }}>
+                        {horse.confidenceRank}% Confidence
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
 export default App;
+
