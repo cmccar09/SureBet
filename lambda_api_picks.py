@@ -365,14 +365,17 @@ def check_yesterday_results(headers):
             })
         }
     
-    # Calculate stats from existing outcomes
-    wins = sum(1 for p in picks if p.get('outcome') == 'win')
-    places = sum(1 for p in picks if p.get('outcome') == 'placed')
-    losses = sum(1 for p in picks if p.get('outcome') == 'loss')
-    pending = sum(1 for p in picks if p.get('outcome') in ['pending', None])
+    # Calculate stats from existing outcomes (case-insensitive)
+    wins = sum(1 for p in picks if str(p.get('outcome', '')).upper() in ['WIN', 'WON'])
+    places = sum(1 for p in picks if str(p.get('outcome', '')).upper() == 'PLACED')
+    losses = sum(1 for p in picks if str(p.get('outcome', '')).upper() in ['LOSS', 'LOST'])
+    pending = sum(1 for p in picks if str(p.get('outcome', '')).upper() in ['PENDING', ''] or p.get('outcome') is None)
     
-    total_stake = sum(float(p.get('stake', 0)) for p in picks)
-    total_return = sum(float(p.get('stake', 0)) * float(p.get('odds', 0)) for p in picks if p.get('outcome') == 'win')
+    # EXCLUDE PENDING from stake/return calculations - only count resolved bets
+    resolved_picks = [p for p in picks if str(p.get('outcome', '')).upper() not in ['PENDING', ''] and p.get('outcome') is not None]
+    
+    total_stake = sum(float(p.get('stake', 0)) for p in resolved_picks)
+    total_return = sum(float(p.get('stake', 0)) * float(p.get('odds', 0)) for p in resolved_picks if str(p.get('outcome', '')).upper() in ['WIN', 'WON'])
     
     # Use profit field if available
     total_profit = sum(float(p.get('profit', 0)) for p in picks if p.get('profit') is not None)
@@ -386,12 +389,15 @@ def check_yesterday_results(headers):
         if not sport_picks:
             return None
         
-        sport_wins = sum(1 for p in sport_picks if p.get('outcome') == 'win')
-        sport_places = sum(1 for p in sport_picks if p.get('outcome') == 'placed')
-        sport_losses = sum(1 for p in sport_picks if p.get('outcome') == 'loss')
-        sport_pending = sum(1 for p in sport_picks if p.get('outcome') in ['pending', None])
-        sport_stake = sum(float(p.get('stake', 0)) for p in sport_picks)
-        sport_profit = sum(float(p.get('profit', 0)) for p in sport_picks if p.get('profit') is not None)
+        sport_wins = sum(1 for p in sport_picks if str(p.get('outcome', '')).upper() in ['WIN', 'WON'])
+        sport_places = sum(1 for p in sport_picks if str(p.get('outcome', '')).upper() == 'PLACED')
+        sport_losses = sum(1 for p in sport_picks if str(p.get('outcome', '')).upper() in ['LOSS', 'LOST'])
+        sport_pending = sum(1 for p in sport_picks if str(p.get('outcome', '')).upper() in ['PENDING', ''] or p.get('outcome') is None)
+        
+        # EXCLUDE PENDING from stake/return calculations - only count resolved bets
+        sport_resolved = [p for p in sport_picks if str(p.get('outcome', '')).upper() not in ['PENDING', ''] and p.get('outcome') is not None]
+        sport_stake = sum(float(p.get('stake', 0)) for p in sport_resolved)
+        sport_profit = sum(float(p.get('profit', 0)) for p in sport_resolved if p.get('profit') is not None)
         sport_roi = (sport_profit / sport_stake * 100) if sport_stake > 0 else 0
         
         return {
@@ -492,19 +498,22 @@ def check_today_results(headers):
     # No need to call Betfair API - outcomes are already in the picks
     picks_with_results = picks
     
-    # Calculate overall stats from existing outcomes
-    wins = sum(1 for p in picks if p.get('outcome') == 'win')
-    places = sum(1 for p in picks if p.get('outcome') == 'placed')
-    losses = sum(1 for p in picks if p.get('outcome') == 'loss')
-    pending = sum(1 for p in picks if p.get('outcome') in ['pending', None])
+    # Calculate overall stats from existing outcomes (case-insensitive)
+    wins = sum(1 for p in picks if str(p.get('outcome', '')).upper() in ['WIN', 'WON'])
+    places = sum(1 for p in picks if str(p.get('outcome', '')).upper() == 'PLACED')
+    losses = sum(1 for p in picks if str(p.get('outcome', '')).upper() in ['LOSS', 'LOST'])
+    pending = sum(1 for p in picks if str(p.get('outcome', '')).upper() in ['PENDING', ''] or p.get('outcome') is None)
     
-    total_stake = sum(float(p.get('stake', 2.0)) for p in picks)
+    # EXCLUDE PENDING from stake/return calculations - only count resolved bets
+    resolved_picks = [p for p in picks if str(p.get('outcome', '')).upper() not in ['PENDING', ''] and p.get('outcome') is not None]
     
-    # Calculate returns based on outcomes
+    total_stake = sum(float(p.get('stake', 2.0)) for p in resolved_picks)
+    
+    # Calculate returns based on outcomes (only resolved bets)
     total_return = 0
-    for p in picks:
-        outcome = p.get('outcome')
-        if outcome == 'win':
+    for p in resolved_picks:
+        outcome = str(p.get('outcome', '')).upper()
+        if outcome in ['WIN', 'WON']:
             stake = float(p.get('stake', 2.0))
             odds = float(p.get('odds', 0))
             bet_type = p.get('bet_type', 'WIN').upper()
@@ -513,7 +522,7 @@ def check_today_results(headers):
             else:  # EW
                 ew_fraction = float(p.get('ew_fraction', 0.2))
                 total_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
-        elif outcome == 'placed':
+        elif outcome == 'PLACED':
             stake = float(p.get('stake', 2.0))
             odds = float(p.get('odds', 0))
             ew_fraction = float(p.get('ew_fraction', 0.2))
@@ -531,16 +540,20 @@ def check_today_results(headers):
         if not sport_picks:
             return None
         
-        sport_wins = sum(1 for p in sport_picks if p.get('outcome') == 'win')
-        sport_places = sum(1 for p in sport_picks if p.get('outcome') == 'placed')
-        sport_losses = sum(1 for p in sport_picks if p.get('outcome') == 'loss')
-        sport_pending = sum(1 for p in sport_picks if p.get('outcome') in ['pending', None])
-        sport_stake = sum(float(p.get('stake', 2.0)) for p in sport_picks)
+        sport_wins = sum(1 for p in sport_picks if str(p.get('outcome', '')).upper() in ['WIN', 'WON'])
+        sport_places = sum(1 for p in sport_picks if str(p.get('outcome', '')).upper() == 'PLACED')
+        sport_losses = sum(1 for p in sport_picks if str(p.get('outcome', '')).upper() in ['LOSS', 'LOST'])
+        sport_pending = sum(1 for p in sport_picks if str(p.get('outcome', '')).upper() in ['PENDING', ''] or p.get('outcome') is None)
         
-        # Calculate returns for this sport
+        # EXCLUDE PENDING from stake/return calculations - only count resolved bets
+        sport_resolved = [p for p in sport_picks if str(p.get('outcome', '')).upper() not in ['PENDING', ''] and p.get('outcome') is not None]
+        sport_stake = sum(float(p.get('stake', 2.0)) for p in sport_resolved)
+        
+        # Calculate returns for this sport (only resolved bets)
         sport_return = 0
-        for p in sport_picks:
-            if p.get('outcome') == 'win':
+        for p in sport_resolved:
+            outcome = str(p.get('outcome', '')).upper()
+            if outcome in ['WIN', 'WON']:
                 stake = float(p.get('stake', 2.0))
                 odds = float(p.get('odds', 0))
                 bet_type = p.get('bet_type', 'WIN').upper()
@@ -549,7 +562,7 @@ def check_today_results(headers):
                 else:  # EW
                     ew_fraction = float(p.get('ew_fraction', 0.2))
                     sport_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
-            elif p.get('outcome') == 'placed':
+            elif outcome == 'PLACED':
                 stake = float(p.get('stake', 2.0))
                 odds = float(p.get('odds', 0))
                 ew_fraction = float(p.get('ew_fraction', 0.2))
