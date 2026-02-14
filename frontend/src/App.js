@@ -1022,7 +1022,7 @@ function App() {
                     <h2 style={{margin: 0}}>{horseName}</h2>
                     {/* ANALYSIS STATUS BADGE */}
                     {(() => {
-                      const coverage = pick.race_coverage_pct || 0;
+                      const coverage = pick.coverage || pick.data_coverage || pick.race_coverage_pct || 0;
                       const isComplete = coverage >= 90;
                       const confScore = pick.comprehensive_score || pick.combined_confidence || 0;
                       const hasScore = confScore > 0;
