@@ -1,33 +1,97 @@
-# Git & AWS Amplify Deployment Guide
+# Lambda Deployment Guide
 
-## Git Setup (Complete ✅)
+## ⚠️ IMPORTANT: Read Before Deploying
 
-Your repository is initialized with:
-- ✅ `.gitignore` - Protects secrets and credentials
-- ✅ `README.md` - Complete documentation
-- ✅ `amplify.yml` - Amplify build config
-- ✅ `betfair-creds.json.example` - Template for credentials
+### BettingPicksAPI Lambda Function
 
-## Next Steps
+**Source File:** `lambda_api_picks.py`  
+**Lambda Handler:** `lambda_function.lambda_handler`  
+**Region:** `eu-west-1`
 
-### 1. Configure Git User (If Needed)
+### How to Deploy
 
-```powershell
-git config user.name "Your Name"
-git config user.email "your.email@example.com"
-```
-
-### 2. Commit Everything
+**ALWAYS use the deployment script:**
 
 ```powershell
-git add .
-git commit -m "Initial commit: AI betting system with self-learning"
+.\deploy_api_lambda.ps1
 ```
 
-### 3. Create GitHub Repository
+**DO NOT manually deploy** - the script handles the required filename conversion.
 
-**Option A: Via GitHub Website**
-1. Go to https://github.com/new
+### Why the Script is Required
+
+The Lambda function is configured with handler `lambda_function.lambda_handler`, which means:
+- Lambda looks for a file named `lambda_function.py`
+- Our source file is `lambda_api_picks.py` (for clarity)
+- The script automatically copies and renames during deployment
+
+### What the Script Does
+
+1. ✅ Validates `lambda_api_picks.py` exists
+2. ✅ Copies to `lambda_function.py` (temp file)
+3. ✅ Creates deployment package with correct filename
+4. ✅ Uploads to AWS Lambda in eu-west-1
+5. ✅ Tests the API endpoint
+6. ✅ Cleans up temp files
+
+### Manual Deployment (Emergency Only)
+
+If the script fails, you can deploy manually:
+
+```powershell
+# Copy source file
+Copy-Item lambda_api_picks.py lambda_function.py
+
+# Create package
+Compress-Archive -Path lambda_function.py -DestinationPath lambda_deployment.zip -Force
+
+# Deploy
+aws lambda update-function-code `
+    --function-name BettingPicksAPI `
+    --zip-file fileb://lambda_deployment.zip `
+    --region eu-west-1
+
+# Clean up
+Remove-Item lambda_function.py
+```
+
+### Troubleshooting
+
+**Error: "No module named 'lambda_function'"**
+- ✅ Solution: Use `deploy_api_lambda.ps1` (it handles the rename)
+- ❌ Cause: File was uploaded as `lambda_api_picks.py` instead of `lambda_function.py`
+
+**Error: HTTP 500**
+- Check logs: `aws logs tail /aws/lambda/BettingPicksAPI --region eu-west-1 --since 5m`
+- Verify deployment time matches recent upload
+
+### API Endpoints
+
+After deployment, test these endpoints:
+
+- `GET https://mnybvagd5m.execute-api.eu-west-1.amazonaws.com/api/picks/today`
+- `GET https://mnybvagd5m.execute-api.eu-west-1.amazonaws.com/api/results/today`
+- `GET https://mnybvagd5m.execute-api.eu-west-1.amazonaws.com/api/results/yesterday`
+
+### Version Control
+
+**Before deploying:**
+1. Commit changes to `lambda_api_picks.py`
+2. Run the deployment script
+3. Test the live API
+
+**Files to commit:**
+- ✅ `lambda_api_picks.py` (source file)
+- ❌ `lambda_function.py` (temp file - auto-generated)
+- ❌ `lambda_deployment.zip` (build artifact - auto-generated)
+
+### Recent Fixes
+
+**Feb 14, 2026 - Case-Insensitive Outcome Handling**
+- Fixed: Win count showing 0 despite winning bets
+- Cause: Database had mixed case (`WON`, `win`, `won`)
+- Solution: Lambda now handles all case variations
+- Commits: `50a192b`, `69ba4b4`, `cc9f956`
 2. Create new repository (e.g., "ai-betting-system")
 3. Don't initialize with README (you already have one)
 
