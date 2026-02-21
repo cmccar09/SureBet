@@ -94,17 +94,43 @@ def process_race_comprehensive(race):
         is_valid, score, reason = validate_pick_for_ui(pick)
         
         if is_valid:
-            print(f"\n[APPROVED] {pick['horse']} @ {pick['odds']}")
+            horse_name = pick['horse'].get('name', 'Unknown') if isinstance(pick['horse'], dict) else str(pick['horse'])
+            horse_odds = pick['horse'].get('odds', 0) if isinstance(pick['horse'], dict) else 0
+            print(f"\n[APPROVED] {horse_name} @ {horse_odds}")
             print(f"   Score: {score}/100")
-            print(f"   Confidence: {pick['confidence']}")
-            print(f"   Reasoning: {pick['reasoning'][:100]}...")
+            reasons = pick.get('reasons', [])
+            if reasons:
+                print(f"   Reasoning: {reasons[0][:100]}...")
             return pick
         else:
-            print(f"\n[REJECTED] {pick.get('horse', 'Unknown')}")
+            horse_name = pick['horse'].get('name', 'Unknown') if isinstance(pick.get('horse'), dict) else str(pick.get('horse', 'Unknown'))
+            print(f"\n[REJECTED] {horse_name}")
             print(f"   {reason}")
             return None
     else:
         print(f"\n[SKIPPED] No horses meet comprehensive criteria")
+        return None
+
+def load_intraday_learnings():
+    """Load insights from earlier races today"""
+    try:
+        with open('intraday_learnings.json', 'r') as f:
+            learnings = json.load(f)
+            print("✓ Loaded intraday learnings from earlier races")
+            
+            # Display key insights
+            for learning in learnings.get('learnings', []):
+                if learning['type'] == 'HOT_TRAINERS':
+                    trainers = [t[0] for t in learning['data'][:3]]
+                    print(f"  🔥 Hot trainers today: {', '.join(trainers)}")
+                elif learning['type'] == 'WINNING_ODDS_RANGE':
+                    category, stats = learning['data']
+                    print(f"  💰 Best odds range: {category} ({stats['win_rate']*100:.0f}% win rate)")
+            print()
+            return learnings
+    except FileNotFoundError:
+        print("ℹ️  No intraday learnings available (run intraday_learning_system.py first)")
+        print()
         return None
 
 def run_comprehensive_workflow():
@@ -118,6 +144,9 @@ def run_comprehensive_workflow():
     print(f"Analysis: 7-factor comprehensive (minimum 60/100)")
     print("="*80 + "\n")
     
+    # Load intraday learnings from earlier races
+    intraday_learnings = load_intraday_learnings()
+    
     # Fetch upcoming races
     races = fetch_upcoming_races(hours_ahead=6)
     
@@ -129,6 +158,7 @@ def run_comprehensive_workflow():
     
     approved_picks = []
     rejected_count = 0
+    skipped_too_close = 0
     
     # Process each race
     for race in races:
@@ -139,14 +169,20 @@ def run_comprehensive_workflow():
             race_data = {
                 'course': race.get('venue'),
                 'race_time': race.get('start_time'),
-                'race_name': race.get('market_name', 'Unknown')
+                'race_name': race.get('market_name', 'Unknown'),
+                'market_id': race.get('market_id')  # For results fetching
             }
             
             success = add_pick_to_ui(pick, race_data)
             if success:
                 approved_picks.append(pick)
         else:
-            rejected_count += 1
+            # Check if this was skipped due to multiple 85+ horses
+            race_id = f"{race.get('venue')}_{race.get('start_time')}"
+            if "RACE SKIPPED" in str(race):
+                skipped_too_close += 1
+            else:
+                rejected_count += 1
     
     # Summary
     print("\n" + "="*80)
@@ -155,15 +191,20 @@ def run_comprehensive_workflow():
     print(f"Races analyzed: {len(races)}")
     print(f"Picks approved: {len(approved_picks)}")
     print(f"Picks rejected: {rejected_count}")
+    if skipped_too_close > 0:
+        print(f"Races skipped (too close to call): {skipped_too_close}")
     
     if approved_picks:
         print(f"\nAPPROVED PICKS (added to UI):")
         for pick in approved_picks:
-            print(f"  ✓ {pick['horse']} @ {pick['odds']} - {pick['comprehensive_score']}/100")
+            horse_name = pick['horse'].get('name', 'Unknown') if isinstance(pick['horse'], dict) else str(pick['horse'])
+            horse_odds = pick['horse'].get('odds', 0) if isinstance(pick['horse'], dict) else 0
+            score = pick.get('score', pick.get('comprehensive_score', 0))
+            print(f"  + {horse_name} @ {horse_odds} - {score}/100")
     
     print("\n" + "="*80)
-    print("✓ All UI picks passed comprehensive analysis")
-    print("✓ No odds-only picks allowed")
+    print("+ All UI picks passed comprehensive analysis")
+    print("+ No odds-only picks allowed")
     print("="*80 + "\n")
 
 if __name__ == "__main__":

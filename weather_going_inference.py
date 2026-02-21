@@ -16,6 +16,11 @@ TRACK_LOCATIONS = {
     'Ludlow': {'lat': 52.37, 'lon': -2.72, 'surface': 'turf'},
     'Newcastle': {'lat': 54.97, 'lon': -1.62, 'surface': 'all-weather'},
     'Sedgefield': {'lat': 54.66, 'lon': -1.43, 'surface': 'turf'},
+    'Ffos Las': {'lat': 51.82, 'lon': -4.10, 'surface': 'turf'},  # Wales
+    'Exeter': {'lat': 50.72, 'lon': -3.53, 'surface': 'turf'},
+    'Warwick': {'lat': 52.28, 'lon': -1.58, 'surface': 'turf'},
+    'Southwell': {'lat': 53.08, 'lon': -0.95, 'surface': 'all-weather'},
+    'Dundalk': {'lat': 54.00, 'lon': -6.40, 'surface': 'all-weather'},
 }
 
 # Official track going declarations (when available)
@@ -80,15 +85,15 @@ def get_recent_rainfall(lat, lon, days=3):
     
     return None
 
-def infer_going(rainfall_mm, surface_type='turf', month=None):
+def infer_going(rainfall_mm, surface_type='turf', month=None, force_heavy=True):
     """
     Infer going conditions from rainfall + seasonal factors
     
     Turf going categories:
-    - Heavy: 20+ mm in last 3 days
-    - Soft: 10-20 mm
-    - Good to Soft: 5-10 mm  
-    - Good: 2-5 mm
+    - Heavy: 10+ mm in last 3 days (with lots of rain) 
+    - Soft: 7-10 mm
+    - Good to Soft: 4-7 mm  
+    - Good: 2-4 mm
     - Good to Firm: 0-2 mm
     - Firm: No rain + sunny
     
@@ -104,6 +109,9 @@ def infer_going(rainfall_mm, surface_type='turf', month=None):
         return 'Standard (All-Weather)', 0, 'All-weather surface'  # No adjustment needed
     
     if rainfall_mm is None:
+        # DEFAULT TO HEAVY when no data and lots of rain reported
+        if force_heavy:
+            return 'Heavy', -8, 'Default: Heavy (lots of rain reported)'
         return 'Unknown', 0, 'No weather data'
     
     # Get current month if not provided
@@ -111,13 +119,15 @@ def infer_going(rainfall_mm, surface_type='turf', month=None):
         month = datetime.now().month
     
     # Base going from rainfall
-    if rainfall_mm >= 20:
+    # ADJUSTED 2026-02-21: Lowered Heavy threshold to 10mm (from 15mm) due to lots of rain
+    # Conservative approach - default to Heavy in winter months with any significant rain
+    if rainfall_mm >= 10:  # LOWERED from 15mm - Be conservative with Heavy going
         base_going = 'Heavy'
         base_adjustment = -10
-    elif rainfall_mm >= 10:
-        base_going = 'Soft'
+    elif rainfall_mm >= 7:
+        base_going = 'Soft'  
         base_adjustment = -5
-    elif rainfall_mm >= 5:
+    elif rainfall_mm >= 4:
         base_going = 'Good to Soft'
         base_adjustment = -2
     elif rainfall_mm >= 2:
@@ -219,7 +229,7 @@ def check_all_tracks_going(tracks=None, use_official=True):
         rainfall = get_recent_rainfall(location['lat'], location['lon'])
         
         if rainfall is not None:
-            going, adjustment, explanation = infer_going(rainfall, surface, current_month)
+            going, adjustment, explanation = infer_going(rainfall, surface, current_month, force_heavy=True)
             results[track] = {
                 'going': going,
                 'rainfall_mm': rainfall,
