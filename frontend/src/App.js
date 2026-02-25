@@ -1026,8 +1026,6 @@ function App() {
                       const isComplete = coverage >= 90;
                       const confScore = pick.comprehensive_score || pick.combined_confidence || 0;
                       const hasScore = confScore > 0;
-                      const nextBest = pick.next_best_score || 0;
-                      const scoreGap = pick.score_gap || 0;
                       
                       return (
                         <div style={{display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap'}}>
@@ -1058,22 +1056,6 @@ function App() {
                           }}>
                             {hasScore ? '✓ Scored' : '⚠ Not Scored'} ({confScore.toFixed(0)}/100)
                           </div>
-                          
-                          {/* Next Best Score Badge - Shows competition level */}
-                          {nextBest > 0 && (
-                            <div style={{
-                              display: 'inline-block',
-                              padding: '4px 10px',
-                              borderRadius: '4px',
-                              fontSize: '11px',
-                              fontWeight: 'bold',
-                              background: scoreGap > 10 ? '#dcfce7' : scoreGap > 5 ? '#fef3c7' : '#fee2e2',
-                              color: scoreGap > 10 ? '#166534' : scoreGap > 5 ? '#92400e' : '#991b1b',
-                              border: scoreGap > 10 ? '1px solid #86efac' : scoreGap > 5 ? '1px solid #fde68a' : '1px solid #fca5a5'
-                            }}>
-                              Next best: {nextBest.toFixed(0)} (+{scoreGap.toFixed(0)} gap)
-                            </div>
-                          )}
                         </div>
                       );
                     })()}
@@ -1207,6 +1189,37 @@ function App() {
                           <div>Place: {pick.confidence_breakdown.place_component?.toFixed(1) || 0}</div>
                           <div>Edge: {pick.confidence_breakdown.edge_component?.toFixed(1) || 0}</div>
                           <div>Consistency: {pick.confidence_breakdown.consistency_component?.toFixed(1) || 0}</div>
+                        </div>
+                      )}
+                      
+                      {/* Next Best Horse Competition Analysis */}
+                      {pick.next_best_score > 0 && (
+                        <div style={{
+                          marginTop: '12px',
+                          padding: '10px',
+                          background: pick.score_gap > 10 ? '#dcfce7' : pick.score_gap > 5 ? '#fef3c7' : '#fee2e2',
+                          borderRadius: '6px',
+                          borderLeft: `3px solid ${pick.score_gap > 10 ? '#16a34a' : pick.score_gap > 5 ? '#f59e0b' : '#ef4444'}`
+                        }}>
+                          <div style={{
+                            fontSize: '12px',
+                            fontWeight: 'bold',
+                            color: pick.score_gap > 10 ? '#166534' : pick.score_gap > 5 ? '#92400e' : '#991b1b',
+                            marginBottom: '4px'
+                          }}>
+                            🏇 Race Competition
+                          </div>
+                          <div style={{fontSize: '12px', color: '#374151'}}>
+                            <strong>Next best horse:</strong> {pick.next_best_score.toFixed(0)}/100
+                          </div>
+                          <div style={{fontSize: '12px', color: '#374151'}}>
+                            <strong>Score gap:</strong> +{pick.score_gap.toFixed(0)} points
+                          </div>
+                          <div style={{fontSize: '11px', color: '#6b7280', marginTop: '6px', fontStyle: 'italic'}}>
+                            {pick.score_gap > 10 ? '✓ Dominant position - clear class advantage' :
+                             pick.score_gap > 5 ? '⚠ Good edge - moderate competition' :
+                             '⚠ Tight race - strong competition from other runners'}
+                          </div>
                         </div>
                       )}
                     </div>
