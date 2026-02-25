@@ -147,6 +147,31 @@ def get_today_picks():
         for item in future_items:
             item.pop('_sort_score', None)
         
+        # Calculate next_best_score for each pick (to show competition level)
+        for pick in future_items:
+            pick_course = pick.get('course', '')
+            pick_race_time = pick.get('race_time', '')
+            pick_score = float(pick.get('comprehensive_score', 0))
+            
+            # Find all horses in the same race (from all items, not just UI picks)
+            same_race_horses = [
+                item for item in items 
+                if item.get('course') == pick_course 
+                and item.get('race_time') == pick_race_time
+                and item.get('horse') != pick.get('horse')  # Exclude self
+                and item.get('comprehensive_score')  # Has a score
+            ]
+            
+            # Find the next best score
+            if same_race_horses:
+                scores = [float(h.get('comprehensive_score', 0)) for h in same_race_horses]
+                scores.sort(reverse=True)
+                pick['next_best_score'] = scores[0] if scores else 0
+                pick['score_gap'] = pick_score - (scores[0] if scores else 0)
+            else:
+                pick['next_best_score'] = 0
+                pick['score_gap'] = 0
+        
         # Get system run times
         run_times = get_system_run_times()
         
@@ -310,6 +335,169 @@ def health():
         'timestamp': datetime.now().isoformat()
     })
 
+# ============================================================================
+# CHELTENHAM FESTIVAL 2026 API ENDPOINTS
+# ============================================================================
+
+@app.route('/api/cheltenham/races', methods=['GET'])
+def get_cheltenham_races():
+    """Get all Cheltenham Festival 2026 races"""
+    try:
+        cheltenham_table = dynamodb.Table('CheltenhamFestival2026')
+        response = cheltenham_table.scan()
+        items = response.get('Items', [])
+        
+        # Filter to get race info only (not individual horses)
+        races = [item for item in items if item.get('horseId') == 'RACE_INFO']
+        races = [decimal_to_float(item) for item in races]
+        
+        # Group by day
+        days = {}
+        for race in races:
+            day = race.get('festivalDay', 'Unknown')
+            if day not in days:
+                days[day] = []
+            days[day].append(race)
+        
+        # Sort races within each day by time
+        for day in days:
+            days[day].sort(key=lambda x: x.get('raceTime', '00:00'))
+        
+        return jsonify({
+            'success': True,
+            'days': days,
+            'totalRaces': len(races)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/cheltenham/races/<race_id>', methods=['GET'])
+def get_cheltenham_race(race_id):
+    """Get specific race with all horses and research"""
+    try:
+        cheltenham_table = dynamodb.Table('CheltenhamFestival2026')
+        response = cheltenham_table.query(
+            KeyConditionExpression='raceId = :raceId',
+            ExpressionAttributeValues={':raceId': race_id}
+        )
+        
+        items = response.get('Items', [])
+        items = [decimal_to_float(item) for item in items]
+        
+        # Separate race info from horses
+        race_info = next((item for item in items if item.get('horseId') == 'RACE_INFO'), None)
+        horses = [item for item in items if item.get('horseId') != 'RACE_INFO']
+        
+        # Sort horses by confidence rank (highest first)
+        horses.sort(key=lambda x: x.get('confidenceRank', 0), reverse=True)
+        
+        return jsonify({
+            'success': True,
+            'race': race_info,
+            'horses': horses,
+            'totalHorses': len(horses)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/cheltenham/races/<race_id>/horses', methods=['POST'])
+def update_cheltenham_horse(race_id):
+    """Add or update horse research for a specific race"""
+    from flask import request
+    
+    try:
+        data = request.json
+        cheltenham_table = dynamodb.Table('CheltenhamFestival2026')
+        
+        horse_name = data.get('horseName', '')
+        if not horse_name:
+            return jsonify({
+                'success': False,
+                'error': 'Horse name is required'
+            }), 400
+        
+        # Create horse ID with timestamp for tracking updates
+        horse_id = f"{horse_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        
+        item = {
+            'raceId': race_id,
+            'horseId': horse_id,
+            'horseName': horse_name,
+            'festivalDay': data.get('festivalDay', ''),
+            'confidenceRank': decimal_to_float(data.get('confidenceRank', 0)),
+            'currentOdds': data.get('currentOdds', 'N/A'),
+            'trainer': data.get('trainer', ''),
+            'jockey': data.get('jockey', ''),
+            'form': data.get('form', ''),
+            'researchNotes': data.get('researchNotes', []),
+            'lastUpdated': datetime.now().isoformat(),
+            'analysis': data.get('analysis', {}),
+            'betRecommendation': data.get('betRecommendation', 'HOLD')
+        }
+        
+        cheltenham_table.put_item(Item=item)
+        
+        return jsonify({
+            'success': True,
+            'horseId': horse_id,
+            'message': f'Updated {horse_name} successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/cheltenham/research/<race_id>', methods=['POST'])
+def add_cheltenham_research(race_id):
+    """Add research notes to a specific race"""
+    from flask import request
+    
+    try:
+        data = request.json
+        cheltenham_table = dynamodb.Table('CheltenhamFestival2026')
+        
+        # Get current race info
+        response = cheltenham_table.get_item(
+            Key={'raceId': race_id, 'horseId': 'RACE_INFO'}
+        )
+        
+        race_item = response.get('Item', {})
+        
+        # Add new research note
+        notes = race_item.get('researchNotes', [])
+        notes.append({
+            'timestamp': datetime.now().isoformat(),
+            'note': data.get('note', ''),
+            'type': data.get('type', 'GENERAL')
+        })
+        
+        # Update race
+        cheltenham_table.update_item(
+            Key={'raceId': race_id, 'horseId': 'RACE_INFO'},
+            UpdateExpression='SET researchNotes = :notes, lastUpdated = :updated',
+            ExpressionAttributeValues={
+                ':notes': notes,
+                ':updated': datetime.now().isoformat()
+            }
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Research note added successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     print("="*60)
     print("Betting Picks API Server")
@@ -319,6 +507,9 @@ if __name__ == '__main__':
     print("  - http://localhost:5001/api/picks/today  (future picks only)")
     print("  - http://localhost:5001/api/results/today (all today + summary)")
     print("  - http://localhost:5001/api/health       (health check)")
+    print("\nCheltenham Festival 2026:")
+    print("  - http://localhost:5001/api/cheltenham/races")
+    print("  - http://localhost:5001/api/cheltenham/races/<race_id>")
     print("="*60)
     print("\nStarting server on http://localhost:5001")
     print("Press Ctrl+C to stop")

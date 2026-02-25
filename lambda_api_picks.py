@@ -154,6 +154,11 @@ def get_today_picks(headers):
     # CRITICAL: Only show items explicitly marked for UI display
     horse_items = [item for item in horse_items if item.get('show_in_ui') == True]
     
+    # Filter to System A only: picks with stake <= 10 (excludes learning_workflow picks)
+    # System A = Comprehensive scoring system with £5-6 stakes (actual bets)
+    # System B = Learning workflow with £12-30 stakes (data collection only)
+    horse_items = [item for item in horse_items if float(item.get('stake', 0)) <= 10]
+    
     # DEMO MODE: On Jan 20, 2026, show ALL picks regardless of time
     # This allows showing past races during the demo
     if today == '2026-01-20':
@@ -180,6 +185,31 @@ def get_today_picks(headers):
             else:
                 # Include if no race time (safer than excluding)
                 future_picks.append(item)
+    
+    # Calculate next_best_score for each pick (to show competition level)
+    for pick in future_picks:
+        pick_course = pick.get('course', '')
+        pick_race_time = pick.get('race_time', '')
+        pick_score = float(pick.get('comprehensive_score', 0))
+        
+        # Find all horses in the same race
+        same_race_horses = [
+            item for item in items 
+            if item.get('course') == pick_course 
+            and item.get('race_time') == pick_race_time
+            and item.get('horse') != pick.get('horse')  # Exclude self
+            and item.get('comprehensive_score')  # Has a score
+        ]
+        
+        # Find the next best score
+        if same_race_horses:
+            scores = [float(h.get('comprehensive_score', 0)) for h in same_race_horses]
+            scores.sort(reverse=True)
+            pick['next_best_score'] = scores[0] if scores else 0
+            pick['score_gap'] = pick_score - (scores[0] if scores else 0)
+        else:
+            pick['next_best_score'] = 0
+            pick['score_gap'] = 0
     
     # Sort by race time ascending (earliest races first)
     future_picks.sort(key=lambda x: x.get('race_time', ''))
@@ -288,19 +318,41 @@ def get_greyhound_picks(headers):
     }
 
 def get_yesterday_picks(headers):
-    """Get yesterday's picks with results"""
+    """Get yesterday's picks with results (System A only - actual bets)"""
     from datetime import timedelta
+    from boto3.dynamodb.conditions import Key
     yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     
-    # Check both 'date' and 'bet_date' fields (schema evolved)
-    response = table.scan(
-        FilterExpression='#d = :yesterday OR bet_date = :yesterday',
-        ExpressionAttributeNames={'#d': 'date'},
-        ExpressionAttributeValues={':yesterday': yesterday}
+    print(f"[DEBUG] Querying for yesterday: {yesterday}")
+    
+    # Use query with partition key for better performance (bet_date is the partition key)
+    response = table.query(
+        KeyConditionExpression=Key('bet_date').eq(yesterday)
     )
     
     items = response.get('Items', [])
+    print(f"[DEBUG] Raw items from query: {len(items)}")
     items = [decimal_to_float(item) for item in items]
+    
+    # Filter to System A only: picks with stake <= 10 (excludes learning_workflow picks)
+    # System A = Comprehensive scoring system with £5-6 stakes (actual bets)
+    # System B = Learning workflow with £12-30 stakes (data collection only)
+    before_filter = len(items)
+    items = [item for item in items if float(item.get('stake', 0)) <= 10]
+    print(f"[DEBUG] After stake filter (<= 10): {len(items)} (was {before_filter})")
+    
+    # Normalize outcome values for frontend compatibility
+    # Database uses: 'won', 'WON', 'lost', 'LOST'
+    # Frontend expects: 'win', 'loss', 'placed'
+    for item in items:
+        outcome = item.get('outcome', '').lower() if item.get('outcome') else None
+        if outcome in ['won', 'win']:
+            item['outcome'] = 'win'
+        elif outcome in ['lost', 'loss']:
+            item['outcome'] = 'loss'
+        elif outcome in ['placed', 'place']:
+            item['outcome'] = 'placed'
+        # Keep None or other values as-is (for pending/voided)
     
     # Sort by race time
     items.sort(key=lambda x: x.get('race_time', ''))
@@ -347,6 +399,19 @@ def check_yesterday_results(headers):
     
     # Filter for UI picks only - keep others in database for learning
     picks = [item for item in all_picks if item.get('show_in_ui') == True]
+    
+    # Normalize outcome values for frontend compatibility
+    # Database uses: 'won', 'WON', 'lost', 'LOST'
+    # Frontend expects: 'win', 'loss', 'placed'
+    for item in picks:
+        outcome = item.get('outcome', '').lower() if item.get('outcome') else None
+        if outcome in ['won', 'win']:
+            item['outcome'] = 'win'
+        elif outcome in ['lost', 'loss']:
+            item['outcome'] = 'loss'
+        elif outcome in ['placed', 'place']:
+            item['outcome'] = 'placed'
+        # Keep None or other values as-is (for pending/voided)
     
     print(f"Yesterday ({yesterday}) - Total picks: {len(all_picks)}, UI picks: {len(picks)}")
     
@@ -459,6 +524,19 @@ def check_today_results(headers):
     
     # Filter for UI picks only - keep others in database for learning
     picks = [item for item in all_picks if item.get('show_in_ui') == True]
+    
+    # Normalize outcome values for frontend compatibility
+    # Database uses: 'won', 'WON', 'lost', 'LOST'
+    # Frontend expects: 'win', 'loss', 'placed'
+    for item in picks:
+        outcome = item.get('outcome', '').lower() if item.get('outcome') else None
+        if outcome in ['won', 'win']:
+            item['outcome'] = 'win'
+        elif outcome in ['lost', 'loss']:
+            item['outcome'] = 'loss'
+        elif outcome in ['placed', 'place']:
+            item['outcome'] = 'placed'
+        # Keep None or other values as-is (for pending/voided)
     
     # Debug logging
     print(f"Total picks retrieved: {len(all_picks)}, UI picks: {len(picks)}")

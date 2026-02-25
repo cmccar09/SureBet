@@ -1026,6 +1026,8 @@ function App() {
                       const isComplete = coverage >= 90;
                       const confScore = pick.comprehensive_score || pick.combined_confidence || 0;
                       const hasScore = confScore > 0;
+                      const nextBest = pick.next_best_score || 0;
+                      const scoreGap = pick.score_gap || 0;
                       
                       return (
                         <div style={{display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap'}}>
@@ -1056,6 +1058,22 @@ function App() {
                           }}>
                             {hasScore ? '✓ Scored' : '⚠ Not Scored'} ({confScore.toFixed(0)}/100)
                           </div>
+                          
+                          {/* Next Best Score Badge - Shows competition level */}
+                          {nextBest > 0 && (
+                            <div style={{
+                              display: 'inline-block',
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              background: scoreGap > 10 ? '#dcfce7' : scoreGap > 5 ? '#fef3c7' : '#fee2e2',
+                              color: scoreGap > 10 ? '#166534' : scoreGap > 5 ? '#92400e' : '#991b1b',
+                              border: scoreGap > 10 ? '1px solid #86efac' : scoreGap > 5 ? '1px solid #fde68a' : '1px solid #fca5a5'
+                            }}>
+                              Next best: {nextBest.toFixed(0)} (+{scoreGap.toFixed(0)} gap)
+                            </div>
+                          )}
                         </div>
                       );
                     })()}
