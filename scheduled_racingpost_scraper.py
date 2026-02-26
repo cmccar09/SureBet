@@ -102,19 +102,36 @@ def scrape_todays_races():
                 print(f"   [{idx}/{len(race_urls)}] {course_name}...", end=' ')
                 
                 driver.get(url)
-                wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'rp-horseTable')))
                 time.sleep(2)
                 
-                # Extract race time from page if possible
+                # Extract race time from page
                 race_time = None
                 try:
-                    time_elem = driver.find_element(By.CSS_SELECTOR, 'span.rp-raceTimeCourseName__time')
+                    time_elem = driver.find_element(By.CSS_SELECTOR, 'span.rp-raceTimeCourseName__time, .rp-raceTimeCourseName__time')
                     race_time = time_elem.text.strip()
                 except:
-                    pass
+                    # Try alternative selector
+                    try:
+                        time_elem = driver.find_element(By.XPATH, "//span[contains(@class, 'time')]")
+                        race_time = time_elem.text.strip()
+                    except:
+                        pass
                 
-                # Get table
-                table_elem = driver.find_element(By.CLASS_NAME, 'rp-horseTable')
+                # Get results table - try multiple selectors
+                table_elem = None
+                try:
+                    table_elem = driver.find_element(By.CSS_SELECTOR, 'table.rp-horseTable, .rp-horseTable, table[data-test-selector="table-raceResult"]')
+                except:
+                    try:
+                        table_elem = driver.find_element(By.TAG_NAME, 'table')
+                    except:
+                        print("[No table]")
+                        continue
+                
+                if not table_elem:
+                    print("[No table]")
+                    continue
+                
                 rows = table_elem.find_elements(By.TAG_NAME, 'tr')
                 
                 runners = []
@@ -122,48 +139,62 @@ def scrape_todays_races():
                 
                 for row in rows:
                     try:
+                        # Skip header rows
                         if 'header' in (row.get_attribute('class') or '').lower():
                             continue
                         
                         cells = row.find_elements(By.TAG_NAME, 'td')
-                        if not cells:
+                        if len(cells) < 3:  # Need at least position, horse name, and some other data
                             continue
                         
-                        # Position
-                        pos_text = cells[0].text.strip()
-                        position = ''.join(c for c in pos_text if c.isdigit())
+                        # Position (usually first cell)
+                        pos_cell = cells[0]
+                        pos_text = pos_cell.text.strip()
+                        
+                        # Extract numeric position
+                        position = ''
+                        for char in pos_text:
+                            if char.isdigit():
+                                position += char
+                            elif position:  # Stop at first non-digit after we found digits
+                                break
                         
                         if position:
-                            has_results = True  # If we have positions, race has finished
+                            has_results = True
                         
-                        # Horse name
+                        # Horse name - look for links in the row
                         horse_name = None
-                        links = row.find_elements(By.TAG_NAME, 'a')
-                        for link in links:
-                            text = link.text.strip()
-                            if text and len(text) > 2 and not text.isdigit():
-                                horse_name = text
-                                break
+                        horse_links = row.find_elements(By.CSS_SELECTOR, 'a[href*="/horse/"], a.rp-horseTable__horse__name')
+                        
+                        if horse_links:
+                            horse_name = horse_links[0].text.strip()
+                        
+                        # Fallback: look for any substantial text in 2nd or 3rd cell
+                        if not horse_name:
+                            for cell_idx in [1, 2]:
+                                if cell_idx < len(cells):
+                                    text = cells[cell_idx].text.strip()
+                                    # Must be at least 3 chars, not all numbers
+                                    if len(text) >= 3 and not text.isdigit() and not '/' in text:
+                                        horse_name = text
+                                        break
                         
                         if not horse_name:
                             continue
                         
-                        # Odds
+                        # Odds - look for fractional format or "EVS"
                         odds = None
-                        spans = row.find_elements(By.TAG_NAME, 'span')
-                        for span in spans:
-                            text = span.text.strip()
-                            if '/' in text or 'EVS' in text.upper():
-                                odds = parse_odds(text)
+                        for cell in cells:
+                            cell_text = cell.text.strip()
+                            if '/' in cell_text or 'EVS' in cell_text.upper():
+                                odds = parse_odds(cell_text)
                                 break
                         
-                        # Jockey
+                        # Jockey - usually a link with href containing "/jockey/"
                         jockey = None
-                        for link in links[1:]:  # Skip first link (horse name)
-                            text = link.text.strip()
-                            if text and len(text) > 3:
-                                jockey = text
-                                break
+                        jockey_links = row.find_elements(By.CSS_SELECTOR, 'a[href*="/jockey/"]')
+                        if jockey_links:
+                            jockey = jockey_links[0].text.strip()
                         
                         runners.append({
                             'horse_name': horse_name,
@@ -173,6 +204,7 @@ def scrape_todays_races():
                         })
                     
                     except Exception as e:
+                        # Skip problematic rows silently
                         continue
                 
                 if runners:
