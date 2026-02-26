@@ -1197,14 +1197,14 @@ function App() {
                         <div style={{
                           marginTop: '12px',
                           padding: '10px',
-                          background: pick.score_gap > 10 ? '#dcfce7' : pick.score_gap > 5 ? '#fef3c7' : '#fee2e2',
+                          background: pick.score_gap < 0 ? '#eff6ff' : pick.score_gap > 10 ? '#dcfce7' : pick.score_gap > 5 ? '#fef3c7' : '#fee2e2',
                           borderRadius: '6px',
-                          borderLeft: `3px solid ${pick.score_gap > 10 ? '#16a34a' : pick.score_gap > 5 ? '#f59e0b' : '#ef4444'}`
+                          borderLeft: `3px solid ${pick.score_gap < 0 ? '#3b82f6' : pick.score_gap > 10 ? '#16a34a' : pick.score_gap > 5 ? '#f59e0b' : '#ef4444'}`
                         }}>
                           <div style={{
                             fontSize: '12px',
                             fontWeight: 'bold',
-                            color: pick.score_gap > 10 ? '#166534' : pick.score_gap > 5 ? '#92400e' : '#991b1b',
+                            color: pick.score_gap < 0 ? '#1d4ed8' : pick.score_gap > 10 ? '#166534' : pick.score_gap > 5 ? '#92400e' : '#991b1b',
                             marginBottom: '4px'
                           }}>
                             🏇 Race Competition
@@ -1213,10 +1213,11 @@ function App() {
                             <strong>Next best horse:</strong> {pick.next_best_score.toFixed(0)}/100
                           </div>
                           <div style={{fontSize: '12px', color: '#374151'}}>
-                            <strong>Score gap:</strong> +{pick.score_gap.toFixed(0)} points
+                            <strong>Score gap:</strong> {pick.score_gap > 0 ? '+' : ''}{pick.score_gap.toFixed(0)} points
                           </div>
                           <div style={{fontSize: '11px', color: '#6b7280', marginTop: '6px', fontStyle: 'italic'}}>
-                            {pick.score_gap > 10 ? '✓ Dominant position - clear class advantage' :
+                            {pick.score_gap < 0 ? `ℹ Another pick in this race scores ${Math.abs(pick.score_gap).toFixed(0)} pts higher` :
+                             pick.score_gap > 10 ? '✓ Dominant position - clear class advantage' :
                              pick.score_gap > 5 ? '⚠ Good edge - moderate competition' :
                              '⚠ Tight race - strong competition from other runners'}
                           </div>
