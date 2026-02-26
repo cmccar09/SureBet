@@ -13,7 +13,7 @@ Fully automated system that continuously learns throughout the racing day and im
    - Used to detect patterns and adjust weights
 
 2. **UI Track** (`show_in_ui=True`)
-   - Only high-confidence picks (>=70 score)
+   - Only high-confidence picks (>=85 score) — **UPDATED Feb 26, 2026** (was 70; data shows 85+ = +33% ROI)
    - Validated and promoted from learning data
    - What users see in the interface
    - Continuously updated as confidence improves

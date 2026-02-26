@@ -1387,9 +1387,84 @@ Target: Calibrated predictions, systematic error elimination, continuous improve
 
 ---
 
+## STRATEGY V2.3 - FEBRUARY 2026 LEARNING UPDATE
+
+**Status: Active (Feb 26, 2026)**
+**Previous: V2.2 Prediction Accountability + Calibration**
+**New: Evidence-based odds range refinement + scoring weight corrections**
+
+### Key Findings from Feb 2026 Real-Money Results (85+ score picks)
+
+#### 1. Score Threshold Performance
+| Score Bucket | Bets | Win Rate | ROI |
+|---|---|---|---|
+| 90-100 | 14 | 35.7% | **+33.0%** ✅ |
+| 85-89  | 10 | 10.0% | **-21.8%** ❌ |
+| 80-84  | 21 | 42.9% | **+8.0%**  ✅ |
+| 75-79  | 25 | 24.0% | **-0.8%**  ≈  |
+
+**Action taken**: `show_in_ui` threshold raised back to **85+**. The 75-79 range adds noise with near-breakeven ROI.
+
+#### 2. Odds Range Performance (85+ score picks)
+| Odds Range | Bets | SR% | P/L |
+|---|---|---|---|
+| Odds-on (<2.0) | 1 | 100% | +£0.43 |
+| Evens-2/1 (2-3) | 2 | 50% | +£1.00 |
+| **3/1-4/1 (3-5)** | 13 | 30.8% | **-£11.95** ❌ |
+| **5/1-7/1 (5-8)** | 8 | 12.5% | **+£25.20** ✅ |
+
+**Finding**: The old "sweet spot" of 3-5 odds is a LOSING range. The 5-8 range (5/1-7/1) is where money is made.
+
+**Action taken**: `prompt.txt` updated — primary sweet spot changed from 3-9 to **5-8 odds** (4/1-7/1).
+
+#### 3. Form Quality Finding
+| Form Quality | Win Rate | Implication |
+|---|---|---|
+| "Excellent" | 2.8% | Horses in great form are over-valued by market |
+| "Good" | 0.6% | Often over-bet − worst performing |
+| "Poor" | 3.6% | Best performers − bounce-back candidates |
+
+**Finding**: Horses labelled as "good form" lose the most. Recent wins are already priced in. Poor-form bounce-backs offer better value.
+
+**Action taken**: `recent_win` weight reduced from **25 → 15** in `DEFAULT_WEIGHTS` and DynamoDB `SYSTEM_WEIGHTS`.
+
+#### 4. Score Gap Analysis
+- Large gap between our pick and next best horse **does NOT predict wins**
+- Big gap (>15 pts): ROI = -10.1%
+- Small gap (0-5 pts): ROI = +195.6% (one big winner, Laughing John +£37.20)
+- **Conclusion**: Do NOT add score gap as a bonus scoring factor
+
+#### 5. One Pick Per Race Rule
+- Enforced in Lambda and `api_server.py` (commit ab39ecc)
+- Groups by `(course, race_time)`, keeps highest-scoring pick only
+- Eliminates contradictory recommendations in same race
+
+### Changes Made (Feb 26, 2026)
+| File | Change |
+|---|---|
+| `comprehensive_pick_logic.py` | `recent_win` weight 25 → 15 |
+| `comprehensive_pick_logic.py` | `show_in_ui` threshold back to 85+ |
+| `prompt.txt` | Sweet spot updated to 5-8 (4/1-7/1) |
+| DynamoDB SYSTEM_WEIGHTS | `recent_win` updated to 15 |
+| `lambda_api_picks.py` | One-pick-per-race dedup enforced |
+| `run_learning_analysis.py` | New: full historical performance script |
+| `analyze_score_gap_vs_outcome.py` | New: gap vs outcome analysis |
+
+### Running P/L (Feb 2026, 85+ score picks)
+| Date | Picks | W | P | P/L |
+|---|---|---|---|---|
+| Feb 13 | 1 | 1 | 0 | +£2.10 |
+| Feb 14 | 7 | 6 | 0 | +£17.33 |
+| Feb 20 | 6 | 2 | 0 | +£2.35 |
+| Feb 21 | 16 | 3 | 0 | -£6.97 |
+| Feb 25 | 6 | 2 | 1 | **+£20.70** |
+| **Total** | **45** | **16** | **1** | **+£36.81** |
+
+---
+
 **STRATEGY V2.1 - SWEET SPOT WINNER FOCUS WITH SELF-LEARNING**
 
-Status: Active (Jan 31, 2026) ✅
+Status: Superseded by V2.3 ✅
 Approach: Mandatory 3-9 odds + Recent winners + Self-optimizing
 Target: 75%+ sweet spot coverage, 28%+ win rate, 20%+ ROI
 

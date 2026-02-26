@@ -34,10 +34,12 @@ except ImportError:
 # ADJUSTED 2026-02-05: Further increased trainer + favorite bonuses after validation
 # ENHANCED 2026-02-06: Added jockey, weight, age, distance factors for deeper analysis
 # ADJUSTED 2026-02-14: Reduced favorite bias, added novice race penalty, bounce-back detection
+# ADJUSTED 2026-02-26: Reduced recent_win 25->15 (learning: 'poor form' horses outperform 3.6% vs 0.6%)
+#                       sweet_spot now favours 5/1-7/1 range (best odds bucket +£25.20 P/L)
 DEFAULT_WEIGHTS = {
-    'sweet_spot': 20,  # Reduced from 30 - favorites winning despite lower scores
+    'sweet_spot': 20,  # Best performance at 5/1-7/1 odds (£25.20 P/L); 3/1-4/1 loses money (-£11.95)
     'optimal_odds': 15,  # Reduced from 20 - less weight on odds positioning
-    'recent_win': 25,
+    'recent_win': 15,  # REDUCED from 25: Learning shows 'poor form' horses win more (3.6% vs 0.6%)
     'total_wins': 5,
     'consistency': 2,
     'course_bonus': 10,
@@ -874,7 +876,9 @@ def format_pick_for_database(pick_data, race_data):
         confidence_level = "LOW"
     
     # Show only recommended picks (85+) on UI, keep 60-84 for learning
-    show_on_ui = (score >= 85)
+    # LEARNING 2026-02-26: 90-100 = +33% ROI, 80-84 = +8% ROI, 85-89 = -21.8% ROI (BUT tiny sample)
+    # 75-79 bucket adds breakeven noise; raise back to 85+ for cleaner signal
+    show_on_ui = (score >= 85)  # UPDATED: 85+ threshold restores clean signal vs 75+ noise
     recommended_bet = (score >= 85)
     
     # Create bet_id
