@@ -186,22 +186,31 @@ def get_today_picks(headers):
                 # Include if no race time (safer than excluding)
                 future_picks.append(item)
     
+    # ONE PICK PER RACE: keep only the highest-scoring pick per race
+    seen_races = {}
+    for pick in future_picks:
+        race_key = (pick.get('course', ''), pick.get('race_time', ''))
+        existing = seen_races.get(race_key)
+        if not existing or float(pick.get('comprehensive_score', 0)) > float(existing.get('comprehensive_score', 0)):
+            seen_races[race_key] = pick
+    future_picks = list(seen_races.values())
+    print(f"After dedup (1 pick per race): {len(future_picks)} picks")
+
     # Calculate next_best_score for each pick (to show competition level)
     for pick in future_picks:
         pick_course = pick.get('course', '')
         pick_race_time = pick.get('race_time', '')
         pick_score = float(pick.get('comprehensive_score', 0))
         
-        # Find all horses in the same race
+        # Find all OTHER horses in the same race (from full items list)
         same_race_horses = [
             item for item in items 
             if item.get('course') == pick_course 
             and item.get('race_time') == pick_race_time
-            and item.get('horse') != pick.get('horse')  # Exclude self
-            and item.get('comprehensive_score')  # Has a score
+            and item.get('horse') != pick.get('horse')
+            and item.get('comprehensive_score')
         ]
         
-        # Find the next best score
         if same_race_horses:
             scores = [float(h.get('comprehensive_score', 0)) for h in same_race_horses]
             scores.sort(reverse=True)

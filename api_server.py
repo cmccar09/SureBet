@@ -146,7 +146,17 @@ def get_today_picks():
         # Remove temporary sort field
         for item in future_items:
             item.pop('_sort_score', None)
-        
+
+        # ONE PICK PER RACE: keep only the highest-scoring pick per race
+        seen_races = {}
+        for pick in future_items:
+            race_key = (pick.get('course', ''), pick.get('race_time', ''))
+            existing = seen_races.get(race_key)
+            if not existing or float(pick.get('comprehensive_score', 0)) > float(existing.get('comprehensive_score', 0)):
+                seen_races[race_key] = pick
+        future_items = list(seen_races.values())
+        future_items.sort(key=lambda x: x.get('race_time', ''))
+
         # Calculate next_best_score for each pick (to show competition level)
         for pick in future_items:
             pick_course = pick.get('course', '')
