@@ -1216,7 +1216,7 @@ function App() {
                             <strong>Score gap:</strong> {pick.score_gap > 0 ? '+' : ''}{pick.score_gap.toFixed(0)} points
                           </div>
                           <div style={{fontSize: '11px', color: '#6b7280', marginTop: '6px', fontStyle: 'italic'}}>
-                            {pick.score_gap < 0 ? `ℹ Another pick in this race scores ${Math.abs(pick.score_gap).toFixed(0)} pts higher` :
+                            {pick.score_gap < 0 ? `ℹ We also back a higher-rated horse in this race (+${Math.abs(pick.score_gap).toFixed(0)} pts) - both are recommended picks` :
                              pick.score_gap > 10 ? '✓ Dominant position - clear class advantage' :
                              pick.score_gap > 5 ? '⚠ Good edge - moderate competition' :
                              '⚠ Tight race - strong competition from other runners'}
