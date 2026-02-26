@@ -19,10 +19,19 @@ function App() {
   const [todaySummary, setTodaySummary] = useState(null);
   const [systemStatus, setSystemStatus] = useState(null);
   const [view, setView] = useState('picks'); // 'picks' or 'cheltenham'
+  const [lastRefreshed, setLastRefreshed] = useState(null);
 
   useEffect(() => {
     fetchPicks();
-    fetchTodaySummary(); // Fetch summary stats on load
+    fetchTodaySummary();
+    setLastRefreshed(new Date());
+    // Auto-refresh every 30 minutes
+    const interval = setInterval(() => {
+      fetchPicks();
+      fetchTodaySummary();
+      setLastRefreshed(new Date());
+    }, 30 * 60 * 1000);
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
@@ -781,51 +790,68 @@ function App() {
 
         {!loading && !error && picks.length > 0 && (
           <>
-            {/* Budget Summary Banner */}
-            <div style={{
-              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-              color: 'white',
-              padding: '20px',
-              borderRadius: '12px',
-              margin: '20px auto',
-              maxWidth: '900px',
-              boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-            }}>
-              <div style={{fontSize: '16px', fontWeight: 'bold', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between'}}>
-                <span style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                  💰 Daily Budget Management
-                </span>
-                {picks.length > 0 && picks[0].created_at && (
-                  <span style={{fontSize: '14px', opacity: 0.95, fontWeight: 'normal'}}>
-                    Last run time: {new Date(picks[0].created_at).toLocaleString('en-GB', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </span>
-                )}
-              </div>
-              <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '16px', fontSize: '14px'}}>
-                <div>
-                  <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Daily Budget</div>
-                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>€{DAILY_BUDGET}</div>
+            {/* Bet of the Day Banner */}
+            {(() => {
+              // Find the best pending pick: highest comprehensive_score, not yet settled
+              const pending = picks.filter(p => !p.outcome || p.outcome === '' || p.outcome === null);
+              const best = pending.length > 0
+                ? [...pending].sort((a, b) => (parseInt(b.comprehensive_score) || 0) - (parseInt(a.comprehensive_score) || 0))[0]
+                : null;
+
+              if (!best) return null;
+
+              const score = parseInt(best.comprehensive_score) || 0;
+              const odds = parseFloat(best.odds) || 0;
+              const raceTime = best.race_time ? new Date(best.race_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+              const reasons = (best.selection_reasons || []).slice(0, 3);
+
+              // Next refresh time
+              const nextCheck = lastRefreshed ? new Date(lastRefreshed.getTime() + 30 * 60 * 1000) : null;
+              const nextCheckStr = nextCheck ? nextCheck.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+              const lastStr = lastRefreshed ? lastRefreshed.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
+
+              // Score label
+              const scoreLabel = score >= 90 ? '🔥 Excellent' : score >= 85 ? '✅ Strong' : '👍 Good';
+
+              return (
+                <div style={{
+                  background: 'linear-gradient(135deg, #14532d 0%, #166534 100%)',
+                  color: 'white',
+                  padding: '16px 20px',
+                  borderRadius: '12px',
+                  margin: '20px auto',
+                  maxWidth: '900px',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
+                }}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px'}}>
+                    <div>
+                      <div style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.75, marginBottom: '4px'}}>
+                        ⭐ Bet of the Day
+                      </div>
+                      <div style={{fontSize: '22px', fontWeight: 'bold', lineHeight: '1.2'}}>
+                        {best.horse}
+                      </div>
+                      <div style={{fontSize: '14px', opacity: 0.9, marginTop: '3px'}}>
+                        {best.course} · {raceTime} · {odds > 1 ? `${(odds - 1).toFixed(0)}/${ 1 } (${odds}dec)` : `${odds}dec`} · Score: {score} {scoreLabel}
+                      </div>
+                    </div>
+                    <div style={{textAlign: 'right', fontSize: '11px', opacity: 0.7, whiteSpace: 'nowrap'}}>
+                      <div>Checked: {lastStr}</div>
+                      <div>Next: {nextCheckStr}</div>
+                    </div>
+                  </div>
+                  {reasons.length > 0 && (
+                    <div style={{marginTop: '10px', fontSize: '13px', opacity: 0.9, display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
+                      {reasons.map((r, i) => (
+                        <span key={i} style={{background: 'rgba(255,255,255,0.12)', borderRadius: '6px', padding: '2px 8px'}}>
+                          {r}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Max Picks/Day</div>
-                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>{MAX_PICKS_PER_DAY}</div>
-                </div>
-                <div>
-                  <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Today's Picks</div>
-                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>{Math.min(picks.length, MAX_PICKS_PER_DAY)}</div>
-                </div>
-                <div>
-                  <div style={{opacity: 0.9, marginBottom: '4px', fontSize: '12px'}}>Base per Pick</div>
-                  <div style={{fontSize: '20px', fontWeight: 'bold'}}>€{(DAILY_BUDGET / MAX_PICKS_PER_DAY).toFixed(0)}</div>
-                </div>
-              </div>
-              <div style={{marginTop: '12px', fontSize: '12px', opacity: 0.9, lineHeight: '1.5'}}>
-                Stakes: EXCELLENT (75+) = 2.0x, GOOD (60-74) = 1.5x, FAIR (45-59) = 1.0x, POOR (under 45) = 0.5x. ROI bonus: 150%+ = 1.5x, 100-149% = 1.25x
-              </div>
-            </div>
+              );
+            })()}
 
             <div className="picks-summary" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
               <span>Showing top {Math.min(5, picks.length)} of {picks.length} selections</span>

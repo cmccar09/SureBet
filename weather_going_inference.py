@@ -32,7 +32,13 @@ OFFICIAL_GOING = {
         'Newcastle': {'going': 'Standard', 'adjustment': 0},
         'Punchestown': {'going': 'Soft to Heavy (Heavy in places)', 'adjustment': -8},
         'Sedgefield': {'going': 'Good to Soft (Good in places)', 'adjustment': -3},
-    }
+    },
+    '2026-02-26': {
+        'Clonmel': {'going': 'Heavy', 'adjustment': -8},
+        'Ludlow': {'going': 'Good to Soft', 'adjustment': -3},
+        'Taunton': {'going': 'Good to Soft', 'adjustment': -3},
+        'Wetherby': {'going': 'Soft', 'adjustment': -5},
+    },
 }
 
 # Seasonal going bias (UK/Ireland climate)
