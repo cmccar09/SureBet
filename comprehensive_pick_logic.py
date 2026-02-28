@@ -44,7 +44,7 @@ DEFAULT_WEIGHTS = {
     'consistency': 2,
     'course_bonus': 10,
     'database_history': 15,
-    'going_suitability': 8,
+    'going_suitability': 14,  # RAISED from 8: Ground is CRITICAL in Feb UK/Ireland NH racing
     'track_pattern_bonus': 10,  # Bonus based on what's winning today at this track
     'trainer_reputation': 25,  # INCREASED from 20: Elite trainers are THE critical factor
     'favorite_correction': 12,  # REDUCED from 20: Ascot 13:15 lesson - favorites can fail
@@ -54,7 +54,8 @@ DEFAULT_WEIGHTS = {
     'distance_suitability': 12,  # NEW: Distance matching horse's strengths
     'novice_race_penalty': 15,  # NEW: Novice races are less predictable
     'bounce_back_bonus': 12,  # NEW: Horses recovering from poor run (e.g., 2-6-1)
-    'short_form_improvement': 10  # NEW: Limited form in novice = potential improvement
+    'short_form_improvement': 10,  # NEW: Limited form in novice = potential improvement
+    'aw_low_class_penalty': 35,  # NEW: AW Class 5/6 handicaps are highly unpredictable (Dandy Khan lesson)
 }
 
 # Cache for weights (reload every 5 minutes)
@@ -389,47 +390,86 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['claiming_jockey'] = 0
     
-    # 5. GOING CONDITIONS (Weather & Track)
-    # ADJUSTED 2026-02-20: Increased weight for Heavy/Soft going (from 8 to 15 points)
-    # Extreme going is a MAJOR differentiator - unsuited horses have little chance
-    base_going_pts = int(weights.get('going_suitability', 8))
+    # 5. GOING CONDITIONS - Proper horse suitability assessment
+    # February UK/Ireland: Soft/Heavy ground is the norm - this is a MAJOR differentiator
+    # A horse that can't handle soft simply has little chance; proven soft-ground performers
+    # get a significant edge over rivals who prefer quicker ground.
+    base_going_pts = int(weights.get('going_suitability', 14))
     
     if course in going_data:
         going_info = going_data[course]
         going_adjustment = going_info.get('adjustment', 0)
         going_description = going_info.get('going', 'Unknown')
+        is_soft_ground = 'Heavy' in going_description or 'Soft' in going_description
+        is_extreme = abs(going_adjustment) >= 5  # Heavy/Soft or very firm
+        is_all_weather = going_info.get('surface', '') == 'all-weather' or 'Standard' in going_description
         
-        # CRITICAL: In Heavy/Soft going, triple the weight (15 pts instead of 8)
-        if 'Heavy' in going_description or 'Soft' in going_description:
-            going_suitability_pts = base_going_pts * 2  # 16pts for extreme going
+        # Double weight in extreme conditions (absolutely critical discriminator)
+        going_suitability_pts = base_going_pts * 2 if is_extreme else base_going_pts
+        
+        if is_all_weather:
+            # All-weather: ground irrelevant, give neutral bonus for all runners
+            going_suitability_pts = base_going_pts // 2
+            score += going_suitability_pts
+            breakdown['going_suitability'] = going_suitability_pts
+            reasons.append(f"All-weather (going neutral): +{going_suitability_pts}pts")
         else:
-            going_suitability_pts = base_going_pts
-        
-        # Apply going adjustment (negative for soft/heavy, positive for firm)
-        # Horses with good form on similar going get bonus
-        if going_adjustment != 0:
-            # Simple heuristic: horses with recent wins likely suited to conditions
-            if recent_win and abs(going_adjustment) <= 5:
-                # Recent winner gets bonus in moderate conditions
+            # Check horse going preference from data (explicit field if available)
+            going_pref = str(horse_data.get('going_preference', horse_data.get('goes_on', ''))).lower()
+            
+            # Infer suitability from preference field or form
+            suited = False
+            if going_pref and going_pref not in ['', 'none', 'unknown', 'n/a']:
+                # Explicit preference known
+                if is_soft_ground and any(g in going_pref for g in ['soft', 'heavy', 'any', 'all']):
+                    suited = True
+                elif not is_soft_ground and any(g in going_pref for g in ['firm', 'good', 'fast', 'any', 'all']):
+                    suited = True
+            
+            if not suited:
+                # Form-based proxy:
+                # 3+ wins = proven versatile performer (adapts to most going)
+                # 2 wins + extreme going = give benefit of doubt
+                # Recent win in similar conditions = suited
+                if wins >= 3:
+                    suited = True   # Multiple wins across varied conditions = adaptable
+                elif wins >= 2 and not is_extreme:
+                    suited = True   # Consistent performer in moderate conditions
+                elif wins >= 1 and is_soft_ground and 'Heavy' not in going_description:
+                    suited = True   # Has won before, moderate soft = probably handles it
+            
+            if suited:
                 score += going_suitability_pts
                 breakdown['going_suitability'] = going_suitability_pts
-                reasons.append(f"Suited to {going_description}: {going_suitability_pts}pts")
-            elif abs(going_adjustment) > 5:
-                # Extreme conditions (Heavy/Firm) - CRITICAL differentiator
-                # Only give bonus if form shows versatility (multiple wins)
-                if wins >= 2:
-                    bonus_pts = going_suitability_pts
-                    score += bonus_pts
-                    breakdown['going_suitability'] = bonus_pts
-                    reasons.append(f"Proven in varied going ({going_description}): {bonus_pts}pts")
-                else:
-                    breakdown['going_suitability'] = 0
+                reasons.append(f"Proven/suited to {going_description}: +{going_suitability_pts}pts")
+            elif is_extreme and wins == 0:
+                # No wins at all in extreme going = flag risk
+                penalty = base_going_pts
+                score -= penalty
+                breakdown['going_suitability'] = -penalty
+                reasons.append(f"No wins - unproven in {going_description}: -{penalty}pts")
+            elif is_extreme and wins <= 1:
+                # Limited form in extreme going = smaller risk flag
+                penalty = base_going_pts // 2
+                score -= penalty
+                breakdown['going_suitability'] = -penalty
+                reasons.append(f"Limited wins - questionable in {going_description}: -{penalty}pts")
+            else:
+                breakdown['going_suitability'] = 0
+    else:
+        # Track not in going data - use seasonal default (Feb = probably soft)
+        current_month = datetime.now().month
+        if current_month in [1, 2, 3, 11, 12]:  # Winter months
+            # Soft is likely - only reward horses with multiple wins
+            if wins >= 2:
+                default_pts = base_going_pts // 2
+                score += default_pts
+                breakdown['going_suitability'] = default_pts
+                reasons.append(f"Consistent form (going prob. soft in {datetime.now().strftime('%B')}): +{default_pts}pts")
             else:
                 breakdown['going_suitability'] = 0
         else:
             breakdown['going_suitability'] = 0
-    else:
-        breakdown['going_suitability'] = 0
     
     # 6. DATABASE HISTORY
     db = boto3.resource('dynamodb', region_name='eu-west-1')
@@ -642,7 +682,35 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         reasons.append(f"⚠️ Novice race (less predictable): -{novice_penalty}pts")
     else:
         breakdown['novice_penalty'] = 0
-    
+
+    # 11b. AW LOW CLASS PENALTY (Lesson: 2026-02-28 Lingfield 15:52)
+    # Class 5/6 AW handicaps are designed by handicappers to produce unpredictable results.
+    # Our scoring rewards form/trainer consistency - exactly what is discounted in these races.
+    # Going advantage (our main edge) is also zero on AW Standard.
+    # Royal Jet scored 105 (trainer +25, wins +20, form 3111) yet lost to Dandy Khan (42) at 8/1.
+    aw_low_class_penalty = 0
+    aw_marker = horse_data.get('race_class', horse_data.get('class', ''))
+    aw_name_check = str(horse_data.get('race_name', horse_data.get('market_name', race_name))).lower()
+    is_low_class = (
+        str(aw_marker) in ['5', '6', 'Class 5', 'Class 6'] or
+        'class 5' in aw_name_check or 'class 6' in aw_name_check or
+        'class5' in aw_name_check or 'class6' in aw_name_check
+    )
+    # Only apply to AW (going_suitability_pts sourced from is_all_weather check above)
+    # We re-derive the AW flag here safely from going_data
+    _going_info_for_class = going_data.get(course, {})
+    _is_aw_for_class = (
+        _going_info_for_class.get('surface', '') == 'all-weather' or
+        'Standard' in str(_going_info_for_class.get('going', ''))
+    )
+    if _is_aw_for_class and is_low_class:
+        aw_low_class_penalty = int(weights.get('aw_low_class_penalty', 20))
+        score -= aw_low_class_penalty
+        breakdown['aw_low_class_penalty'] = -aw_low_class_penalty
+        reasons.append(f"AW Class 5/6 (unpredictable handicap): -{aw_low_class_penalty}pts")
+    else:
+        breakdown['aw_low_class_penalty'] = 0
+
     # 12. BOUNCE-BACK PATTERN (NEW - Lesson from Ascot 13:15)
     # Detect patterns like 2-6-1 or 2-5-1 showing recovery after poor run
     bounce_back_pts = int(weights.get('bounce_back_bonus', 12))
@@ -839,15 +907,26 @@ def get_comprehensive_pick(race_data, course_stats=None):
     # Sort by score
     analyzed_horses.sort(key=lambda x: x['score'], reverse=True)
     
-    # CHECK: If 2+ horses score 85+, skip race (too close to call)
+    # CHECK: If 2+ horses score 85+, apply tiered logic:
+    # - Exactly 2 qualifying: back the TOP scorer (evidence: 14:55 Kelso 28-Feb-26 - top scorer won 14/1)
+    # - 3+ qualifying: skip (too unpredictable - 14:30 Doncaster 28-Feb-26 lowest scorer won 5/1)
     recommended_horses = [h for h in analyzed_horses if h['score'] >= 85]
-    if len(recommended_horses) >= 2:
-        # Too close to call - return None with special flag
+    if len(recommended_horses) >= 3:
+        # 3+ qualifiers - too close to call, skip
         print(f"  ⚠️  RACE SKIPPED: {len(recommended_horses)} horses scored 85+ (too close to call)")
         for h in recommended_horses:
             horse_name = h['horse'].get('name', 'Unknown')
             print(f"     - {horse_name}: {h['score']}/100")
         return None
+    elif len(recommended_horses) == 2:
+        # Exactly 2 qualifiers - back the top scorer, log the competition
+        top = recommended_horses[0]
+        second = recommended_horses[1]
+        top_name = top['horse'].get('name', 'Unknown')
+        second_name = second['horse'].get('name', 'Unknown')
+        print(f"  2 horses scored 85+: backing top scorer {top_name} ({top['score']}) over {second_name} ({second['score']})")
+        # Override analyzed_horses so best_pick below picks the top qualifier
+        analyzed_horses = recommended_horses
     
     # Add coverage to the best pick
     best_pick = analyzed_horses[0]
@@ -875,11 +954,12 @@ def format_pick_for_database(pick_data, race_data):
     else:
         confidence_level = "LOW"
     
-    # Show only recommended picks (85+) on UI, keep 60-84 for learning
+    # Show only recommended picks on UI
     # LEARNING 2026-02-26: 90-100 = +33% ROI, 80-84 = +8% ROI, 85-89 = -21.8% ROI (BUT tiny sample)
-    # 75-79 bucket adds breakeven noise; raise back to 85+ for cleaner signal
-    show_on_ui = (score >= 85)  # UPDATED: 85+ threshold restores clean signal vs 75+ noise
-    recommended_bet = (score >= 85)
+    # 2026-02-28: AW Class 5/6 penalty applied - pushed below 75 threshold automatically
+    aw_penalised = float(best_pick.get('breakdown', {}).get('aw_low_class_penalty', 0)) < 0
+    show_on_ui = (score >= 85) and not aw_penalised  # AW Class 5/6 never shown regardless of score
+    recommended_bet = show_on_ui
     
     # Create bet_id
     bet_id = f"{race_time}_" + course + "_" + horse.get('name', '').replace(' ', '_')

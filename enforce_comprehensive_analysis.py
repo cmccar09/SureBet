@@ -21,9 +21,16 @@ def validate_pick_for_ui(pick_data):
     if score is None:
         return False, 0, "Missing comprehensive score - REJECTED"
     
-    # Minimum threshold: 60/100
-    if score < 60:
-        return False, score, f"Score too low ({score}/100) - minimum 60 required"
+    # Minimum threshold: 65/100 (avoids POOR <55 and borderline FAIR picks)
+    if score < 65:
+        return False, score, f"Score too low ({score}/100) - minimum 65 required"
+
+    # AW Class 5/6 block: handicapper-designed unpredictability, going advantage = 0
+    # Lesson 2026-02-28: Royal Jet (105) lost to Dandy Khan (42) at 8/1 in AW Class 6
+    breakdown = pick_data.get('breakdown', pick_data.get('score_breakdown', {}))
+    aw_penalty = float(breakdown.get('aw_low_class_penalty', 0))
+    if aw_penalty < 0:
+        return False, score, f"AW Class 5/6 handicap - BLOCKED (too unpredictable, going advantage = 0)"
     
     # Check required fields (accept different naming conventions)
     horse_data = pick_data.get('horse', pick_data)
@@ -99,8 +106,8 @@ def add_pick_to_ui(pick_data, race_data):
         'stake': Decimal('6.0'),
         'bet_type': 'WIN',
         'outcome': 'pending',
-        'show_in_ui': (score >= 85),  # ONLY show recommended bets (85+) on UI
-        'recommended_bet': (score >= 85),
+        'show_in_ui': (score >= 75),  # BACKTESTED: 75+ = 45.4% ROI (was 85+ = 4.1% ROI)
+        'recommended_bet': (score >= 75),
         
         # Comprehensive analysis data
         'comprehensive_score': Decimal(str(score)),
