@@ -56,6 +56,8 @@ DEFAULT_WEIGHTS = {
     'bounce_back_bonus': 12,  # NEW: Horses recovering from poor run (e.g., 2-6-1)
     'short_form_improvement': 10,  # NEW: Limited form in novice = potential improvement
     'aw_low_class_penalty': 35,  # NEW: AW Class 5/6 handicaps are highly unpredictable (Dandy Khan lesson)
+    'cd_bonus': 12,              # NEW: C (course winner) or D (distance winner) marker = proven here
+    'graded_race_cd_bonus': 8,   # NEW: Extra CD bonus in Graded races (field is hand-selected)
 }
 
 # Cache for weights (reload every 5 minutes)
@@ -390,6 +392,22 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['claiming_jockey'] = 0
     
+    # 4b. GRADED RACE DETECTION
+    # Grade 1/2/3 and Listed races are hand-selected elite fields.
+    # Form-based going penalties are unreliable here: horses in Graded races are
+    # specifically aimed at these races and have their trainers' confidence behind them.
+    # Small sample form (e.g. 55-1632) does NOT reliably predict unreadiness for conditions.
+    _race_name_raw = str(horse_data.get('race_name',
+        horse_data.get('market_name',
+        horse_data.get('race_type', '')))).lower()
+    is_graded_race = any(kw in _race_name_raw for kw in [
+        'grd1', 'grd2', 'grd3', 'grd 1', 'grd 2', 'grd 3',
+        'grade 1', 'grade 2', 'grade 3',
+        'g1 ', 'g2 ', 'g3 ', '(g1)', '(g2)', '(g3)',
+        'grade one', 'grade two', 'grade three',
+        'listed', 'group 1', 'group 2', 'group 3',
+    ])
+
     # 5. GOING CONDITIONS - Proper horse suitability assessment
     # February UK/Ireland: Soft/Heavy ground is the norm - this is a MAJOR differentiator
     # A horse that can't handle soft simply has little chance; proven soft-ground performers
@@ -470,7 +488,53 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
                 breakdown['going_suitability'] = 0
         else:
             breakdown['going_suitability'] = 0
-    
+
+    # 5a. GRADED RACE GOING PENALTY CORRECTION
+    # If a going penalty was applied but the race is Graded (Grd1/2/3/Listed),
+    # remove the penalty. Graded-class horses are prepared for all conditions;
+    # penalising them based on limited form digits is a false negative.
+    # Lesson: James Du Berlais (W. P. Mullins, Grd2 Navan, form 55-1632) won at
+    # score 43 because we deducted 7pts going penalty from only 1 win in form.
+    if is_graded_race and breakdown.get('going_suitability', 0) < 0:
+        penalty_was = breakdown['going_suitability']
+        score -= penalty_was   # undo the penalty (penalty_was is negative, so this adds back)
+        breakdown['going_suitability'] = 0
+        reasons = [r for r in reasons if 'questionable in' not in r and 'unproven in' not in r]
+        reasons.append(f"Graded race - going penalty removed (elite field): 0pts")
+
+    # 5b. C/D MARKER BONUS
+    # C = course winner, D = distance winner, CD = both.
+    # These are proven performance markers that our form string doesn't capture.
+    # We look for them in horse_data['cd_marker'] (if the API provides it)
+    # or fall back to trailing annotations in the form string.
+    cd_marker = str(horse_data.get('cd_marker', horse_data.get('form_flags', ''))).upper()
+    # Fallback: some racing feeds embed CD annotations at end of form string
+    if not cd_marker and form:
+        raw_form = str(horse_data.get('raw_form', form))
+        trailing = raw_form.lstrip('0123456789-').upper()
+        if trailing in ('C', 'D', 'CD'):
+            cd_marker = trailing
+    cd_pts = 0
+    base_cd = int(weights.get('cd_bonus', 12))
+    extra_cd = int(weights.get('graded_race_cd_bonus', 8)) if is_graded_race else 0
+    if 'CD' in cd_marker:
+        cd_pts = base_cd + extra_cd
+        score += cd_pts
+        breakdown['cd_bonus'] = cd_pts
+        reasons.append(f"Course & Distance winner (CD): +{cd_pts}pts")
+    elif 'C' in cd_marker:
+        cd_pts = (base_cd // 2) + extra_cd
+        score += cd_pts
+        breakdown['cd_bonus'] = cd_pts
+        reasons.append(f"Course winner (C): +{cd_pts}pts")
+    elif 'D' in cd_marker:
+        cd_pts = (base_cd // 2) + extra_cd
+        score += cd_pts
+        breakdown['cd_bonus'] = cd_pts
+        reasons.append(f"Distance winner (D): +{cd_pts}pts")
+    else:
+        breakdown['cd_bonus'] = 0
+
     # 6. DATABASE HISTORY
     db = boto3.resource('dynamodb', region_name='eu-west-1')
     table = db.Table('SureBetBets')
