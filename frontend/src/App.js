@@ -800,7 +800,7 @@ function App() {
 
               if (!best) return null;
 
-              const score = parseInt(best.comprehensive_score) || 0;
+              const score = Math.min(parseInt(best.comprehensive_score) || 0, 100);
               const odds = parseFloat(best.odds) || 0;
               const raceTime = best.race_time ? new Date(best.race_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
               const reasons = (best.selection_reasons || []).slice(0, 3);
@@ -871,7 +871,7 @@ function App() {
                         {gapLabel.text}
                       </div>
                       <div style={{fontSize: '12px', opacity: 0.8}}>
-                        vs{nextBestHorse ? ` ${nextBestHorse}` : ''} · {nextBestScore.toFixed(0)}/100
+                        vs{nextBestHorse ? ` ${nextBestHorse}` : ''} · {Math.min(nextBestScore, 100).toFixed(0)}/100
                         {gap !== 0 && (
                           <span style={{marginLeft: '6px', fontWeight: 'bold', color: gap > 0 ? '#4ade80' : '#f87171'}}>
                             ({gap > 0 ? '+' : ''}{gap.toFixed(0)} pts)
@@ -1106,7 +1106,7 @@ function App() {
                   boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
                 }}>
                   <div style={{fontSize: '18px', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '1px'}}>
-                    {confLabel} - {confidence.toFixed(0)}/100
+                    {confLabel} - {Math.min(confidence, 100).toFixed(0)}/100
                   </div>
                   <div style={{fontSize: '13px', opacity: 0.95}}>
                     {confLabel === 'PREMIUM'   ? 'Premium confidence - going proven + high score ★' :
@@ -1154,7 +1154,7 @@ function App() {
                             color: hasScore ? '#1e40af' : '#991b1b',
                             border: hasScore ? '1px solid #93c5fd' : '1px solid #fca5a5'
                           }}>
-                            {hasScore ? '✓ Scored' : '⚠ Not Scored'} ({confScore.toFixed(0)}/100)
+                            {hasScore ? '✓ Scored' : '⚠ Not Scored'} ({Math.min(confScore, 100).toFixed(0)}/100)
                           </div>
                         </div>
                       );
@@ -1265,7 +1265,7 @@ function App() {
                       fontSize: '14px',
                       userSelect: 'none'
                     }}>
-                      📊 Confidence Details: {pick.combined_confidence.toFixed(0)}/100 ({pick.confidence_grade || 'N/A'})
+                      📊 Confidence Details: {Math.min(pick.combined_confidence, 100).toFixed(0)}/100 ({pick.confidence_grade || 'N/A'})
                     </summary>
                     <div style={{
                       padding: '12px',
@@ -1313,7 +1313,7 @@ function App() {
                             <strong>Next best:</strong>{' '}
                             {pick.next_best_horse ? <span style={{fontWeight: 'bold'}}>{pick.next_best_horse}</span> : null}
                             {pick.next_best_horse ? ' · ' : ''}
-                            {pick.next_best_score.toFixed(0)}/100
+                            {Math.min(pick.next_best_score, 100).toFixed(0)}/100
                           </div>
                           <div style={{fontSize: '12px', color: '#374151'}}>
                             <strong>Score gap:</strong> {pick.score_gap > 0 ? '+' : ''}{pick.score_gap.toFixed(0)} points
@@ -1675,7 +1675,7 @@ function CheltenhamView({ apiUrl }) {
                         fontSize: '13px',
                         fontWeight: '700',
                       }}>
-                        {pick.score}/100 · {pick.confidence}
+                        {Math.min(pick.score, 100)}/100 · {pick.confidence}
                       </div>
                       {pick.reasons && pick.reasons.length > 0 && (
                         <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px', maxWidth: '260px', textAlign: 'right' }}>
