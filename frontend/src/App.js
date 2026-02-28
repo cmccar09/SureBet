@@ -813,6 +813,16 @@ function App() {
               // Score label
               const scoreLabel = score >= 90 ? '🔥 Excellent' : score >= 85 ? '✅ Strong' : '👍 Good';
 
+              // Gap analysis
+              const gap = parseFloat(best.score_gap) || 0;
+              const nextBestScore = parseFloat(best.next_best_score) || 0;
+              const nextBestHorse = best.next_best_horse || '';
+              const gapLabel = gap >= 15 ? { text: '🏆 Clear class advantage', color: 'rgba(74,222,128,0.25)', border: '#4ade80' }
+                             : gap >= 8  ? { text: '✅ Good lead over rivals', color: 'rgba(250,204,21,0.2)', border: '#facc15' }
+                             : gap >= 1  ? { text: '⚠️ Moderate edge — competitive race', color: 'rgba(251,146,60,0.2)', border: '#fb923c' }
+                             : gap < 0   ? { text: '❗ Another horse rated higher in this race', color: 'rgba(239,68,68,0.2)', border: '#ef4444' }
+                             : null;
+
               return (
                 <div style={{
                   background: 'linear-gradient(135deg, #14532d 0%, #166534 100%)',
@@ -832,7 +842,7 @@ function App() {
                         {best.horse}
                       </div>
                       <div style={{fontSize: '14px', opacity: 0.9, marginTop: '3px'}}>
-                        {best.course} · {raceTime} · {odds > 1 ? `${(odds - 1).toFixed(0)}/${ 1 } (${odds}dec)` : `${odds}dec`} · Score: {score} {scoreLabel}
+                        {best.course} · {raceTime} · {odds > 1 ? `${(odds - 1).toFixed(0)}/1 (${odds}dec)` : `${odds}dec`} · Score: {score} {scoreLabel}
                       </div>
                     </div>
                     <div style={{textAlign: 'right', fontSize: '11px', opacity: 0.7, whiteSpace: 'nowrap'}}>
@@ -840,6 +850,37 @@ function App() {
                       <div>Next: {nextCheckStr}</div>
                     </div>
                   </div>
+
+                  {/* Gap indicator row */}
+                  {nextBestScore > 0 && gapLabel && (
+                    <div style={{
+                      marginTop: '10px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      flexWrap: 'wrap'
+                    }}>
+                      <div style={{
+                        background: gapLabel.color,
+                        border: `1px solid ${gapLabel.border}`,
+                        borderRadius: '6px',
+                        padding: '4px 10px',
+                        fontSize: '12px',
+                        fontWeight: '600'
+                      }}>
+                        {gapLabel.text}
+                      </div>
+                      <div style={{fontSize: '12px', opacity: 0.8}}>
+                        vs{nextBestHorse ? ` ${nextBestHorse}` : ''} · {nextBestScore.toFixed(0)}/100
+                        {gap !== 0 && (
+                          <span style={{marginLeft: '6px', fontWeight: 'bold', color: gap > 0 ? '#4ade80' : '#f87171'}}>
+                            ({gap > 0 ? '+' : ''}{gap.toFixed(0)} pts)
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {reasons.length > 0 && (
                     <div style={{marginTop: '10px', fontSize: '13px', opacity: 0.9, display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
                       {reasons.map((r, i) => (
@@ -899,7 +940,14 @@ function App() {
               // Use global budget constants - only top 5 picks get budget allocation
               const baseBudgetPerPick = DAILY_BUDGET / MAX_PICKS_PER_DAY;
               const betType = (pick.bet_type || 'WIN').toUpperCase();
-              const confidence = parseFloat(pick.combined_confidence || 0);
+              // Use the best available score — prefer combined_confidence but
+              // fall back to comprehensive_score so POOR/missing values don't
+              // override a high-quality comprehensive score.
+              const rawCombined = parseFloat(pick.combined_confidence || 0);
+              const rawComp     = parseFloat(pick.comprehensive_score || 0);
+              const confidence  = rawCombined >= 55 ? rawCombined
+                                : rawComp     >= 55 ? rawComp
+                                : Math.max(rawCombined, rawComp);
               const decisionRating = pick.decision_rating || 'RISKY';
               
               // Confidence multiplier: Higher confidence = bigger stake
@@ -927,6 +975,13 @@ function App() {
                 confidenceMultiplier = 0.5;
                 confColor = '#ef4444'; // Red
                 confLabel = 'POOR';
+              }
+
+              // Override for PREMIUM picks (flagged from today's learnings - going proven + high score)
+              if (pick.confidence_color === 'gold') {
+                confColor = '#B8860B'; // Dark gold
+                confLabel = 'PREMIUM';
+                if (confidence >= 100) confidenceMultiplier = 2.5;
               }
               
               // ROI multiplier: Better value = bigger stake
@@ -1021,6 +1076,24 @@ function App() {
                   </div>
                 )}
                 
+                {/* PREMIUM ALERT NOTE - from today's going/form learnings */}
+                {pick.alert_note && (
+                  <div style={{
+                    background: pick.confidence_color === 'gold'
+                      ? 'linear-gradient(135deg, #92400e 0%, #b45309 100%)'
+                      : '#1e40af',
+                    color: 'white',
+                    padding: '10px 16px',
+                    fontSize: '13px',
+                    fontWeight: '600',
+                    textAlign: 'center',
+                    borderBottom: '2px solid rgba(255,255,255,0.25)',
+                    lineHeight: '1.4'
+                  }}>
+                    {pick.confidence_color === 'gold' ? '★ ' : 'ℹ '}{pick.alert_note}
+                  </div>
+                )}
+
                 {/* COMBINED CONFIDENCE RATING - Top Prominent Display */}
                 <div style={{
                   background: confColor,
@@ -1036,10 +1109,11 @@ function App() {
                     {confLabel} - {confidence.toFixed(0)}/100
                   </div>
                   <div style={{fontSize: '13px', opacity: 0.95}}>
-                    {confidence >= 60 ? 'Strong confidence - 2.0x stake' :
-                     confidence >= 40 ? 'Good bet - 1.3x stake' :
-                     confidence >= 25 ? 'Proceed with caution - 0.8x stake' :
-                     'Weak signals - 0.4x stake'}
+                    {confLabel === 'PREMIUM'   ? 'Premium confidence - going proven + high score ★' :
+                     confLabel === 'EXCELLENT' ? 'Excellent confidence - back with 2.0x stake' :
+                     confLabel === 'GOOD'      ? 'Good confidence - back with 1.5x stake' :
+                     confLabel === 'FAIR'      ? 'Fair confidence - proceed with 1.0x stake' :
+                                                'Low confidence - 0.5x stake only'}
                   </div>
                 </div>
                 
@@ -1236,7 +1310,10 @@ function App() {
                             🏇 Race Competition
                           </div>
                           <div style={{fontSize: '12px', color: '#374151'}}>
-                            <strong>Next best horse:</strong> {pick.next_best_score.toFixed(0)}/100
+                            <strong>Next best:</strong>{' '}
+                            {pick.next_best_horse ? <span style={{fontWeight: 'bold'}}>{pick.next_best_horse}</span> : null}
+                            {pick.next_best_horse ? ' · ' : ''}
+                            {pick.next_best_score.toFixed(0)}/100
                           </div>
                           <div style={{fontSize: '12px', color: '#374151'}}>
                             <strong>Score gap:</strong> {pick.score_gap > 0 ? '+' : ''}{pick.score_gap.toFixed(0)} points
@@ -1301,9 +1378,15 @@ function CheltenhamView({ apiUrl }) {
   const [selectedDay, setSelectedDay] = useState('Tuesday_10_March');
   const [expandedRace, setExpandedRace] = useState(null);
   const [raceHorses, setRaceHorses] = useState({});
+  const [cheltenhamPicks, setCheltenhamPicks] = useState({});
+  const [picksDate, setPicksDate] = useState(null);
+  const [totalChanges, setTotalChanges] = useState(0);
+  const [savingPicks, setSavingPicks] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
 
   useEffect(() => {
     loadRaces();
+    loadPicks();
   }, []);
 
   const loadRaces = async () => {
@@ -1317,6 +1400,47 @@ function CheltenhamView({ apiUrl }) {
       console.error('Error loading Cheltenham races:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadPicks = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/api/cheltenham/picks`);
+      const data = await response.json();
+      if (data.success) {
+        // Flatten day-grouped picks into a race_name -> pick map
+        const pickMap = {};
+        Object.values(data.days || {}).forEach(dayPicks => {
+          dayPicks.forEach(pick => {
+            pickMap[pick.race_name] = pick;
+          });
+        });
+        setCheltenhamPicks(pickMap);
+        setPicksDate(data.pick_date || null);
+        setTotalChanges(data.total_changes || 0);
+      }
+    } catch (error) {
+      console.error('Error loading Cheltenham picks:', error);
+    }
+  };
+
+  const triggerPickSave = async () => {
+    setSavingPicks(true);
+    setSaveMessage('');
+    try {
+      const response = await fetch(`${apiUrl}/api/cheltenham/picks/save`, { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        setSaveMessage('Picks saved! Refreshing...');
+        await loadPicks();
+        setSaveMessage('Picks updated successfully.');
+      } else {
+        setSaveMessage(`Error: ${data.error || 'Unknown error'}`);
+      }
+    } catch (error) {
+      setSaveMessage(`Error: ${error.message}`);
+    } finally {
+      setSavingPicks(false);
     }
   };
 
@@ -1381,6 +1505,57 @@ function CheltenhamView({ apiUrl }) {
           <strong>{getDaysUntil()}</strong> days until the festival
         </div>
       </div>
+
+      {/* Picks Summary Banner */}
+      {Object.keys(cheltenhamPicks).length > 0 && (
+        <div style={{
+          background: totalChanges > 0
+            ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)'
+            : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          color: 'white',
+          padding: '14px 20px',
+          borderRadius: '10px',
+          marginBottom: '20px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '10px',
+        }}>
+          <div>
+            <strong style={{ fontSize: '16px' }}>
+              {totalChanges > 0
+                ? `⚡ ${totalChanges} pick${totalChanges > 1 ? 's' : ''} changed today`
+                : '✓ All picks stable today'}
+            </strong>
+            <span style={{ opacity: 0.85, marginLeft: '12px', fontSize: '14px' }}>
+              {Object.keys(cheltenhamPicks).length} races tracked
+              {picksDate ? ` · ${picksDate}` : ''}
+            </span>
+          </div>
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            {saveMessage && (
+              <span style={{ fontSize: '13px', opacity: 0.9 }}>{saveMessage}</span>
+            )}
+            <button
+              onClick={triggerPickSave}
+              disabled={savingPicks}
+              style={{
+                background: 'rgba(255,255,255,0.25)',
+                color: 'white',
+                border: '1px solid rgba(255,255,255,0.5)',
+                padding: '8px 16px',
+                borderRadius: '6px',
+                cursor: savingPicks ? 'not-allowed' : 'pointer',
+                fontWeight: '600',
+                fontSize: '13px',
+              }}
+            >
+              {savingPicks ? 'Saving...' : '↻ Refresh Picks'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Day Tabs */}
       <div style={{ display: 'flex', gap: '10px', marginBottom: '30px', flexWrap: 'wrap' }}>
@@ -1461,6 +1636,83 @@ function CheltenhamView({ apiUrl }) {
                 {expandedRace === race.raceId ? 'Hide' : 'View'} Horses
               </button>
             </div>
+
+            {/* TODAY'S PICK BANNER */}
+            {cheltenhamPicks[race.raceName] && (() => {
+              const pick = cheltenhamPicks[race.raceName];
+              const confColour = pick.confidence === 'HIGH' ? '#d1fae5' : pick.confidence === 'MEDIUM' ? '#fef3c7' : '#fee2e2';
+              const confText   = pick.confidence === 'HIGH' ? '#065f46' : pick.confidence === 'MEDIUM' ? '#92400e' : '#991b1b';
+              return (
+                <div style={{
+                  background: confColour,
+                  border: `2px solid ${confText}`,
+                  borderRadius: '10px',
+                  padding: '14px 18px',
+                  marginBottom: '14px',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '1px', color: confText, textTransform: 'uppercase' }}>
+                        Today's Pick
+                      </span>
+                      <div style={{ fontSize: '19px', fontWeight: '700', color: '#1f2937', marginTop: '4px' }}>
+                        {pick.horse}
+                        <span style={{ fontSize: '15px', fontWeight: '400', color: '#6b7280', marginLeft: '10px' }}>
+                          @ {pick.odds}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#6b7280', marginTop: '4px' }}>
+                        {pick.trainer && <span>T: {pick.trainer}</span>}
+                        {pick.jockey && <span style={{ marginLeft: '12px' }}>J: {pick.jockey}</span>}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{
+                        background: confText,
+                        color: 'white',
+                        padding: '6px 14px',
+                        borderRadius: '20px',
+                        fontSize: '13px',
+                        fontWeight: '700',
+                      }}>
+                        {pick.score}/100 · {pick.confidence}
+                      </div>
+                      {pick.reasons && pick.reasons.length > 0 && (
+                        <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px', maxWidth: '260px', textAlign: 'right' }}>
+                          {pick.reasons.slice(0, 2).join(' · ')}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {pick.pick_changed && pick.previous_horse && (
+                    <div style={{
+                      marginTop: '10px',
+                      paddingTop: '10px',
+                      borderTop: '1px solid rgba(0,0,0,0.08)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                    }}>
+                      <span style={{
+                        background: '#f59e0b',
+                        color: 'white',
+                        padding: '3px 10px',
+                        borderRadius: '12px',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        letterSpacing: '0.5px',
+                      }}>
+                        CHANGED
+                      </span>
+                      <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                        Previously: <strong>{pick.previous_horse}</strong>
+                        {pick.previous_odds ? ` @ ${pick.previous_odds}` : ''}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {expandedRace === race.raceId && (
               <div style={{ marginTop: '15px' }}>
