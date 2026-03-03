@@ -122,11 +122,15 @@ def get_today_picks():
                  and item.get('horse') and item.get('horse') != 'Unknown'
                  and item.get('show_in_ui') == True]
         
-        # Filter for HIGH confidence picks only (comprehensive_score >= 75)
+        # Filter for HIGH confidence picks only
+        # Require comprehensive_score >= 75 AND combined_confidence >= 55 (not POOR)
         high_confidence_items = []
         for item in items:
-            comp_score = item.get('comprehensive_score') or item.get('analysis_score') or 0
-            if float(comp_score) >= 75:
+            comp_score = float(item.get('comprehensive_score') or item.get('analysis_score') or 0)
+            comb_conf  = float(item.get('combined_confidence') or 0)
+            # Accept if comprehensive_score passes threshold;
+            # but reject if combined_confidence explicitly marks this as POOR (<55)
+            if comp_score >= 75 and (comb_conf == 0 or comb_conf >= 55):
                 high_confidence_items.append(item)
         items = high_confidence_items
         
@@ -508,6 +512,122 @@ def add_cheltenham_research(race_id):
             'error': str(e)
         }), 500
 
+@app.route('/api/cheltenham/picks', methods=['GET'])
+def get_cheltenham_picks():
+    """
+    Return today's top pick for every 2026 Cheltenham race, including
+    whether the pick changed from yesterday's saved pick.
+
+    Query params:
+      ?date=YYYY-MM-DD   override today's date (for testing)
+    """
+    from flask import request as flask_request
+    from datetime import datetime as dt, timedelta
+
+    try:
+        target_date = flask_request.args.get('date', dt.now().strftime('%Y-%m-%d'))
+        yesterday   = (dt.strptime(target_date, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
+
+        picks_table = dynamodb.Table('CheltenhamPicks')
+
+        # Fetch today
+        today_resp = picks_table.scan(
+            FilterExpression='pick_date = :d',
+            ExpressionAttributeValues={':d': target_date}
+        )
+        today_items = {item['race_name']: decimal_to_float(item)
+                       for item in today_resp.get('Items', [])}
+
+        # Fetch yesterday (for context if today has no saves yet)
+        yest_resp = picks_table.scan(
+            FilterExpression='pick_date = :d',
+            ExpressionAttributeValues={':d': yesterday}
+        )
+        yest_items = {item['race_name']: decimal_to_float(item)
+                      for item in yest_resp.get('Items', [])}
+
+        # Build response grouped by festival day
+        days = {}
+        all_picks = list(today_items.values()) or list(yest_items.values())
+
+        for item in all_picks:
+            day = item.get('day', 'Unknown')
+            if day not in days:
+                days[day] = []
+            days[day].append({
+                'race_name':      item.get('race_name', ''),
+                'day':            item.get('day', ''),
+                'race_time':      item.get('race_time', ''),
+                'grade':          item.get('grade', ''),
+                'distance':       item.get('distance', ''),
+                'horse':          item.get('horse', ''),
+                'trainer':        item.get('trainer', ''),
+                'jockey':         item.get('jockey', ''),
+                'odds':           item.get('odds', ''),
+                'score':          item.get('score', 0),
+                'tier':           item.get('tier', ''),
+                'value_rating':   item.get('value_rating', 0),
+                'second_score':   item.get('second_score', 0),
+                'score_gap':      item.get('score_gap', 0),
+                'confidence':     item.get('confidence', ''),
+                'reasons':        item.get('reasons', []),
+                'warnings':       item.get('warnings', []),
+                'pick_changed':   item.get('pick_changed', False),
+                'previous_horse': item.get('previous_horse', ''),
+                'previous_odds':  item.get('previous_odds', ''),
+                'change_reason':  item.get('change_reason', ''),
+                'pick_date':      item.get('pick_date', target_date),
+                'all_horses':     item.get('all_horses', []),
+            })
+
+        # Sort each day's picks by grade / race name
+        day_order = [
+            'Tuesday_10_March',
+            'Wednesday_11_March',
+            'Thursday_12_March',
+            'Friday_13_March',
+        ]
+        ordered_days = {d: days[d] for d in day_order if d in days}
+        for d in days:
+            if d not in ordered_days:
+                ordered_days[d] = days[d]
+
+        total_changes = sum(1 for p in all_picks if p.get('pick_changed'))
+
+        return jsonify({
+            'success':      True,
+            'pick_date':    target_date,
+            'days':         ordered_days,
+            'total_picks':  len(all_picks),
+            'total_changes': total_changes,
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error':   str(e)
+        }), 500
+
+
+@app.route('/api/cheltenham/picks/save', methods=['POST'])
+def save_cheltenham_picks_api():
+    """Trigger a fresh pick-save run (calls save_cheltenham_picks logic)"""
+    try:
+        import subprocess, sys
+        result = subprocess.run(
+            [sys.executable, 'save_cheltenham_picks.py'],
+            capture_output=True, text=True, cwd='.', timeout=120
+        )
+        success = result.returncode == 0
+        return jsonify({
+            'success': success,
+            'output':  result.stdout[-3000:] if result.stdout else '',
+            'errors':  result.stderr[-1000:] if result.stderr else '',
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     print("="*60)
     print("Betting Picks API Server")
@@ -520,6 +640,8 @@ if __name__ == '__main__':
     print("\nCheltenham Festival 2026:")
     print("  - http://localhost:5001/api/cheltenham/races")
     print("  - http://localhost:5001/api/cheltenham/races/<race_id>")
+    print("  - http://localhost:5001/api/cheltenham/picks         (today's picks)")
+    print("  - http://localhost:5001/api/cheltenham/picks/save    (trigger save)")
     print("="*60)
     print("\nStarting server on http://localhost:5001")
     print("Press Ctrl+C to stop")

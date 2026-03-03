@@ -1377,8 +1377,10 @@ function CheltenhamView({ apiUrl }) {
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState('Tuesday_10_March');
   const [expandedRace, setExpandedRace] = useState(null);
+  const [expandedScores, setExpandedScores] = useState({});
   const [raceHorses, setRaceHorses] = useState({});
   const [cheltenhamPicks, setCheltenhamPicks] = useState({});
+  const [racesFromPicks, setRacesFromPicks] = useState({});
   const [picksDate, setPicksDate] = useState(null);
   const [totalChanges, setTotalChanges] = useState(0);
   const [savingPicks, setSavingPicks] = useState(false);
@@ -1418,6 +1420,23 @@ function CheltenhamView({ apiUrl }) {
         setCheltenhamPicks(pickMap);
         setPicksDate(data.pick_date || null);
         setTotalChanges(data.total_changes || 0);
+
+        // Derive race structure from picks (used when DynamoDB races table is empty)
+        const derived = {};
+        Object.entries(data.days || {}).forEach(([day, dayArr]) => {
+          derived[day] = dayArr
+            .slice()
+            .sort((a, b) => (a.race_time || '').localeCompare(b.race_time || ''))
+            .map((p, i) => ({
+              raceId:       `${day}_${i}`,
+              raceName:     p.race_name,
+              raceTime:     p.race_time || '',
+              raceGrade:    p.grade,
+              raceDistance: p.distance || '',
+              totalHorses:  (p.all_horses || []).length,
+            }));
+        });
+        setRacesFromPicks(derived);
       }
     } catch (error) {
       console.error('Error loading Cheltenham picks:', error);
@@ -1480,7 +1499,7 @@ function CheltenhamView({ apiUrl }) {
     return <div style={{ padding: '40px', textAlign: 'center' }}>Loading Cheltenham Festival...</div>;
   }
 
-  const currentRaces = races[selectedDay] || [];
+  const currentRaces = races[selectedDay] || racesFromPicks[selectedDay] || [];
 
   return (
     <div style={{ padding: '20px' }}>
@@ -1675,7 +1694,7 @@ function CheltenhamView({ apiUrl }) {
                         fontSize: '13px',
                         fontWeight: '700',
                       }}>
-                        {Math.min(pick.score, 100)}/100 · {pick.confidence}
+                        {pick.score} pts · {pick.tier || pick.confidence}
                       </div>
                       {pick.reasons && pick.reasons.length > 0 && (
                         <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px', maxWidth: '260px', textAlign: 'right' }}>
@@ -1708,6 +1727,140 @@ function CheltenhamView({ apiUrl }) {
                         Previously: <strong>{pick.previous_horse}</strong>
                         {pick.previous_odds ? ` @ ${pick.previous_odds}` : ''}
                       </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            {/* SCORE ANALYSIS PANEL */}
+            {cheltenhamPicks[race.raceName] && (cheltenhamPicks[race.raceName].all_horses || []).length > 0 && (() => {
+              const pick = cheltenhamPicks[race.raceName];
+              const horses = pick.all_horses || [];
+              const isOpen = !!expandedScores[race.raceName];
+              const tierColor = (tier) => {
+                if (!tier) return '#6b7280';
+                if (tier.includes('A+'))  return '#7c3aed';
+                if (tier.startsWith('A')) return '#1d4ed8';
+                if (tier.startsWith('B')) return '#0891b2';
+                if (tier.startsWith('C')) return '#059669';
+                if (tier.startsWith('D')) return '#d97706';
+                return '#6b7280';
+              };
+              return (
+                <div style={{ marginBottom: '14px' }}>
+                  <button
+                    onClick={() => setExpandedScores(prev => ({ ...prev, [race.raceName]: !prev[race.raceName] }))}
+                    style={{
+                      width: '100%',
+                      background: isOpen ? '#1e3a8a' : '#eff6ff',
+                      color: isOpen ? 'white' : '#1e3a8a',
+                      border: '2px solid #1e3a8a',
+                      padding: '10px 20px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontWeight: '700',
+                      fontSize: '14px',
+                      textAlign: 'left',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span>📊 Score Analysis — {horses.length} horses ranked</span>
+                    <span>{isOpen ? '▲ Hide' : '▼ Show full field'}</span>
+                  </button>
+
+                  {isOpen && (
+                    <div style={{
+                      background: '#f8fafc',
+                      border: '2px solid #1e3a8a',
+                      borderTop: 'none',
+                      borderRadius: '0 0 8px 8px',
+                      padding: '16px',
+                    }}>
+                      {/* Score legend */}
+                      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '14px', fontSize: '12px' }}>
+                        {[['A+ ELITE','#7c3aed'],['A ELITE','#1d4ed8'],['B EXCELLENT','#0891b2'],['C STRONG','#059669'],['D FAIR','#d97706'],['E WEAK','#6b7280']].map(([label,col]) => (
+                          <span key={label} style={{ background: col, color: 'white', padding: '3px 8px', borderRadius: '4px', fontWeight: '600' }}>{label}</span>
+                        ))}
+                      </div>
+
+                      {horses.map((h, idx) => {
+                        const tc = tierColor(h.tier);
+                        return (
+                          <div key={idx} style={{
+                            background: h.is_surebet_pick ? '#fffbeb' : 'white',
+                            border: h.is_surebet_pick ? '2px solid #f59e0b' : '1px solid #e5e7eb',
+                            borderRadius: '8px',
+                            padding: '12px 14px',
+                            marginBottom: '8px',
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                              {/* Rank */}
+                              <span style={{
+                                background: idx === 0 ? '#1e3a8a' : '#e5e7eb',
+                                color: idx === 0 ? 'white' : '#6b7280',
+                                borderRadius: '50%',
+                                width: '28px', height: '28px',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                fontWeight: '700', fontSize: '13px', flexShrink: 0,
+                              }}>{idx + 1}</span>
+
+                              {/* Name */}
+                              <span style={{ fontWeight: '700', fontSize: '16px', flex: 1 }}>
+                                {h.name}
+                                {h.is_surebet_pick && (
+                                  <span style={{ background: '#f59e0b', color: 'white', fontSize: '10px', fontWeight: '700', padding: '2px 7px', borderRadius: '10px', marginLeft: '8px', letterSpacing: '0.5px' }}>
+                                    PICK
+                                  </span>
+                                )}
+                              </span>
+
+                              {/* Score */}
+                              <span style={{ fontWeight: '800', fontSize: '18px', color: tc, minWidth: '48px', textAlign: 'right' }}>
+                                {h.score}
+                              </span>
+
+                              {/* Tier */}
+                              <span style={{ background: tc, color: 'white', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', whiteSpace: 'nowrap' }}>
+                                {(h.tier || '').trim()}
+                              </span>
+
+                              {/* Value rating */}
+                              <span style={{ background: '#f3f4f6', color: '#374151', padding: '4px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                                VR: {Number(h.value_rating || 0).toFixed(1)}
+                              </span>
+                            </div>
+
+                            {/* Trainer / Jockey */}
+                            <div style={{ fontSize: '12px', color: '#6b7280', marginTop: '6px', marginLeft: '38px' }}>
+                              T: {h.trainer || 'N/A'} &nbsp;|&nbsp; J: {h.jockey || 'N/A'}
+                              {h.cheltenham_record && h.cheltenham_record !== 'First time' && (
+                                <span style={{ marginLeft: '12px', color: '#059669', fontWeight: '600' }}>
+                                  🏆 {h.cheltenham_record}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Tips */}
+                            {(h.tips || []).length > 0 && (
+                              <div style={{ marginTop: '8px', marginLeft: '38px', display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                                {h.tips.map((tip, ti) => (
+                                  <span key={ti} style={{ background: '#dcfce7', color: '#166534', padding: '2px 8px', borderRadius: '4px', fontSize: '11px' }}>
+                                    + {tip}
+                                  </span>
+                                ))}
+                                {(h.warnings || []).map((w, wi) => (
+                                  <span key={`w${wi}`} style={{ background: '#fee2e2', color: '#991b1b', padding: '2px 8px', borderRadius: '4px', fontSize: '11px' }}>
+                                    ! {w}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
