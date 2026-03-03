@@ -50,7 +50,13 @@ def lambda_handler(event, context):
     
     try:
         # Route requests - check more specific paths first
-        if 'results/yesterday' in path:
+        if 'cheltenham/picks/save' in path:
+            return save_cheltenham_picks_lambda(headers)
+        elif 'cheltenham/picks' in path:
+            return get_cheltenham_picks_lambda(headers, event)
+        elif 'cheltenham/races' in path:
+            return get_cheltenham_races_lambda(headers)
+        elif 'results/yesterday' in path:
             return check_yesterday_results(headers)
         elif 'results/today' in path or path.endswith('/results'):
             return check_today_results(headers)
@@ -212,12 +218,14 @@ def get_today_picks(headers):
         ]
         
         if same_race_horses:
-            scores = [float(h.get('comprehensive_score', 0)) for h in same_race_horses]
-            scores.sort(reverse=True)
-            pick['next_best_score'] = scores[0] if scores else 0
-            pick['score_gap'] = pick_score - (scores[0] if scores else 0)
+            same_race_horses.sort(key=lambda h: float(h.get('comprehensive_score', 0)), reverse=True)
+            best_rival = same_race_horses[0]
+            pick['next_best_score'] = float(best_rival.get('comprehensive_score', 0))
+            pick['next_best_horse'] = best_rival.get('horse', '')
+            pick['score_gap'] = pick_score - pick['next_best_score']
         else:
             pick['next_best_score'] = 0
+            pick['next_best_horse'] = ''
             pick['score_gap'] = 0
     
     # Sort by race time ascending (earliest races first)
@@ -523,17 +531,39 @@ def check_today_results(headers):
     from boto3.dynamodb.conditions import Key
     today = datetime.now().strftime('%Y-%m-%d')
     
-    # Get ALL today's picks using partition key query (much faster than scan)
-    response = table.query(
-        KeyConditionExpression=Key('bet_date').eq(today)
-    )
-    
-    all_picks = response.get('Items', [])
+    # Get ALL today's picks using partition key query - WITH PAGINATION
+    all_picks = []
+    response = table.query(KeyConditionExpression=Key('bet_date').eq(today))
+    all_picks.extend(response.get('Items', []))
+    while 'LastEvaluatedKey' in response:
+        response = table.query(
+            KeyConditionExpression=Key('bet_date').eq(today),
+            ExclusiveStartKey=response['LastEvaluatedKey']
+        )
+        all_picks.extend(response.get('Items', []))
+
     all_picks = [decimal_to_float(item) for item in all_picks]
-    
+    print(f"Total picks retrieved (paginated): {len(all_picks)}")
+
     # Filter for UI picks only - keep others in database for learning
     picks = [item for item in all_picks if item.get('show_in_ui') == True]
-    
+
+    # Filter: race must be TODAY (excludes yesterday's races stored with today's bet_date)
+    picks = [item for item in picks if str(item.get('race_time', '')).startswith(today)]
+
+    # ONE PICK PER RACE: keep only the highest-scoring pick per (course, race_time)
+    # Eliminates multiple runners saved by learning workflow for skipped/close-call races
+    seen_races = {}
+    for pick in picks:
+        race_key = (pick.get('course', ''), pick.get('race_time', ''))
+        existing = seen_races.get(race_key)
+        score = float(pick.get('comprehensive_score') or pick.get('analysis_score') or 0)
+        existing_score = float(existing.get('comprehensive_score') or existing.get('analysis_score') or 0) if existing else 0
+        if not existing or score > existing_score:
+            seen_races[race_key] = pick
+    picks = list(seen_races.values())
+    print(f"After dedup (1 pick/race): {len(picks)} picks")
+
     # Normalize outcome values for frontend compatibility
     # Database uses: 'won', 'WON', 'lost', 'LOST'
     # Frontend expects: 'win', 'loss', 'placed'
@@ -546,9 +576,6 @@ def check_today_results(headers):
         elif outcome in ['placed', 'place']:
             item['outcome'] = 'placed'
         # Keep None or other values as-is (for pending/voided)
-    
-    # Debug logging
-    print(f"Total picks retrieved: {len(all_picks)}, UI picks: {len(picks)}")
     
     if not picks:
         print("NO PICKS for today - returning empty")
@@ -703,6 +730,138 @@ def check_today_results(headers):
             'debug_timestamp': datetime.now().isoformat()
         })
     }
+
+def get_cheltenham_picks_lambda(headers, event):
+    """Return today's Cheltenham picks from CheltenhamPicks DynamoDB table."""
+    from boto3.dynamodb.conditions import Attr
+    from datetime import timedelta
+
+    db_chelt = dynamodb.Table('CheltenhamPicks')
+    qp = event.get('queryStringParameters') or {}
+    target_date = qp.get('date', datetime.now().strftime('%Y-%m-%d'))
+    yesterday = (datetime.strptime(target_date, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
+
+    def scan_date(dt):
+        resp = db_chelt.scan(
+            FilterExpression=Attr('pick_date').eq(dt)
+        )
+        return {item['race_name']: decimal_to_float(item) for item in resp.get('Items', [])}
+
+    today_items = scan_date(target_date)
+    yest_items  = scan_date(yesterday)
+    all_picks   = list(today_items.values()) or list(yest_items.values())
+
+    DAY_ORDER = ['Tuesday_10_March', 'Wednesday_11_March', 'Thursday_12_March', 'Friday_13_March']
+    days = {}
+    for item in all_picks:
+        day = item.get('day', 'Unknown')
+        if day not in days:
+            days[day] = []
+        days[day].append({
+            'race_name':      item.get('race_name', ''),
+            'day':            item.get('day', ''),
+            'race_time':      item.get('race_time', ''),
+            'grade':          item.get('grade', ''),
+            'distance':       item.get('distance', ''),
+            'horse':          item.get('horse', ''),
+            'trainer':        item.get('trainer', ''),
+            'jockey':         item.get('jockey', ''),
+            'odds':           item.get('odds', ''),
+            'score':          item.get('score', 0),
+            'tier':           item.get('tier', ''),
+            'value_rating':   item.get('value_rating', 0),
+            'second_score':   item.get('second_score', 0),
+            'score_gap':      item.get('score_gap', 0),
+            'confidence':     item.get('confidence', ''),
+            'reasons':        item.get('reasons', []),
+            'warnings':       item.get('warnings', []),
+            'pick_changed':   item.get('pick_changed', False),
+            'previous_horse': item.get('previous_horse', ''),
+            'previous_odds':  item.get('previous_odds', ''),
+            'change_reason':  item.get('change_reason', ''),
+            'pick_date':      item.get('pick_date', target_date),
+            'all_horses':     item.get('all_horses', []),
+        })
+
+    ordered = {d: days[d] for d in DAY_ORDER if d in days}
+    for d in days:
+        if d not in ordered:
+            ordered[d] = days[d]
+
+    total_changes = sum(1 for p in all_picks if p.get('pick_changed'))
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'success':       True,
+            'pick_date':     target_date,
+            'days':          ordered,
+            'total_picks':   len(all_picks),
+            'total_changes': total_changes,
+        })
+    }
+
+
+def get_cheltenham_races_lambda(headers):
+    """
+    Return Cheltenham race structure derived from CheltenhamPicks DynamoDB table.
+    Grouped by day with race metadata (name, time, grade, horses count).
+    """
+    from boto3.dynamodb.conditions import Attr
+    today = datetime.now().strftime('%Y-%m-%d')
+    db_chelt = dynamodb.Table('CheltenhamPicks')
+    resp = db_chelt.scan(FilterExpression=Attr('pick_date').eq(today))
+    items = [decimal_to_float(i) for i in resp.get('Items', [])]
+
+    DAY_ORDER = ['Tuesday_10_March', 'Wednesday_11_March', 'Thursday_12_March', 'Friday_13_March']
+    days = {}
+    for idx, item in enumerate(items):
+        day = item.get('day', 'Unknown')
+        if day not in days:
+            days[day] = []
+        days[day].append({
+            'raceId':       f"{day}_{idx}",
+            'raceName':     item.get('race_name', ''),
+            'raceTime':     item.get('race_time', ''),
+            'raceGrade':    item.get('grade', ''),
+            'raceDistance': item.get('distance', ''),
+            'festivalDay':  day,
+            'totalHorses':  len(item.get('all_horses', [])),
+        })
+
+    ordered = {d: sorted(days.get(d, []), key=lambda x: x.get('raceTime', '')) for d in DAY_ORDER}
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({'success': True, 'races': ordered, 'totalRaces': len(items)})
+    }
+
+
+def save_cheltenham_picks_lambda(headers):
+    """
+    Trigger cheltenham picks save.
+    In Lambda, invoke the dedicated save Lambda (if available) or return guidance.
+    """
+    import boto3 as _boto3
+    lc = _boto3.client('lambda', region_name='eu-west-1')
+    try:
+        lc.invoke(
+            FunctionName='cheltenham-picks-save',
+            InvocationType='Event',
+            Payload=json.dumps({'source': 'api-trigger'})
+        )
+        msg = 'Save triggered — picks will update in ~60s. Refresh to see changes.'
+        triggered = True
+    except Exception as e:
+        msg = f'Could not trigger save Lambda: {e}. Run: python save_cheltenham_picks.py'
+        triggered = False
+
+    return {
+        'statusCode': 202 if triggered else 200,
+        'headers': headers,
+        'body': json.dumps({'success': triggered, 'message': msg})
+    }
+
 
 def trigger_workflow(headers):
     """Trigger the betting workflow Lambda to generate new picks"""
