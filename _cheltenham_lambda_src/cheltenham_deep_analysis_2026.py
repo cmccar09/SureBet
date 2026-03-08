@@ -647,21 +647,21 @@ WINNERS = {
     # ---- 2025 ----
     "2025": {
         "Champion Hurdle": {
-            "winner": "Constitution Hill",
-            "trainer": "Nicky Henderson", "jockey": "Nico de Boinville",
-            "sp": "1/5", "age": 8, "form": "11111", "going": "Good to Soft",
-            "previous_festival": "Won 2023",
-            "rating": 178,
-            "factors": ["Unbeaten record", "Previous Festival winner", "Henderson/de Boinville"],
+            "winner": "Golden Ace",
+            "trainer": "Jeremy Scott", "jockey": "Lorcan Williams",
+            "sp": "25/1", "age": 7, "form": "1", "going": "Good to Soft",
+            "previous_festival": None,
+            "rating": 154,
+            "factors": ["Shock winner 25/1", "British-trained winner", "Only 7 runners", "State Man/Constitution Hill both fell"],
             "irish": False,
         },
         "Queen Mother Champion Chase": {
-            "winner": "Energumene",
-            "trainer": "Willie Mullins", "jockey": "Paul Townend",
-            "sp": "11/8", "age": 10, "form": "111", "going": "Good to Soft",
-            "previous_festival": "Won 2022, 2023",
-            "rating": 172,
-            "factors": ["Multiple Festival winner", "Mullins/Townend", "Experience"],
+            "winner": "Marine Nationale",
+            "trainer": "Barry Connell", "jockey": "Sean Flanagan",
+            "sp": "5/1", "age": 8, "form": "1", "going": "Good to Soft",
+            "previous_festival": None,
+            "rating": 173,
+            "factors": ["Irish outsider 5/1", "Energumene pulled up", "Jonbon badly hampered"],
             "irish": True,
         },
         "Stayers Hurdle": {
@@ -742,26 +742,29 @@ RACES_2026 = {
         "distance": "2m 87y",
         "entries": [
             # NB: Constitution Hill officially NR 2026 (Nicky Henderson, flat plans)
+            # CONFIRMED 08/03/2026: Lossiemouth runs Champion Hurdle (Mullins/Rich Ricci) — was Mares Hurdle 5/4
+            {"name": "Lossiemouth", "trainer": "Willie Mullins", "jockey": "Paul Townend",
+             "odds": "2/1", "age": 7, "form": "1-1-2-11", "rating": 169,
+             "cheltenham_record": "Won 2024 Mares Hurdle; Won 2025 Mares Hurdle",
+             "last_run": "2nd Irish Champion Hurdle Jan 2026", "days_off": 42,
+             "ground_pref": "soft"},
             {"name": "The New Lion", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
              "odds": "9/4", "age": 7, "form": "1-1-1F1", "rating": 163,
-             "cheltenham_record": None,
+             "cheltenham_record": "Won 2025 Turners Novices' Hurdle",
              "last_run": "Won Grade 1 Aintree Hurdle trial Feb 2026", "days_off": 35},
             {"name": "Brighterdaysahead", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
-             "odds": "10/3", "age": 7, "form": "1-2-3-1", "rating": 173,
-             "cheltenham_record": "3rd 2025 Champion Hurdle",
+             "odds": "5/1", "age": 7, "form": "1-2-3-1", "rating": 173,
+             "cheltenham_record": "4th 2025 Champion Hurdle",
              "last_run": "Won Grade 1 Jan 2026", "days_off": 42},
-            {"name": "Lossiemouth", "trainer": "Willie Mullins", "jockey": "Paul Townend",
-             "odds": "7/2", "age": 7, "form": "1-1-2-11", "rating": 171,
-             "cheltenham_record": "Won 2024 Mares Hurdle; Won 2025 Mares Hurdle",
-             "last_run": "2nd Irish Champion Hurdle Jan 2026", "days_off": 42},
             {"name": "Golden Ace", "trainer": "Jeremy Scott", "jockey": "Felix de Giles",
-             "odds": "7/1", "age": 8, "form": "1-2-3", "rating": 165,
+             "odds": "8/1", "age": 8, "form": "1-2-3", "rating": 165,
              "cheltenham_record": "Won 2025 Champion Hurdle",
              "last_run": "3rd Kingwell Hurdle Feb 2026", "days_off": 28},
             {"name": "Poniros", "trainer": "Willie Mullins", "jockey": "Paul Townend",
-             "odds": "10/1", "age": 5, "form": "1-1-3-21", "rating": 160,
+             "odds": "14/1", "age": 5, "form": "1-1-3-21", "rating": 160,
              "cheltenham_record": "Won 2025 Triumph Hurdle",
-             "last_run": "Won Grade 2 hurdle Jan 2026", "days_off": 42},
+             "last_run": "Won Grade 2 hurdle Jan 2026", "days_off": 42,
+             "ground_pref": "good_to_soft", "dist_class_form": "Won Grade 1 Triumph Hurdle 2m Cheltenham 2025"},
             {"name": "Ballyburn", "trainer": "Willie Mullins", "jockey": "Patrick Mullins",
              "odds": "20/1", "age": 8, "form": "3-2-3-74", "rating": 168,
              "cheltenham_record": "Won 2024 Ballymore Novices Hurdle",
@@ -807,7 +810,8 @@ RACES_2026 = {
             {"name": "Kopek Des Bordes", "trainer": "Willie Mullins", "jockey": "Paul Townend",
              "odds": "7/4", "age": 6, "form": "1-4-1-11", "rating": 163,
              "cheltenham_record": "Won 2025 Arkle Challenge Trophy",
-             "last_run": "Won Grade 1 Novice Chase Feb 2026", "days_off": 28},
+             "last_run": "Won Grade 1 Novice Chase Feb 2026", "days_off": 28,
+             "ground_pref": "soft", "dist_class_form": "Won Grade 1 Arkle Chase 2m Cheltenham 2025"},
             {"name": "Lulamba", "trainer": "Nicky Henderson", "jockey": "Nico de Boinville",
              "odds": "2/1", "age": 5, "form": "1-1-1-12", "rating": 174,
              "cheltenham_record": "2nd 2025 Triumph Hurdle",
@@ -820,10 +824,7 @@ RACES_2026 = {
              "odds": "7/1", "age": 7, "form": "1-1-1-03", "rating": 168,
              "cheltenham_record": None,
              "last_run": "Won Grade 1 Novice Chase Jan 2026", "days_off": 42},
-            {"name": "Irish Panther", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
-             "odds": "14/1", "age": 9, "form": "1-1-1-P2", "rating": 163,
-             "cheltenham_record": None,
-             "last_run": "2nd Grade 1 Jan 2026", "days_off": 42},
+            # CONFIRMED 08/03/2026: Irish Panther moved to QMCC (swerved Arkle)
         ]
     },
     # ── DAY 2 GRADE 1 RACES ──────────────────────────────────────────────────
@@ -835,11 +836,12 @@ RACES_2026 = {
             # NB: Marine Nationale NR 2026 (not declared)
             {"name": "Majborough", "trainer": "Willie Mullins", "jockey": "Paul Townend",
              "odds": "6/4", "age": 6, "form": "1-2-3-1", "rating": 183,
-             "cheltenham_record": "Won 2024 Triumph Hurdle",
-             "last_run": "Won Grade 1 Chase Jan 2026", "days_off": 42},
+             "cheltenham_record": "Won 2024 Triumph Hurdle; 3rd 2025 Arkle Challenge Trophy",
+             "last_run": "Won Grade 1 Chase Jan 2026", "days_off": 42,
+             "ground_pref": "good_to_soft", "dist_class_form": "Won Grade 1 QMCC Trial Chase 2m Jan 2026"},
             {"name": "L'Eau du Sud", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
              "odds": "6/1", "age": 8, "form": "1-1-F-11", "rating": 174,
-             "cheltenham_record": None,
+             "cheltenham_record": "4th 2025 Arkle Challenge Trophy",
              "last_run": "Won Grade 1 Champion Chase Trial Feb 2026", "days_off": 28},
             {"name": "Il Etait Temps", "trainer": "Willie Mullins", "jockey": "Mark Walsh",
              "odds": "7/1", "age": 8, "form": "1-1-F-11", "rating": 180,
@@ -853,6 +855,11 @@ RACES_2026 = {
              "odds": "16/1", "age": 9, "form": "2-1-1-11", "rating": 170,
              "cheltenham_record": "Won 2021 Triumph Hurdle; Placed 2022 QMCC",
              "last_run": "Won Grade 1 Chase Jan 2026", "days_off": 42},
+            # CONFIRMED 08/03/2026: Irish Panther switched from Arkle to QMCC
+            {"name": "Irish Panther", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
+             "odds": "20/1", "age": 9, "form": "1-1-1-P2", "rating": 163,
+             "cheltenham_record": None,
+             "last_run": "2nd Grade 1 Jan 2026", "days_off": 42},
         ]
     },
     # ── DAY 3 GRADE 1 RACES ──────────────────────────────────────────────────
@@ -864,7 +871,8 @@ RACES_2026 = {
             {"name": "Teahupoo", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
              "odds": "9/4", "age": 9, "form": "1-1-1-22", "rating": 172,
              "cheltenham_record": "2nd 2024 Stayers Hurdle; Placed 2023",
-             "last_run": "Won Grade 1 Leopardstown Jan 2026", "days_off": 42},
+             "last_run": "Won Grade 1 Stayers Hurdle 3m Leopardstown Jan 2026", "days_off": 42,
+             "ground_pref": "soft", "dist_class_form": "Won Grade 1 Stayers Hurdle 3m Leopardstown Jan 2026"},
             {"name": "Honesty Policy", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
              "odds": "9/2", "age": 6, "form": "3-2-1-11", "rating": 159,
              "cheltenham_record": None,
@@ -896,14 +904,8 @@ RACES_2026 = {
         "grade": "Grade 1",
         "distance": "2m 4f",
         "entries": [
-            {"name": "Lossiemouth", "trainer": "Willie Mullins", "jockey": "Paul Townend",
-             "odds": "5/4", "age": 7, "form": "1-1-2-11", "rating": 169,
-             "cheltenham_record": "Won 2024 Mares Hurdle; Won 2025 Mares Hurdle",
-             "last_run": "2nd Irish Champion Hurdle Jan 2026 (also entered Champion Hurdle)", "days_off": 42},
-            {"name": "Brighterdaysahead", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
-             "odds": "9/4", "age": 7, "form": "1-2-3-41", "rating": 171,
-             "cheltenham_record": "3rd 2025 Champion Hurdle",
-             "last_run": "Won Grade 1 Jan 2026 (also entered Champion Hurdle)", "days_off": 42},
+            # CONFIRMED 08/03/2026: Lossiemouth runs Champion Hurdle — Mares Hurdle now wide open
+            # Brighterdaysahead confirmed Champion Hurdle (per market 08/03/2026)
             {"name": "Jade De Grugy", "trainer": "Willie Mullins", "jockey": "Mark Walsh",
              "odds": "5/1", "age": 7, "form": "1-2-3-21", "rating": 162,
              "cheltenham_record": None,
@@ -929,27 +931,25 @@ RACES_2026 = {
         "distance": "3m 2f",
         "entries": [
             {"name": "Gaelic Warrior", "trainer": "Willie Mullins", "jockey": "Paul Townend",
-             "odds": "6/1", "age": 8, "form": "2-3-1-11", "rating": 178,
-             "cheltenham_record": "Won 2024 Turners Novices Chase",
-             "last_run": "Won Grade 1 Chase Feb 2026", "days_off": 28},
+             "odds": "7/2", "age": 8, "form": "2-3-1-11", "rating": 178,
+             "cheltenham_record": "Won 2024 Turners Novices Chase; Won 2025 Cheltenham Gold Cup",
+             "last_run": "Won Grade 1 Gold Cup Trial Chase 3m2f Feb 2026", "days_off": 28,
+             "ground_pref": "soft", "dist_class_form": "Won Grade 1 Gold Cup Chase 3m2f Cheltenham 2025"},
             {"name": "The Jukebox Man", "trainer": "Ben Pauling", "jockey": "Jonjo O'Neill Jr",
-             "odds": "6/1", "age": 8, "form": "1-1-11", "rating": 178,
+             "odds": "4/1", "age": 8, "form": "1-1-11", "rating": 178,
              "cheltenham_record": None,
              "last_run": "Won Grade 1 Denman Chase Feb 2026", "days_off": 21},
             {"name": "Jango Baie", "trainer": "Nicky Henderson", "jockey": "Nico de Boinville",
-             "odds": "6/1", "age": 7, "form": "4-1-3-12", "rating": 177,
-             "cheltenham_record": "2nd 2025 Ryanair Chase",
+             "odds": "4/1", "age": 7, "form": "4-1-3-12", "rating": 177,
+             "cheltenham_record": "Won 2025 Arkle Challenge Trophy",
              "last_run": "2nd Grade 1 Chase Jan 2026", "days_off": 42},
-            {"name": "Galopin Des Champs", "trainer": "Willie Mullins", "jockey": "Paul Townend",
-             "odds": "7/1", "age": 10, "form": "3-3-1-21", "rating": 179,
-             "cheltenham_record": "Won 2023 Gold Cup; Won 2024 Gold Cup",
-             "last_run": "3rd Savills Chase Dec 2025", "days_off": 75},
+            # RULED OUT 07/03/2026: Galopin Des Champs withdrawn with setback (Willie Mullins confirmed)
             {"name": "Haiti Couleurs", "trainer": "Rebecca Curtis", "jockey": "Adam Wedge",
              "odds": "8/1", "age": 9, "form": "1-1-P-11", "rating": 172,
-             "cheltenham_record": None,
+             "cheltenham_record": "Won 2025 Princess Royal NH Challenge Cup",
              "last_run": "Won Grade 2 Chase Feb 2026", "days_off": 28},
             {"name": "Inothewayurthinkin", "trainer": "Gavin Cromwell", "jockey": "Danny Mullins",
-             "odds": "8/1", "age": 8, "form": "9-F-5-14", "rating": 184,
+             "odds": "13/2", "age": 8, "form": "9-F-5-14", "rating": 184,
              "cheltenham_record": "Won 2025 Cheltenham Gold Cup",
              "last_run": "4th King George VI Chase Dec 2025", "days_off": 77},
             {"name": "Grey Dawning", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
@@ -1232,6 +1232,103 @@ def analyze_age_ratings():
     print("  * Age 10+ CAN win but must have proven Festival record (see Energumene 2025 at 10)")
 
 
+# ── Module-level jockey/combo constants (shared with deduplication logic) ─────
+JOCKEY_SCORES = {
+    "Paul Townend":       20,
+    "Nico de Boinville":  15,
+    "Jack Kennedy":       12,
+    "Rachael Blackmore":  12,
+    "Donagh Meyler":       8,   # Added: Emmet Mullins' stable jockey, Festival winner
+    "Mark Walsh":          8,
+    "Danny Mullins":       8,
+    "Patrick Mullins":     8,
+    "Davy Russell":        8,
+    "Sean Flanagan":        6,   # Added: top Irish jump jockey
+    "Harry Cobden":        6,
+    "Tom Cannon":          6,
+    "Aidan Coleman":       6,
+    "Keith Donoghue":      6,
+}
+
+ELITE_COMBOS = {
+    ("Willie Mullins",       "Paul Townend"):       15,
+    ("Nicky Henderson",      "Nico de Boinville"):  12,
+    ("Gordon Elliott",       "Jack Kennedy"):        8,
+    ("Henry de Bromhead",    "Rachael Blackmore"):   8,
+    ("Gavin Cromwell",       "Danny Mullins"):       8,
+}
+
+
+def deduplicate_jockeys_in_field(scored):
+    """
+    One jockey cannot ride two horses in the same race.
+    After scoring, find any jockey assigned to multiple horses and strip the
+    jockey bonus (+ combo bonus if applicable) from every horse EXCEPT the
+    highest-scoring one.  Re-sorts the list descending by score.
+
+    Works on either:
+      - list of tuples  (score, horse_dict, tips, warnings, vr)  [generate_2026_picks format]
+      - list of dicts   with keys 'score', 'jockey', 'trainer', 'tips', 'warnings' [score_field format]
+    Pass the list; it is mutated and returned.
+    """
+    from collections import defaultdict
+
+    # Detect format
+    tuple_format = scored and isinstance(scored[0], (tuple, list))
+
+    def get_jockey(item):
+        return item[1].get("jockey", "") if tuple_format else item.get("jockey", "")
+    def get_trainer(item):
+        return item[1].get("trainer", "") if tuple_format else item.get("trainer", "")
+    def get_score(item):
+        return item[0] if tuple_format else item["score"]
+    def get_name(item):
+        return item[1].get("name", "?") if tuple_format else item.get("name", "?")
+
+    by_jockey = defaultdict(list)
+    for item in scored:
+        j = get_jockey(item)
+        if j:
+            by_jockey[j].append(item)
+
+    for jockey, horses in by_jockey.items():
+        if len(horses) < 2:
+            continue
+        # Sort by score descending; top horse keeps the bonus
+        horses.sort(key=get_score, reverse=True)
+        top_name = get_name(horses[0])
+        for item in horses[1:]:
+            trainer   = get_trainer(item)
+            j_bonus   = JOCKEY_SCORES.get(jockey, 3)
+            cb_bonus  = ELITE_COMBOS.get((trainer, jockey), 0)
+            deducted  = j_bonus + cb_bonus
+            deduct_msg = (
+                f"⚠ Jockey '{jockey}' cannot ride two horses — assigned to "
+                f"{top_name} (higher scorer). Jockey/combo bonus removed: -{deducted}pts"
+            )
+            if tuple_format:
+                old_score, horse_d, tips, warnings, vr = item
+                new_score = old_score - deducted
+                new_tips  = [t for t in tips
+                             if f"Jockey '{jockey}'" not in t and "Elite combo bonus" not in t]
+                new_tips.append(deduct_msg)
+                new_warnings = list(warnings) + [f"Jockey clash: {jockey} rides {top_name}"]
+                # Mutate in-place by replacing the tuple elements via index
+                idx = scored.index(item)
+                scored[idx] = (new_score, horse_d, new_tips, new_warnings, vr)
+            else:
+                item["score"] -= deducted
+                item["tips"] = [t for t in item.get("tips", [])
+                                 if f"Jockey '{jockey}'" not in t and "Elite combo bonus" not in t]
+                item["tips"].append(deduct_msg)
+                item.setdefault("warnings", [])
+                if len(item["warnings"]) < 3:
+                    item["warnings"].append(f"Jockey clash: {jockey} rides {top_name}")
+
+    scored.sort(key=get_score, reverse=True)
+    return scored
+
+
 def score_horse_2026(horse, race_name):
     """
     Score a 2026 horse based on patterns extracted from 10-year analysis.
@@ -1247,12 +1344,16 @@ def score_horse_2026(horse, race_name):
         "Willie Mullins":    25,
         "Nicky Henderson":   20,
         "Gordon Elliott":    18,
+        "Emmet Mullins":     15,   # Added: top Irish NH trainer, multiple Festival winners
         "Henry de Bromhead": 15,
         "Gavin Cromwell":    12,
         "Paul Nicholls":      8,
         "Alan King":          8,
         "Emma Lavelle":       8,
+        "Rebecca Curtis":     8,   # Added: top NH trainer, Welsh Champion many times
         "Peter Fahey":        8,
+        "Dan Skelton":        8,
+        "Ben Pauling":        6,
     }
     t_score = trainer_scores.get(trainer, 5)
     score += t_score
@@ -1260,33 +1361,12 @@ def score_horse_2026(horse, race_name):
 
     # --- Jockey bonus ---
     jockey = horse.get("jockey", "")
-    jockey_scores = {
-        "Paul Townend":       20,
-        "Nico de Boinville":  15,
-        "Jack Kennedy":       12,
-        "Rachael Blackmore":  12,
-        "Mark Walsh":          8,
-        "Danny Mullins":       8,
-        "Patrick Mullins":     8,
-        "Davy Russell":        8,
-        "Harry Cobden":        6,
-        "Tom Cannon":          6,
-        "Aidan Coleman":       6,
-        "Keith Donoghue":      6,
-    }
-    j_score = jockey_scores.get(jockey, 3)
+    j_score = JOCKEY_SCORES.get(jockey, 3)
     score += j_score
     tips.append(f"Jockey '{jockey}': +{j_score}pts")
 
     # Trainer/Jockey combo bonus
-    elite_combos = {
-        ("Willie Mullins", "Paul Townend"): 15,
-        ("Nicky Henderson", "Nico de Boinville"): 12,
-        ("Gordon Elliott", "Jack Kennedy"): 8,
-        ("Henry de Bromhead", "Rachael Blackmore"): 8,
-        ("Gavin Cromwell", "Danny Mullins"): 8,
-    }
-    combo_bonus = elite_combos.get((trainer, jockey), 0)
+    combo_bonus = ELITE_COMBOS.get((trainer, jockey), 0)
     if combo_bonus:
         score += combo_bonus
         tips.append(f"Elite combo bonus: +{combo_bonus}pts")
@@ -1308,6 +1388,65 @@ def score_horse_2026(horse, race_name):
         tips.append(f"Previous Festival place: +8pts")
     else:
         warnings.append("No previous Festival form (unknown quantity)")
+
+    # --- Same-race winner bonus (+10) ---
+    # If the horse won the EXACT same race in a prior year, reward that specific
+    # course-and-distance mastery on top of the general Festival win bonus.
+    if race_name and record and won_count >= 1:
+        race_key_words = [
+            w for w in race_name.lower().split()
+            if len(w) > 4 and w not in {"chase", "hurdle", "novices", "mares",
+                                         "champion", "grade", "novice", "stakes"}
+        ]
+        if race_key_words and any(kw in record.lower() for kw in race_key_words):
+            score += 10
+            tips.append(f"Won this exact race before: +10pts (same race course & distance mastery)")
+
+    # --- Ground / Going preference bonus (+8/-5) ---
+    # Cheltenham March = Good to Soft / Soft almost every year.
+    # Use 'ground_pref' field if present; also infer from cheltenham_record + last_run.
+    ground_pref = horse.get("ground_pref", "").lower()
+    last_run_txt = (horse.get("last_run", "") or "").lower()
+    ch_record_txt = record.lower()
+    soft_signals = any(g in ground_pref for g in ("soft", "good_to_soft", "any", "yielding"))
+    # Cheltenham wins implicitly prove soft-ground ability
+    ch_soft_proof = won_count >= 1  # winning at Cheltenham = can handle the March ground
+    # Explicit preference for good/firm ground is a negative
+    needs_better = any(g in ground_pref for g in ("good", "firm", "fast"))
+    if soft_signals:
+        score += 8
+        tips.append(f"Ground suits (soft/good-to-soft preference): +8pts")
+    elif ch_soft_proof and not needs_better:
+        score += 5
+        tips.append(f"Proven Cheltenham ground handler (course winner): +5pts")
+    elif needs_better:
+        score -= 5
+        warnings.append(f"Preference for better ground (March Cheltenham = Soft): -5pts")
+
+    # --- Same distance / class form bonus (+8) ---
+    # Reward horses that previously won at the same distance bracket and race class.
+    # Uses optional 'dist_class_form' field (free-text like '2m5f Grade 1 win Feb 2026')
+    # or infers from last_run and race_name.
+    dist_class = horse.get("dist_class_form", "") or ""
+    if dist_class:
+        score += 8
+        tips.append(f"Won same distance/class bracket: +8pts ({dist_class[:50]})")
+    else:
+        # Infer from last_run: Grade 1 win at correct distance class
+        grade1_win_signals = ("won grade 1" in last_run_txt or "won grade 2" in last_run_txt)
+        # Detect distance keywords from race_name and match in last_run
+        dist_keywords = {"2m": ["2m", "2 mile"], "2m4": ["2m4", "2m 4", "2.5m"],
+                         "2m5": ["2m5", "2m 5"], "3m": ["3m", "3 mile"],
+                         "3m1": ["3m1", "3m 1"], "3m2": ["3m2", "3m 2"]}
+        race_dist_match = False
+        for dist_key, signals in dist_keywords.items():
+            if any(s in race_name.lower() for s in signals):
+                if any(s in last_run_txt for s in signals):
+                    race_dist_match = True
+                    break
+        if grade1_win_signals and race_dist_match:
+            score += 8
+            tips.append(f"Graded win at same distance bracket this season: +8pts")
 
     # --- Form pattern ---
     form = horse.get("form", "").replace("-", "")
@@ -1409,6 +1548,7 @@ def score_horse_2026(horse, race_name):
     # Elite Irish raider bonus (+8)
     IRISH_ELITE_TRAINERS = [
         "Willie Mullins", "W P Mullins", "Gordon Elliott",
+        "Emmet Mullins",   # Added: top Festival trainer
         "Henry de Bromhead", "Henry De Bromhead",
         "Gavin Cromwell", "Joseph Patrick O'Brien", "Joseph O'Brien",
         "Noel Meade", "Peter Fahey", "Paul Nolan",
@@ -1462,6 +1602,8 @@ def generate_2026_picks():
             scored.append((s, horse, tips, warnings, vr))
 
         scored.sort(key=lambda x: x[0], reverse=True)
+        # Remove jockey bonus from any horse sharing a jockey with a higher scorer
+        deduplicate_jockeys_in_field(scored)
 
         for i, (score, horse, tips, warnings, vr) in enumerate(scored):
             if i == 0:

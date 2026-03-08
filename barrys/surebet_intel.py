@@ -104,73 +104,92 @@ EXTRA_RACES = {
         ]
     },
     "day1_race7": {   # Challenge Cup Chase (3m6f Nov Hcap Chs, Class 2, 17 runners, 10 Mar 2026)
+        # NOTE: form strings stored most-recent-first (reversed from racecard UK convention)
+        # to match scorer's startswith() recency logic.
         "entries": [
             {"name": "Backmersackme",    "trainer": "Emmet Mullins",            "jockey": "Donagh Meyler",
-             "odds": "7/2",  "age": 8, "form": "6-78201", "rating": 152,
+             "odds": "7/2",  "age": 8, "form": "102876",  "rating": 152,
+             # racecard "6-78201": most recent = 1(WIN), then 0, 2, 8, 7, 6
              "cheltenham_record": None,
              "last_run": "Won Novice Chase Leopardstown Feb 2026", "days_off": 28},
             {"name": "Newton Tornado",   "trainer": "Rebecca Curtis",           "jockey": "Sean Flanagan",
-             "odds": "9/2",  "age": 7, "form": "21-F1P1", "rating": 148,
+             "odds": "9/2",  "age": 7, "form": "1P1F12",  "rating": 148,
+             # racecard "21-F1P1": most recent = 1(WIN), then P, 1, F, 1, 2
              "cheltenham_record": None,
              "last_run": "Won Novice Chase Jan 2026", "days_off": 42},
             {"name": "Wade Out",         "trainer": "Olly Murphy",              "jockey": "Sean Bowen",
-             "odds": "11/2", "age": 8, "form": "616-114", "rating": 145,
+             "odds": "11/2", "age": 8, "form": "411616",  "rating": 145,
+             # racecard "616-114": most recent = 4(4th), before = 1,1 (two wins)
              "cheltenham_record": "Cheltenham winner",
              "last_run": "Won Handicap Chase Feb 2026", "days_off": 28},
             {"name": "King Of Answers",  "trainer": "Lucinda Russell",          "jockey": "Derek Fox",
-             "odds": "10/1", "age": 9, "form": "P2-5141", "rating": 143,
+             "odds": "10/1", "age": 9, "form": "14152P",  "rating": 143,
+             # racecard "P2-5141": most recent = 1(WIN)
              "cheltenham_record": None,
              "last_run": "Won Handicap Chase Feb 2026", "days_off": 28},
             {"name": "One Big Bang",     "trainer": "James Owen",               "jockey": "Alex Chadwick",
-             "odds": "10/1", "age": 8, "form": "15-3213", "rating": 141,
+             "odds": "10/1", "age": 8, "form": "312351",  "rating": 141,
+             # racecard "15-3213": most recent = 3(3rd)
              "cheltenham_record": None,
              "last_run": "3rd Handicap Chase Jan 2026", "days_off": 42},
             {"name": "Guard The Moon",   "trainer": "Nigel Twiston-Davies",     "jockey": "Sam Twiston-Davies",
-             "odds": "10/1", "age": 8, "form": "8PF-1P1", "rating": 140,
+             "odds": "10/1", "age": 8, "form": "1P1FP8",  "rating": 140,
+             # racecard "8PF-1P1": most recent = 1(WIN), poor_form: 2 P's
              "cheltenham_record": None,
              "last_run": "Won Chase Jan 2026", "days_off": 42},
             {"name": "Iceberg Theory",   "trainer": "Paul Nolan",               "jockey": "C Stone-Walsh",
-             "odds": "8/1",  "age": 7, "form": "36P2-11", "rating": 147,
+             "odds": "8/1",  "age": 7, "form": "112P63",  "rating": 147,
+             # racecard "36P2-11": most recent = 1,1 (two consecutive wins)
              "cheltenham_record": None,
              "last_run": "Won Novice Chase Cork Nov 2025", "days_off": 119},
             {"name": "Grand Geste",      "trainer": "Joel Parkinson",           "jockey": "Danny McMenamin",
-             "odds": "12/1", "age": 9, "form": "P-221P1", "rating": 138,
+             "odds": "12/1", "age": 9, "form": "1P122P",  "rating": 138,
+             # racecard "P-221P1": most recent = 1(WIN), 2 P's penalty
              "cheltenham_record": None,
              "last_run": "Won Chase Feb 2026", "days_off": 28},
             {"name": "Walking On Air",   "trainer": "Faye Bramley",             "jockey": "Harry Cobden",
-             "odds": "14/1", "age": 9, "form": "3F0P-83", "rating": 133,
+             "odds": "14/1", "age": 9, "form": "38P0F3",  "rating": 133,
+             # racecard "3F0P-83": most recent = 3(3rd)
              "cheltenham_record": None,
              "last_run": "8th Chase Feb 2026", "days_off": 28},
             {"name": "Pic Roc",          "trainer": "Ben Pauling",              "jockey": "Ben Jones",
-             "odds": "16/1", "age": 8, "form": "6-U1591", "rating": 135,
+             "odds": "16/1", "age": 8, "form": "1951U6",  "rating": 135,
+             # racecard "6-U1591": most recent = 1(WIN)
              "cheltenham_record": None,
              "last_run": "9th Chase Feb 2026", "days_off": 28},
             {"name": "Holloway Queen",   "trainer": "Nicky Henderson",          "jockey": "James Bowen",
-             "odds": "16/1", "age": 8, "form": "4P-PU41", "rating": 136,
+             "odds": "16/1", "age": 8, "form": "14UPP4",  "rating": 136,
+             # racecard "4P-PU41": most recent = 1(WIN), 2 P's penalty
              "cheltenham_record": None,
              "last_run": "Won Handicap Chase Feb 2026", "days_off": 28},
             {"name": "First Confession", "trainer": "Joe Tizzard",              "jockey": "Brendan Powell",
-             "odds": "20/1", "age": 8, "form": "P-335F1", "rating": 131,
+             "odds": "20/1", "age": 8, "form": "1F533P",  "rating": 131,
+             # racecard "P-335F1": most recent = 1(WIN), 1 P penalty
              "cheltenham_record": None,
              "last_run": "Won Handicap Chase Feb 2026", "days_off": 28},
             {"name": "Kurasso Blue",     "trainer": "Gordon Elliott",           "jockey": "J W Kennedy",
-             "odds": "9/1",  "age": 6, "form": "151-212", "rating": 146,
+             "odds": "9/1",  "age": 6, "form": "212151",  "rating": 146,
+             # racecard "151-212": most recent = 2(2nd), no consecutive wins from front
              "cheltenham_record": None,
              "last_run": "2nd Novice Chase Jan 2026", "days_off": 42},
             {"name": "Will Do",          "trainer": "Gordon Elliott",           "jockey": "Danny Gilligan",
-             "odds": "25/1", "age": 7, "form": "0-7020P", "rating": 128,
+             "odds": "25/1", "age": 7, "form": "P02070",  "rating": 128,
+             # racecard "0-7020P": most recent = P(pulled up)
              "cheltenham_record": None,
              "last_run": "P Chase Jan 2026", "days_off": 42},
             {"name": "Union Station",    "trainer": "Gavin Cromwell",           "jockey": "Keith Donoghue",
-             "odds": "25/1", "age": 8, "form": "26-2P2U", "rating": 130,
+             "odds": "25/1", "age": 8, "form": "U2P262",  "rating": 130,
+             # racecard "26-2P2U": most recent = U(unseated)
              "cheltenham_record": None,
              "last_run": "Unseated Chase Jan 2026", "days_off": 42},
             {"name": "Silver Thorn",     "trainer": "Emma Lavelle",             "jockey": "Jonathan Burke",
-             "odds": "25/1", "age": 8, "form": "2P-5114", "rating": 134,
+             "odds": "25/1", "age": 8, "form": "4115P2",  "rating": 134,
+             # racecard "2P-5114": most recent = 4(4th), two wins before
              "cheltenham_record": None,
              "last_run": "Won Chase Jan 2026", "days_off": 42},
             {"name": "Holokea",          "trainer": "Mickey Bowen",             "jockey": "Shane Fenelon",
-             "odds": "33/1", "age": 8, "form": "212229",  "rating": 126,
+             "odds": "33/1", "age": 8, "form": "922212",  "rating": 126,
+             # racecard "212229": most recent = 9(9th)
              "cheltenham_record": None,
              "last_run": "9th Chase Feb 2026", "days_off": 28},
         ]

@@ -1238,10 +1238,12 @@ JOCKEY_SCORES = {
     "Nico de Boinville":  15,
     "Jack Kennedy":       12,
     "Rachael Blackmore":  12,
+    "Donagh Meyler":       8,   # Added: Emmet Mullins' stable jockey, Festival winner
     "Mark Walsh":          8,
     "Danny Mullins":       8,
     "Patrick Mullins":     8,
     "Davy Russell":        8,
+    "Sean Flanagan":        6,   # Added: top Irish jump jockey
     "Harry Cobden":        6,
     "Tom Cannon":          6,
     "Aidan Coleman":       6,
@@ -1342,12 +1344,16 @@ def score_horse_2026(horse, race_name):
         "Willie Mullins":    25,
         "Nicky Henderson":   20,
         "Gordon Elliott":    18,
+        "Emmet Mullins":     15,   # Added: top Irish NH trainer, multiple Festival winners
         "Henry de Bromhead": 15,
         "Gavin Cromwell":    12,
         "Paul Nicholls":      8,
         "Alan King":          8,
         "Emma Lavelle":       8,
+        "Rebecca Curtis":     8,   # Added: top NH trainer, Welsh Champion many times
         "Peter Fahey":        8,
+        "Dan Skelton":        8,
+        "Ben Pauling":        6,
     }
     t_score = trainer_scores.get(trainer, 5)
     score += t_score
@@ -1542,6 +1548,7 @@ def score_horse_2026(horse, race_name):
     # Elite Irish raider bonus (+8)
     IRISH_ELITE_TRAINERS = [
         "Willie Mullins", "W P Mullins", "Gordon Elliott",
+        "Emmet Mullins",   # Added: top Festival trainer
         "Henry de Bromhead", "Henry De Bromhead",
         "Gavin Cromwell", "Joseph Patrick O'Brien", "Joseph O'Brien",
         "Noel Meade", "Peter Fahey", "Paul Nolan",
