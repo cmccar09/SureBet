@@ -42,6 +42,274 @@ dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
 PICKS_TABLE = 'CheltenhamPicks'
 
 
+# ─── Cheltenham Strategy: Race Classification ────────────────────────────────
+# SKIP: Handicaps, amateur races, cross country — NO bets
+SKIP_RACES = {
+    "Ultima Handicap Chase",
+    "Conditional Jockeys Handicap Hurdle",
+    "National Hunt Chase",
+    "Coral Cup Handicap Hurdle",
+    "Glenfarclas Chase",
+    "Glenfarclas Chase Cross Country",
+    "Cross Country Chase",
+    "Pertemps Final Handicap Hurdle",
+    "Pertemps Network Final",
+    "Festival Plate Handicap Chase",
+    "Plate Handicap Chase",
+    "TrustATrader Festival Plate Handicap Chase",
+    "Boodles Juvenile Handicap Hurdle",
+    "Fred Winter Juvenile Handicap Hurdle",
+    "Martin Pipe Conditional Jockeys Hurdle",
+    "Martin Pipe Conditional Jockeys Novices Hurdle",
+    "County Handicap Hurdle",
+    "Grand Annual Handicap Chase",
+    "St James Place Foxhunter Chase",
+    "Foxhunter Chase",
+    "Hunters Chase",
+}
+
+# GRADE1 non-handicap championship races — eligible for BETTING_PICK
+GRADE1_RACES = {
+    "Sky Bet Supreme Novices Hurdle",
+    "Supreme Novices Hurdle",
+    "Supreme Novices' Hurdle",
+    "Arkle Challenge Trophy Chase",
+    "Arkle Chase",
+    "Arkle Novices Chase",
+    "Unibet Champion Hurdle",
+    "Champion Hurdle",
+    "Close Brothers Mares Hurdle",
+    "Mares Hurdle",
+    "Mares' Hurdle",
+    "Ballymore Novices Hurdle",
+    "Brown Advisory Novices Chase",
+    "Queen Mother Champion Chase",
+    "QMCC",
+    "Dawn Run Mares Novices Hurdle",
+    "Turners Novices Chase",
+    "Ryanair Chase",
+    "Paddy Power Stayers Hurdle",
+    "Stayers Hurdle",
+    "Stayers' Hurdle",
+    "JCB Triumph Hurdle",
+    "Triumph Hurdle",
+    "Albert Bartlett Novices Hurdle",
+    "Cheltenham Gold Cup",
+    "Gold Cup",
+    "Champion Standard Open NH Flat Race",
+    "Champion Bumper",
+    "NH Flat Race",
+}
+
+
+# ─── Live Racing Post odds scraped 2026-03-05 ────────────────────────────────
+# Format: lowercase horse name → odds string
+RP_LIVE_ODDS = {
+    # Champion Hurdle (Day 1)
+    "the new lion":           "2/1",
+    "brighterdaysahead":      "7/2",
+    "lossiemouth":            "2/1",   # Champion Hurdle favourite (updated 08/03/2026)
+    "golden ace":             "7/1",
+    "poniros":                "10/1",
+    "alexei":                 "16/1",
+    "anzadam":                "20/1",
+    "workahead":              "100/1",
+
+    # Cheltenham Gold Cup (Day 4)
+    "gaelic warrior":         "7/2",  # Gold Cup favourite since Galopin withdrawal (updated 08/03/2026)
+    "the jukebox man":        "6/1",
+    "jango baie":             "6/1",
+    "galopin des champs":     "7/1",
+    "inothewayurthinkin":     "8/1",
+    "grey dawning":           "14/1",
+    "spillane's tower":       "16/1",
+    "i am maximus":           "33/1",
+    "grangeclare west":       "33/1",
+    "affordale fury":         "33/1",
+    "envoi allen":            "40/1",
+    "fastorslow":             "40/1",
+    "banbridge":              "40/1",
+    "nick rockett":           "40/1",
+    "monty's star":           "50/1",
+    "firefox":                "50/1",
+    "heart wood":             "66/1",
+    "stellar story":          "66/1",
+    "impaire et passe":       "66/1",
+    "resplendent grey":       "66/1",
+    "spindleberry":           "66/1",
+    "three card brag":        "100/1",
+    "lecky watson":           "100/1",
+    "handstands":             "100/1",
+    "myretown":               "150/1",
+    "gold tweet":             "200/1",
+
+    # Queen Mother Champion Chase / QMCC (Day 2)
+    "majborough":             "6/4",
+    "l'eau du sud":           "6/1",
+    "il etait temps":         "7/1",
+    "jonbon":                 "14/1",
+    "quilixios":              "16/1",
+    "thistle ask":            "16/1",
+    "found a fifty":          "40/1",
+    "solness":                "40/1",
+
+    # Supreme Novices' Hurdle (Day 1)
+    "old park star":          "2/1",
+    "talk the talk":          "11/2",
+    "mighty park":            "13/2",
+    "el cairos":              "7/1",
+    "mydaddypaddy":           "10/1",
+    "idaho sun":              "14/1",
+    "leader d'allier":        "14/1",
+    "sober glory":            "14/1",
+    "sober":                  "16/1",
+    "baron noir":             "25/1",
+    "sortudo":                "33/1",
+
+    # Ballymore / Baring Bingham Novices' Hurdle (Day 2)
+    "no drama this end":      "4/1",
+    "skylight hustle":        "6/1",
+    "king rasko grey":        "8/1",
+    "act of innocence":       "10/1",
+    "i'll sort that":         "14/1",
+    "doctor steinberg":       "3/1",   # Albert Bartlett FAVOURITE
+
+    # Arkle Chase (Day 1)
+    "kopek des bordes":       "7/4",
+    "lulamba":                "15/8",
+    "kargese":                "6/1",
+    "romeo coolio":           "5/1",
+    "irish panther":          "14/1",
+    "steel ally":             "16/1",
+    "kappa jy pyke":          "16/1",
+    "jax junior":             "33/1",
+    "sixmilebridge":          "40/1",
+    "july flower":            "40/1",
+    "no questions asked":     "50/1",
+    "mambonumberfive":        "50/1",
+    "hansard":                "100/1",
+    "break my soul":          "125/1",
+
+    # Stayers' Hurdle (Day 3)
+    "teahupoo":               "9/4",
+    "honesty policy":         "9/2",
+    "kabral du mathan":       "5/1",
+    "bob olinger":            "7/1",
+    "ma shantou":             "8/1",
+    "ballyburn":              "12/1",
+    "impose toi":             "16/1",
+    "wodhooh":                "16/1",
+    "hewick":                 "33/1",
+    "home by the lee":        "40/1",
+    "flooring porter":        "40/1",
+    "the yellow clay":        "40/1",
+    "feet of a dancer":       "50/1",
+    "potters charm":          "50/1",
+    "doddiethegreat":         "66/1",
+    "french ship":            "80/1",
+
+    # Ryanair Chase (Day 3)
+    "fact to file":           "4/5",
+    "panic attack":           "20/1",
+    "protektorat":            "25/1",
+    "jagwar":                 "25/1",
+    "energumene":             "40/1",
+    "better days ahead":      "50/1",
+    "edwardstone":            "100/1",
+    "master chewy":           "100/1",
+    "croke park":             "100/1",
+
+    # Jack Richards Novices' Chase / Turners Chase (Day 3)
+    "koktail divin":          "9/2",
+    "regent's stroll":        "6/1",
+    "meetmebythesea":         "6/1",
+    "slade steel":            "9/1",
+    "sixmilebridge":          "9/1",
+
+    # Mares' Hurdle (Day 3)
+    "jade de grugy":          "5/1",
+    "take no chances":        "14/1",
+    "murcia":                 "20/1",
+    "jetara":                 "33/1",
+    "dream on baby":          "33/1",
+    "nurse susan":            "40/1",
+    "park princess":          "50/1",
+    "kateira":                "66/1",
+    "lavida adiva":           "66/1",
+    "listentoyourheart":      "66/1",
+    "sunset marquesa":        "66/1",
+    "that'll do moss":        "66/1",
+    "siog geal":              "66/1",
+    "baby kate":              "100/1",
+    "la pinsonniere":         "100/1",
+    "sotchi":                 "250/1",
+
+    # Brown Advisory Novices' Chase (Day 2)
+    "final demand":           "7/2",
+    "the big westerner":      "10/1",  # running in Mares Chase at 10/1
+    "kaid d'authie":          "6/1",
+    "wendigo":                "8/1",
+    "western fold":           "8/1",
+    "oscars brother":         "12/1",
+    "kitzbuhel":              "12/1",
+    "salver":                 "16/1",
+    "kappa jy pyke":          "25/1",
+
+    # JCB Triumph Hurdle (Day 4)
+    "proactif":               "7/2",
+    "selma de vary":          "9/2",
+    "minella study":          "7/1",
+    "maestro conti":          "15/2",
+    "mange tout":             "8/1",
+    "macho man":              "8/1",
+    "winston junior":         "13/2",
+
+    # Dawn Run Mares' Novices' Hurdle (Day 3)
+    "bambino fever":          "4/5",
+    "oldschool outlaw":       "4/1",
+    "echoing silence":        "10/1",
+    "la conquiere":           "14/1",
+
+    # Champion Bumper (Day 2)
+    "love sign d'aunou":      "9/2",
+    "the irish avatar":       "8/1",
+    "keep him company":       "9/1",
+    "quiryn":                 "10/1",
+    "bass hunter":            "14/1",
+
+    # Mrs Paddy Power Mares Chase (Day 3)
+    "dinoblue":               "6/4",
+
+    # Fred Winter Juvenile Handicap Hurdle (Day 1)
+    "manlaga":                "7/1",
+
+    # National Hunt Chase (Day 1)
+    # "backmersackme":          "9/2",   # non-runner 08/03/2026
+
+    # Jack Richards Novices' Chase (Day 3) - additional
+    # "waterford whispers":     "12/1",  # non-runner 08/03/2026
+}
+
+
+def get_live_odds(horse_name: str) -> str:
+    """Look up live RP odds for a horse (case-insensitive).  Falls back to '?'."""
+    return RP_LIVE_ODDS.get(horse_name.lower().strip(), "?")
+
+
+def _race_classification(race_name: str):
+    """Return (is_grade1, is_skip) for a race name — partial substring match."""
+    rn_lower = race_name.lower()
+    is_skip = any(s.lower() in rn_lower or rn_lower in s.lower()
+                  for s in SKIP_RACES)
+    is_g1   = any(g.lower() in rn_lower or rn_lower in g.lower()
+                  for g in GRADE1_RACES)
+    return is_g1, is_skip
+
+# Table: CheltenhamPicks
+# PK: race_name   SK: pick_date
+PICKS_TABLE = 'CheltenhamPicks'
+
+
 def get_picks_table():
     return dynamodb.Table(PICKS_TABLE)
 
@@ -88,7 +356,8 @@ def score_all_races():
     """
     Score all 28 Cheltenham 2026 races using the SureBet engine.
     Returns a dict keyed by race_name with enriched pick data including
-    the full ordered field (all_horses).
+    the full ordered field (all_horses), tiered strategy classification,
+    and live RP odds.
     """
     raw_picks = build_all_picks(verbose=True)   # verbose=True → full scored list
 
@@ -99,41 +368,70 @@ def score_all_races():
             continue
 
         top = scored[0]
-        second_score = scored[1]["score"] if len(scored) > 1 else 0
+        second_score      = scored[1]["score"] if len(scored) > 1 else 0
+        second_horse_name = scored[1]["name"]  if len(scored) > 1 else ""
 
         top_score = top["score"]
+        race_name = r["race_name"]
+
+        # ── Cheltenham Strategy Tier Classification ──────────────────────────
+        is_grade1, is_skip = _race_classification(race_name)
+
+        # BETTING_PICK: Grade 1, not a skip race, score >= 75
+        # WATCH_LIST:   Not a skip race, score >= 60
+        # OPINION_ONLY: Everything else (skip races, low scores)
+        if (not is_skip) and is_grade1 and top_score >= 75:
+            bet_tier        = "BETTING_PICK"
+            bet_recommendation = True
+        elif (not is_skip) and top_score >= 60:
+            bet_tier        = "WATCH_LIST"
+            bet_recommendation = False
+        else:
+            bet_tier        = "OPINION_ONLY"
+            bet_recommendation = False
+
+        # Legacy confidence field (kept for backwards compatibility)
         confidence = (
             'HIGH'   if top_score >= 140 else
             'MEDIUM' if top_score >= 100 else
             'LOW'
         )
 
-        race_name = r["race_name"]
+        # ── Live odds from RP ────────────────────────────────────────────────
+        live_odds = get_live_odds(top["name"])
+
         dynamo_day = DAY_TO_DYNAMO.get(r["day"], f"Day_{r['day']}")
 
         picks[race_name] = {
-            'race_name':    race_name,
-            'race_key':     race_key,
-            'day':          dynamo_day,
-            'race_time':    r.get("time", ""),
-            'grade':        r["grade"],
-            'distance':     '',
-            'horse':        top["name"],
-            'trainer':      top.get("trainer", ""),
-            'jockey':       top.get("jockey", ""),
-            'odds':         '?',                     # live odds via Betfair
-            'age':          '',
-            'form':         '',
-            'rating':       0,
-            'score':        top_score,
-            'tier':         _tier(top_score),
-            'value_rating': top.get("value_r", 0),
-            'second_score': second_score,
-            'score_gap':    top_score - second_score,
-            'confidence':   confidence,
-            'reasons':      top.get("tips", [])[:6],
-            'warnings':     top.get("warnings", []),
-            # Full ordered field ──────────────────────────────────────────
+            'race_name':        race_name,
+            'race_key':         race_key,
+            'day':              dynamo_day,
+            'race_time':        r.get("time", ""),
+            'grade':            r["grade"],
+            'distance':         '',
+            'horse':            top["name"],
+            'trainer':          top.get("trainer", ""),
+            'jockey':           top.get("jockey", ""),
+            'odds':             live_odds,
+            'age':              '',
+            'form':             '',
+            'rating':           0,
+            'score':            top_score,
+            'tier':             _tier(top_score),
+            'value_rating':     top.get("value_r", 0),
+            'second_score':     second_score,
+            'second_horse_name': second_horse_name,
+            'score_gap':        top_score - second_score,
+            'confidence':       confidence,
+            # ── Strategy fields ─────────────────────────────────────────────
+            'is_grade1':        is_grade1,
+            'is_skip_race':     is_skip,
+            'bet_tier':         bet_tier,
+            'bet_recommendation': bet_recommendation,
+            # ────────────────────────────────────────────────────────────────
+            'reasons':          top.get("tips", [])[:6],
+            'warnings':         top.get("warnings", []),
+            # Full ordered horse list ─────────────────────────────────────────
             'all_horses':   [
                 {
                     'name':             h["name"],
@@ -146,6 +444,7 @@ def score_all_races():
                     'warnings':         h.get("warnings", []),
                     'cheltenham_record': h.get("cheltenham_record", ""),
                     'is_surebet_pick':  h["name"] == top["name"],
+                    'odds':             get_live_odds(h["name"]),
                 }
                 for h in scored
             ],
@@ -224,7 +523,7 @@ def save_picks(dry_run=False):
         else:
             marker = '             '
 
-        print(f"  {marker}  {race_name}")
+        print(f"  {marker}  [{pick['bet_tier']:<14}]  {race_name}")
         print(f"              -> {pick['horse']} @ {pick['odds']}  "
               f"[score {pick['score']}  |  {pick['tier']}  |  {pick['confidence']}]")
         if changed:
@@ -233,32 +532,39 @@ def save_picks(dry_run=False):
 
         if not dry_run:
             item = {
-                'race_name':       race_name,
-                'pick_date':       today,
-                'day':             pick['day'],
-                'race_time':       pick['race_time'],
-                'grade':           pick['grade'],
-                'distance':        pick['distance'],
-                'horse':           pick['horse'],
-                'trainer':         pick['trainer'],
-                'jockey':          pick['jockey'],
-                'odds':            pick['odds'],
-                'age':             str(pick['age']),
-                'form':            pick['form'],
-                'rating':          Decimal(str(pick['rating'])),
-                'score':           Decimal(str(pick['score'])),
-                'tier':            pick['tier'],
-                'value_rating':    Decimal(str(round(pick['value_rating'], 1))),
-                'second_score':    Decimal(str(pick['second_score'])),
-                'score_gap':       Decimal(str(pick['score_gap'])),
-                'confidence':      pick['confidence'],
-                'reasons':         pick['reasons'],
-                'warnings':        pick['warnings'],
-                'pick_changed':    changed,
-                'previous_horse':  prev_horse or '',
-                'previous_odds':   prev_odds or '',
-                'change_reason':   change_reason,
-                'updated_at':      datetime.now().isoformat(),
+                'race_name':         race_name,
+                'pick_date':         today,
+                'day':               pick['day'],
+                'race_time':         pick['race_time'],
+                'grade':             pick['grade'],
+                'distance':          pick['distance'],
+                'horse':             pick['horse'],
+                'trainer':           pick['trainer'],
+                'jockey':            pick['jockey'],
+                'odds':              pick['odds'],
+                'age':               str(pick['age']),
+                'form':              pick['form'],
+                'rating':            Decimal(str(pick['rating'])),
+                'score':             Decimal(str(pick['score'])),
+                'tier':              pick['tier'],
+                'value_rating':      Decimal(str(round(pick['value_rating'], 1))),
+                'second_score':      Decimal(str(pick['second_score'])),
+                'second_horse_name': pick.get('second_horse_name', ''),
+                'score_gap':         Decimal(str(pick['score_gap'])),
+                'confidence':        pick['confidence'],
+                # ── Strategy fields ──────────────────────────────────────────
+                'is_grade1':         pick['is_grade1'],
+                'is_skip_race':      pick['is_skip_race'],
+                'bet_tier':          pick['bet_tier'],
+                'bet_recommendation': pick['bet_recommendation'],
+                # ─────────────────────────────────────────────────────────────
+                'reasons':           pick['reasons'],
+                'warnings':          pick['warnings'],
+                'pick_changed':      changed,
+                'previous_horse':    prev_horse or '',
+                'previous_odds':     prev_odds or '',
+                'change_reason':     change_reason,
+                'updated_at':        datetime.now().isoformat(),
                 # Full ordered field with scoring breakdown
                 'all_horses':     [
                     {
@@ -272,6 +578,7 @@ def save_picks(dry_run=False):
                         'warnings':          h['warnings'],
                         'cheltenham_record': h['cheltenham_record'],
                         'is_surebet_pick':   h['is_surebet_pick'],
+                        'odds':              h.get('odds', '?'),
                     }
                     for h in pick['all_horses']
                 ],
@@ -288,6 +595,15 @@ def save_picks(dry_run=False):
     if not dry_run:
         print(f"  Saved to DynamoDB: {saved}")
     print(f"  Pick changes today: {len(changes)}")
+
+    # Strategy tier breakdown
+    tier_counts = {}
+    for p in today_picks.values():
+        t = p.get('bet_tier', 'OPINION_ONLY')
+        tier_counts[t] = tier_counts.get(t, 0) + 1
+    print(f"\n  STRATEGY TIERS:")
+    for t in ['BETTING_PICK', 'WATCH_LIST', 'OPINION_ONLY']:
+        print(f"    {t:<16}: {tier_counts.get(t, 0)}")
 
     if changes:
         print(f"\n  CHANGED PICKS:")
@@ -354,6 +670,56 @@ def show_history(race_name=None, days=14):
 
     except Exception as e:
         print(f"  Error reading history: {e}")
+
+
+def lambda_handler(event, context):
+    """
+    AWS Lambda entry point for scheduled / on-demand execution.
+
+    Schedule logic:
+      - Pre-festival (before 10 Mar 2026): runs once per day.
+        A rate(30 minutes) rule triggers this, but only the 06:00 UTC
+        invocation actually saves; others are skipped.
+      - Race days (10–13 Mar 2026, 11:00–18:30 UTC): saves every call
+        so picks refresh every 30 minutes during live racing.
+    """
+    now_utc  = datetime.utcnow()
+    today    = now_utc.date()
+
+    festival_start = __import__('datetime').date(2026, 3, 10)
+    festival_end   = __import__('datetime').date(2026, 3, 13)
+
+    if today < festival_start:
+        # Pre-festival: only run at the 06:xx trigger (hour == 6 or explicit call)
+        source = event.get('source', '')
+        if source == 'aws.events' and now_utc.hour != 6:
+            return {
+                'statusCode': 200,
+                'body': f'Skipped — pre-festival non-6am trigger at {now_utc.strftime("%H:%M")} UTC'
+            }
+    elif festival_start <= today <= festival_end:
+        # Race days: only run between 11:00 and 18:30 UTC
+        if not (11 <= now_utc.hour < 19):
+            return {
+                'statusCode': 200,
+                'body': f'Skipped — outside race hours at {now_utc.strftime("%H:%M")} UTC'
+            }
+    else:
+        # Festival over
+        return {
+            'statusCode': 200,
+            'body': 'Festival finished — no save needed'
+        }
+
+    try:
+        picks, changes = save_picks(dry_run=False)
+        return {
+            'statusCode': 200,
+            'body': f'Saved {len(picks)} picks. Changes: {len(changes)}'
+        }
+    except Exception as e:
+        print(f'ERROR in lambda_handler: {e}')
+        raise
 
 
 if __name__ == '__main__':
