@@ -7,1365 +7,18 @@ const API_BASE_URL = process.env.REACT_APP_API_URL ||
 
 // Budget configuration - €100 daily budget on top 5 picks only
 const DAILY_BUDGET = 100;
-const MAX_PICKS_PER_DAY = 5;
+const MAX_PICKS_PER_DAY = 5; // eslint-disable-line no-unused-vars
 
 function App() {
-  const [picks, setPicks] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [filter, setFilter] = useState('today');
-  const [results, setResults] = useState(null);
-  const [resultsLoading, setResultsLoading] = useState(false);
-  const [todaySummary, setTodaySummary] = useState(null);
-  const [systemStatus, setSystemStatus] = useState(null);
-  const [view, setView] = useState('picks'); // 'picks' or 'cheltenham'
-  const [lastRefreshed, setLastRefreshed] = useState(null);
-
-  useEffect(() => {
-    fetchPicks();
-    fetchTodaySummary();
-    setLastRefreshed(new Date());
-    // Auto-refresh every 30 minutes
-    const interval = setInterval(() => {
-      fetchPicks();
-      fetchTodaySummary();
-      setLastRefreshed(new Date());
-    }, 30 * 60 * 1000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
-
-  const fetchPicks = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      let endpoint;
-      if (filter === 'today') {
-        // Use /picks/today to show only FUTURE races (upcoming bets)
-        endpoint = `${API_BASE_URL}/api/picks/today`;
-      } else if (filter === 'greyhounds') {
-        endpoint = `${API_BASE_URL}/api/picks/greyhounds`;
-      } else {
-        endpoint = `${API_BASE_URL}/api/picks`;
-      }
-      
-      console.log('Fetching from:', endpoint);
-      const response = await fetch(endpoint);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-
-      if (data.success !== false) {
-        setPicks(data.picks || []);
-        // Store system status for "no picks" message
-        if (data.last_run && data.next_run) {
-          setSystemStatus({
-            lastRun: data.last_run,
-            nextRun: data.next_run,
-            message: data.message
-          });
-        }
-      } else {
-        setError(data.error || 'Failed to load picks');
-      }
-    } catch (err) {
-      console.error('Error fetching picks:', err);
-      setError(`Cannot load picks: ${err.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchTodaySummary = async () => {
-    try {
-      const endpoint = `${API_BASE_URL}/api/results/today`;
-      console.log('Fetching summary from:', endpoint);
-      const response = await fetch(endpoint);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      
-      const data = await response.json();
-
-      if (data.success && data.summary) {
-        setTodaySummary(data.summary);
-      }
-    } catch (err) {
-      console.error('Error fetching summary:', err);
-      // Don't set error - summary is optional
-    }
-  };
-
-  const checkResults = async (dateFilter = 'today') => {
-    setResultsLoading(true);
-    setError(null);
-
-    try {
-      // Fetch results based on date filter
-      const endpoint = dateFilter === 'yesterday' 
-        ? `${API_BASE_URL}/api/picks/yesterday` 
-        : `${API_BASE_URL}/api/results`;
-      console.log('Checking results from:', endpoint);
-      const response = await fetch(endpoint);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-
-      if (data.success && data.picks) {
-        // Use summary from API if available, otherwise calculate from picks
-        const picks = data.picks;
-        
-        // If API provides summary, use it directly
-        if (data.summary) {
-          setResults({
-            success: true,
-            date: data.date || 'Yesterday',
-            picks: picks,
-            summary: data.summary
-          });
-          setResultsLoading(false);
-          return;
-        }
-        
-        // Fallback: Calculate summary from picks (support both uppercase and lowercase outcomes)
-        const normalizeOutcome = (p) => {
-          const outcome = (p.outcome || p.result || p.status || '').toLowerCase();
-          return outcome;
-        };
-        
-        const wins = picks.filter(p => normalizeOutcome(p) === 'win').length;
-        const places = picks.filter(p => normalizeOutcome(p) === 'placed').length;
-        const losses = picks.filter(p => normalizeOutcome(p) === 'loss').length;
-        const pending = picks.filter(p => {
-          const outcome = normalizeOutcome(p);
-          return !outcome || outcome === 'PENDING' || outcome === '';
-        }).length;
-        
-        // Calculate profit/loss based on outcome, stake, and odds
-        let totalPL = 0;
-        let totalStake = 0;
-        picks.forEach(p => {
-          const stake = parseFloat(p.stake || 0);
-          const odds = parseFloat(p.odds || 0);
-          const outcome = p.outcome;
-          
-          // Check if there's a pre-calculated profit field first
-          if (p.profit !== undefined && p.profit !== null) {
-            totalPL += parseFloat(p.profit);
-            totalStake += stake;
-          } else if (outcome === 'win') {
-            // Win profit = stake * (odds - 1)
-            totalPL += stake * (odds - 1);
-            totalStake += stake;
-          } else if (outcome === 'placed') {
-            // Place profit (assume 1/4 odds for simplicity)
-            const placeOdds = 1 + ((odds - 1) * 0.25);
-            totalPL += stake * (placeOdds - 1);
-            totalStake += stake;
-          } else if (outcome === 'loss') {
-            // Loss = -stake
-            totalPL -= stake;
-            totalStake += stake;
-          }
-          // Pending bets don't count toward P/L or stake
-        });
-        
-        const totalReturn = totalStake + totalPL;
-        const roi = totalStake > 0 ? ((totalPL / totalStake) * 100) : 0;
-        const strikeRate = (wins + places) > 0 && picks.length > 0 ? 
-          (((wins + places) / picks.length) * 100) : 0;
-
-        setResults({
-          success: true,
-          date: data.date || 'Yesterday',
-          picks: picks,
-          summary: {
-            total_picks: picks.length,
-            wins: wins,
-            places: places,
-            losses: losses,
-            pending: pending,
-            total_stake: totalStake.toFixed(2),
-            total_return: totalReturn.toFixed(2),
-            profit: totalPL.toFixed(2),
-            roi: roi.toFixed(1),
-            strike_rate: strikeRate.toFixed(1)
-          }
-        });
-      } else {
-        setError(data.error || 'Failed to load results');
-      }
-    } catch (err) {
-      console.error('Error checking results:', err);
-      setError(`Cannot load results: ${err.message}`);
-    } finally {
-      setResultsLoading(false);
-    }
-  };
-
-  const formatOdds = (odds) => {
-    if (!odds) return 'N/A';
-    try {
-      // Handle if odds is an object (e.g., {fractional, decimal, overround})
-      if (typeof odds === 'object') {
-        if (odds.fractional) return String(odds.fractional);
-        if (odds.decimal) odds = odds.decimal;
-        else return 'N/A';
-      }
-      
-      const decimal = parseFloat(odds);
-      if (isNaN(decimal)) return String(odds);
-      
-      // Convert decimal to fractional
-      const fractional = decimal - 1;
-      if (fractional < 1) {
-        return `${Math.round(1/fractional)}/${1}`;
-      }
-      return `${Math.round(fractional)}/${1}`;
-    } catch (e) {
-      return 'N/A';
-    }
-  };
-
-  const formatTime = (timeStr) => {
-    if (!timeStr) return 'TBC';
-    try {
-      const date = new Date(timeStr);
-      if (isNaN(date.getTime())) return timeStr;
-      // UK/Ireland time (Europe/Dublin timezone = GMT/IST)
-      const time = date.toLocaleTimeString('en-IE', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false,
-        timeZone: 'Europe/Dublin'
-      });
-      
-      // Determine if GMT or IST (Irish Summer Time)
-      const month = date.getMonth();
-      const isWinter = month < 2 || month > 9; // Jan, Feb, Nov, Dec = GMT
-      const timezone = isWinter ? 'GMT' : 'IST';
-      
-      return `${time} ${timezone}`;
-    } catch (e) {
-      return timeStr;
-    }
-  };
-
-  const getBetTypeBadge = (betType) => {
-    const type = (betType || 'WIN').toUpperCase();
-    const color = type === 'EW' ? '#f59e0b' : '#10b981';
-    return (
-      <span style={{
-        background: color,
-        color: 'white',
-        padding: '4px 8px',
-        borderRadius: '4px',
-        fontSize: '12px',
-        fontWeight: 'bold'
-      }}>
-        {type}
-      </span>
-    );
-  };
-
   return (
     <div className="App">
       <header className="App-header">
-        <h1>🏇 SureBet Betting</h1>
-        <p>The most advanced super Intelligence AI Betting Platform</p>
-        
-        <div className="filter-buttons">
-          <button 
-            className={view === 'picks' ? 'active' : ''} 
-            onClick={() => setView('picks')}
-          >
-            📅 Today's Picks
-          </button>
-          <button 
-            className={view === 'cheltenham' ? 'active' : ''} 
-            onClick={() => setView('cheltenham')}
-          >
-            🏆 Cheltenham 2026
-          </button>
-        </div>
-
-        {view === 'picks' && (
-          <div className="filter-buttons" style={{ marginTop: '10px' }}>
-            <button 
-              className={filter === 'today' ? 'active' : ''} 
-              onClick={() => setFilter('today')}
-            >
-              🏇 Horses
-          </button>
-          <button onClick={() => checkResults('today')} className="results-btn" disabled={resultsLoading}>
-            {resultsLoading ? '⏳ Checking...' : '📊 Today\'s Results'}
-          </button>
-          <button onClick={() => checkResults('yesterday')} className="results-btn" disabled={resultsLoading}>
-            {resultsLoading ? '⏳ Checking...' : '📈 Yesterday\'s Results'}
-          </button>
-          </div>
-        )}
+        <h1>🏆 Cheltenham Festival 2026</h1>
+        <p>10–13 March 2026 · AI-Powered Race Analysis</p>
       </header>
 
       <main className="picks-container">
-        {view === 'cheltenham' ? (
-          <CheltenhamView apiUrl={API_BASE_URL} />
-        ) : (
-          <>
-        {/* Results Summary */}
-        {results && results.summary && (
-          <div className="results-summary">
-            <h2>📊 Today's Results {results.date && `(${results.date})`}</h2>
-            
-            {/* Separate sections for Horses and Greyhounds */}
-            {results.horses && results.horses.summary && (
-              <div style={{ marginBottom: '32px' }}>
-                <h3 style={{ fontSize: '20px', marginBottom: '16px', color: '#333' }}>🏇 Horse Racing</h3>
-                <div className="results-grid">
-                  <div className="result-stat">
-                    <div className="stat-label">Total Picks</div>
-                    <div className="stat-value">{results.horses.summary.total_picks}</div>
-                  </div>
-                  <div className="result-stat win">
-                    <div className="stat-label">Wins</div>
-                    <div className="stat-value">{results.horses.summary.wins}</div>
-                  </div>
-                  <div className="result-stat loss">
-                    <div className="stat-label">Losses</div>
-                    <div className="stat-value">{results.horses.summary.losses}</div>
-                  </div>
-                  <div className="result-stat pending">
-                    <div className="stat-label">Pending</div>
-                    <div className="stat-value">{results.horses.summary.pending}</div>
-                  </div>
-                  <div className="result-stat">
-                    <div className="stat-label">Win Rate</div>
-                    <div className="stat-value">{results.horses.summary.strike_rate}%</div>
-                  </div>
-                  <div className={`result-stat ${results.horses.summary.profit >= 0 ? 'profit' : 'loss'}`}>
-                    <div className="stat-label">P/L</div>
-                    <div className="stat-value">
-                      {results.horses.summary.profit >= 0 ? '+' : ''}€{results.horses.summary.profit}
-                    </div>
-                  </div>
-                  <div className={`result-stat ${results.horses.summary.roi >= 0 ? 'profit' : 'loss'}`}>
-                    <div className="stat-label">ROI</div>
-                    <div className="stat-value">{results.horses.summary.roi}%</div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            {/* Combined Summary */}
-            <div style={{ marginBottom: '24px' }}>
-              <h3 style={{ fontSize: '22px', marginBottom: '20px', color: '#1f2937', fontWeight: 'bold' }}>📈 Overall Performance</h3>
-              
-              {/* Key Performance Indicators - Large Display */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                gap: '16px',
-                marginBottom: '24px'
-              }}>
-                <div style={{
-                  background: results.summary.profit >= 0 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                  color: 'white',
-                  padding: '24px',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                }}>
-                  <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px', fontWeight: '600' }}>TOTAL PROFIT/LOSS</div>
-                  <div style={{ fontSize: '36px', fontWeight: 'bold' }}>
-                    {results.summary.profit >= 0 ? '+' : ''}£{results.summary.profit}
-                  </div>
-                  <div style={{ fontSize: '13px', opacity: 0.85, marginTop: '4px' }}>
-                    From £{results.summary.total_stake} staked
-                  </div>
-                </div>
-                
-                <div style={{
-                  background: results.summary.roi >= 0 ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : 'linear-gradient(135deg, #6b7280 0%, #4b5563 100%)',
-                  color: 'white',
-                  padding: '24px',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                }}>
-                  <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px', fontWeight: '600' }}>RETURN ON INVESTMENT</div>
-                  <div style={{ fontSize: '36px', fontWeight: 'bold' }}>
-                    {results.summary.roi >= 0 ? '+' : ''}{results.summary.roi}%
-                  </div>
-                  <div style={{ fontSize: '13px', opacity: 0.85, marginTop: '4px' }}>
-                    Total return: £{results.summary.total_return}
-                  </div>
-                </div>
-                
-                <div style={{
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
-                  color: 'white',
-                  padding: '24px',
-                  borderRadius: '12px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                }}>
-                  <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '8px', fontWeight: '600' }}>WIN RATE</div>
-                  <div style={{ fontSize: '36px', fontWeight: 'bold' }}>
-                    {results.summary.strike_rate}%
-                  </div>
-                  <div style={{ fontSize: '13px', opacity: 0.85, marginTop: '4px' }}>
-                    {results.summary.wins} wins from {results.summary.total_picks} picks
-                  </div>
-                </div>
-              </div>
-              
-              {/* Detailed Stats Grid */}
-              <h4 style={{ fontSize: '16px', marginBottom: '12px', color: '#4b5563', fontWeight: '600' }}>Detailed Breakdown</h4>
-              <div className="results-grid">
-              <div className="result-stat">
-                <div className="stat-label">Total Picks</div>
-                <div className="stat-value">{results.summary.total_picks}</div>
-              </div>
-              <div className="result-stat win">
-                <div className="stat-label">Wins</div>
-                <div className="stat-value">{results.summary.wins}</div>
-              </div>
-              <div className="result-stat place">
-                <div className="stat-label">Places</div>
-                <div className="stat-value">{results.summary.places}</div>
-              </div>
-              <div className="result-stat loss">
-                <div className="stat-label">Losses</div>
-                <div className="stat-value">{results.summary.losses}</div>
-              </div>
-              <div className="result-stat pending">
-                <div className="stat-label">Pending</div>
-                <div className="stat-value">{results.summary.pending}</div>
-              </div>
-              <div className="result-stat">
-                <div className="stat-label">Strike Rate</div>
-                <div className="stat-value">{results.summary.strike_rate}%</div>
-              </div>
-              <div className="result-stat">
-                <div className="stat-label">Total Stake</div>
-                <div className="stat-value">€{results.summary.total_stake}</div>
-              </div>
-              <div className="result-stat">
-                <div className="stat-label">Total Return</div>
-                <div className="stat-value">€{results.summary.total_return}</div>
-              </div>
-              <div className={`result-stat ${results.summary.profit >= 0 ? 'profit' : 'loss'}`}>
-                <div className="stat-label">Profit/Loss</div>
-                <div className="stat-value">
-                  {results.summary.profit >= 0 ? '+' : ''}€{results.summary.profit}
-                </div>
-              </div>
-              <div className={`result-stat ${results.summary.roi >= 0 ? 'profit' : 'loss'}`}>
-                <div className="stat-label">ROI</div>
-                <div className="stat-value">{results.summary.roi}%</div>
-              </div>
-            </div>
-            
-            {/* Bet Type and Confidence Breakdown */}
-            <div style={{ marginTop: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              {/* Bet Type Breakdown */}
-              <div style={{ 
-                background: 'white', 
-                borderRadius: '12px', 
-                padding: '20px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-              }}>
-                <h4 style={{ fontSize: '16px', marginBottom: '16px', color: '#1f2937', fontWeight: '600' }}>
-                  📊 Bet Type Distribution
-                </h4>
-                {(() => {
-                  const ewBets = results.picks.filter(p => {
-                    const bt = (p.bet_type || '').toUpperCase();
-                    return bt === 'EW' || bt === 'EACH-WAY' || bt === 'EACH WAY';
-                  });
-                  const winBets = results.picks.filter(p => {
-                    const bt = (p.bet_type || 'WIN').toUpperCase();
-                    return bt === 'WIN' || bt === 'W';
-                  });
-                  const totalBets = results.picks.length;
-                  const ewPercent = totalBets > 0 ? ((ewBets.length / totalBets) * 100).toFixed(1) : 0;
-                  const winPercent = totalBets > 0 ? ((winBets.length / totalBets) * 100).toFixed(1) : 0;
-                  
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '14px', color: '#6b7280' }}>Each-Way (EW)</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#f59e0b' }}>
-                            {ewBets.length}
-                          </span>
-                          <span style={{ fontSize: '14px', color: '#9ca3af' }}>
-                            ({ewPercent}%)
-                          </span>
-                        </div>
-                      </div>
-                      <div style={{ 
-                        width: '100%', 
-                        height: '8px', 
-                        background: '#e5e7eb', 
-                        borderRadius: '4px',
-                        overflow: 'hidden'
-                      }}>
-                        <div style={{ 
-                          width: `${ewPercent}%`, 
-                          height: '100%', 
-                          background: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)',
-                          transition: 'width 0.5s ease'
-                        }}></div>
-                      </div>
-                      
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
-                        <span style={{ fontSize: '14px', color: '#6b7280' }}>Win</span>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '18px', fontWeight: 'bold', color: '#10b981' }}>
-                            {winBets.length}
-                          </span>
-                          <span style={{ fontSize: '14px', color: '#9ca3af' }}>
-                            ({winPercent}%)
-                          </span>
-                        </div>
-                      </div>
-                      <div style={{ 
-                        width: '100%', 
-                        height: '8px', 
-                        background: '#e5e7eb', 
-                        borderRadius: '4px',
-                        overflow: 'hidden'
-                      }}>
-                        <div style={{ 
-                          width: `${winPercent}%`, 
-                          height: '100%', 
-                          background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
-                          transition: 'width 0.5s ease'
-                        }}></div>
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-              
-              {/* Confidence Level Breakdown */}
-              <div style={{ 
-                background: 'white', 
-                borderRadius: '12px', 
-                padding: '20px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-              }}>
-                <h4 style={{ fontSize: '16px', marginBottom: '16px', color: '#1f2937', fontWeight: '600' }}>
-                  🎯 Confidence Distribution
-                </h4>
-                {(() => {
-                  const getConfidenceLevel = (conf) => {
-                    const c = parseFloat(conf) || 0;
-                    if (c >= 85) return 'Excellent';
-                    if (c >= 70) return 'Good';
-                    if (c >= 55) return 'Fair';
-                    return 'Poor';
-                  };
-                  
-                  const confidenceBuckets = {
-                    'Excellent': { count: 0, color: '#10b981', min: 85 },
-                    'Good': { count: 0, color: '#FFB84D', min: 70 },
-                    'Fair': { count: 0, color: '#FF8C00', min: 55 },
-                    'Poor': { count: 0, color: '#ef4444', min: 0 }
-                  };
-                  
-                  results.picks.forEach(p => {
-                    const level = getConfidenceLevel(p.combined_confidence || p.confidence);
-                    if (confidenceBuckets[level]) {
-                      confidenceBuckets[level].count++;
-                    }
-                  });
-                  
-                  const totalBets = results.picks.length;
-                  
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {Object.entries(confidenceBuckets).map(([level, data]) => {
-                        const percent = totalBets > 0 ? ((data.count / totalBets) * 100).toFixed(1) : 0;
-                        return (
-                          <div key={level}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                              <span style={{ fontSize: '13px', color: '#6b7280' }}>
-                                {level} ({data.min}%+)
-                              </span>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                <span style={{ fontSize: '16px', fontWeight: 'bold', color: data.color }}>
-                                  {data.count}
-                                </span>
-                                <span style={{ fontSize: '12px', color: '#9ca3af' }}>
-                                  ({percent}%)
-                                </span>
-                              </div>
-                            </div>
-                            <div style={{ 
-                              width: '100%', 
-                              height: '6px', 
-                              background: '#e5e7eb', 
-                              borderRadius: '3px',
-                              overflow: 'hidden'
-                            }}>
-                              <div style={{ 
-                                width: `${percent}%`, 
-                                height: '100%', 
-                                background: data.color,
-                                transition: 'width 0.5s ease'
-                              }}></div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
-            </div>
-
-            {/* Detailed picks list - mobile-friendly card layout */}
-            {results.picks && results.picks.length > 0 && (
-              <div style={{ marginTop: '24px' }}>
-                <h3 style={{ fontSize: '18px', marginBottom: '12px', color: '#333' }}>Detailed Results</h3>
-                <div style={{ 
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))',
-                  gap: '12px'
-                }}>
-                  {results.picks.map((pick, index) => {
-                    const outcome = pick.outcome || 'pending';
-                    
-                    // Calculate P/L for this pick
-                    const stake = parseFloat(pick.stake || 0);
-                    const odds = parseFloat(pick.odds || 0);
-                    let pl = 0;
-                    
-                    if (pick.profit !== undefined && pick.profit !== null) {
-                      pl = parseFloat(pick.profit);
-                    } else if (outcome === 'win') {
-                      pl = stake * (odds - 1);
-                    } else if (outcome === 'placed') {
-                      const placeOdds = 1 + ((odds - 1) * 0.25);
-                      pl = stake * (placeOdds - 1);
-                    } else if (outcome === 'loss') {
-                      pl = -stake;
-                    }
-                    
-                    const outcomeColor = 
-                      outcome === 'win' || outcome === 'placed' ? '#10b981' : 
-                      outcome === 'loss' ? '#ef4444' : '#6b7280';
-                    const outcomeIcon = 
-                      outcome === 'win' ? '🏆' : 
-                      outcome === 'placed' ? '📍' : 
-                      outcome === 'loss' ? '❌' : '⏳';
-
-                    return (
-                      <div key={index} style={{
-                        background: 'white',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        borderLeft: `4px solid ${outcomeColor}`,
-                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                        transition: 'transform 0.2s, box-shadow 0.2s'
-                      }}>
-                        {/* Header: Horse name and outcome */}
-                        <div style={{ 
-                          display: 'flex', 
-                          justifyContent: 'space-between', 
-                          alignItems: 'center',
-                          marginBottom: '12px'
-                        }}>
-                          <div style={{ 
-                            fontSize: '16px', 
-                            fontWeight: 'bold', 
-                            color: '#111',
-                            flex: 1
-                          }}>
-                            {outcomeIcon} {pick.horse || 'Unknown Horse'}
-                          </div>
-                          <div style={{
-                            background: outcomeColor,
-                            color: 'white',
-                            padding: '4px 12px',
-                            borderRadius: '6px',
-                            fontSize: '12px',
-                            fontWeight: 'bold'
-                          }}>
-                            {outcome}
-                          </div>
-                        </div>
-
-                        {/* Race Details */}
-                        <div style={{ 
-                          display: 'grid',
-                          gridTemplateColumns: '1fr 1fr',
-                          gap: '8px',
-                          marginBottom: '12px',
-                          fontSize: '13px',
-                          color: '#6b7280'
-                        }}>
-                          <div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '2px' }}>VENUE</div>
-                            <div style={{ fontWeight: '500', color: '#374151' }}>{pick.course}</div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '2px' }}>TIME</div>
-                            <div style={{ fontWeight: '500', color: '#374151' }}>{formatTime(pick.race_time)}</div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '2px' }}>BET TYPE</div>
-                            <div style={{ fontWeight: '500', color: '#374151' }}>{pick.bet_type || 'WIN'}</div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: '11px', color: '#9ca3af', marginBottom: '2px' }}>ODDS</div>
-                            <div style={{ fontWeight: '500', color: '#374151' }}>{pick.odds}</div>
-                          </div>
-                        </div>
-
-                        {/* P/L Banner */}
-                        <div style={{
-                          background: pl >= 0 ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                          color: 'white',
-                          padding: '10px',
-                          borderRadius: '8px',
-                          textAlign: 'center'
-                        }}>
-                          <div style={{ fontSize: '11px', opacity: 0.9, marginBottom: '2px' }}>PROFIT/LOSS</div>
-                          <div style={{ fontSize: '20px', fontWeight: 'bold' }}>
-                            {pl >= 0 ? '+' : ''}€{pl.toFixed(2)}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <button onClick={() => setResults(null)} className="close-results">
-              ✕ Close Results
-            </button>
-          </div>
-        )}
-        
-        {loading && <div className="loading">Loading picks...</div>}
-        
-        {error && (
-          <div className="error">
-            <h3>Error loading picks</h3>
-            <p>{error}</p>
-            <p className="hint">Check AWS credentials are configured</p>
-          </div>
-        )}
-
-        {!loading && !error && picks.length === 0 && (
-          <div className="no-picks">
-            <h3>No Selections Available</h3>
-            {systemStatus ? (
-              <>
-                <p style={{marginBottom: '10px'}}>
-                  <strong>Last Run:</strong> {new Date(systemStatus.lastRun).toLocaleString()}
-                </p>
-                <p style={{marginBottom: '10px'}}>
-                  {systemStatus.message || 'No selections met the criteria'}
-                </p>
-                <p style={{color: '#3b82f6', fontWeight: 'bold'}}>
-                  <strong>Running again at:</strong> {new Date(systemStatus.nextRun).toLocaleString()}
-                </p>
-              </>
-            ) : (
-              <p>No selections available today</p>
-            )}
-          </div>
-        )}
-
-        {!loading && !error && picks.length > 0 && (
-          <>
-            {/* Bet of the Day Banner */}
-            {(() => {
-              // Find the best pending pick: highest comprehensive_score, not yet settled
-              const pending = picks.filter(p => !p.outcome || p.outcome === '' || p.outcome === null);
-              const best = pending.length > 0
-                ? [...pending].sort((a, b) => (parseInt(b.comprehensive_score) || 0) - (parseInt(a.comprehensive_score) || 0))[0]
-                : null;
-
-              if (!best) return null;
-
-              const score = Math.min(parseInt(best.comprehensive_score) || 0, 100);
-              const odds = parseFloat(best.odds) || 0;
-              const raceTime = best.race_time ? new Date(best.race_time).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
-              const reasons = (best.selection_reasons || []).slice(0, 3);
-
-              // Next refresh time
-              const nextCheck = lastRefreshed ? new Date(lastRefreshed.getTime() + 30 * 60 * 1000) : null;
-              const nextCheckStr = nextCheck ? nextCheck.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
-              const lastStr = lastRefreshed ? lastRefreshed.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '';
-
-              // Score label
-              const scoreLabel = score >= 90 ? '🔥 Excellent' : score >= 85 ? '✅ Strong' : '👍 Good';
-
-              // Gap analysis
-              const gap = parseFloat(best.score_gap) || 0;
-              const nextBestScore = parseFloat(best.next_best_score) || 0;
-              const nextBestHorse = best.next_best_horse || '';
-              const gapLabel = gap >= 15 ? { text: '🏆 Clear class advantage', color: 'rgba(74,222,128,0.25)', border: '#4ade80' }
-                             : gap >= 8  ? { text: '✅ Good lead over rivals', color: 'rgba(250,204,21,0.2)', border: '#facc15' }
-                             : gap >= 1  ? { text: '⚠️ Moderate edge — competitive race', color: 'rgba(251,146,60,0.2)', border: '#fb923c' }
-                             : gap < 0   ? { text: '❗ Another horse rated higher in this race', color: 'rgba(239,68,68,0.2)', border: '#ef4444' }
-                             : null;
-
-              return (
-                <div style={{
-                  background: 'linear-gradient(135deg, #14532d 0%, #166534 100%)',
-                  color: 'white',
-                  padding: '16px 20px',
-                  borderRadius: '12px',
-                  margin: '20px auto',
-                  maxWidth: '900px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.2)'
-                }}>
-                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '8px'}}>
-                    <div>
-                      <div style={{fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.75, marginBottom: '4px'}}>
-                        ⭐ Bet of the Day
-                      </div>
-                      <div style={{fontSize: '22px', fontWeight: 'bold', lineHeight: '1.2'}}>
-                        {best.horse}
-                      </div>
-                      <div style={{fontSize: '14px', opacity: 0.9, marginTop: '3px'}}>
-                        {best.course} · {raceTime} · {odds > 1 ? `${(odds - 1).toFixed(0)}/1 (${odds}dec)` : `${odds}dec`} · Score: {score} {scoreLabel}
-                      </div>
-                    </div>
-                    <div style={{textAlign: 'right', fontSize: '11px', opacity: 0.7, whiteSpace: 'nowrap'}}>
-                      <div>Checked: {lastStr}</div>
-                      <div>Next: {nextCheckStr}</div>
-                    </div>
-                  </div>
-
-                  {/* Gap indicator row */}
-                  {nextBestScore > 0 && gapLabel && (
-                    <div style={{
-                      marginTop: '10px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      flexWrap: 'wrap'
-                    }}>
-                      <div style={{
-                        background: gapLabel.color,
-                        border: `1px solid ${gapLabel.border}`,
-                        borderRadius: '6px',
-                        padding: '4px 10px',
-                        fontSize: '12px',
-                        fontWeight: '600'
-                      }}>
-                        {gapLabel.text}
-                      </div>
-                      <div style={{fontSize: '12px', opacity: 0.8}}>
-                        vs{nextBestHorse ? ` ${nextBestHorse}` : ''} · {Math.min(nextBestScore, 100).toFixed(0)}/100
-                        {gap !== 0 && (
-                          <span style={{marginLeft: '6px', fontWeight: 'bold', color: gap > 0 ? '#4ade80' : '#f87171'}}>
-                            ({gap > 0 ? '+' : ''}{gap.toFixed(0)} pts)
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {reasons.length > 0 && (
-                    <div style={{marginTop: '10px', fontSize: '13px', opacity: 0.9, display: 'flex', gap: '12px', flexWrap: 'wrap'}}>
-                      {reasons.map((r, i) => (
-                        <span key={i} style={{background: 'rgba(255,255,255,0.12)', borderRadius: '6px', padding: '2px 8px'}}>
-                          {r}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            <div className="picks-summary" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-              <span>Showing top {Math.min(5, picks.length)} of {picks.length} selections</span>
-              {picks.length > 0 && picks[0].timestamp && (
-                <span style={{fontSize: '11px', opacity: 0.7}}>
-                  Last run: {new Date(picks[0].timestamp).toLocaleString('en-GB', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}
-                </span>
-              )}
-            </div>
-            <div className="picks-grid">
-            {picks
-              .sort((a, b) => {
-                // Sort by race_time - soonest first
-                const timeA = new Date(a.race_time || '9999-12-31').getTime();
-                const timeB = new Date(b.race_time || '9999-12-31').getTime();
-                return timeA - timeB;
-              })
-              .slice(0, 5).map((pick, index) => {
-              // Safely extract values, handling objects
-              const horseName = typeof pick.horse === 'string' ? pick.horse : 'Unknown';
-              const courseName = typeof pick.course === 'string' ? pick.course : 'Unknown';
-              
-              // Extract probabilities and odds first
-              const odds = parseFloat(pick.odds || 0);
-              const pWin = parseFloat(pick.p_win || 0);
-              const pPlace = parseFloat(pick.p_place || 0);
-              
-              // Calculate ROI from odds and win probability
-              // ROI = (Expected Return - Stake) / Stake
-              // For WIN bets: Expected Return = odds * p_win
-              // ROI% = ((odds * p_win) - 1) * 100
-              let roi = 0;
-              if (odds > 0 && pWin > 0) {
-                roi = ((odds * pWin) - 1);  // Decimal ROI (e.g., 0.25 = 25%)
-              }
-              
-              const belowThreshold = roi < 0.05;  // Less than 5% ROI
-              
-              // BUDGET-BASED STAKE CALCULATION
-              // Use global budget constants - only top 5 picks get budget allocation
-              const baseBudgetPerPick = DAILY_BUDGET / MAX_PICKS_PER_DAY;
-              const betType = (pick.bet_type || 'WIN').toUpperCase();
-              // Use the best available score — prefer combined_confidence but
-              // fall back to comprehensive_score so POOR/missing values don't
-              // override a high-quality comprehensive score.
-              const rawCombined = parseFloat(pick.combined_confidence || 0);
-              const rawComp     = parseFloat(pick.comprehensive_score || 0);
-              const confidence  = rawCombined >= 55 ? rawCombined
-                                : rawComp     >= 55 ? rawComp
-                                : Math.max(rawCombined, rawComp);
-              const decisionRating = pick.decision_rating || 'RISKY';
-              
-              // Confidence multiplier: Higher confidence = bigger stake
-              // EXCELLENT (85+): 40-50% win chance - 2.0x - GREEN
-              // GOOD (70-84): 25-35% win chance - 1.5x - LIGHT AMBER
-              // FAIR (55-69): 15-25% win chance - 1.0x - DARK AMBER
-              // POOR (under 55): <15% win chance - 0.5x - RED
-              let confidenceMultiplier = 1.0;
-              let confColor = '#FF8C00'; // Default dark amber
-              let confLabel = 'FAIR';
-              
-              if (confidence >= 85) {
-                confidenceMultiplier = 2.0;
-                confColor = '#10b981'; // Green
-                confLabel = 'EXCELLENT';
-              } else if (confidence >= 70) {
-                confidenceMultiplier = 1.5;
-                confColor = '#FFB84D'; // Light amber
-                confLabel = 'GOOD';
-              } else if (confidence >= 55) {
-                confidenceMultiplier = 1.0;
-                confColor = '#FF8C00'; // Dark amber
-                confLabel = 'FAIR';
-              } else {
-                confidenceMultiplier = 0.5;
-                confColor = '#ef4444'; // Red
-                confLabel = 'POOR';
-              }
-
-              // Override for PREMIUM picks (flagged from today's learnings - going proven + high score)
-              if (pick.confidence_color === 'gold') {
-                confColor = '#B8860B'; // Dark gold
-                confLabel = 'PREMIUM';
-                if (confidence >= 100) confidenceMultiplier = 2.5;
-              }
-              
-              // ROI multiplier: Better value = bigger stake
-              // 150%+ ROI: 1.5x
-              // 100-149% ROI: 1.25x
-              // 50-99% ROI: 1.0x
-              // <50% ROI: 0.75x
-              let roiMultiplier = 1.0;
-              if (roi >= 1.5) {
-                roiMultiplier = 1.5;
-              } else if (roi >= 1.0) {
-                roiMultiplier = 1.25;
-              } else if (roi < 0.5) {
-                roiMultiplier = 0.75;
-              }
-              
-              // Calculate final stake
-              let stake = baseBudgetPerPick * confidenceMultiplier * roiMultiplier;
-              
-              // Each Way bets need double (half on win, half on place)
-              if (betType === 'EW') {
-                stake = stake * 2;
-              }
-              
-              // Round to nearest €1
-              stake = Math.round(stake);
-              
-              // Apply sensible min/max limits
-              if (betType === 'EW') {
-                stake = Math.max(4, Math.min(stake, 100)); // €2-50 each way (€4-100 total)
-              } else {
-                stake = Math.max(2, Math.min(stake, 50)); // €2-50 win
-              }
-              
-              // Calculate potential returns
-              let potentialWin = 0;
-              let expectedReturn = 0;
-              
-              if (betType === 'WIN') {
-                potentialWin = stake * odds;
-                expectedReturn = potentialWin * pWin;
-              } else if (betType === 'EW') {
-                const ewFraction = parseFloat(pick.ew_fraction || 0.2);
-                const halfStake = stake / 2;
-                const winReturn = halfStake * odds;
-                const placeOdds = 1 + ((odds - 1) * ewFraction);
-                const placeReturn = halfStake * placeOdds;
-                potentialWin = winReturn + placeReturn;
-                expectedReturn = (winReturn * pWin) + (placeReturn * pPlace);
-              }
-              
-              const profit = potentialWin - stake;
-              const expectedProfit = expectedReturn - stake;
-              
-              // Get decision rating styling (already declared above, just get score here)
-              const decisionScore = pick.decision_score || 50;
-              
-              let decisionBg, decisionIcon, decisionText;
-              if (decisionRating === 'DO IT') {
-                decisionBg = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
-                decisionIcon = '🟢';
-                decisionText = 'Strong Bet';
-              } else if (decisionRating === 'RISKY') {
-                decisionBg = 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)';
-                decisionIcon = '🟠';
-                decisionText = 'Moderate Risk';
-              } else {
-                decisionBg = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
-                decisionIcon = '🔴';
-                decisionText = 'Skip This';
-              }
-              
-              // Check if this is a recommended bet (85+ confidence)
-              const isRecommended = pick.recommended_bet === true || confidence >= 85;
-              
-              return (
-              <div key={pick.bet_id || index} className={`pick-card ${belowThreshold ? 'below-threshold' : ''}`}>
-                {/* RECOMMENDED BET BANNER for 85+ picks */}
-                {isRecommended && (
-                  <div style={{
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    color: 'white',
-                    padding: '8px 16px',
-                    fontSize: '12px',
-                    fontWeight: 'bold',
-                    textAlign: 'center',
-                    letterSpacing: '1px',
-                    borderRadius: '8px 8px 0 0',
-                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-                  }}>
-                    ⭐ RECOMMENDED BET - Proven 85+ Threshold
-                  </div>
-                )}
-                
-                {/* PREMIUM ALERT NOTE - from today's going/form learnings */}
-                {pick.alert_note && (
-                  <div style={{
-                    background: pick.confidence_color === 'gold'
-                      ? 'linear-gradient(135deg, #92400e 0%, #b45309 100%)'
-                      : '#1e40af',
-                    color: 'white',
-                    padding: '10px 16px',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    textAlign: 'center',
-                    borderBottom: '2px solid rgba(255,255,255,0.25)',
-                    lineHeight: '1.4'
-                  }}>
-                    {pick.confidence_color === 'gold' ? '★ ' : 'ℹ '}{pick.alert_note}
-                  </div>
-                )}
-
-                {/* COMBINED CONFIDENCE RATING - Top Prominent Display */}
-                <div style={{
-                  background: confColor,
-                  color: 'white',
-                  padding: '16px',
-                  borderRadius: isRecommended ? '0 0 0 0' : '8px 8px 0 0',
-                  borderRadius: '8px 8px 0 0',
-                  marginBottom: '16px',
-                  textAlign: 'center',
-                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                }}>
-                  <div style={{fontSize: '18px', fontWeight: 'bold', marginBottom: '8px', letterSpacing: '1px'}}>
-                    {confLabel} - {Math.min(confidence, 100).toFixed(0)}/100
-                  </div>
-                  <div style={{fontSize: '13px', opacity: 0.95}}>
-                    {confLabel === 'PREMIUM'   ? 'Premium confidence - going proven + high score ★' :
-                     confLabel === 'EXCELLENT' ? 'Excellent confidence - back with 2.0x stake' :
-                     confLabel === 'GOOD'      ? 'Good confidence - back with 1.5x stake' :
-                     confLabel === 'FAIR'      ? 'Fair confidence - proceed with 1.0x stake' :
-                                                'Low confidence - 0.5x stake only'}
-                  </div>
-                </div>
-                
-                <div className="pick-header" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', padding: '0 16px'}}>
-                  <div>
-                    <h2 style={{margin: 0}}>{horseName}</h2>
-                    {/* ANALYSIS STATUS BADGE */}
-                    {(() => {
-                      const coverage = pick.coverage || pick.data_coverage || pick.race_coverage_pct || 0;
-                      const isComplete = coverage >= 90;
-                      const confScore = pick.comprehensive_score || pick.combined_confidence || 0;
-                      const hasScore = confScore > 0;
-                      
-                      return (
-                        <div style={{display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap'}}>
-                          {/* Race Coverage Badge */}
-                          <div style={{
-                            display: 'inline-block',
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            fontWeight: 'bold',
-                            background: isComplete ? '#dcfce7' : '#fee2e2',
-                            color: isComplete ? '#166534' : '#991b1b',
-                            border: isComplete ? '1px solid #86efac' : '1px solid #fca5a5'
-                          }}>
-                            {isComplete ? '✓ Analysis' : '⚠ Analysis'} ({coverage.toFixed(0)}% coverage)
-                          </div>
-                          
-                          {/* Confidence Scoring Badge */}
-                          <div style={{
-                            display: 'inline-block',
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            fontWeight: 'bold',
-                            background: hasScore ? '#dbeafe' : '#fee2e2',
-                            color: hasScore ? '#1e40af' : '#991b1b',
-                            border: hasScore ? '1px solid #93c5fd' : '1px solid #fca5a5'
-                          }}>
-                            {hasScore ? '✓ Scored' : '⚠ Not Scored'} ({Math.min(confScore, 100).toFixed(0)}/100)
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                  <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
-                    {getBetTypeBadge(pick.bet_type)}
-                    {/* ROI INDICATOR BADGE */}
-                    <div style={{
-                      background: belowThreshold ? '#f59e0b' : '#10b981',
-                      color: 'white',
-                      padding: '6px 12px',
-                      borderRadius: '6px',
-                      fontWeight: 'bold',
-                      fontSize: '14px',
-                      boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                      whiteSpace: 'nowrap'
-                    }}>
-                      {belowThreshold ? '⚠️' : '✓'} {roi.toFixed(1)}% ROI
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="pick-venue" style={{padding: '0 16px'}}>
-                  <span className="venue-icon">📍</span>
-                  <span>{courseName}</span>
-                  <span className="time">{formatTime(pick.race_time)}</span>
-                </div>
-                
-                {/* RECOMMENDED STAKE - Clear and Prominent */}
-                <div style={{
-                  background: decisionRating === 'DO IT' 
-                    ? 'linear-gradient(135deg, #10b981 0%, #059669 100%)' 
-                    : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  padding: '20px',
-                  borderRadius: '12px',
-                  margin: '16px',
-                  marginBottom: '12px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
-                }}>
-                  <div style={{fontSize: '14px', opacity: 0.95, marginBottom: '8px', fontWeight: '600', letterSpacing: '0.5px'}}>
-                    💰 RECOMMENDED STAKE (from €100/day budget)
-                  </div>
-                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '20px'}}>
-                    <div style={{flex: 1}}>
-                      <div style={{fontSize: '36px', fontWeight: 'bold', marginBottom: '8px'}}>
-                        €{stake.toFixed(0)}
-                      </div>
-                      <div style={{fontSize: '13px', opacity: 0.9, lineHeight: '1.4'}}>
-                        {betType === 'EW' 
-                          ? `€${(stake/2).toFixed(0)} Win + €${(stake/2).toFixed(0)} Place (Each Way)` 
-                          : `Win bet (confidence: ${confidence.toFixed(0)}%)`
-                        }
-                      </div>
-                      <div style={{fontSize: '12px', opacity: 0.85, marginTop: '6px', fontStyle: 'italic'}}>
-                        Top {MAX_PICKS_PER_DAY} picks selected • <span style={{color: confColor, fontWeight: 'bold'}}>{confLabel}</span> confidence ({confidence.toFixed(0)}%)
-                      </div>
-                    </div>
-                    <div style={{textAlign: 'right', borderLeft: '2px solid rgba(255,255,255,0.3)', paddingLeft: '20px'}}>
-                      <div style={{fontSize: '13px', opacity: 0.9, marginBottom: '4px'}}>
-                        Potential Win:
-                      </div>
-                      <div style={{fontSize: '24px', fontWeight: 'bold', color: '#a7f3d0'}}>
-                        €{profit.toFixed(0)}
-                      </div>
-                      <div style={{fontSize: '12px', opacity: 0.85, marginTop: '6px'}}>
-                        Expected Value: {expectedProfit > 0 ? '+' : ''}€{expectedProfit.toFixed(0)}
-                      </div>
-                      <div style={{fontSize: '11px', opacity: 0.75, marginTop: '4px'}}>
-                        ({roi.toFixed(1)}% ROI × {roiMultiplier.toFixed(2)}x)
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* KEY STATS - Compact */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 1fr',
-                  gap: '12px',
-                  padding: '0 16px',
-                  marginBottom: '16px'
-                }}>
-                  <div style={{textAlign: 'center'}}>
-                    <div style={{fontSize: '12px', color: '#6b7280', marginBottom: '4px'}}>Odds</div>
-                    <div style={{fontSize: '18px', fontWeight: 'bold'}}>{formatOdds(pick.odds)}</div>
-                  </div>
-                  <div style={{textAlign: 'center'}}>
-                    <div style={{fontSize: '12px', color: '#6b7280', marginBottom: '4px'}}>Win</div>
-                    <div style={{fontSize: '18px', fontWeight: 'bold'}}>{(parseFloat(pick.p_win || 0) * 100).toFixed(0)}%</div>
-                  </div>
-                  <div style={{textAlign: 'center'}}>
-                    <div style={{fontSize: '12px', color: '#6b7280', marginBottom: '4px'}}>Place</div>
-                    <div style={{fontSize: '18px', fontWeight: 'bold'}}>{(parseFloat(pick.p_place || 0) * 100).toFixed(0)}%</div>
-                  </div>
-                </div>
-                
-                {/* COMBINED CONFIDENCE - Collapsed by default, expandable */}
-                {pick.combined_confidence && (
-                  <details style={{margin: '0 16px', marginBottom: '16px'}}>
-                    <summary style={{
-                      cursor: 'pointer',
-                      padding: '12px',
-                      background: '#f3f4f6',
-                      borderRadius: '6px',
-                      fontWeight: '600',
-                      fontSize: '14px',
-                      userSelect: 'none'
-                    }}>
-                      📊 Confidence Details: {Math.min(pick.combined_confidence, 100).toFixed(0)}/100 ({pick.confidence_grade || 'N/A'})
-                    </summary>
-                    <div style={{
-                      padding: '12px',
-                      background: '#f9fafb',
-                      borderRadius: '0 0 6px 6px',
-                      marginTop: '4px',
-                      fontSize: '13px'
-                    }}>
-                      <div style={{marginBottom: '8px'}}>
-                        {pick.confidence_explanation || 'Multiple confidence signals consolidated'}
-                      </div>
-                      {pick.confidence_breakdown && (
-                        <div style={{
-                          display: 'grid',
-                          gridTemplateColumns: '1fr 1fr',
-                          gap: '6px',
-                          fontSize: '12px',
-                          color: '#6b7280'
-                        }}>
-                          <div>Win: {pick.confidence_breakdown.win_component?.toFixed(1) || 0}</div>
-                          <div>Place: {pick.confidence_breakdown.place_component?.toFixed(1) || 0}</div>
-                          <div>Edge: {pick.confidence_breakdown.edge_component?.toFixed(1) || 0}</div>
-                          <div>Consistency: {pick.confidence_breakdown.consistency_component?.toFixed(1) || 0}</div>
-                        </div>
-                      )}
-                      
-                      {/* Next Best Horse Competition Analysis */}
-                      {pick.next_best_score > 0 && (
-                        <div style={{
-                          marginTop: '12px',
-                          padding: '10px',
-                          background: pick.score_gap < 0 ? '#eff6ff' : pick.score_gap > 10 ? '#dcfce7' : pick.score_gap > 5 ? '#fef3c7' : '#fee2e2',
-                          borderRadius: '6px',
-                          borderLeft: `3px solid ${pick.score_gap < 0 ? '#3b82f6' : pick.score_gap > 10 ? '#16a34a' : pick.score_gap > 5 ? '#f59e0b' : '#ef4444'}`
-                        }}>
-                          <div style={{
-                            fontSize: '12px',
-                            fontWeight: 'bold',
-                            color: pick.score_gap < 0 ? '#1d4ed8' : pick.score_gap > 10 ? '#166534' : pick.score_gap > 5 ? '#92400e' : '#991b1b',
-                            marginBottom: '4px'
-                          }}>
-                            🏇 Race Competition
-                          </div>
-                          <div style={{fontSize: '12px', color: '#374151'}}>
-                            <strong>Next best:</strong>{' '}
-                            {pick.next_best_horse ? <span style={{fontWeight: 'bold'}}>{pick.next_best_horse}</span> : null}
-                            {pick.next_best_horse ? ' · ' : ''}
-                            {Math.min(pick.next_best_score, 100).toFixed(0)}/100
-                          </div>
-                          <div style={{fontSize: '12px', color: '#374151'}}>
-                            <strong>Score gap:</strong> {pick.score_gap > 0 ? '+' : ''}{pick.score_gap.toFixed(0)} points
-                          </div>
-                          <div style={{fontSize: '11px', color: '#6b7280', marginTop: '6px', fontStyle: 'italic'}}>
-                            {pick.score_gap < 0 ? `ℹ We also back a higher-rated horse in this race (+${Math.abs(pick.score_gap).toFixed(0)} pts) - both are recommended picks` :
-                             pick.score_gap > 10 ? '✓ Dominant position - clear class advantage' :
-                             pick.score_gap > 5 ? '⚠ Good edge - moderate competition' :
-                             '⚠ Tight race - strong competition from other runners'}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </details>
-                )}
-
-                {pick.why_now && (
-                  <div className="rationale" style={{margin: '0 16px', marginBottom: '16px'}}>
-                    <strong>Why Now:</strong> {pick.why_now}
-                  </div>
-                )}
-
-                {pick.tags && pick.tags.length > 0 && (
-                  <div className="tags" style={{margin: '0 16px', marginBottom: '16px'}}>
-                    {(Array.isArray(pick.tags) ? pick.tags : pick.tags.split(',')).map((tag, i) => (
-                      <span key={i} className="tag">{tag.trim()}</span>
-                    ))}
-                  </div>
-                )}
-
-                <div className="pick-footer" style={{padding: '0 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                  <span className="timestamp">
-                    Last updated: {new Date(pick.timestamp).toLocaleString('en-GB', { 
-                      hour: '2-digit', 
-                      minute: '2-digit',
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric'
-                    })}
-                  </span>
-                  <span style={{fontSize: '11px', color: '#10b981', fontWeight: 'bold'}}>
-                    ✓ ACTIVE
-                  </span>
-                </div>
-              </div>
-            );
-          })}
-          </div>
-        </>
-        )}
-        </>
-        )}
+        <CheltenhamView apiUrl={API_BASE_URL} />
       </main>
     </div>
   );
@@ -1423,20 +76,44 @@ function CheltenhamView({ apiUrl }) {
 
         // Derive race structure from picks (used when DynamoDB races table is empty)
         const derived = {};
+        const newRaceHorses = {};
         Object.entries(data.days || {}).forEach(([day, dayArr]) => {
-          derived[day] = dayArr
+          const sorted = dayArr
             .slice()
-            .sort((a, b) => (a.race_time || '').localeCompare(b.race_time || ''))
-            .map((p, i) => ({
-              raceId:       `${day}_${i}`,
-              raceName:     p.race_name,
-              raceTime:     p.race_time || '',
-              raceGrade:    p.grade,
-              raceDistance: p.distance || '',
-              totalHorses:  (p.all_horses || []).length,
-            }));
+            .sort((a, b) => (a.race_time || '').localeCompare(b.race_time || ''));
+          derived[day] = sorted.map((p, i) => ({
+            raceId:       `${day}_${i}`,
+            raceName:     p.race_name,
+            raceTime:     p.race_time || '',
+            raceGrade:    p.grade,
+            raceDistance: p.distance || '',
+            totalHorses:  (p.all_horses || []).length,
+          }));
+          // Pre-populate expanded horse view from all_horses already in picks data
+          sorted.forEach((p, i) => {
+            const raceId = `${day}_${i}`;
+            if (p.all_horses && p.all_horses.length > 0) {
+              newRaceHorses[raceId] = p.all_horses.map(h => ({
+                horseName:         h.name,
+                currentOdds:       h.odds || 'N/A',
+                trainer:           h.trainer || '',
+                jockey:            h.jockey || '',
+                form:              '',
+                score:             h.score,
+                tier:              h.tier,
+                value_rating:      h.value_rating,
+                tips:              h.tips || [],
+                warnings:          h.warnings || [],
+                cheltenham_record: h.cheltenham_record || '',
+                is_surebet_pick:   h.is_surebet_pick,
+                confidenceRank:    Math.min(100, Math.round(((h.score || 0) / 211) * 100)),
+                researchNotes:     (h.tips || []),
+              }));
+            }
+          });
         });
         setRacesFromPicks(derived);
+        setRaceHorses(prev => ({ ...prev, ...newRaceHorses }));
       }
     } catch (error) {
       console.error('Error loading Cheltenham picks:', error);
@@ -1463,21 +140,33 @@ function CheltenhamView({ apiUrl }) {
     }
   };
 
-  const loadHorses = async (raceId) => {
-    if (raceHorses[raceId]) {
-      setExpandedRace(expandedRace === raceId ? null : raceId);
+  const loadHorses = async (raceId, raceName) => {
+    // Toggle off if already open
+    if (expandedRace === raceId) {
+      setExpandedRace(null);
       return;
     }
-
+    // Use cheltenhamPicks all_horses if available (avoids raceId key-mismatch problem)
+    if (raceName && cheltenhamPicks[raceName]?.all_horses?.length > 0) {
+      setExpandedRace(raceId);
+      return;
+    }
+    // Fall back to raceHorses cache
+    if (raceHorses[raceId]) {
+      setExpandedRace(raceId);
+      return;
+    }
+    // Last resort: fetch from API
     try {
       const response = await fetch(`${apiUrl}/api/cheltenham/races/${raceId}`);
       const data = await response.json();
-      if (data.success) {
+      if (data.success && data.horses) {
         setRaceHorses({ ...raceHorses, [raceId]: data.horses });
-        setExpandedRace(raceId);
       }
+      setExpandedRace(raceId);
     } catch (error) {
       console.error('Error loading horses:', error);
+      setExpandedRace(raceId);
     }
   };
 
@@ -1524,6 +213,212 @@ function CheltenhamView({ apiUrl }) {
           <strong>{getDaysUntil()}</strong> days until the festival
         </div>
       </div>
+
+      {/* ── FESTIVAL TOP 3 NAPS ── */}
+      {Object.keys(cheltenhamPicks).length > 0 && (() => {
+        // Compute top 3 picks across the entire festival by score
+        const allPicks = Object.values(cheltenhamPicks).filter(
+          p => p.bet_tier === 'BETTING_PICK' || p.recommendation === 'BETTING_PICK'
+        );
+        const top3 = allPicks
+          .slice()
+          .sort((a, b) => parseFloat(b.score || 0) - parseFloat(a.score || 0))
+          .slice(0, 3);
+        if (top3.length === 0) return null;
+        const dayLabel = (day) => {
+          const map = {
+            Tuesday_10_March: 'Tue 10 Mar',
+            Wednesday_11_March: 'Wed 11 Mar',
+            Thursday_12_March: 'Thu 12 Mar',
+            Friday_13_March: 'Fri 13 Mar',
+          };
+          return map[day] || day;
+        };
+        const medals = ['🥇', '🥈', '🥉'];
+        const colours = [
+          { bg: 'linear-gradient(135deg,#78350f 0%,#92400e 100%)', border: '#d97706', badge: '#d97706' },
+          { bg: 'linear-gradient(135deg,#1e3a5f 0%,#1e40af 100%)', border: '#3b82f6', badge: '#3b82f6' },
+          { bg: 'linear-gradient(135deg,#1a0d2e 0%,#2d1b4e 100%)', border: '#9333ea', badge: '#9333ea' },
+        ];
+        return (
+          <div style={{
+            background: 'linear-gradient(135deg,#0d1117 0%,#1a2035 60%,#0d1117 100%)',
+            border: '2px solid #d97706',
+            borderRadius: '12px',
+            padding: '18px 22px',
+            marginBottom: '20px',
+          }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '1.5px',
+              textTransform: 'uppercase', color: '#d97706', marginBottom: '4px' }}>
+              ⭐ Festival NAPs — Top 3 Picks of the Week
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))',
+              gap: '12px', marginTop: '10px' }}>
+              {top3.map((pick, i) => (
+                <div key={pick.race_name} style={{
+                  background: colours[i].bg,
+                  border: `2px solid ${colours[i].border}`,
+                  borderRadius: '10px',
+                  padding: '14px 16px',
+                  color: 'white',
+                }}>
+                  <div style={{ fontSize: '11px', opacity: 0.75, marginBottom: '3px' }}>
+                    {medals[i]} {pick.race_name} · {dayLabel(pick.day)}
+                  </div>
+                  <div style={{ fontSize: '20px', fontWeight: '800', marginBottom: '4px' }}>
+                    {pick.horse}
+                  </div>
+                  <div style={{ fontSize: '13px', opacity:0.85, marginBottom:'6px' }}>
+                    {pick.trainer && <span>T: {pick.trainer}</span>}
+                    {pick.jockey && <span style={{ marginLeft: '10px' }}>J: {pick.jockey}</span>}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.35)',
+                      borderRadius: '6px', padding: '3px 9px', fontSize: '13px', fontWeight: '700',
+                    }}>
+                      Score {pick.score}
+                    </span>
+                    <span style={{
+                      background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.35)',
+                      borderRadius: '6px', padding: '3px 9px', fontSize: '13px', fontWeight: '700',
+                    }}>
+                      +{pick.score_gap} gap
+                    </span>
+                    <span style={{
+                      background: colours[i].badge, borderRadius: '6px',
+                      padding: '3px 9px', fontSize: '13px', fontWeight: '800',
+                    }}>
+                      {pick.odds}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── TODAY'S TOP 3 BETS ── */}
+      {Object.keys(cheltenhamPicks).length > 0 && (() => {
+        // Determine which festival day is "today"
+        const now = new Date();
+        const festivalDays = [
+          { key: 'Tuesday_10_March',   date: new Date('2026-03-10'), label: 'Champion Day',       short: 'Tue 10 Mar' },
+          { key: 'Wednesday_11_March', date: new Date('2026-03-11'), label: "Ladies' Day",         short: 'Wed 11 Mar' },
+          { key: 'Thursday_12_March',  date: new Date('2026-03-12'), label: "St Patrick's Thu",    short: 'Thu 12 Mar' },
+          { key: 'Friday_13_March',    date: new Date('2026-03-13'), label: 'Gold Cup Day',         short: 'Fri 13 Mar' },
+        ];
+        const toMidnight = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        const todayMidnight = toMidnight(now);
+
+        // Find today's day, or the next upcoming festival day
+        let activeFestDay = festivalDays.find(fd => toMidnight(fd.date).getTime() === todayMidnight.getTime());
+        if (!activeFestDay) {
+          activeFestDay = festivalDays.find(fd => fd.date > now);
+        }
+        if (!activeFestDay) return null; // festival over
+
+        const isToday = activeFestDay && toMidnight(activeFestDay.date).getTime() === todayMidnight.getTime();
+        const titleTag = isToday ? "🔥 TODAY'S TOP 3 BETS" : `⏳ NEXT UP — ${activeFestDay.label.toUpperCase()}`;
+        const subtitleTag = isToday
+          ? `${activeFestDay.label} · ${activeFestDay.short} · Back these NOW`
+          : `${activeFestDay.short} · Prepare your bets`;
+
+        // Get all BETTING_PICK picks for that day, sorted by soonest upcoming race time
+        const nowHHMM = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+        const isLiveDay = isToday;
+        const dayPicks = Object.values(cheltenhamPicks)
+          .filter(p => p.day === activeFestDay.key && (p.bet_tier === 'BETTING_PICK' || p.recommendation === 'BETTING_PICK'))
+          .sort((a, b) => (a.race_time || '').localeCompare(b.race_time || ''))
+          .filter(p => !isLiveDay || !p.race_time || p.race_time >= nowHHMM)
+          .slice(0, 3);
+
+        if (dayPicks.length === 0) return null;
+
+        const tierColour = score => {
+          const s = parseFloat(score || 0);
+          if (s >= 155) return '#d97706';
+          if (s >= 140) return '#3b82f6';
+          if (s >= 120) return '#10b981';
+          if (s >= 100) return '#8b5cf6';
+          return '#6b7280';
+        };
+        const medals = ['🥇', '🥈', '🥉'];
+
+        return (
+          <div style={{
+            background: isToday
+              ? 'linear-gradient(135deg,#0d1f0d 0%,#052e16 60%,#0d1117 100%)'
+              : 'linear-gradient(135deg,#0d1520 0%,#161b22 100%)',
+            border: `2px solid ${isToday ? '#10b981' : '#3b82f6'}`,
+            borderRadius: '12px',
+            padding: '18px 22px',
+            marginBottom: '20px',
+          }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '1.5px',
+              textTransform: 'uppercase', color: isToday ? '#10b981' : '#3b82f6', marginBottom: '2px' }}>
+              {titleTag}
+            </div>
+            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginBottom: '14px' }}>
+              {subtitleTag}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: '12px' }}>
+              {dayPicks.map((pick, i) => (
+                <div key={pick.race_name} style={{
+                  background: 'rgba(255,255,255,0.06)',
+                  border: `1px solid ${tierColour(pick.score)}55`,
+                  borderLeft: `4px solid ${tierColour(pick.score)}`,
+                  borderRadius: '10px',
+                  padding: '14px 16px',
+                  color: 'white',
+                }}>
+                  <div style={{ fontSize: '11px', opacity: 0.65, marginBottom: '4px' }}>
+                    {medals[i]} {pick.race_time} · {pick.race_name}
+                  </div>
+                  <div style={{ fontSize: '19px', fontWeight: '800', marginBottom: '4px', lineHeight: '1.1' }}>
+                    {pick.horse}
+                  </div>
+                  <div style={{ fontSize: '12px', opacity: 0.75, marginBottom: '8px' }}>
+                    {pick.trainer && <span>T: {pick.trainer}</span>}
+                    {pick.jockey && <span style={{ marginLeft: '8px' }}>J: {pick.jockey}</span>}
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                    <span style={{
+                      background: `${tierColour(pick.score)}22`,
+                      border: `1px solid ${tierColour(pick.score)}66`,
+                      borderRadius: '6px', padding: '2px 8px', fontSize: '12px', fontWeight: '700',
+                      color: tierColour(pick.score),
+                    }}>
+                      Score {pick.score}
+                    </span>
+                    <span style={{
+                      background: 'rgba(255,255,255,0.12)', border: '1px solid rgba(255,255,255,0.25)',
+                      borderRadius: '6px', padding: '2px 8px', fontSize: '12px', fontWeight: '800', color: 'white',
+                    }}>
+                      {pick.odds || '?'}
+                    </span>
+                    {parseFloat(pick.score_gap || 0) >= 5 && (
+                      <span style={{
+                        background: 'rgba(16,185,129,0.15)', border: '1px solid rgba(16,185,129,0.4)',
+                        borderRadius: '6px', padding: '2px 8px', fontSize: '11px', color: '#10b981',
+                      }}>
+                        +{pick.score_gap} gap
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {isToday && (
+              <div style={{ marginTop: '12px', fontSize: '11px', color: 'rgba(255,255,255,0.45)',
+                borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '10px' }}>
+                ⚠ Always verify final jockey declarations before placing bets · Refreshes daily at 8am
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Picks Summary Banner */}
       {Object.keys(cheltenhamPicks).length > 0 && (
@@ -1641,7 +536,7 @@ function CheltenhamView({ apiUrl }) {
                 </div>
               </div>
               <button
-                onClick={() => loadHorses(race.raceId)}
+                onClick={() => loadHorses(race.raceId, race.raceName)}
                 style={{
                   background: '#3b82f6',
                   color: 'white',
@@ -1684,6 +579,38 @@ function CheltenhamView({ apiUrl }) {
                         {pick.trainer && <span>T: {pick.trainer}</span>}
                         {pick.jockey && <span style={{ marginLeft: '12px' }}>J: {pick.jockey}</span>}
                       </div>
+                      {/* Next-best competitor */}
+                      {(() => {
+                        const secondName = pick.second_horse_name
+                          || (pick.all_horses && pick.all_horses[1] && pick.all_horses[1].name)
+                          || null;
+                        const gap = pick.score_gap != null ? pick.score_gap : (pick.score - pick.second_score);
+                        if (!secondName) return null;
+                        return (
+                          <div style={{ fontSize: '13px', color: '#4b5563', marginTop: '8px' }}>
+                            <span style={{ color: confText, fontWeight: '600' }}>Next best: </span>
+                            {secondName}
+                            <span style={{
+                              marginLeft: '8px',
+                              background: 'rgba(0,0,0,0.08)',
+                              padding: '2px 7px',
+                              borderRadius: '10px',
+                              fontSize: '12px',
+                              fontWeight: '600'
+                            }}>
+                              {pick.second_score} pts
+                            </span>
+                            <span style={{
+                              marginLeft: '6px',
+                              fontSize: '12px',
+                              fontWeight: '700',
+                              color: gap > 20 ? '#059669' : gap > 10 ? '#d97706' : '#dc2626'
+                            }}>
+                              +{gap} gap
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{
@@ -1867,55 +794,75 @@ function CheltenhamView({ apiUrl }) {
               );
             })()}
 
-            {expandedRace === race.raceId && (
-              <div style={{ marginTop: '15px' }}>
-                {!raceHorses[race.raceId] || raceHorses[race.raceId].length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '30px', color: '#9ca3af', fontStyle: 'italic' }}>
+            {expandedRace === race.raceId && (() => {
+              // Prefer all_horses from cheltenhamPicks (always populated from DynamoDB);
+              // fall back to the legacy raceHorses cache populated by loadHorses API call.
+              const pickHorses = cheltenhamPicks[race.raceName]?.all_horses || [];
+              const legacyHorses = raceHorses[race.raceId] || [];
+              const horses = pickHorses.length > 0 ? pickHorses : legacyHorses;
+              if (horses.length === 0) {
+                return (
+                  <div style={{ textAlign: 'center', padding: '30px', color: '#9ca3af', fontStyle: 'italic', marginTop: '15px' }}>
                     No horses added yet. Run: python cheltenham_festival_scraper.py --sample
                   </div>
-                ) : (
-                  raceHorses[race.raceId].map((horse, idx) => (
-                    <div key={idx} style={{
-                      background: 'white',
-                      padding: '15px',
-                      borderRadius: '8px',
-                      marginBottom: '10px',
-                      borderLeft: '4px solid #10b981',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '18px', fontWeight: '600', marginBottom: '5px' }}>
-                          {horse.horseName}
-                        </div>
-                        <div style={{ display: 'flex', gap: '15px', fontSize: '14px', color: '#6b7280' }}>
-                          <span>💰 {horse.currentOdds || 'N/A'}</span>
-                          <span>👨‍🏫 {horse.trainer || 'N/A'}</span>
-                          <span>🏇 {horse.jockey || 'N/A'}</span>
-                          <span>📊 Form: {horse.form || 'N/A'}</span>
-                        </div>
-                        {horse.researchNotes && horse.researchNotes.length > 0 && (
-                          <div style={{ marginTop: '10px', padding: '10px', background: '#f9fafb', borderRadius: '6px', fontSize: '14px' }}>
-                            {horse.researchNotes[0]}
-                          </div>
-                        )}
-                      </div>
-                      <div style={{
-                        padding: '8px 16px',
-                        borderRadius: '20px',
-                        fontWeight: '600',
-                        fontSize: '14px',
-                        background: horse.confidenceRank >= 75 ? '#10b981' : horse.confidenceRank >= 50 ? '#fbbf24' : '#ef4444',
-                        color: 'white'
+                );
+              }
+              return (
+                <div style={{ marginTop: '15px' }}>
+                  {horses.map((h, idx) => {
+                    // Support both all_horses field names (h.name) and legacy raceHorses field names (h.horseName)
+                    const name = h.name || h.horseName || 'Unknown';
+                    const odds = h.odds || h.currentOdds || 'N/A';
+                    const trainer = h.trainer || 'N/A';
+                    const jockey = h.jockey || 'N/A';
+                    const score = h.score != null ? parseFloat(h.score).toFixed(1) : null;
+                    const scoreGap = h.score_gap != null ? parseFloat(h.score_gap).toFixed(1) : null;
+                    const isBettingPick = h.bet_tier === 'BETTING_PICK' || h.recommendation === 'BETTING_PICK';
+                    const borderColor = isBettingPick ? '#10b981' : idx === 0 ? '#3b82f6' : '#e5e7eb';
+                    return (
+                      <div key={idx} style={{
+                        background: 'white',
+                        padding: '14px 16px',
+                        borderRadius: '8px',
+                        marginBottom: '10px',
+                        borderLeft: `4px solid ${borderColor}`,
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        gap: '12px',
                       }}>
-                        {horse.confidenceRank}% Confidence
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '13px', fontWeight: '700', color: '#6b7280', minWidth: '22px' }}>
+                              #{idx + 1}
+                            </span>
+                            <span style={{ fontSize: '17px', fontWeight: '700', color: '#111' }}>
+                              {name}
+                            </span>
+                            {isBettingPick && (
+                              <span style={{ background: '#10b981', color: 'white', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>
+                                ✓ NAP
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: '14px', fontSize: '13px', color: '#6b7280', flexWrap: 'wrap', marginLeft: '30px' }}>
+                            <span>💰 {odds}</span>
+                            <span>👨‍🏫 {trainer}</span>
+                            <span>🏇 {jockey}</span>
+                            {score && <span style={{ color: '#059669', fontWeight: '600' }}>Score {score}{scoreGap ? ` (+${scoreGap})` : ''}</span>}
+                          </div>
+                          {h.cheltenham_record && h.cheltenham_record !== 'First time' && (
+                            <div style={{ fontSize: '12px', color: '#059669', fontWeight: '600', marginLeft: '30px', marginTop: '4px' }}>
+                              🏆 {h.cheltenham_record}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         ))
       )}
