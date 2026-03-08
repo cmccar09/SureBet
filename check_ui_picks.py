@@ -28,9 +28,14 @@ if items:
         except:
             print(f"Error parsing time for {i.get('horse')}: {race_time_str}")
     
+    # Filter for show_in_ui=True
+    ui_picks = [i for i in future if i.get('show_in_ui') == True]
     print(f'\nFuture picks (should show on UI): {len(future)}')
-    for item in sorted(future, key=lambda x: x.get('race_time', '')):
-        print(f"  ✓ {item.get('horse'):25} @ {item.get('course'):20} - {item.get('race_time')}")
+    print(f'UI picks (show_in_ui=True): {len(ui_picks)}')
+    
+    for item in sorted(ui_picks, key=lambda x: x.get('race_time', '')):
+        course = item.get('course', 'Unknown')
+        print(f"  ✓ {item.get('horse'):25} @ {course:20} Score: {item.get('comprehensive_score')}/100 show_in_ui={item.get('show_in_ui')} recommended_bet={item.get('recommended_bet')}")
     
     print(f'\nPast picks (filtered out): {len(past)}')
     for item in sorted(past, key=lambda x: x.get('race_time', ''))[:5]:

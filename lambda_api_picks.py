@@ -758,29 +758,35 @@ def get_cheltenham_picks_lambda(headers, event):
         if day not in days:
             days[day] = []
         days[day].append({
-            'race_name':      item.get('race_name', ''),
-            'day':            item.get('day', ''),
-            'race_time':      item.get('race_time', ''),
-            'grade':          item.get('grade', ''),
-            'distance':       item.get('distance', ''),
-            'horse':          item.get('horse', ''),
-            'trainer':        item.get('trainer', ''),
-            'jockey':         item.get('jockey', ''),
-            'odds':           item.get('odds', ''),
-            'score':          item.get('score', 0),
-            'tier':           item.get('tier', ''),
-            'value_rating':   item.get('value_rating', 0),
-            'second_score':   item.get('second_score', 0),
-            'score_gap':      item.get('score_gap', 0),
-            'confidence':     item.get('confidence', ''),
-            'reasons':        item.get('reasons', []),
-            'warnings':       item.get('warnings', []),
-            'pick_changed':   item.get('pick_changed', False),
-            'previous_horse': item.get('previous_horse', ''),
-            'previous_odds':  item.get('previous_odds', ''),
-            'change_reason':  item.get('change_reason', ''),
-            'pick_date':      item.get('pick_date', target_date),
-            'all_horses':     item.get('all_horses', []),
+            'race_name':        item.get('race_name', ''),
+            'day':              item.get('day', ''),
+            'race_time':        item.get('race_time', ''),
+            'grade':            item.get('grade', ''),
+            'distance':         item.get('distance', ''),
+            'horse':            item.get('horse', ''),
+            'trainer':          item.get('trainer', ''),
+            'jockey':           item.get('jockey', ''),
+            'odds':             item.get('odds', ''),
+            'score':            item.get('score', 0),
+            'tier':             item.get('tier', ''),
+            'value_rating':     item.get('value_rating', 0),
+            'second_score':     item.get('second_score', 0),
+            'score_gap':        item.get('score_gap', 0),
+            'confidence':       item.get('confidence', ''),
+            # ── Strategy fields ──────────────────────────────────────────────
+            'is_grade1':        item.get('is_grade1', False),
+            'is_skip_race':     item.get('is_skip_race', False),
+            'bet_tier':         item.get('bet_tier', 'OPINION_ONLY'),
+            'bet_recommendation': item.get('bet_recommendation', False),
+            # ─────────────────────────────────────────────────────────────────
+            'reasons':          item.get('reasons', []),
+            'warnings':         item.get('warnings', []),
+            'pick_changed':     item.get('pick_changed', False),
+            'previous_horse':   item.get('previous_horse', ''),
+            'previous_odds':    item.get('previous_odds', ''),
+            'change_reason':    item.get('change_reason', ''),
+            'pick_date':        item.get('pick_date', target_date),
+            'all_horses':       item.get('all_horses', []),
         })
 
     ordered = {d: days[d] for d in DAY_ORDER if d in days}
@@ -839,28 +845,62 @@ def get_cheltenham_races_lambda(headers):
 
 def save_cheltenham_picks_lambda(headers):
     """
-    Trigger cheltenham picks save.
-    In Lambda, invoke the dedicated save Lambda (if available) or return guidance.
+    Run cheltenham picks save inline (imports and calls save_picks directly).
+    Falls back to async Lambda invoke if import fails.
     """
-    import boto3 as _boto3
-    lc = _boto3.client('lambda', region_name='eu-west-1')
     try:
-        lc.invoke(
-            FunctionName='cheltenham-picks-save',
-            InvocationType='Event',
-            Payload=json.dumps({'source': 'api-trigger'})
-        )
-        msg = 'Save triggered — picks will update in ~60s. Refresh to see changes.'
-        triggered = True
+        import sys
+        sys.path.insert(0, '/var/task')
+        from save_cheltenham_picks import save_picks
+        picks, changes = save_picks(dry_run=False)
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success': True,
+                'message': f'Saved {len(picks)} picks. {len(changes)} changed.',
+                'picks_count': len(picks),
+                'changes_count': len(changes),
+            })
+        }
+    except ImportError:
+        # Fall back to async Lambda invoke if module not found
+        import boto3 as _boto3
+        try:
+            lc = _boto3.client('lambda', region_name='eu-west-1')
+            lc.invoke(
+                FunctionName='cheltenham-picks-save',
+                InvocationType='Event',
+                Payload=json.dumps({'source': 'api-trigger'})
+            )
+            return {
+                'statusCode': 202,
+                'headers': headers,
+                'body': json.dumps({
+                    'success': True,
+                    'message': 'Save triggered — picks will update in ~60s. Refresh to see changes.',
+                })
+            }
+        except Exception as e2:
+            return {
+                'statusCode': 500,
+                'headers': headers,
+                'body': json.dumps({
+                    'success': False,
+                    'error': f'Could not trigger pick save: {e2}',
+                    'message': 'Run: python save_cheltenham_picks.py locally to refresh picks.',
+                })
+            }
     except Exception as e:
-        msg = f'Could not trigger save Lambda: {e}. Run: python save_cheltenham_picks.py'
-        triggered = False
-
-    return {
-        'statusCode': 202 if triggered else 200,
-        'headers': headers,
-        'body': json.dumps({'success': triggered, 'message': msg})
-    }
+        return {
+            'statusCode': 500,
+            'headers': headers,
+            'body': json.dumps({
+                'success': False,
+                'error': str(e),
+                'message': f'Pick save failed: {e}',
+            })
+        }
 
 
 def trigger_workflow(headers):

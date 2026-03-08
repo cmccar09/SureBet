@@ -25,7 +25,7 @@ import json
 import boto3
 from datetime import datetime, timedelta
 from decimal import Decimal
-from comprehensive_pick_logic import analyze_horse_comprehensive, get_comprehensive_pick
+from comprehensive_pick_logic import analyze_horse_comprehensive, get_comprehensive_pick, should_skip_race
 from enforce_comprehensive_analysis import validate_pick_for_ui, add_pick_to_ui
 
 def fetch_upcoming_races(hours_ahead=6):
@@ -69,7 +69,17 @@ def process_race_comprehensive(race):
     race_time = race.get('start_time', '')
     race_name = race.get('market_name', 'Unknown Race')
     runners = race.get('runners', [])
-    
+
+    # ------------------------------------------------------------------
+    # SKIP FILTER: Class 3/4/5/6 handicaps are too unpredictable for our
+    # model (lesson: 2026-03-01 Huntingdon 14:45 Reallyntruthfully PU)
+    # ------------------------------------------------------------------
+    skip, skip_reason = should_skip_race(race)
+    if skip:
+        print(f"\n[SKIP] {race_time} {venue} | {race_name}")
+        print(f"   Reason: {skip_reason}")
+        return None
+
     print(f"\n{'='*80}")
     print(f"ANALYZING: {race_time} - {venue} - {race_name}")
     print(f"Runners: {len(runners)}")

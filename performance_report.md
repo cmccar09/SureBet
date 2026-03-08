@@ -1,20 +1,20 @@
 
 # Performance Evaluation Report
-Generated: 2026-02-05 12:30:07
+Generated: 2026-03-06 19:30:04
 
 ## Overall Metrics
-- Total Selections: 5
-- Wins: 1 (20.0%)
-- Places: 1 (20.0%)
-- Expected Strike Rate: 27.4%
-- Calibration Error: 7.4%
+- Total Selections: 3
+- Wins: 1 (33.3%)
+- Places: 1 (33.3%)
+- Expected Strike Rate: 25.7%
+- Calibration Error: 39.7%
 
 ## Calibration Analysis
-\n- Predicted: 26.2% -> Actual: 25.0% (n=4, error=1.3%)\n- Predicted: 32.0% -> Actual: 0.0% (n=1, error=32.0%)
+\n- Predicted: 15.0% -> Actual: 0.0% (n=1, error=15.0%)\n- Predicted: 29.0% -> Actual: 100.0% (n=1, error=71.0%)\n- Predicted: 33.0% -> Actual: 0.0% (n=1, error=33.0%)
 
 ## Performance by Edge Type
 
 
 ## Recommended Adjustments
 
-No adjustments needed - performance within expected parameters.
+1. HIGH_PRIORITY: Calibration error is 39.7%. Consider adjusting probability model or isotonic regression parameters.

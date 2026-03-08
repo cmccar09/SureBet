@@ -58,9 +58,10 @@ def check_data_quality():
 
 
 def store_all_races_for_learning():
-    \"\"\"Store ALL horses from ALL races - LEARNING data + 85+ UI picks\"\"\"
-    print(\"\\n\" + \"=\"*80)
-    print(\"COMPREHENSIVE DAILY ANALYSIS - 7-Factor Scoring\")\n    print(\"=\"*80)
+    """Store ALL horses from ALL races - LEARNING data + 85+ UI picks"""
+    print("\n" + "="*80)
+    print("COMPREHENSIVE DAILY ANALYSIS - 7-Factor Scoring")
+    print("="*80)
     
     # Use complete_daily_analysis.py for 100% coverage + strict 85+ threshold
     result = subprocess.run(
@@ -97,15 +98,13 @@ def analyze_winners_and_learn():
 
 
 def fetch_latest_results():
-    """Fetch results for completed races"""
+    """Fetch results from API (today + yesterday for comparison)"""
     print("\n" + "="*80)
-    print("FETCHING RESULTS FOR COMPLETED RACES")
+    print("FETCHING RESULTS FROM API")
     print("="*80)
     
-    today = datetime.now().strftime('%Y-%m-%d')
-    
     result = subprocess.run(
-        ['python', 'betfair_results_fetcher_v2.py', '--date', today],
+        ['python', 'fetch_api_results.py'],
         capture_output=True,
         text=True,
         timeout=300

@@ -9,7 +9,7 @@ import json
 import boto3
 from datetime import datetime
 from decimal import Decimal
-from comprehensive_pick_logic import analyze_horse_comprehensive, get_comprehensive_pick
+from comprehensive_pick_logic import analyze_horse_comprehensive, get_comprehensive_pick, should_skip_race
 
 def validate_pick_for_ui(pick_data):
     """
@@ -20,7 +20,14 @@ def validate_pick_for_ui(pick_data):
     score = pick_data.get('comprehensive_score') or pick_data.get('score')
     if score is None:
         return False, 0, "Missing comprehensive score - REJECTED"
-    
+
+    # Class 3/4/5/6 handicap hard block (any surface)
+    # Lesson: 2026-03-01 Huntingdon 14:45 - Reallyntruthfully (1111 form, 3/1) PU
+    # Handicapper-engineered unpredictability; model weights calibrated for Grade 1+
+    skip, skip_reason = should_skip_race(pick_data)
+    if skip:
+        return False, score, f"Class 3-6 handicap - BLOCKED: {skip_reason}"
+
     # Minimum threshold: 65/100 (avoids POOR <55 and borderline FAIR picks)
     if score < 65:
         return False, score, f"Score too low ({score}/100) - minimum 65 required"

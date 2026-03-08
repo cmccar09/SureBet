@@ -20,7 +20,7 @@ print(f'Low scores (<60): {len(items) - len(ui_picks) - len([i for i in items if
 
 print(f'\nScore distribution:')
 scores = [float(i.get('comprehensive_score', 0)) for i in items]
-print(f'  85-100 (RECOMMENDED): {sum(1 for s in scores if s >= 85)} horses')
+print(f'  75-100 (RECOMMENDED): {sum(1 for s in scores if s >= 75)} horses')  # BACKTESTED: 75+ = 45.4% ROI
 print(f'  75-84 (HIGH):  {sum(1 for s in scores if 75 <= s < 85)} horses')
 print(f'  70-74 (GOOD):  {sum(1 for s in scores if 70 <= s < 75)} horses')
 print(f'  60-69 (FAIR):  {sum(1 for s in scores if 60 <= s < 70)} horses')

@@ -76,20 +76,25 @@ def analyze_and_save_all():
             odds = runner.get('odds', 0)
             
             # Determine if this goes to UI or stays as learning data
-            # Thresholds: 85+ shown on UI and marked as recommended bets
-            show_on_ui = bool(score >= 85)
-            recommended_bet = bool(score >= 85)
+            # NEW THRESHOLD: 80+ shown on UI (7-day data shows 75+ at -10.2% ROI)
+            # Being more selective: quality > quantity
+            show_on_ui = bool(score >= 80)  # UPDATED 2026-02-24: Raised from 75
+            recommended_bet = bool(score >= 80)  # More restrictive filtering
             
             # DEBUG
             if total_horses < 3:
                 print(f"  DEBUG: {horse_name} score={score} show_on_ui={show_on_ui} recommended_bet={recommended_bet}")
             
-            # Confidence level based on REALISTIC 4-tier system with -5 adjustment
-            # Proven threshold: 85+ shows 67% win rate, 100% place rate
-            if score >= 70:
+            # Confidence level based on REALISTIC 4-tier system
+            # 7-day analysis: 75+ bucket has 25% SR (best but still -10% ROI)
+            if score >= 80:
                 confidence_level = "EXCELLENT"
-                confidence_grade = "EXCELLENT (Best Chance - 50-70% Win Rate)"
+                confidence_grade = "EXCELLENT (Premium Pick - 25%+ Win Rate)"
                 confidence_color = "green"
+            elif score >= 75:
+                confidence_level = "VERY GOOD"
+                confidence_grade = "VERY GOOD (Strong Chance)"
+                confidence_color = "light-green"
             elif score >= 50:
                 confidence_level = "GOOD"
                 confidence_grade = "GOOD (Decent Chance - 30-40% Win Rate)"

@@ -1,46 +1,24 @@
 [
   {
-    "our_pick": "Pallas Lord",
+    "our_pick": "Esque Elegance",
     "our_odds": 0,
-    "our_p_win": 0.32,
+    "our_p_win": 0.33,
     "actual_winner": "Unknown",
-    "winner_selection_id": "4627418",
-    "market_id": "1.253530564",
+    "winner_selection_id": "80105995",
+    "market_id": "1.254753702",
     "venue": "Newcastle",
-    "race_time": "2026-02-04T20:30:00.000Z",
-    "lesson": "Picked Pallas Lord but None won - need to analyze winner's characteristics"
+    "race_time": "2026-03-05T20:00:00.000Z",
+    "lesson": "Picked Esque Elegance but None won - need to analyze winner's characteristics"
   },
   {
-    "our_pick": "Concert Boy",
+    "our_pick": "Lady Delila",
     "our_odds": 0,
-    "our_p_win": 0.28,
+    "our_p_win": 0.15,
     "actual_winner": "Unknown",
-    "winner_selection_id": "4627418",
-    "market_id": "1.253530564",
+    "winner_selection_id": "80105995",
+    "market_id": "1.254753702",
     "venue": "Newcastle",
-    "race_time": "2026-02-04T20:30:00.000Z",
-    "lesson": "Picked Concert Boy but None won - need to analyze winner's characteristics"
-  },
-  {
-    "our_pick": "Tasever",
-    "our_odds": 0,
-    "our_p_win": 0.25,
-    "actual_winner": "Unknown",
-    "winner_selection_id": "4627418",
-    "market_id": "1.253530564",
-    "venue": "Newcastle",
-    "race_time": "2026-02-04T20:30:00.000Z",
-    "lesson": "Picked Tasever but None won - need to analyze winner's characteristics"
-  },
-  {
-    "our_pick": "Sherlock",
-    "our_odds": 0,
-    "our_p_win": 0.22,
-    "actual_winner": "Unknown",
-    "winner_selection_id": "4627418",
-    "market_id": "1.253530564",
-    "venue": "Newcastle",
-    "race_time": "2026-02-04T20:30:00.000Z",
-    "lesson": "Picked Sherlock but None won - need to analyze winner's characteristics"
+    "race_time": "2026-03-05T20:00:00.000Z",
+    "lesson": "Picked Lady Delila but None won - need to analyze winner's characteristics"
   }
 ]

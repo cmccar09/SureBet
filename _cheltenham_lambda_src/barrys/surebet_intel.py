@@ -33,12 +33,12 @@ from cheltenham_full_fields_2026 import extend_race_entries
 RACES_2026_MAP = {
     "Supreme Novices Hurdle":      "day1_race1",
     "Arkle Challenge Trophy":      "day1_race2",
-    "Champion Hurdle":             "day1_race4",
-    "Close Brothers Mares Hurdle": "day1_race5",
-    "Queen Mother Champion Chase": "day2_race4",
+    "Champion Hurdle":             "day1_race5",   # Day 1 16:00
+    "Close Brothers Mares Hurdle": "day3_race3",   # Day 3 14:40
+    "Queen Mother Champion Chase": "day2_race5",   # Day 2 16:00
     "Stayers Hurdle":              "day3_race4",
-    "Cheltenham Gold Cup":         "day4_race4",
-    "Champion Bumper":             "day4_race6",
+    "Cheltenham Gold Cup":         "day4_race5",   # Day 4 16:00
+    "Champion Bumper":             "day2_race7",   # Day 2 17:20
 }
 
 # ── Extended horse data for the remaining 20 races ─────────────────────────
@@ -463,7 +463,7 @@ EXTRA_RACES = {
              "last_run": "Won Hurdle Jan 2026", "days_off": 42},
         ]
     },
-    "day2_race5": {   # Glenfarclas Cross Country Chase  (Grade 2, ~4m)
+    "day2_race4": {   # Glenfarclas Cross Country Chase  (Grade 2, ~4m, Day 2 15:20)
         "entries": [
             {"name": "Favori De Champdou", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
              "odds": "3/1", "age": 11, "form": "1-1-1-21", "rating": 155,
@@ -487,7 +487,27 @@ EXTRA_RACES = {
              "last_run": "2nd Cross Country Jan 2026", "days_off": 42},
         ]
     },
-    "day2_race6": {   # Dawn Run / Mares Novices Hurdle  (Grade 2, 2m1f)
+    "day2_race6": {   # Grand Annual Handicap Chase  (Grade 3, 2m, Day 2 16:40)
+        "entries": [
+            {"name": "Inthepocket", "trainer": "Willie Mullins", "jockey": "Paul Townend",
+             "odds": "6/1", "age": 7, "form": "1-1-1", "rating": 148,
+             "cheltenham_record": None,
+             "last_run": "Won Grade 3 Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Coeur De Lion", "trainer": "Nicky Henderson", "jockey": "Nico de Boinville",
+             "odds": "8/1", "age": 8, "form": "1-2-1-11", "rating": 145,
+             "cheltenham_record": None,
+             "last_run": "Won Handicap Chase Jan 2026", "days_off": 42},
+            {"name": "Dancewiththedevil", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
+             "odds": "8/1", "age": 7, "form": "2-1-1-21", "rating": 143,
+             "cheltenham_record": None,
+             "last_run": "Won Handicap Chase Jan 2026", "days_off": 42},
+            {"name": "Waterbys Hurricane", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
+             "odds": "10/1", "age": 8, "form": "1-2-3-31", "rating": 141,
+             "cheltenham_record": None,
+             "last_run": "3rd Handicap Chase Feb 2026", "days_off": 28},
+        ]
+    },
+    "day3_race1": {   # Ryanair Mares' Novices' Hurdle  (Grade 1, 2m1f, Day 3 13:20)
         "entries": [
             {"name": "Bambino Fever", "trainer": "Willie Mullins", "jockey": "Paul Townend",
              "odds": "4/5", "age": 5, "form": "1-1-1", "rating": 148,
@@ -527,7 +547,7 @@ EXTRA_RACES = {
              "last_run": "2nd Grade 1 Bumper Jan 2026", "days_off": 42},
         ]
     },
-    "day3_race1": {   # Jack Richards / Turners Novices Chase  (Grade 1, 2m4f)
+    "day3_race2": {   # Jack Richards Novices' Chase  (Grade 1, 2m4f, Day 3 14:00)
         "entries": [
             {"name": "Koktail Divin", "trainer": "Henry de Bromhead", "jockey": "Jack Kennedy",
              "odds": "9/2", "age": 7, "form": "1-1-1-21", "rating": 162,
@@ -551,7 +571,7 @@ EXTRA_RACES = {
              "last_run": "Won Grade 2 Chase Feb 2026", "days_off": 28},
         ]
     },
-    "day3_race2": {   # Pertemps Final Handicap Hurdle  (Grade 3, 3m)
+    "day3_race6": {   # Pertemps Handicap Hurdle  (Grade 3, 3m, Day 3 16:40)
         "entries": [
             {"name": "Supremely West", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
              "odds": "9/2", "age": 8, "form": "1-2-1-11", "rating": 148,
@@ -576,10 +596,10 @@ EXTRA_RACES = {
             # Shantreusse removed — NOT in Betfair ANTEPOST 2026-03-06 (not entered)
         ]
     },
-    "day3_race3": {   # Ryanair Chase  (Grade 1, 2m5f)
+    "day3_race5": {   # Ryanair Chase  (Grade 1, 2m5f, Day 3 16:00)
         # NB: Jonbon/Heart Wood/Gaelic Warrior/Banbridge moved to Gold Cup field
         # Panic Attack, Protektorat, Jagwar, Energumene etc added via
-        # cheltenham_full_fields_2026.ADDITIONAL_RUNNERS["day3_race3"]
+        # cheltenham_full_fields_2026.ADDITIONAL_RUNNERS["day3_race5"]
         "entries": [
             {"name": "Fact To File", "trainer": "Willie Mullins", "jockey": "Paul Townend",
              "odds": "4/5", "age": 8, "form": "1-1-1-11", "rating": 179,
@@ -588,7 +608,7 @@ EXTRA_RACES = {
              "ground_pref": "soft", "dist_class_form": "Won Grade 1 Ryanair Chase 2m5f Cheltenham ×2"},
         ]
     },
-    "day3_race5": {   # Festival Plate / Plate Handicap Chase  (Grade 3, 2m5f)
+    "day1_race6_plate": {   # Cheltenham Plate Chase  (Day 1 16:40) — field data archive
         "entries": [
             {"name": "Madara", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
              "odds": "4/1", "age": 8, "form": "1-2-1-11", "rating": 156,
@@ -609,56 +629,24 @@ EXTRA_RACES = {
             # Grange Walk removed — not entered for Cheltenham (Betfair ANTEPOST: absent)
         ]
     },
-    "day3_race6": {   # Boodles / Fred Winter Juvenile Handicap Hurdle  (Grade 3, 2m1f, 4yo)
+    "day3_race7": {   # Kim Muir Handicap Chase  (Grade 3, 3m2f, amateur riders, Day 3 17:20)
         "entries": [
-            {"name": "Saratoga", "trainer": "Padraig Roche", "jockey": "TBD",
-             "odds": "11/2", "age": 4, "form": "1-2-1-11", "rating": 137,
+            {"name": "Weveallbeencaught", "trainer": "Gordon Elliott", "jockey": "Derek O'Connor (am)",
+             "odds": "8/1", "age": 9, "form": "1-2-1-11", "rating": 148,
              "cheltenham_record": None,
-             "last_run": "Won Juvenile Hurdle Jan 2026", "days_off": 42},
-            {"name": "Winston Junior", "trainer": "Faye Bramley", "jockey": "TBD",
-             "odds": "13/2", "age": 4, "form": "1-2-1-21", "rating": 135,
+             "last_run": "Won Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Campers Rock", "trainer": "Gavin Cromwell", "jockey": "Derek O'Connor (am)",
+             "odds": "10/1", "age": 8, "form": "2-1-1-21", "rating": 145,
              "cheltenham_record": None,
-             "last_run": "Won Juvenile Hurdle Jan 2026", "days_off": 42},
-            {"name": "Manlaga", "trainer": "Nicky Henderson", "jockey": "Nico de Boinville",
-             "odds": "7/1", "age": 4, "form": "1-1-1-21", "rating": 138,
+             "last_run": "Won Handicap Chase Jan 2026", "days_off": 42},
+            {"name": "Brave Kingdom", "trainer": "Nicky Henderson", "jockey": "Harry Bannister (am)",
+             "odds": "10/1", "age": 8, "form": "1-2-3-11", "rating": 143,
              "cheltenham_record": None,
-             "last_run": "Won Grade 2 Juvenile Hurdle Jan 2026", "days_off": 42},
-            {"name": "Munsif", "trainer": "C Byrnes", "jockey": "Danny Mullins",
-             "odds": "10/1", "age": 4, "form": "2-1-1-31", "rating": 133,
+             "last_run": "Won Hunters Chase Feb 2026", "days_off": 28},
+            {"name": "Rivella Reina", "trainer": "Willie Mullins", "jockey": "Patrick Mullins (am)",
+             "odds": "12/1", "age": 7, "form": "1-1-2-31", "rating": 141,
              "cheltenham_record": None,
-             "last_run": "3rd Juvenile Hurdle Feb 2026", "days_off": 28},
-            {"name": "Ammes", "trainer": "James Owen", "jockey": "TBD",
-             "odds": "11/1", "age": 4, "form": "1-2-1-11", "rating": 132,
-             "cheltenham_record": None,
-             "last_run": "Won Juvenile Hurdle Feb 2026", "days_off": 28},
-        ]
-    },
-    "day3_race7": {   # Martin Pipe Conditional Jockeys Handicap Hurdle  (2m5f)
-        "entries": [
-            {"name": "Roc Dino", "trainer": "Willie Mullins", "jockey": "Paul Townend",
-             "odds": "7/1", "age": 5, "form": "2-2-3-27", "rating": 145,
-             "cheltenham_record": None,
-             "last_run": "2nd Handicap Hurdle Dec 2025", "days_off": 77},
-            {"name": "A Pai De Nom", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
-             "odds": "8/1", "age": 6, "form": "1-5-3-31", "rating": 149,
-             "cheltenham_record": None,
-             "last_run": "3rd Handicap Jan 2026", "days_off": 42},
-            {"name": "The Passing Wife", "trainer": "Gavin Cromwell", "jockey": "Danny Mullins",
-             "odds": "10/1", "age": 7, "form": "5-5-8-21", "rating": 143,
-             "cheltenham_record": None,
-             "last_run": "Won Conditional Handicap Hurdle Jan 2026", "days_off": 42},
-            {"name": "Kel Histoire", "trainer": "Willie Mullins", "jockey": "Mark Walsh",
-             "odds": "10/1", "age": 6, "form": "4-3-4-18", "rating": 145,
-             "cheltenham_record": None,
-             "last_run": "Won Handicap Jan 2026", "days_off": 42},
-            {"name": "He Can't Dance", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
-             "odds": "20/1", "age": 6, "form": "1-3-4-22", "rating": 141,
-             "cheltenham_record": None,
-             "last_run": "2nd Grade 2 Hurdle Jan 2026", "days_off": 42},
-            {"name": "Zanndabad", "trainer": "A J Martin", "jockey": "TBD",
-             "odds": "25/1", "age": 7, "form": "1-1-2-62", "rating": 146,
-             "cheltenham_record": None,
-             "last_run": "Won Conditional Handicap Feb 2026", "days_off": 28},
+             "last_run": "Won Handicap Chase Jan 2026", "days_off": 42},
         ]
     },
     "day4_race1": {   # JCB Triumph Hurdle  (Grade 1, 2m1f, 4yo juveniles)
@@ -749,8 +737,7 @@ EXTRA_RACES = {
              "last_run": "Won Grade 2 Novice Hurdle Feb 2026", "days_off": 28},
         ]
     },
-    "day4_race5": {   # Grand Annual / Mares Chase  (Grade 1, mares only)
-        # NB: The Mares Chase (Grade 1) runs in the day4_race5 slot at 2026 Festival
+    "day4_race4": {   # Mrs Paddy Power Mares' Chase  (Grade 2, mares only, Day 4 15:20)
         "entries": [
             {"name": "Dinoblue", "trainer": "Willie Mullins", "jockey": "Paul Townend",
              "odds": "6/4", "age": 9, "form": "1-2-1-11", "rating": 175,
@@ -778,7 +765,7 @@ EXTRA_RACES = {
              "last_run": "2nd Grade 1 Mares Chase Jan 2026", "days_off": 42},
         ]
     },
-    "day4_race7": {   # St James's Place Foxhunter Chase  (Hunters', ~3m2f)
+    "day4_race6": {   # St James's Place Hunters' Chase  (Hunter Chase, ~3m2f, Day 4 16:40)
         "entries": [
             {"name": "Wonderwall", "trainer": "S Curling", "jockey": "Rob James",
              "odds": "5/1", "age": 10, "form": "1-2-3-43", "rating": 142,
@@ -804,6 +791,34 @@ EXTRA_RACES = {
              "odds": "12/1", "age": 9, "form": "1-1-P-33", "rating": 132,
              "cheltenham_record": None,
              "last_run": "Won Hunter Chase Jan 2026", "days_off": 42},
+        ]
+    },
+    "day4_race7": {   # Martin Pipe Handicap Hurdle  (Grade 3, 2m5f, conditional jockeys, Day 4 17:20)
+        "entries": [
+            {"name": "Roc Dino", "trainer": "Willie Mullins", "jockey": "Paul Townend",
+             "odds": "7/1", "age": 5, "form": "2-2-3-27", "rating": 145,
+             "cheltenham_record": None,
+             "last_run": "2nd Handicap Hurdle Dec 2025", "days_off": 77},
+            {"name": "A Pai De Nom", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
+             "odds": "8/1", "age": 6, "form": "1-5-3-31", "rating": 149,
+             "cheltenham_record": None,
+             "last_run": "3rd Handicap Jan 2026", "days_off": 42},
+            {"name": "The Passing Wife", "trainer": "Gavin Cromwell", "jockey": "Danny Mullins",
+             "odds": "10/1", "age": 7, "form": "5-5-8-21", "rating": 143,
+             "cheltenham_record": None,
+             "last_run": "Won Conditional Handicap Hurdle Jan 2026", "days_off": 42},
+            {"name": "Kel Histoire", "trainer": "Willie Mullins", "jockey": "Mark Walsh",
+             "odds": "10/1", "age": 6, "form": "4-3-4-18", "rating": 145,
+             "cheltenham_record": None,
+             "last_run": "Won Handicap Jan 2026", "days_off": 42},
+            {"name": "He Can't Dance", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
+             "odds": "20/1", "age": 6, "form": "1-3-4-22", "rating": 141,
+             "cheltenham_record": None,
+             "last_run": "2nd Grade 2 Hurdle Jan 2026", "days_off": 42},
+            {"name": "Zanndabad", "trainer": "A J Martin", "jockey": "TBD",
+             "odds": "25/1", "age": 7, "form": "1-1-2-62", "rating": 146,
+             "cheltenham_record": None,
+             "last_run": "Won Conditional Handicap Feb 2026", "days_off": 28},
         ]
     },
 }
@@ -1026,14 +1041,14 @@ def print_picks_table(picks):
     key_races = [
         ("day1_race1", "Supreme Novices Hurdle"),
         ("day1_race2", "Arkle Challenge Trophy"),
-        ("day1_race4", "Champion Hurdle"),
-        ("day1_race5", "Mares Hurdle"),
-        ("day2_race4", "Queen Mother Chase"),
-        ("day3_race3", "Ryanair Chase"),
+        ("day1_race5", "Champion Hurdle"),
+        ("day2_race5", "Queen Mother Chase"),
+        ("day2_race7", "Champion Bumper"),
+        ("day3_race3", "Close Brothers Mares Hurdle"),
         ("day3_race4", "Stayers Hurdle"),
+        ("day3_race5", "Ryanair Chase"),
         ("day4_race3", "Albert Bartlett"),
-        ("day4_race4", "Cheltenham Gold Cup"),
-        ("day4_race6", "Champion Bumper"),
+        ("day4_race5", "Cheltenham Gold Cup"),
     ]
     print(f"\n  {'RACE':<32} {'SUREBET PICK':<26} {'SCORE':<8} {'DOUGLAS STUNNERS PICK':<26} {'SCORE':<8} {'RATIONALE'}")
     print(f"  {'-'*115}")

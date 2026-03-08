@@ -21,10 +21,44 @@ TRACK_LOCATIONS = {
     'Warwick': {'lat': 52.28, 'lon': -1.58, 'surface': 'turf'},
     'Southwell': {'lat': 53.08, 'lon': -0.95, 'surface': 'all-weather'},
     'Dundalk': {'lat': 54.00, 'lon': -6.40, 'surface': 'all-weather'},
+    # 2026-02-28: Added missing tracks
+    'Doncaster': {'lat': 53.52, 'lon': -1.10, 'surface': 'turf'},
+    'Kelso': {'lat': 55.60, 'lon': -2.43, 'surface': 'turf'},
+    'Navan': {'lat': 53.65, 'lon': -6.68, 'surface': 'turf'},
+    'Newbury': {'lat': 51.40, 'lon': -1.33, 'surface': 'turf'},
+    'Lingfield': {'lat': 51.17, 'lon': -0.00, 'surface': 'all-weather'},
+    'Cheltenham': {'lat': 51.90, 'lon': -2.07, 'surface': 'turf'},
+    'Ascot': {'lat': 51.41, 'lon': -0.68, 'surface': 'turf'},
+    'Sandown': {'lat': 51.37, 'lon': -0.35, 'surface': 'turf'},
+    'Haydock': {'lat': 53.46, 'lon': -2.62, 'surface': 'turf'},
+    'Leicester': {'lat': 52.63, 'lon': -1.13, 'surface': 'turf'},
+    'Leopardstown': {'lat': 53.28, 'lon': -6.18, 'surface': 'turf'},
+    'Naas': {'lat': 53.22, 'lon': -6.66, 'surface': 'turf'},
+    'Gowran Park': {'lat': 52.57, 'lon': -7.05, 'surface': 'turf'},
+    'Thurles': {'lat': 52.68, 'lon': -7.89, 'surface': 'turf'},
+    'Clonmel': {'lat': 52.35, 'lon': -7.71, 'surface': 'turf'},
+    'Limerick': {'lat': 52.66, 'lon': -8.63, 'surface': 'turf'},
+    'Cork': {'lat': 51.90, 'lon': -8.54, 'surface': 'turf'},
+    'Galway': {'lat': 53.27, 'lon': -9.08, 'surface': 'turf'},
+    'Ayr': {'lat': 55.46, 'lon': -4.64, 'surface': 'turf'},
+    'Musselburgh': {'lat': 55.94, 'lon': -3.04, 'surface': 'turf'},
+    'Perth': {'lat': 56.38, 'lon': -3.43, 'surface': 'turf'},
+    'Huntingdon': {'lat': 52.34, 'lon': -0.19, 'surface': 'turf'},
+    'Market Rasen': {'lat': 53.39, 'lon': -0.33, 'surface': 'turf'},
+    'Wincanton': {'lat': 51.07, 'lon': -2.41, 'surface': 'turf'},
+    'Plumpton': {'lat': 50.94, 'lon': -0.07, 'surface': 'turf'},
+    'Fontwell': {'lat': 50.87, 'lon': -0.61, 'surface': 'turf'},
+    'Wetherby': {'lat': 53.93, 'lon': -1.38, 'surface': 'turf'},
+    'Bangor-on-Dee': {'lat': 52.91, 'lon': -2.99, 'surface': 'turf'},
+    'Stratford': {'lat': 52.20, 'lon': -1.72, 'surface': 'turf'},
+    'Worcester': {'lat': 52.19, 'lon': -2.22, 'surface': 'turf'},
+    'Hereford': {'lat': 52.06, 'lon': -2.72, 'surface': 'turf'},
+    'Chepstow': {'lat': 51.63, 'lon': -2.68, 'surface': 'turf'},
 }
 
 # Official track going declarations (when available)
 # Updated manually before analysis
+# GOING SCALE: Heavy=-10, Soft=-5, Good to Soft=-3, Good=0, Good to Firm=+3, Firm=+8, Standard(AW)=0
 OFFICIAL_GOING = {
     '2026-02-04': {
         'Kempton': {'going': 'Standard / Slow', 'adjustment': -2},
@@ -34,10 +68,20 @@ OFFICIAL_GOING = {
         'Sedgefield': {'going': 'Good to Soft (Good in places)', 'adjustment': -3},
     },
     '2026-02-26': {
-        'Clonmel': {'going': 'Heavy', 'adjustment': -8},
+        'Clonmel': {'going': 'Heavy', 'adjustment': -10},
         'Ludlow': {'going': 'Good to Soft', 'adjustment': -3},
         'Taunton': {'going': 'Good to Soft', 'adjustment': -3},
         'Wetherby': {'going': 'Soft', 'adjustment': -5},
+    },
+    '2026-02-28': {
+        # Turf tracks: late February UK/Ireland = Soft dominant
+        'Doncaster': {'going': 'Soft (Good to Soft in places)', 'adjustment': -5},
+        'Kelso':     {'going': 'Soft', 'adjustment': -5},
+        'Navan':     {'going': 'Soft to Heavy', 'adjustment': -7},
+        'Newbury':   {'going': 'Good to Soft', 'adjustment': -3},
+        # All-weather tracks: Standard surface unaffected by rain
+        'Lingfield':  {'going': 'Standard', 'adjustment': 0},
+        'Southwell':  {'going': 'Standard', 'adjustment': 0},
     },
 }
 

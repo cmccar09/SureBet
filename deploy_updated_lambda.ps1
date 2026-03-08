@@ -37,7 +37,7 @@ Pop-Location
 
 Write-Host "4. Deploying to AWS Lambda..." -ForegroundColor Yellow
 aws lambda update-function-code `
-    --function-name betting `
+    --function-name BettingPicksAPI `
     --zip-file fileb://lambda-results.zip `
     --region eu-west-1
 

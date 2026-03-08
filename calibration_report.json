@@ -1,146 +1,178 @@
 {
-  "generated_at": "2026-01-31T19:25:46.742289",
-  "sample_size": 64,
+  "generated_at": "2026-02-26T11:02:48.704207",
+  "sample_size": 961,
   "date_range": {
-    "start": "2026-01-25",
-    "end": "2026-01-31"
+    "start": "2026-02-20",
+    "end": "2026-02-25"
   },
   "overall": {
-    "total_picks": 64,
-    "wins": 11,
-    "win_rate": 0.172,
-    "avg_predicted_p_win": 0.252,
-    "avg_confidence": 25.2
+    "total_picks": 961,
+    "wins": 134,
+    "win_rate": 0.139,
+    "avg_predicted_p_win": 0.019,
+    "avg_confidence": 1.9
   },
   "calibration_bins": {
     "0-20%": {
-      "predicted": 0.098,
-      "actual": 0.0,
-      "calibration_error": -0.098,
-      "sample_size": 26,
-      "wins": 0,
-      "verdict": "CALIBRATED \u2705"
+      "predicted": 0.003,
+      "actual": 0.129,
+      "calibration_error": 0.126,
+      "sample_size": 916,
+      "wins": 118,
+      "verdict": "UNDERCONFIDENT \u26a0\ufe0f"
     },
     "20-40%": {
-      "predicted": 0.32,
-      "actual": 0.188,
-      "calibration_error": -0.132,
-      "sample_size": 32,
-      "wins": 6,
-      "verdict": "OVERCONFIDENT \u26a0\ufe0f"
+      "predicted": 0.315,
+      "actual": 0.324,
+      "calibration_error": 0.01,
+      "sample_size": 37,
+      "wins": 12,
+      "verdict": "CALIBRATED \u2705"
     },
     "40-60%": {
-      "predicted": 0.518,
-      "actual": 0.75,
-      "calibration_error": 0.232,
-      "sample_size": 4,
+      "predicted": 0.48,
+      "actual": 0.429,
+      "calibration_error": -0.051,
+      "sample_size": 7,
       "wins": 3,
-      "verdict": "INSUFFICIENT DATA"
+      "verdict": "CALIBRATED \u2705"
     },
     "60-80%": {
       "predicted": 0.65,
       "actual": 1.0,
       "calibration_error": 0.35,
-      "sample_size": 2,
-      "wins": 2,
+      "sample_size": 1,
+      "wins": 1,
       "verdict": "INSUFFICIENT DATA"
     }
   },
   "brier_score": {
-    "score": 0.1149,
+    "score": 0.1325,
     "interpretation": "Good",
     "target": "< 0.20"
   },
   "expected_vs_actual": {
-    "expected_wins": 16.15,
-    "actual_wins": 11,
-    "calibration_ratio": 0.681,
-    "verdict": "OVERCONFIDENT"
+    "expected_wins": 17.98,
+    "actual_wins": 134,
+    "calibration_ratio": 7.453,
+    "verdict": "UNDERCONFIDENT"
   },
   "failures": {
-    "count": 3,
-    "avg_predicted_p_win": 0.45,
-    "avg_confidence": 45.0,
+    "count": 5,
+    "avg_predicted_p_win": 0.434,
+    "avg_confidence": 43.4,
     "patterns": {
       "by_odds_range": {
-        "<3.0": 2,
-        "3-4": 1,
+        "<3.0": 5,
+        "3-4": 0,
         "4-5": 0,
         "5-6": 0,
         "6-9": 0,
         "9+": 0
       },
       "by_tag": {
-        "enhanced_analysis": 3
+        "enhanced_analysis": 5
       }
     },
     "recommendations": [
       {
         "type": "TAG_FAILING",
         "tag": "enhanced_analysis",
-        "failures": 3,
+        "failures": 5,
         "action": "Reduce confidence boost for 'enhanced_analysis' tag by 10-15 points",
-        "reason": "3 high-confidence losses with this tag - signal not reliable"
+        "reason": "5 high-confidence losses with this tag - signal not reliable"
       }
     ]
   },
   "successes": {
-    "count": 8,
-    "avg_predicted_p_win": 0.475,
-    "avg_confidence": 47.5,
+    "count": 14,
+    "avg_predicted_p_win": 0.409,
+    "avg_confidence": 40.9,
     "patterns": {
       "by_course": {
-        "Wolverhampton": 4
+        "Bangor-on-Dee": 2,
+        "Kempton": 2,
+        "Lingfield": 2
       },
       "by_odds_range": {
-        "<3.0": 5,
-        "3-4": 2,
-        "4-5": 0,
-        "5-6": 1,
-        "6-9": 0,
+        "<3.0": 7,
+        "3-4": 3,
+        "4-5": 3,
+        "5-6": 0,
+        "6-9": 1,
         "9+": 0
       },
       "by_tag": {
-        "enhanced_analysis": 8,
-        "Recent winner": 2
+        "enhanced_analysis": 14,
+        "recent win": 3,
+        "Consistent recent form": 3,
+        "odds within optimal range": 2
       }
     },
     "reinforcements": [
       {
         "type": "COURSE_SUCCESS",
-        "course": "Wolverhampton",
-        "wins": 4,
-        "action": "Track trainer/jockey patterns at Wolverhampton",
-        "reason": "4 wins - understanding this course well"
+        "course": "Bangor-on-Dee",
+        "wins": 2,
+        "action": "Track trainer/jockey patterns at Bangor-on-Dee",
+        "reason": "2 wins - understanding this course well"
+      },
+      {
+        "type": "COURSE_SUCCESS",
+        "course": "Kempton",
+        "wins": 2,
+        "action": "Track trainer/jockey patterns at Kempton",
+        "reason": "2 wins - understanding this course well"
+      },
+      {
+        "type": "COURSE_SUCCESS",
+        "course": "Lingfield",
+        "wins": 2,
+        "action": "Track trainer/jockey patterns at Lingfield",
+        "reason": "2 wins - understanding this course well"
       },
       {
         "type": "TAG_WORKING",
         "tag": "enhanced_analysis",
-        "wins": 8,
+        "wins": 14,
         "action": "Reinforce 'enhanced_analysis' tag - add +5-10 confidence points",
-        "reason": "8 wins - this signal is working"
+        "reason": "14 wins - this signal is working"
       },
       {
         "type": "TAG_WORKING",
-        "tag": "Recent winner",
+        "tag": "recent win",
+        "wins": 3,
+        "action": "Reinforce 'recent win' tag - add +5-10 confidence points",
+        "reason": "3 wins - this signal is working"
+      },
+      {
+        "type": "TAG_WORKING",
+        "tag": "Consistent recent form",
+        "wins": 3,
+        "action": "Reinforce 'Consistent recent form' tag - add +5-10 confidence points",
+        "reason": "3 wins - this signal is working"
+      },
+      {
+        "type": "TAG_WORKING",
+        "tag": "odds within optimal range",
         "wins": 2,
-        "action": "Reinforce 'Recent winner' tag - add +5-10 confidence points",
+        "action": "Reinforce 'odds within optimal range' tag - add +5-10 confidence points",
         "reason": "2 wins - this signal is working"
       }
     ]
   },
   "verdict": {
-    "calibration_status": "OVERCONFIDENT \u26a0\ufe0f",
+    "calibration_status": "UNDERCONFIDENT \u26a0\ufe0f",
     "key_issues": [
-      "TAG_FAILING: 3 high-confidence losses with this tag - signal not reliable"
+      "TAG_FAILING: 5 high-confidence losses with this tag - signal not reliable"
     ],
     "key_successes": [
-      "COURSE_SUCCESS: 4 wins - understanding this course well",
-      "TAG_WORKING: 8 wins - this signal is working",
-      "TAG_WORKING: 2 wins - this signal is working"
+      "COURSE_SUCCESS: 2 wins - understanding this course well",
+      "COURSE_SUCCESS: 2 wins - understanding this course well",
+      "COURSE_SUCCESS: 2 wins - understanding this course well"
     ],
     "priority_actions": [
-      "Reduce overall confidence by 31%",
+      "Can be more confident in selections - increase confidence by 10-15%",
       "Reduce confidence boost for 'enhanced_analysis' tag by 10-15 points"
     ]
   }

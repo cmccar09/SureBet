@@ -11,34 +11,34 @@ Data sourced from:
   - Public knowledge of 2026 Cheltenham declarations
 
 Race key mapping (matches FESTIVAL_RACES in barrys_config.py):
-  day1_race1 → Supreme Novices Hurdle
-  day1_race2 → Arkle Challenge Trophy
-  day1_race3 → Ultima Handicap Chase
-  day1_race4 → Champion Hurdle
-  day1_race5 → Mares Hurdle (Close Brothers)
-  day1_race6 → Cheltenham Plate Chase (Class 1, 2m4f Hcap, 23 runners)
-  day1_race7 → Conditional Jockeys Handicap Hurdle
-  day2_race1 → Ballymore Novices Hurdle
-  day2_race2 → Brown Advisory Novices Chase
-  day2_race3 → Coral Cup Handicap Hurdle
-  day2_race4 → Queen Mother Champion Chase
-  day2_race5 → Glenfarclas Cross Country Chase
-  day2_race6 → Dawn Run Mares Novices Hurdle
-  day2_race7 → FBD NH Flat Race (INH)
-  day3_race1 → Turners Novices Chase
-  day3_race2 → Pertemps Final Handicap Hurdle
-  day3_race3 → Ryanair Chase
-  day3_race4 → Stayers Hurdle
-  day3_race5 → Plate Handicap Chase
-  day3_race6 → Boodles Juvenile Handicap Hurdle
-  day3_race7 → Martin Pipe Conditional Jockeys Hurdle
+  day1_race1 → Sky Bet Supreme Novices' Hurdle
+  day1_race2 → Arkle Challenge Trophy Chase
+  day1_race3 → Fred Winter Handicap Hurdle
+  day1_race4 → Ultima Handicap Chase
+  day1_race5 → Unibet Champion Hurdle
+  day1_race6 → Cheltenham Plate Chase
+  day1_race7 → National Hunt Chase
+  day2_race1 → Turner's Novices' Hurdle
+  day2_race2 → Brown Advisory Novices' Chase
+  day2_race3 → BetMGM Cup Hurdle
+  day2_race4 → Glenfarclas Cross Country Chase
+  day2_race5 → Queen Mother Champion Chase
+  day2_race6 → Grand Annual Handicap Chase
+  day2_race7 → Champion Bumper
+  day3_race1 → Ryanair Mares' Novices' Hurdle
+  day3_race2 → Jack Richards Novices' Chase
+  day3_race3 → Close Brothers Mares' Hurdle
+  day3_race4 → Paddy Power Stayers' Hurdle
+  day3_race5 → Ryanair Chase
+  day3_race6 → Pertemps Handicap Hurdle
+  day3_race7 → Kim Muir Handicap Chase
   day4_race1 → JCB Triumph Hurdle
   day4_race2 → County Handicap Hurdle
-  day4_race3 → Albert Bartlett Novices Hurdle
-  day4_race4 → Cheltenham Gold Cup
-  day4_race5 → Grand Annual / Mares Chase
-  day4_race6 → Champion Bumper (NH Flat)
-  day4_race7 → St James Place Foxhunter Chase
+  day4_race3 → Albert Bartlett Novices' Hurdle
+  day4_race4 → Mrs Paddy Power Mares' Chase
+  day4_race5 → Cheltenham Gold Cup
+  day4_race6 → St James's Place Hunters' Chase
+  day4_race7 → Martin Pipe Handicap Hurdle
 """
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -94,7 +94,7 @@ ADDITIONAL_RUNNERS = {
          "cheltenham_record": None},
     ],
 
-    "day1_race4": [  # Champion Hurdle
+    "day1_race5": [  # Champion Hurdle
         {"name": "Alexei",    "trainer": "Nicky Henderson",  "jockey": "Nico de Boinville",
          "odds": "16/1", "age": 6, "form": "4-1-1-21", "rating": 164,
          "cheltenham_record": None},
@@ -106,7 +106,7 @@ ADDITIONAL_RUNNERS = {
          "cheltenham_record": None},
     ],
 
-    "day1_race5": [  # Close Brothers Mares Hurdle
+    "day3_race3": [  # Close Brothers Mares' Hurdle  (moved to Day 3 14:40)
         # Jade De Grugy, Take No Chances, Feet Of A Dancer, Golden Ace already in RACES_2026
         # CONFIRMED 08/03/2026: Lossiemouth → Champion Hurdle; Brighterdaysahead → Champion Hurdle
         # Murcia is a County Handicap Hurdle entrant (day4_race2) — NOT a Mares Hurdle runner
@@ -173,7 +173,7 @@ ADDITIONAL_RUNNERS = {
          "cheltenham_record": None},
     ],
 
-    "day2_race4": [  # Queen Mother Champion Chase
+    "day2_race5": [  # Queen Mother Champion Chase
         # Majborough, L'Eau du Sud, Il Etait Temps, Jonbon, Quilixios already in RACES_2026
         {"name": "Thistle Ask",   "trainer": "Alan King",        "jockey": "Tom Cannon",
          "odds": "16/1", "age": 8, "form": "1-1-2-21", "rating": 162,
@@ -188,8 +188,8 @@ ADDITIONAL_RUNNERS = {
 
     # ── DAY 3 ─────────────────────────────────────────────────────────────────
 
-    "day3_race3": [  # Ryanair Chase
-        # Fact To File already in EXTRA_RACES day3_race3 (old EXTRA_RACES had wrong horses)
+    "day3_race5": [  # Ryanair Chase
+        # Fact To File already in EXTRA_RACES day3_race5 (now correctly keyed)
         # We use RP_LIVE_ODDS runners: Fact To File, Panic Attack, Protektorat, Jagwar,
         # Energumene, Better Days Ahead, Edwardstone, Master Chewy, Croke Park
         {"name": "Panic Attack",    "trainer": "Dan Skelton",       "jockey": "Harry Skelton",
@@ -251,7 +251,7 @@ ADDITIONAL_RUNNERS = {
 
     # ── DAY 4 ─────────────────────────────────────────────────────────────────
 
-    "day4_race4": [  # Cheltenham Gold Cup
+    "day4_race5": [  # Cheltenham Gold Cup
         # Gaelic Warrior, The Jukebox Man, Jango Baie, Galopin Des Champs,
         # Haiti Couleurs, Inothewayurthinkin, Grey Dawning, Spillane's Tower already in RACES_2026
         {"name": "I Am Maximus",    "trainer": "Willie Mullins",    "jockey": "Paul Townend",
@@ -399,30 +399,30 @@ RACE_FULL_FIELDS = {
         "Iberico Lord", "Workahead",
     ],
     "day2_race4": [
+        "Favori De Champdou", "Stumptown", "Desertmore House", "Vanillier", "Anibale Fly",
+    ],
+    "day2_race5": [
         "Majborough", "L'Eau du Sud", "Il Etait Temps", "Jonbon", "Quilixios",
         "Thistle Ask", "Found A Fifty", "Solness",
     ],
-    "day2_race5": [
-        "Favori De Champdou", "Stumptown", "Desertmore House", "Vanillier", "Anibale Fly",
-    ],
     "day2_race6": [
-        "Bambino Fever", "Oldschool Outlaw", "Echoing Silence", "La Conquiere",
+        "Inthepocket", "Coeur De Lion", "Dancewiththedevil", "Waterbys Hurricane",
     ],
     "day2_race7": [
         "Love Sign d'Aunou", "The Irish Avatar", "Keep Him Company", "Quiryn",
         "Bass Hunter", "Charismatic Kid",
     ],
     "day3_race1": [
+        "Bambino Fever", "Oldschool Outlaw", "Echoing Silence", "La Conquiere",
+    ],
+    "day3_race2": [
         "Koktail Divin", "Regent's Stroll", "Meetmebythesea", "Slade Steel",
         "Grey Dawning", "Sixmilebridge",
     ],
-    "day3_race2": [
-        "Supremely West", "C'Est Different", "Electric Mason", "Ace Of Spades",
-        "Minella Emperor",  # Shantreusse removed — NOT in Betfair ANTEPOST 2026-03-06
-    ],
     "day3_race3": [
-        "Fact To File", "Panic Attack", "Protektorat", "Jagwar", "Energumene",
-        "Better Days Ahead", "Edwardstone", "Master Chewy", "Croke Park",
+        "Jade De Grugy", "Dream On Baby", "Feet Of A Dancer",
+        "Golden Ace", "Take No Chances", "Jetara",
+        "Nurse Susan", "Park Princess", "Kateira",
     ],
     "day3_race4": [
         "Teahupoo", "Honesty Policy", "Kabral Du Mathan", "Bob Olinger",
@@ -431,15 +431,15 @@ RACE_FULL_FIELDS = {
         "Feet Of A Dancer", "Potters Charm", "Doddiethegreat", "French Ship",
     ],
     "day3_race5": [
-        "Madara", "McLaurey", "Will The Wise", "Down Memory Lane",
-    ],  # Grange Walk + Run To Freedom removed — not entered for Cheltenham (Betfair confirmed)
+        "Fact To File", "Panic Attack", "Protektorat", "Jagwar", "Energumene",
+        "Better Days Ahead", "Edwardstone", "Master Chewy", "Croke Park",
+    ],
     "day3_race6": [
-        "Saratoga", "Winston Junior", "Manlaga", "Munsif", "Ammes",
-        "Il Etait Temps",
+        "Supremely West", "C'Est Different", "Electric Mason", "Ace Of Spades",
+        "Minella Emperor",
     ],
     "day3_race7": [
-        "Roc Dino", "A Pai De Nom", "The Passing Wife", "Kel Histoire",
-        "He Can't Dance", "Zanndabad", "Kargese",
+        "Weveallbeencaught", "Campers Rock", "Brave Kingdom", "Rivella Reina",
     ],
     "day4_race1": [
         "Proactif", "Selma De Vary", "Minella Study", "Maestro Conti",
@@ -454,6 +454,10 @@ RACE_FULL_FIELDS = {
         "I'll Sort That", "Kazansky", "Perceval Legallois",
     ],
     "day4_race4": [
+        "Dinoblue", "Spindleberry", "Panic Attack", "Only By Night",
+        "Kala Conti", "Diva Luna",
+    ],
+    "day4_race5": [
         "Gaelic Warrior", "The Jukebox Man", "Jango Baie", "Galopin Des Champs",
         "Haiti Couleurs", "Inothewayurthinkin", "Grey Dawning", "Spillane's Tower",
         "I Am Maximus", "Grangeclare West", "Affordale Fury", "Envoi Allen",
@@ -462,16 +466,12 @@ RACE_FULL_FIELDS = {
         "Spindleberry", "Three Card Brag", "Lecky Watson", "Handstands",
         "Myretown", "Gold Tweet",
     ],
-    "day4_race5": [
-        "Dinoblue", "Spindleberry", "Panic Attack", "Only By Night",
-        "Kala Conti", "Diva Luna",
-    ],
     "day4_race6": [
-        "Love Sign d'Aunou", "Keep Him Company", "Quiryn",
-        "Bass Hunter", "Charismatic Kid", "Majborough",
-    ],
-    "day4_race7": [
         "Wonderwall", "Its On The Line", "Con's Roc", "Panda Boy",
         "Chemical Energy", "Music Drive", "Il Est Francais",
+    ],
+    "day4_race7": [
+        "Roc Dino", "A Pai De Nom", "The Passing Wife", "Kel Histoire",
+        "He Can't Dance", "Zanndabad", "Kargese",
     ],
 }

@@ -1,0 +1,40 @@
+{
+  "_description": "MacFitz manual split overrides for Barry's Cheltenham 2026 competition",
+  "_strategy": "MacFitz follows Surebet EXCEPT where a near-tie justifies a different selection. Overrides are keyed by exact race_name from CheltenhamPicks DynamoDB.",
+  "_auto_split_threshold": 3,
+  "_note": "Races with gap <= _auto_split_threshold where no manual override exists will be flagged as NEW_CLOSE_CALL in the HTML regen log but NOT auto-split without human confirmation.",
+  "overrides": {
+    "Conditional Jockeys Handicap Hurdle": {
+      "macfitz_horse": "Sounds Russian",
+      "reason": "Dead heat 93-93 - coin flip, MacFitz takes the alternative runner",
+      "surebet_horse": "Waterford Whispers",
+      "surebet_score": 93,
+      "macfitz_score": 93,
+      "gap": 0,
+      "decided": "2026-03-06",
+      "active": false,
+      "_deactivated": "Sounds Russian not entered for Cheltenham (Betfair ANTEPOST: absent 2026-03-06). Both entries revert to Waterford Whispers."
+    },
+    "Plate Handicap Chase": {
+      "macfitz_horse": "Down Memory Lane",
+      "reason": "1pt gap (94 vs 93) - effectively tied, MacFitz takes alternative",
+      "surebet_horse": "Grange Walk",
+      "surebet_score": 94,
+      "macfitz_score": 93,
+      "gap": 1,
+      "decided": "2026-03-06",
+      "active": false,
+      "_deactivated": "Grange Walk not entered for Cheltenham (Betfair ANTEPOST: absent 2026-03-06). Both entries revert to highest remaining scorer (Down Memory Lane)."
+    },
+    "Cheltenham Gold Cup": {
+      "macfitz_horse": "Fastorslow",
+      "reason": "5pt gap (164 vs 159) - Fastorslow was 2025 Gold Cup runner-up, outstanding festival form justifies the split on the biggest race",
+      "surebet_horse": "Gaelic Warrior",
+      "surebet_score": 164,
+      "macfitz_score": 159,
+      "gap": 5,
+      "decided": "2026-03-06",
+      "active": true
+    }
+  }
+}

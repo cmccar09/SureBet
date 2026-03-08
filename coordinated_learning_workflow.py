@@ -184,18 +184,18 @@ def step3_learn_from_results():
 
 def step4_generate_ui_picks():
     """
-    UI PICKS: Select best picks for display
-    - Only high-confidence selections
-    - Sets show_in_ui=True for validated picks
-    - Rest stays as learning data (show_in_ui=False)
+    UI PICKS: Report current UI pick status.
+    NOTE: All UI picks are managed by comprehensive_workflow.py via add_pick_to_ui().
+    This step no longer promotes learning data to the UI — that caused pollution
+    from skipped-race runners and low-confidence candidates appearing in results.
     """
     print("\n" + "="*80)
-    print("STEP 4: SELECT UI PICKS (High Confidence Only)")
+    print("STEP 4: UI PICKS STATUS")
     print("="*80)
-    print("Identifying picks that meet UI display criteria...")
+    print("UI picks are set exclusively by comprehensive_workflow (add_pick_to_ui).")
+    print("No promotion from learning data to prevent skipped-race contamination.")
     
     try:
-        # Query all analyzed races
         today = datetime.now().strftime('%Y-%m-%d')
         response = bets_table.query(
             KeyConditionExpression='bet_date = :date',
@@ -203,48 +203,17 @@ def step4_generate_ui_picks():
         )
         
         items = response.get('Items', [])
-        
-        # Separate by current UI status
         current_ui = [i for i in items if i.get('show_in_ui') == True]
         learning_data = [i for i in items if not i.get('show_in_ui')]
         
         print(f"Total analyzed: {len(items)}")
-        print(f"Currently on UI: {len(current_ui)}")
+        print(f"UI picks (set by comprehensive_workflow): {len(current_ui)}")
         print(f"Learning data: {len(learning_data)}")
         
-        # Find high-confidence picks from learning data
-        # Criteria: combined_confidence >= 50 (GOOD+ tier after -35 adjustment)
-        candidates = [
-            i for i in learning_data 
-            if i.get('combined_confidence', 0) >= 50
-        ]
-        
-        print(f"\nHigh-confidence candidates (>=50 GOOD+ after -35 adjustment): {len(candidates)}")
-        
-        # Promote top candidates to UI
-        promoted = 0
-        for pick in candidates[:10]:  # Limit to top 10 per cycle
-            try:
-                bets_table.update_item(
-                    Key={
-                        'bet_date': pick['bet_date'],
-                        'bet_id': pick['bet_id']
-                    },
-                    UpdateExpression='SET show_in_ui = :ui',
-                    ExpressionAttributeValues={':ui': True}
-                )
-                promoted += 1
-                horse = pick.get('horse', 'Unknown')
-                conf = pick.get('combined_confidence', 0)
-                print(f"  ✓ Promoted: {horse} (confidence: {conf})")
-            except Exception as e:
-                print(f"  ✗ Failed to promote: {e}")
-        
-        print(f"\n✓ Promoted {promoted} picks to UI")
         return True
         
     except Exception as e:
-        print(f"✗ Error generating UI picks: {e}")
+        print(f"✗ Error checking UI picks status: {e}")
         return False
 
 

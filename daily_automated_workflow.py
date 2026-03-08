@@ -114,8 +114,45 @@ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     # - 100% race coverage tracking
     # - Realistic risk grading (Sure Thing, Dodgy, Risky, Will Lose)
     # Old steps (calculate_all_confidence_scores.py, set_ui_picks_from_validated.py) are replaced
-    )
     
+    # ── CHELTENHAM FESTIVAL 2026 (10–13 March) ──────────────────────────────
+    today_date = datetime.now().date()
+    from datetime import date as _date
+    cheltenham_start = _date(2026, 3,  5)   # Start updating picks 5 days pre-festival
+    cheltenham_end   = _date(2026, 3, 13)   # Last race day
+    festival_live    = _date(2026, 3, 10)   # First race day
+
+    if cheltenham_start <= today_date <= cheltenham_end:
+        print("\n" + "="*80)
+        print("CHELTENHAM FESTIVAL 2026 — Running Cheltenham workflow")
+        print("="*80)
+
+        # Refresh picks: score all 28 races, save top pick + all_horses ranked list
+        run_step(
+            "Cheltenham: Score all 28 races and save picks to DynamoDB",
+            "python save_cheltenham_picks.py"
+        )
+
+        # During live festival days, also refresh Betfair prices / intelligence
+        if festival_live <= today_date <= cheltenham_end:
+            run_step(
+                "Cheltenham: Fetch live Betfair odds and update RP_LIVE_ODDS",
+                "python cheltenham_2026_intelligence.py --update-picks"
+            )
+            # Re-run picks with fresh odds
+            run_step(
+                "Cheltenham: Re-save picks with updated live odds",
+                "python save_cheltenham_picks.py"
+            )
+
+        # Regenerate Barry's competition HTML from live DynamoDB picks.
+        # Applies macfitz_overrides.json (splits for dead-ties / near-ties)
+        # and flags any NEW close calls that may need a human decision.
+        run_step(
+            "Barry's Competition: Regenerate HTML with live picks + MacFitz splits",
+            "python barrys/update_barrys_html.py"
+        )
+
     # STEP 7: Comprehensive historical learning (weekly)
     if datetime.now().weekday() == 0:  # Monday only
         print("\n" + "="*80)
@@ -143,6 +180,13 @@ WHAT HAPPENED:
 7. ✓ Generated picks using optimized weights
 8. ✓ Applied 4-tier grading (EXCELLENT/GOOD/FAIR/POOR)
 9. ✓ Set UI picks (one per validated race)
+
+[CHELTENHAM 5-13 Mar]: If in festival window:
+  • Scored all 28 races (228 horses ranked)
+  • BETTING_PICK: Grade 1, non-handicap, score ≥ 75
+  • WATCH_LIST: non-handicap, score ≥ 60
+  • OPINION_ONLY: handicaps / skip races / score < 60
+  • On race days: live Betfair odds fetched + picks re-saved
 
 NEXT STEPS:
 - View picks: python show_todays_ui_picks.py

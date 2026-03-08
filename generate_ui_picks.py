@@ -140,7 +140,20 @@ def generate_ui_picks():
     all_picks = []
     
     for race in races:
+        venue = race.get('venue', 'Unknown')
+        race_time = race.get('raceTime', '')
+        market_name = race.get('marketName', '')
+        runners = race.get('runners', [])
         num_runners = len(runners)
+        
+        # Get going data for this track
+        track_going = going_data.get(venue, {})
+        going_adjustment = track_going.get('adjustment', 0)
+        going_description = track_going.get('description', 'Unknown')
+        
+        best_score = 0
+        best_horse = None
+        best_reasons = []
         
         for runner in runners:
             score, reasons = score_horse(runner, race, going_adjustment, track_going, num_runners)
@@ -150,25 +163,10 @@ def generate_ui_picks():
                 best_horse = runner
                 best_reasons = reasons
         
-        # Adjust threshold for small fields (Carlisle 14:00 lesson)
-        # Small fields (<6 runners) need higher confidence
+        # Adjust threshold for small fields
         threshold = 55 if num_runners < 6 else 45
         
-        if best_score >= threshold:  # Dynamic threshold based on field size
-        
-        best_score = 0
-        best_horse = None
-        best_reasons = []
-        
-        for runner in runners:
-            score, reasons = score_horse(runner, race, going_adjustment, track_going)
-            
-            if score > best_score:
-                best_score = score
-                best_horse = runner
-                best_reasons = reasons
-        
-        if best_score >= 45:  # UI threshold - raised to limit to 7-10 picks per day
+        if best_score >= threshold:  # UI threshold - raised to limit to 7-10 picks per day
             horse_name = best_horse.get('name', best_horse.get('runnerName', 'Unknown'))
             odds = best_horse.get('odds', 0)
             form = best_horse.get('form', '')

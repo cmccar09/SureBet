@@ -919,6 +919,49 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     return score, breakdown, reasons
 
 
+# ---------------------------------------------------------------------------
+# RACE SKIP FILTER
+# Lesson: 2026-03-01 Huntingdon 14:45 - Reallyntruthfully (form 1111, 3/1) PU
+# Class 3/4/5/6 handicaps are designed by handicappers to produce open results.
+# Our trainer/jockey weights are calibrated for Grade 1 / Listed races.
+# When both our pick AND the market favourite fail it is Class 3-6 chaos.
+# Class 2 is the cut-off: Chester Cup / Royal Hunt Cup level are still viable.
+# ---------------------------------------------------------------------------
+SKIP_HANDICAP_CLASSES = {'3', '4', '5', '6', 'class 3', 'class 4', 'class 5', 'class 6'}
+
+def should_skip_race(race_data):
+    """
+    Returns (True, reason_str) if this race should be skipped ENTIRELY.
+    Skips Class 3 / 4 / 5 / 6 handicap races on any surface.
+    Class 2 and above (Graded / Listed / Class 1-2) are still analysed.
+    """
+    import re
+    market_name = str(race_data.get('market_name',
+                       race_data.get('race_name',
+                       race_data.get('race_type', '')))).lower()
+    race_class  = str(race_data.get('race_class',
+                       race_data.get('class', ''))).lower().strip()
+
+    # Detect handicap from name keywords
+    is_handicap = (
+        'handicap' in market_name or
+        ' hcap'    in market_name or
+        market_name.endswith('hcap') or
+        ' h '      in market_name        # abbreviated NH hurdle handicap
+    )
+
+    # Extract numeric class from name if not already in race_class field
+    # e.g. "Class 3 Handicap Hurdle" or "Class3 Hcap Chase"
+    if not race_class or race_class not in SKIP_HANDICAP_CLASSES:
+        m = re.search(r'class\s*([3-6])', market_name)
+        if m:
+            race_class = m.group(1)
+
+    if is_handicap and race_class in SKIP_HANDICAP_CLASSES:
+        return True, f"Class {race_class.upper().replace('CLASS ', '')} handicap - skipped (unpredictable by design)"
+    return False, None
+
+
 def get_comprehensive_pick(race_data, course_stats=None):
     """
     Get best pick from race using comprehensive analysis

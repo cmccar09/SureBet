@@ -1,5 +1,5 @@
 """
-Fetch and analyze all races for today (2026-02-05)
+Fetch and analyze all races for today
 """
 
 import subprocess
@@ -89,11 +89,12 @@ print("-" * 70)
 try:
     check_code = """
 import boto3
+from datetime import datetime
 
 dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
 table = dynamodb.Table('SureBetBets')
 
-today = '2026-02-05'
+today = datetime.now().strftime('%Y-%m-%d')
 response = table.query(
     KeyConditionExpression='bet_date = :date',
     ExpressionAttributeValues={':date': today}
