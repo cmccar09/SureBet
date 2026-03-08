@@ -827,7 +827,16 @@ def get_cheltenham_races_lambda(headers):
     today = datetime.now().strftime('%Y-%m-%d')
     db_chelt = dynamodb.Table('CheltenhamPicks')
     resp = db_chelt.scan(FilterExpression=Attr('pick_date').eq(today))
-    items = [decimal_to_float(i) for i in resp.get('Items', [])]
+    raw_items = [decimal_to_float(i) for i in resp.get('Items', [])]
+
+    # Deduplicate by (day, race_time) — keep item with the most all_horses
+    seen_slots: dict = {}
+    for item in raw_items:
+        slot = (item.get('day', ''), item.get('race_time', ''))
+        existing = seen_slots.get(slot)
+        if not existing or len(item.get('all_horses', [])) > len(existing.get('all_horses', [])):
+            seen_slots[slot] = item
+    items = list(seen_slots.values())
 
     DAY_ORDER = ['Tuesday_10_March', 'Wednesday_11_March', 'Thursday_12_March', 'Friday_13_March']
     days = {}
