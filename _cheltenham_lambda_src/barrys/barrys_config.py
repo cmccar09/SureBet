@@ -72,7 +72,7 @@ FESTIVAL_RACES = {
     # DAY 1 - Champion Day (Tuesday 10 March)
     "day1_race1":  {"name": "Sky Bet Supreme Novices Hurdle",        "day": 1, "time": "13:30", "grade": "Grade 1"},
     "day1_race2":  {"name": "Arkle Challenge Trophy Chase",          "day": 1, "time": "14:10", "grade": "Grade 1"},
-    "day1_race3":  {"name": "Ultima Handicap Chase",                 "day": 1, "time": "14:50", "grade": "Handicap"},
+    "day1_race3":  {"name": "Fred Winter Handicap Hurdle",               "day": 1, "time": "14:40", "grade": "Handicap"},
     "day1_race4":  {"name": "Unibet Champion Hurdle",                "day": 1, "time": "15:30", "grade": "Grade 1"},
     "day1_race5":  {"name": "Mares Hurdle",                          "day": 1, "time": "16:10", "grade": "Grade 1"},
     "day1_race6":  {"name": "Cheltenham Plate Chase",                   "day": 1, "time": "16:40", "grade": "Hcap"},

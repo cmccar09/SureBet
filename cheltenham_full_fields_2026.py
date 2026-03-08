@@ -353,12 +353,12 @@ RACE_FULL_FIELDS = {
         "Sixmilebridge", "July Flower", "No Questions Asked",
         "Mambonumberfive", "Hansard", "Break My Soul",
     ],
-    "day1_race3": [   # Ultima Handicap Chase (Class 1, 3m1f Hcap, 22 runners)
-        "Jagwar", "Iroko", "Myretown", "Quebecois", "Handstands",
-        "Johnnywho", "Hyland", "Konfusion", "Imperial Saint", "The Doyen Chief",
-        "Resplendent Grey", "Blaze The Way", "Leave of Absence", "The Short Go",
-        "Search For Glory", "Blow Your Wad", "Knight Of Allen", "Patter Merchant",
-        "Margarets Legacy", "Filanderer", "Eyed", "Stolen Silver",
+    "day1_race3": [   # Fred Winter Handicap Hurdle (Class 1, 2m Hcap Hrd, 24 runners)
+        "Saratoga", "Winston Junior", "Manlaga", "Munsif", "Glen To Glen",
+        "Ammes", "Madness Delle", "Dignam", "Mustang Du Breuil", "Bertutea",
+        "Bibe Mus", "Barbizon", "The Mighty Celt", "Ole Ole", "Klycot",
+        "Pourquoi Pas Papa", "Harwa", "Macktoad", "Quinta Do Lago",
+        "Mino Des Mottes", "Hardy Stuff", "Paddockwood", "Lord", "Bandjo",
     ],
     "day1_race4": [
         "The New Lion", "Brighterdaysahead", "Golden Ace",

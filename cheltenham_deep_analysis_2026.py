@@ -1253,6 +1253,11 @@ JOCKEY_SCORES = {
     "Jonjo O'Neill Jr.":   6,   # Added: strong UK NH jockey
     "Jonjo O'Neill Jr":    6,   # Added: alternate spelling without trailing dot
     "Sean Bowen":          7,   # Added: champion British NH jockey
+    "J. J. Slevin":        8,   # Added: top Irish jockey, multiple Festival rides
+    "S. F. O'Keeffe":      5,   # Added: Willie Mullins stable conditional
+    "James Bowen":         5,   # Added: UK jockey
+    "D. E. Mullins":       6,   # Added: Derek Mullins, rides for Margaret Mullins
+    "J. W. Kennedy":       5,   # Added: JW Kennedy Irish jockey
 }
 
 ELITE_COMBOS = {
@@ -1361,6 +1366,13 @@ def score_horse_2026(horse, race_name):
         "Ben Pauling":        6,
         "Oliver Greenall & Josh Guerriero": 8,   # Added: won 2024 Ultima with Jagwar
         "Jonjo O'Neill":      6,   # Added: regular UK trainer, multiple Cheltenham runners
+        "W. P. Mullins":     25,   # Added: alias for Willie Mullins (racecard abbreviation)
+        "Joseph Patrick O'Brien": 18, # Added: top Irish trainer, multiple Festival winners
+        "Gavin Patrick Cromwell": 12, # Added: alias for Gavin Cromwell
+        "Paul Nolan":         8,   # Added: Irish trainer, Festival winners
+        "Faye Bramley":       6,   # Added: UK trainer
+        "Mrs J. Harrington":  15,  # Added: Jessica Harrington, multiple Festival winners
+        "Jessica Harrington": 15,  # Added: alternate name
     }
     t_score = trainer_scores.get(trainer, 5)
     score += t_score
