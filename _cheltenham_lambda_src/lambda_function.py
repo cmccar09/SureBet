@@ -153,18 +153,19 @@ RP_LIVE_ODDS = {
     "found a fifty":          "40/1",
     "solness":                "40/1",
 
-    # Supreme Novices' Hurdle (Day 1)
-    "old park star":          "2/1",
-    "talk the talk":          "11/2",
-    "mighty park":            "13/2",
-    "el cairos":              "7/1",
-    "mydaddypaddy":           "10/1",
-    "idaho sun":              "14/1",
-    "leader d'allier":        "14/1",
-    "sober glory":            "14/1",
-    "sober":                  "16/1",
-    "baron noir":             "25/1",
-    "sortudo":                "33/1",
+    # Supreme Novices' Hurdle (Day 1) — confirmed 12 runners (Betfair 08/03/2026)
+    "old park star":          "11/4",
+    "talk the talk":          "4/1",
+    "mighty park":            "10/3",
+    "el cairos":              "11/2",
+    "mydaddypaddy":           "13/2",
+    "leader dallier":         "10/1",
+    "sober glory":            "12/1",
+    "baron noir":             "33/1",
+    "koktail brut":           "66/1",
+    "too bossy for us":       "40/1",
+    "eachtotheirown":         "33/1",
+    "sageborough":            "100/1",
 
     # Ballymore / Baring Bingham Novices' Hurdle (Day 2)
     "no drama this end":      "4/1",
@@ -174,21 +175,14 @@ RP_LIVE_ODDS = {
     "i'll sort that":         "14/1",
     "doctor steinberg":       "3/1",   # Albert Bartlett FAVOURITE
 
-    # Arkle Chase (Day 1)
+    # Arkle Chase (Day 1) — confirmed 7 runners (Betfair 08/03/2026)
     "kopek des bordes":       "7/4",
     "lulamba":                "15/8",
     "kargese":                "6/1",
-    "romeo coolio":           "5/1",
-    "irish panther":          "14/1",
-    "steel ally":             "16/1",
-    "kappa jy pyke":          "16/1",
-    "jax junior":             "33/1",
-    "sixmilebridge":          "40/1",
-    "july flower":            "40/1",
-    "no questions asked":     "50/1",
-    "mambonumberfive":        "50/1",
+    "steel ally":             "14/1",
+    "jax junior":             "20/1",
+    "mambonumberfive":        "33/1",
     "hansard":                "100/1",
-    "break my soul":          "125/1",
 
     # Stayers' Hurdle (Day 3)
     "teahupoo":               "9/4",
