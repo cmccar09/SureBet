@@ -1250,6 +1250,9 @@ JOCKEY_SCORES = {
     "Aidan Coleman":       6,
     "Keith Donoghue":      6,
     "M. P. Walsh":         6,   # Added: Emmet Mullins conditional/amateur, rides at festivals
+    "Jonjo O'Neill Jr.":   6,   # Added: strong UK NH jockey
+    "Jonjo O'Neill Jr":    6,   # Added: alternate spelling without trailing dot
+    "Sean Bowen":          7,   # Added: champion British NH jockey
 }
 
 ELITE_COMBOS = {
@@ -1356,6 +1359,8 @@ def score_horse_2026(horse, race_name):
         "Peter Fahey":        8,
         "Dan Skelton":        8,
         "Ben Pauling":        6,
+        "Oliver Greenall & Josh Guerriero": 8,   # Added: won 2024 Ultima with Jagwar
+        "Jonjo O'Neill":      6,   # Added: regular UK trainer, multiple Cheltenham runners
     }
     t_score = trainer_scores.get(trainer, 5)
     score += t_score

@@ -353,8 +353,12 @@ RACE_FULL_FIELDS = {
         "Sixmilebridge", "July Flower", "No Questions Asked",
         "Mambonumberfive", "Hansard", "Break My Soul",
     ],
-    "day1_race3": [
-        "Jagwar", "Iroko", "Handstands", "Myretown", "Hyland", "Protektorat",
+    "day1_race3": [   # Ultima Handicap Chase (Class 1, 3m1f Hcap, 22 runners)
+        "Jagwar", "Iroko", "Myretown", "Quebecois", "Handstands",
+        "Johnnywho", "Hyland", "Konfusion", "Imperial Saint", "The Doyen Chief",
+        "Resplendent Grey", "Blaze The Way", "Leave of Absence", "The Short Go",
+        "Search For Glory", "Blow Your Wad", "Knight Of Allen", "Patter Merchant",
+        "Margarets Legacy", "Filanderer", "Eyed", "Stolen Silver",
     ],
     "day1_race4": [
         "The New Lion", "Brighterdaysahead", "Golden Ace",

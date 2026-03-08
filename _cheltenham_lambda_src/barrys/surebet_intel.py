@@ -47,32 +47,120 @@ RACES_2026_MAP = {
 # Jockeys: trainer's expected lead rider (pre-declaration estimates)
 # Form: most-recent run FIRST; Rating = RPR
 EXTRA_RACES = {
-    "day1_race3": {   # Ultima Handicap Chase  (Grade 3, 3m1f)
+    "day1_race3": {   # Ultima Handicap Chase  (Class 1, 3m1f Hcap Chs, 22 runners, 10 Mar 2026)
+        # NOTE: form strings stored most-recent-first (reversed from racecard UK convention)
+        # racecard form shown in comment after each entry
         "entries": [
-            {"name": "Jagwar", "trainer": "Willie Mullins", "jockey": "Paul Townend",
-             "odds": "5/1", "age": 9, "form": "1-1-2-13", "rating": 158,
-             "cheltenham_record": "Won 2024 National Hunt Chase",
-             "last_run": "3rd Grade 1 Chase Jan 2026", "days_off": 42},
-            {"name": "Iroko", "trainer": "Oliver Greenall", "jockey": "Lorcan Murtagh",
-             "odds": "6/1", "age": 9, "form": "1-2-1-41", "rating": 157,
-             "cheltenham_record": None,
+            {"name": "Jagwar",            "trainer": "Oliver Greenall & Josh Guerriero", "jockey": "M. P. Walsh",
+             "odds": "4/1",  "age": 9, "form": "23-1131",  "rating": 165,
+             # racecard 1311-32 C BF: 2nd last, 1st (won), 1st, 3rd, 1st, 1st
+             "cheltenham_record": "Won Ultima Handicap Chase 2024", "has_festival_win": True,
+             "last_run": "2nd Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Iroko",             "trainer": "Oliver Greenall & Josh Guerriero", "jockey": "Jonjo O'Neill Jr.",
+             "odds": "5/1",  "age": 9, "form": "12-424F",  "rating": 162,
+             # racecard F424-21 C: most recent 1st (won)
+             "cheltenham_record": "Cheltenham course winner",
              "last_run": "Won Handicap Chase Feb 2026", "days_off": 28},
-            {"name": "Handstands", "trainer": "Ben Pauling", "jockey": "Jonjo O'Neill Jr",
-             "odds": "8/1", "age": 10, "form": "1-1-2-21", "rating": 153,
-             "cheltenham_record": None,
-             "last_run": "Won Handicap Chase Jan 2026", "days_off": 42},
-            {"name": "Myretown", "trainer": "Lucinda Russell", "jockey": "Derek Fox",
-             "odds": "10/1", "age": 9, "form": "2-1-3-11", "rating": 150,
-             "cheltenham_record": None,
-             "last_run": "Won Scottish Handicap Chase Jan 2026", "days_off": 42},
-            {"name": "Hyland", "trainer": "Nicky Henderson", "jockey": "Nico de Boinville",
-             "odds": "14/1", "age": 9, "form": "1-2-3-32", "rating": 154,
+            {"name": "Myretown",          "trainer": "Lucinda Russell", "jockey": "Derek Fox",
+             "odds": "8/1",  "age": 9, "form": "04F-11F",  "rating": 160,
+             # racecard F11-F40 CD BF
+             "cheltenham_record": "Cheltenham course and distance winner",
+             "last_run": "Last Jan 2026", "days_off": 42},
+            {"name": "Quebecois",         "trainer": "Paul Nicholls",   "jockey": "Harry Cobden",
+             "odds": "15/2", "age": 8, "form": "2242-12",  "rating": 158,
+             # racecard 21-2422 BF: most recent 2nd
              "cheltenham_record": None,
              "last_run": "2nd Handicap Chase Feb 2026", "days_off": 28},
-            {"name": "Protektorat", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
-             "odds": "16/1", "age": 10, "form": "3-2-1-23", "rating": 155,
-             "cheltenham_record": "2nd 2025 Gold Cup",
-             "last_run": "3rd Grade 2 Jan 2026", "days_off": 42},
+            {"name": "Handstands",        "trainer": "Ben Pauling",      "jockey": "Ben Jones",
+             "odds": "15/2", "age": 10, "form": "342-P11", "rating": 157,
+             # racecard 11P-243: most recent 3rd
+             "cheltenham_record": None,
+             "last_run": "3rd Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Johnnywho",         "trainer": "Jonjo O'Neill",    "jockey": "Richie McLernon",
+             "odds": "10/1", "age": 9, "form": "535-523",  "rating": 155,
+             # racecard 325-535 BF: most recent 5th
+             "cheltenham_record": None,
+             "last_run": "5th Chase Feb 2026", "days_off": 28},
+            {"name": "Hyland",            "trainer": "Nicky Henderson",  "jockey": "Nico de Boinville",
+             "odds": "8/1",  "age": 9, "form": "479-P22",  "rating": 156,
+             # racecard 22P-974 CD: most recent 4th
+             "cheltenham_record": "Cheltenham course and distance winner",
+             "last_run": "4th Chase Jan 2026", "days_off": 42},
+            {"name": "Konfusion",         "trainer": "Joel Parkinson & Sue Smith", "jockey": "Callum Bewley",
+             "odds": "12/1", "age": 8, "form": "311U1-2",  "rating": 152,
+             # racecard 2-1U113 BF: most recent 2nd
+             "cheltenham_record": None,
+             "last_run": "2nd Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Imperial Saint",    "trainer": "Philip Hobbs & Johnson White", "jockey": "Callum Pritchard",
+             "odds": "12/1", "age": 9, "form": "165-243",  "rating": 150,
+             # racecard 342-561: most recent 1st (win in that sequence) wait reversed → "165-243" means last char of racecard='1' so startswith '1' = WIN
+             "cheltenham_record": None,
+             "last_run": "Won Handicap Chase Jan 2026", "days_off": 42},
+            {"name": "The Doyen Chief",   "trainer": "Alan King",         "jockey": "Tom Bellamy",
+             "odds": "14/1", "age": 9, "form": "215P2-1",  "rating": 148,
+             # racecard 1-2P512: most recent 1st (WIN)
+             "cheltenham_record": None,
+             "last_run": "Won Chase Feb 2026", "days_off": 28},
+            {"name": "Resplendent Grey",  "trainer": "Olly Murphy",       "jockey": "Sean Bowen",
+             "odds": "14/1", "age": 8, "form": "201-144",  "rating": 147,
+             # racecard 441-102: most recent 2nd
+             "cheltenham_record": None,
+             "last_run": "2nd Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Blaze The Way",     "trainer": "Ms Margaret Mullins", "jockey": "D. E. Mullins",
+             "odds": "14/1", "age": 9, "form": "514265",   "rating": 145,
+             # racecard 562415 C D: most recent 5th
+             "cheltenham_record": "Cheltenham course winner",
+             "last_run": "5th Chase Feb 2026", "days_off": 28},
+            {"name": "Leave of Absence",  "trainer": "Anthony Honeyball", "jockey": "Rex Dingle",
+             "odds": "16/1", "age": 8, "form": "32P1-12",  "rating": 143,
+             # racecard 21-1P23 CD: most recent 3rd (reversed = '3')
+             "cheltenham_record": "Cheltenham course and distance winner",
+             "last_run": "3rd Chase Jan 2026", "days_off": 42},
+            {"name": "The Short Go",      "trainer": "Henry de Bromhead", "jockey": "D. J. O'Keeffe",
+             "odds": "16/1", "age": 9, "form": "34P-5U2",  "rating": 142,
+             # racecard 2U5-P43 BF: most recent 3rd (reversed = '3')
+             "cheltenham_record": None,
+             "last_run": "3rd Chase Feb 2026", "days_off": 28},
+            {"name": "Search For Glory",  "trainer": "Gordon Elliott",    "jockey": "James Smith",
+             "odds": "16/1", "age": 9, "form": "P220-07",  "rating": 140,
+             # racecard 70-022P: most recent P (pulled up)
+             "cheltenham_record": None,
+             "last_run": "Pulled up Chase Jan 2026", "days_off": 42},
+            {"name": "Blow Your Wad",     "trainer": "Gary & Josh Moore", "jockey": "Freddie Mitchell",
+             "odds": "20/1", "age": 8, "form": "2373-55",  "rating": 138,
+             # racecard 55-3732: most recent 2nd
+             "cheltenham_record": None,
+             "last_run": "2nd Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Knight Of Allen",   "trainer": "Mrs Jane Williams", "jockey": "Ciaran Gethings",
+             "odds": "20/1", "age": 10, "form": "2412-13", "rating": 137,
+             # racecard 31-2142: most recent 2nd
+             "cheltenham_record": None,
+             "last_run": "2nd Chase Feb 2026", "days_off": 28},
+            {"name": "Patter Merchant",   "trainer": "Gordon Elliott",    "jockey": "J. W. Kennedy",
+             "odds": "25/1", "age": 8, "form": "03523-5",  "rating": 135,
+             # racecard 5-32530: most recent 0 (last)
+             "cheltenham_record": None,
+             "last_run": "Last Chase Jan 2026", "days_off": 42},
+            {"name": "Margarets Legacy",  "trainer": "Warren Greatrex",   "jockey": "Harry Bannister",
+             "odds": "33/1", "age": 9, "form": "642-11/2", "rating": 132,
+             # racecard 2/11-246: most recent 6th (reversed first char = '6')
+             "cheltenham_record": None,
+             "last_run": "6th Chase Feb 2026", "days_off": 28},
+            {"name": "Filanderer",        "trainer": "Hughie Morrison",   "jockey": "Jonathan Burke",
+             "odds": "33/1", "age": 7, "form": "151-111",  "rating": 130,
+             # racecard 111-151: most recent 1st (WIN)
+             "cheltenham_record": None,
+             "last_run": "Won Chase Feb 2026", "days_off": 28},
+            {"name": "Eyed",              "trainer": "Hughie Morrison",   "jockey": "Sam Twiston-Davies",
+             "odds": "33/1", "age": 8, "form": "572-422",  "rating": 128,
+             # racecard 224-275: most recent 5th
+             "cheltenham_record": None,
+             "last_run": "5th Chase Feb 2026", "days_off": 28},
+            {"name": "Stolen Silver",     "trainer": "Georgina Nicholls", "jockey": "Miss Olive Nicholls",
+             "odds": "50/1", "age": 9, "form": "3P0-46P",  "rating": 126,
+             # racecard P64-0P3 C: most recent P (pulled up)
+             "cheltenham_record": "Cheltenham course winner",
+             "last_run": "Pulled up Chase Jan 2026", "days_off": 42},
         ]
     },
     "day1_race6": {   # Cheltenham Plate Chase (Class 1, 2m4f Hcap Chs, 23 runners, 10 Mar 2026)
