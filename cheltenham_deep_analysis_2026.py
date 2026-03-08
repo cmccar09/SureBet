@@ -765,10 +765,8 @@ RACES_2026 = {
              "cheltenham_record": "Won 2025 Triumph Hurdle",
              "last_run": "Won Grade 2 hurdle Jan 2026", "days_off": 42,
              "ground_pref": "good_to_soft", "dist_class_form": "Won Grade 1 Triumph Hurdle 2m Cheltenham 2025"},
-            {"name": "Ballyburn", "trainer": "Willie Mullins", "jockey": "Patrick Mullins",
-             "odds": "20/1", "age": 8, "form": "3-2-3-74", "rating": 168,
-             "cheltenham_record": "Won 2024 Ballymore Novices Hurdle",
-             "last_run": "3rd Leopardstown Grade 1 Jan 2026", "days_off": 42},
+            # Removed stale "Ballyburn" — confirmed NOT in Champion Hurdle field; runs Stayers Hurdle
+            # Tutti Quanti, Alexei, Anzadam, Workahead are in ADDITIONAL_RUNNERS ("day1_race5")
         ]
     },
     "Supreme Novices Hurdle": {
@@ -796,10 +794,8 @@ RACES_2026 = {
              "odds": "10/1", "age": 5, "form": "2-1-1-1", "rating": 147,
              "cheltenham_record": None,
              "last_run": "Won Grade 2 Jan 2026", "days_off": 42},
-            {"name": "Sober", "trainer": "Philip Hobbs", "jockey": "Richard Johnson",
-             "odds": "16/1", "age": 6, "form": "1-1", "rating": 135,
-             "cheltenham_record": None,
-             "last_run": "Won Novice Hurdle Jan 2026", "days_off": 42},
+            # Removed stale "Sober" entry — correct runner is "Sober Glory" in ADDITIONAL_RUNNERS
+            # (cheltenham_full_fields_2026.py), trainer Philip Hobbs & Johnson White, jockey Ben Jones
         ]
     },
     "Arkle Challenge Trophy": {
@@ -820,10 +816,8 @@ RACES_2026 = {
              "odds": "6/1", "age": 6, "form": "1-1-1-18", "rating": 164,
              "cheltenham_record": "Won 2025 County Hurdle",
              "last_run": "Won Novice Chase Jan 2026", "days_off": 42},
-            {"name": "Romeo Coolio", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
-             "odds": "7/1", "age": 7, "form": "1-1-1-03", "rating": 168,
-             "cheltenham_record": None,
-             "last_run": "Won Grade 1 Novice Chase Jan 2026", "days_off": 42},
+            # Removed stale "Romeo Coolio" — NOT in confirmed 7-runner Betfair field (08/03/2026)
+            # Remaining runners (Steel Ally, Jax Junior, Mambonumberfive, Hansard) in ADDITIONAL_RUNNERS
             # CONFIRMED 08/03/2026: Irish Panther moved to QMCC (swerved Arkle)
         ]
     },
