@@ -77,7 +77,6 @@ EXTRA_RACES = {
     },
     "day1_race6": {   # National Hunt Chase  (Grade 2, 4m, amateur jockeys)
         "entries": [
-            # Backmersackme removed - not in race (declared non-runner 08/03/2026)
             {"name": "Newton Tornado", "trainer": "Rebecca Curtis", "jockey": "Adam Wedge",
              "odds": "6/1", "age": 7, "form": "1-1-2-11", "rating": 145,
              "cheltenham_record": None,
