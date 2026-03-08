@@ -237,12 +237,8 @@ EXTRA_RACES = {
              "last_run": "Won Mares Novice Hurdle Jan 2026", "days_off": 42},
         ]
     },
-    "day2_race7": {   # FBD Hotels NH Flat Race  (INH Flat, 2m1f)
+    "day2_race7": {   # FBD Hotels NH Flat Race  (INH Flat, 2m1f — Irish-trained only)
         "entries": [
-            {"name": "Love Sign d'Aunou", "trainer": "Willie Mullins", "jockey": "Patrick Mullins",
-             "odds": "9/2", "age": 5, "form": "1", "rating": 133,
-             "cheltenham_record": None,
-             "last_run": "Won INH Flat Jan 2026", "days_off": 42},
             {"name": "The Irish Avatar", "trainer": "Willie Mullins", "jockey": "Paul Townend",
              "odds": "5/1", "age": 5, "form": "1", "rating": 125,
              "cheltenham_record": None,
