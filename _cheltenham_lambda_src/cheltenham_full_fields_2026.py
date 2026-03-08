@@ -16,7 +16,7 @@ Race key mapping (matches FESTIVAL_RACES in barrys_config.py):
   day1_race3 → Ultima Handicap Chase
   day1_race4 → Champion Hurdle
   day1_race5 → Mares Hurdle (Close Brothers)
-  day1_race6 → National Hunt Chase
+  day1_race6 → Cheltenham Plate Chase (Class 1, 2m4f Hcap, 23 runners)
   day1_race7 → Conditional Jockeys Handicap Hurdle
   day2_race1 → Ballymore Novices Hurdle
   day2_race2 → Brown Advisory Novices Chase
@@ -368,8 +368,12 @@ RACE_FULL_FIELDS = {
         "Baby Kate", "La Pinsonniere", "Sotchi",
     ],
     "day1_race6": [
-        "Corbetts Cross", "Salvator Mundi", "Stumptown", "Jungle Boogie",
-        "Bright Ruthie", "Nada To Prada",
+        "McLaurey", "Madara", "Will The Wise", "Downmexicoway", "Zurich",
+        "Down Memory Lane", "Booster Bob", "Dee Capo", "No Questions Asked",
+        "OMoore Park", "Peaky Boy", "Guard Your Dreams", "Midnight It Is",
+        "Jungle Boogie", "Jipcot", "Theatre Native", "Riskintheground",
+        "Boombawn", "Grandeur Dame", "Moon Dorange", "Western Zephyr",
+        "Yes Indeed", "Embittered",
     ],
     "day1_race7": [
         "Backmersackme", "Newton Tornado", "Wade Out", "King Of Answers",

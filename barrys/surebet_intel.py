@@ -75,32 +75,125 @@ EXTRA_RACES = {
              "last_run": "3rd Grade 2 Jan 2026", "days_off": 42},
         ]
     },
-    "day1_race6": {   # National Hunt Chase  (Grade 2, 4m, amateur jockeys — CORRECTED 08/03/2026)
+    "day1_race6": {   # Cheltenham Plate Chase (Class 1, 2m4f Hcap Chs, 23 runners, 10 Mar 2026)
+        # NOTE: form strings stored most-recent-first (reversed from racecard UK convention)
+        # VERDICT: Madara (Dan Skelton / Harry Skelton) — C=Cheltenham course winner, eye-catching 2nd Kempton
         "entries": [
-            {"name": "Corbetts Cross",  "trainer": "Gordon Elliott",  "jockey": "Jamie Codd",
-             "odds": "3/1",  "age": 8, "form": "1-1-1-22", "rating": 155,
+            {"name": "McLaurey",           "trainer": "Emmet Mullins",           "jockey": "M. P. Walsh",
+             "odds": "15/2", "age": 7, "form": "473401",  "rating": 155,
+             # racecard 10-4374: most recent = 4th
              "cheltenham_record": None,
-             "last_run": "2nd Grade 1 Novice Hurdle Jan 2026", "days_off": 42},
-            {"name": "Salvator Mundi",  "trainer": "Willie Mullins",  "jockey": "Patrick Mullins",
-             "odds": "7/2",  "age": 7, "form": "1-1-1-21", "rating": 151,
+             "last_run": "Won Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Madara",             "trainer": "Dan Skelton",             "jockey": "Harry Skelton",
+             "odds": "9/2",  "age": 8, "form": "252489",  "rating": 158,
+             # racecard 9/842-52 C (Cheltenham course winner): most recent = 2nd Kempton
+             "cheltenham_record": "Won Cheltenham Plate Chase 2024",
+             "last_run": "2nd Handicap Chase Kempton Feb 2026", "days_off": 35},
+            {"name": "Will The Wise",      "trainer": "Gavin Cromwell",          "jockey": "Keith Donoghue",
+             "odds": "7/1",  "age": 7, "form": "041225",  "rating": 153,
+             # racecard 5-22140 BF: most recent = 0 (tailed off)
              "cheltenham_record": None,
-             "last_run": "Won Novice Chase Feb 2026", "days_off": 28},
-            {"name": "Stumptown",        "trainer": "Gavin Cromwell",  "jockey": "Derek O'Connor",
-             "odds": "8/1",  "age": 8, "form": "1-1-2-11", "rating": 148,
+             "last_run": "Last Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Downmexicoway",      "trainer": "Henry de Bromhead",       "jockey": "D. J. O'Keeffe",
+             "odds": "9/1",  "age": 8, "form": "31210P",  "rating": 150,
+             # racecard P01213: most recent = 3rd
              "cheltenham_record": None,
-             "last_run": "Won Novice Chase Jan 2026", "days_off": 42},
-            {"name": "Jungle Boogie",    "trainer": "Henry de Bromhead","jockey": "Bryan Cooper",
-             "odds": "10/1", "age": 7, "form": "1-2-1-11", "rating": 145,
+             "last_run": "3rd Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Zurich",             "trainer": "Henry de Bromhead",       "jockey": "B. Hayes",
+             "odds": "8/1",  "age": 9, "form": "311035",  "rating": 155,
+             # racecard 530-113 CD: most recent = 3rd
+             "cheltenham_record": "Won Cheltenham 2m4f Chase 2023",
+             "last_run": "3rd Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Down Memory Lane",   "trainer": "Gordon Elliott",          "jockey": "Jack Kennedy",
+             "odds": "10/1", "age": 9, "form": "104231",  "rating": 155,
+             # racecard 1324-01 D: most recent = 1 (WIN)
              "cheltenham_record": None,
-             "last_run": "Won Novice Chase Feb 2026", "days_off": 28},
-            {"name": "Bright Ruthie",    "trainer": "Enda Bolger",     "jockey": "Nina Carberry",
-             "odds": "14/1", "age": 8, "form": "1-3-2-11", "rating": 140,
+             "last_run": "Won Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Booster Bob",        "trainer": "Olly Murphy",             "jockey": "Sean Bowen",
+             "odds": "10/1", "age": 7, "form": "511323",  "rating": 150,
+             # racecard 3231-15 D: most recent = 5th
              "cheltenham_record": None,
-             "last_run": "Won Novice Chase Jan 2026", "days_off": 42},
-            {"name": "Nada To Prada",    "trainer": "Dan Skelton",     "jockey": "Harry Bannister",
-             "odds": "16/1", "age": 7, "form": "2-1-3-11", "rating": 138,
+             "last_run": "5th Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Dee Capo",           "trainer": "Gordon Elliott",          "jockey": "Danny Gilligan",
+             "odds": "10/1", "age": 8, "form": "4U1041",  "rating": 148,
+             # racecard 140-1U4: most recent = 4th
              "cheltenham_record": None,
-             "last_run": "Won Novice Chase Feb 2026", "days_off": 28},
+             "last_run": "4th Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "No Questions Asked", "trainer": "Ben Pauling",             "jockey": "Ben Jones",
+             "odds": "12/1", "age": 7, "form": "132101",  "rating": 148,
+             # racecard 10-1231: most recent = 1 (WIN)
+             "cheltenham_record": None,
+             "last_run": "Won Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "OMoore Park",        "trainer": "Willie Mullins",          "jockey": "S. F. O'Keeffe",
+             "odds": "12/1", "age": 8, "form": "050202",  "rating": 148,
+             # racecard 20-2050 D: most recent = 0 (last)
+             "cheltenham_record": None,
+             "last_run": "Last Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Peaky Boy",          "trainer": "Jonjo O'Neill",           "jockey": "Jonjo O'Neill Jr.",
+             "odds": "16/1", "age": 8, "form": "F33111",  "rating": 148,
+             # racecard 11/133-F CD: most recent = Fell; two wins in recent form
+             "cheltenham_record": "Won Cheltenham 2m4f Chase 2023",
+             "last_run": "Fell Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Guard Your Dreams",  "trainer": "Nigel Twiston-Davies",    "jockey": "Sam Twiston-Davies",
+             "odds": "16/1", "age": 8, "form": "12F474",  "rating": 145,
+             # racecard 474F-21 C+D: most recent = 1 (WIN)
+             "cheltenham_record": "Won Cheltenham 2m4f Chase 2024",
+             "last_run": "Won Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Midnight It Is",     "trainer": "Gavin Cromwell",          "jockey": "Sean Flanagan",
+             "odds": "40/1", "age": 9, "form": "790383",  "rating": 142,
+             # racecard 383-097: most recent = 7th
+             "cheltenham_record": None,
+             "last_run": "7th Handicap Chase Jan 2026", "days_off": 42},
+            {"name": "Jungle Boogie",      "trainer": "Venetia Williams",        "jockey": "Charlie Deutsch",
+             "odds": "25/1", "age": 7, "form": "P7P161",  "rating": 140,
+             # racecard 16/1P-7P D: most recent = P (pulled up)
+             "cheltenham_record": None,
+             "last_run": "P Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Jipcot",             "trainer": "Jonjo O'Neill",           "jockey": "Kielan Woods",
+             "odds": "25/1", "age": 7, "form": "413P04",  "rating": 140,
+             # racecard 40P-314 D+BF: most recent = 4th
+             "cheltenham_record": None,
+             "last_run": "4th Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Theatre Native",     "trainer": "Henry de Bromhead",       "jockey": "M. P. O'Connor",
+             "odds": "25/1", "age": 8, "form": "693012",  "rating": 142,
+             # racecard 21-0396 CD: most recent = 6th
+             "cheltenham_record": "Won Cheltenham 2m4f Chase 2022",
+             "last_run": "6th Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Riskintheground",    "trainer": "Dan Skelton",             "jockey": "Charlie Todd",
+             "odds": "25/1", "age": 8, "form": "940691",  "rating": 140,
+             # racecard 196049 CD: most recent = 9th
+             "cheltenham_record": "Won Cheltenham 2m4f 2023",
+             "last_run": "9th Handicap Chase Feb 2026", "days_off": 28},
+            {"name": "Boombawn",           "trainer": "Dan Skelton",             "jockey": "Tristan Durrell",
+             "odds": "33/1", "age": 7, "form": "083445",  "rating": 137,
+             # racecard 5-44380 D: most recent = 0 (last)
+             "cheltenham_record": None,
+             "last_run": "Last Handicap Chase Feb 2026", "days_off": 42},
+            {"name": "Grandeur Dame",      "trainer": "Alan King",               "jockey": "Tom Bellamy",
+             "odds": "40/1", "age": 8, "form": "P30FP0",  "rating": 135,
+             # racecard 0P-F03P: most recent = P (pulled up)
+             "cheltenham_record": None,
+             "last_run": "P Handicap Chase Jan 2026", "days_off": 42},
+            {"name": "Moon Dorange",       "trainer": "John McConnell",          "jockey": "Callum Pritchard",
+             "odds": "40/1", "age": 7, "form": "076500",  "rating": 135,
+             # racecard 005670 CD: most recent = 0 (last)
+             "cheltenham_record": "Won Cheltenham 2m4f Chase 2024",
+             "last_run": "Last Handicap Chase Jan 2026", "days_off": 56},
+            {"name": "Western Zephyr",     "trainer": "Mickey Bowen",            "jockey": "Shane Fenelon",
+             "odds": "40/1", "age": 7, "form": "2P0321",  "rating": 132,
+             # racecard 1230P-2: most recent = 2nd
+             "cheltenham_record": None,
+             "last_run": "2nd Handicap Chase Jan 2026", "days_off": 42},
+            {"name": "Yes Indeed",         "trainer": "Martin Keighley",         "jockey": "Freddie Keighley",
+             "odds": "50/1", "age": 8, "form": "43P11P",  "rating": 130,
+             # racecard P11-P34: most recent = 4th
+             "cheltenham_record": None,
+             "last_run": "4th Handicap Chase Jan 2026", "days_off": 42},
+            {"name": "Embittered",         "trainer": "Syd Hosie",               "jockey": "Paddy Hanlon",
+             "odds": "80/1", "age": 8, "form": "72P917",  "rating": 128,
+             # racecard 719P27 D: most recent = 7th
+             "cheltenham_record": None,
+             "last_run": "7th Handicap Chase Jan 2026", "days_off": 42},
         ]
     },
     "day1_race7": {   # Challenge Cup Chase (3m6f Nov Hcap Chs, Class 2, 17 runners, 10 Mar 2026)

@@ -1236,18 +1236,20 @@ def analyze_age_ratings():
 JOCKEY_SCORES = {
     "Paul Townend":       20,
     "Nico de Boinville":  15,
+    "Harry Skelton":      12,   # Added: multiple British champion jump jockey
     "Jack Kennedy":       12,
     "Rachael Blackmore":  12,
-    "Donagh Meyler":       8,   # Added: Emmet Mullins' stable jockey, Festival winner
+    "Donagh Meyler":       8,
     "Mark Walsh":          8,
     "Danny Mullins":       8,
     "Patrick Mullins":     8,
     "Davy Russell":        8,
-    "Sean Flanagan":        6,   # Added: top Irish jump jockey
+    "Sean Flanagan":        6,
     "Harry Cobden":        6,
     "Tom Cannon":          6,
     "Aidan Coleman":       6,
     "Keith Donoghue":      6,
+    "M. P. Walsh":         6,   # Added: Emmet Mullins conditional/amateur, rides at festivals
 }
 
 ELITE_COMBOS = {
