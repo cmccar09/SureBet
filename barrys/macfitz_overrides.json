@@ -26,6 +26,16 @@
       "active": false,
       "_deactivated": "Grange Walk not entered for Cheltenham (Betfair ANTEPOST: absent 2026-03-06). Both entries revert to highest remaining scorer (Down Memory Lane)."
     },
+    "Cheltenham Plate Chase": {
+      "macfitz_horse": "Madara",
+      "reason": "4pt gap (98 vs 94) — Madara is the defending champion of this exact race (Won 2024 Cheltenham Plate Chase) at 5/1; Down Memory Lane is a first-timer at 18/1. Festival specialist override justified.",
+      "surebet_horse": "Down Memory Lane",
+      "surebet_score": 98,
+      "macfitz_score": 94,
+      "gap": 4,
+      "decided": "2026-03-08",
+      "active": true
+    },
     "Cheltenham Gold Cup": {
       "macfitz_horse": "Fastorslow",
       "reason": "5pt gap (164 vs 159) - Fastorslow was 2025 Gold Cup runner-up, outstanding festival form justifies the split on the biggest race",
