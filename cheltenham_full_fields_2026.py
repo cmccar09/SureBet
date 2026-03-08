@@ -85,12 +85,40 @@ ADDITIONAL_RUNNERS = {
          "cheltenham_record": None},
     ],
 
-    "day1_race2": [  # Arkle Challenge Trophy Chase — additional runners (TBC: full field not confirmed)
-        # Kopek Des Bordes is the main pick; below are supplementary where known
+    "day1_race2": [  # Arkle Challenge Trophy Chase — confirmed 7 runners from Betfair
+        # Kopek Des Bordes is in RACES_2026_MAP / EXTRA_RACES; remaining field:
+        {"name": "Lulamba",           "trainer": "Willie Mullins",   "jockey": "Paul Townend",
+         "odds": "10/1",  "age": 7, "form": "", "rating": 155, "cheltenham_record": None},
+        {"name": "Kargese",           "trainer": "Willie Mullins",   "jockey": "Mark Walsh",
+         "odds": "10/1",  "age": 6, "form": "", "rating": 150, "cheltenham_record": None},
+        {"name": "Steel Ally",        "trainer": "Dan Skelton",      "jockey": "Harry Skelton",
+         "odds": "14/1",  "age": 7, "form": "", "rating": 149, "cheltenham_record": None},
+        {"name": "Jax Junior",        "trainer": "Gordon Elliott",   "jockey": "Jack Kennedy",
+         "odds": "20/1",  "age": 7, "form": "", "rating": 146, "cheltenham_record": None},
+        {"name": "Mambonumberfive",   "trainer": "Gordon Elliott",   "jockey": "Jack Kennedy",
+         "odds": "33/1",  "age": 7, "form": "", "rating": 138, "cheltenham_record": None},
+        {"name": "Hansard",           "trainer": "Nicky Henderson",  "jockey": "Nico de Boinville",
+         "odds": "100/1", "age": 8, "form": "", "rating": 130, "cheltenham_record": None},
     ],
 
-    "day1_race5": [  # Champion Hurdle — additional runners (TBC: full field not confirmed)
-        # Lossiemouth is the main pick; below are supplementary where known
+    "day1_race5": [  # Champion Hurdle — confirmed 9 runners from Betfair
+        # Lossiemouth is top pick; full confirmed field:
+        {"name": "The New Lion",       "trainer": "Gordon Elliott",   "jockey": "Jack Kennedy",
+         "odds": "8/1",   "age": 6, "form": "", "rating": 165, "cheltenham_record": None},
+        {"name": "Brighterdaysahead", "trainer": "Willie Mullins",   "jockey": "Paul Townend",
+         "odds": "12/1",  "age": 6, "form": "", "rating": 162, "cheltenham_record": None},
+        {"name": "Golden Ace",        "trainer": "Willie Mullins",   "jockey": "Mark Walsh",
+         "odds": "14/1",  "age": 5, "form": "", "rating": 158, "cheltenham_record": None},
+        {"name": "Poniros",           "trainer": "Nicky Henderson",  "jockey": "Nico de Boinville",
+         "odds": "16/1",  "age": 7, "form": "", "rating": 155, "cheltenham_record": None},
+        {"name": "Tutti Quanti",      "trainer": "Henry de Bromhead","jockey": "Rachael Blackmore",
+         "odds": "20/1",  "age": 7, "form": "", "rating": 152, "cheltenham_record": None},
+        {"name": "Alexei",            "trainer": "Nicky Henderson",  "jockey": "Nico de Boinville",
+         "odds": "25/1",  "age": 6, "form": "", "rating": 150, "cheltenham_record": None},
+        {"name": "Anzadam",           "trainer": "Willie Mullins",   "jockey": "Patrick Mullins",
+         "odds": "33/1",  "age": 6, "form": "", "rating": 148, "cheltenham_record": None},
+        {"name": "Workahead",         "trainer": "Henry de Bromhead","jockey": "Jack Kennedy",
+         "odds": "100/1", "age": 8, "form": "", "rating": 140, "cheltenham_record": None},
     ],
 
     "day3_race3": [  # Close Brothers Mares' Hurdle  (moved to Day 3 14:40)
@@ -335,8 +363,9 @@ RACE_FULL_FIELDS = {
         "Baron Noir", "Koktail Brut", "Too Bossy For Us",
         "Eachtotheirown", "Sageborough",
     ],
-    "day1_race2": [  # Arkle Challenge Trophy Chase — full field TBC
-        "Kopek Des Bordes", "Lulamba", "Romeo Coolio", "Kargese", "Irish Panther",
+    "day1_race2": [  # Arkle Challenge Trophy Chase — confirmed 7 runners (Betfair 08 Mar 2026)
+        "Kopek Des Bordes", "Lulamba", "Kargese", "Steel Ally",
+        "Jax Junior", "Mambonumberfive", "Hansard",
     ],
     "day1_race3": [   # Fred Winter Handicap Hurdle (Class 1, 2m Hcap Hrd, 24 runners)
         "Saratoga", "Winston Junior", "Manlaga", "Munsif", "Glen To Glen",
@@ -345,12 +374,16 @@ RACE_FULL_FIELDS = {
         "Pourquoi Pas Papa", "Harwa", "Macktoad", "Quinta Do Lago",
         "Mino Des Mottes", "Hardy Stuff", "Paddockwood", "Lord", "Bandjo",
     ],
-    "day1_race4": [  # Ultima Handicap Chase — full field TBC
-        "Jagwar", "Poniros",
+    "day1_race4": [  # Ultima Handicap Chase — confirmed 22 runners (Betfair 08 Mar 2026)
+        "Jagwar", "Iroko", "Handstands", "Myretown", "Quebecois", "Johnnywho",
+        "Hyland", "Konfusion", "The Short Go", "Knight Of Allen", "Blaze The Way",
+        "Imperial Saint", "Resplendent Grey", "The Doyen Chief", "Leave of Absence",
+        "Search For Glory", "Blow Your Wad", "Margarets Legacy", "Patter Merchant",
+        "Eyed", "Filanderer", "Stolen Silver",
     ],
-    "day1_race5": [  # Champion Hurdle — full field TBC
-        "Lossiemouth", "State Man", "Constitution Hill", "Brighterdaysahead",
-        "Ballyburn", "Impaire Et Passe",
+    "day1_race5": [  # Champion Hurdle — confirmed 9 runners (Betfair 08 Mar 2026)
+        "Lossiemouth", "The New Lion", "Brighterdaysahead", "Golden Ace",
+        "Poniros", "Tutti Quanti", "Alexei", "Anzadam", "Workahead",
     ],
     "day1_race6": [
         "McLaurey", "Madara", "Will The Wise", "Downmexicoway", "Zurich",
