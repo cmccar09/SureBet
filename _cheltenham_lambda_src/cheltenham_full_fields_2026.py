@@ -49,18 +49,39 @@ ADDITIONAL_RUNNERS = {
 
     # ── DAY 1 ─────────────────────────────────────────────────────────────────
 
-    "day1_race1": [  # Supreme Novices Hurdle
-        {"name": "Idaho Sun",        "trainer": "Willie Mullins",    "jockey": "Mark Walsh",
-         "odds": "14/1", "age": 5,  "form": "1-1-1",  "rating": 138,
+    "day1_race1": [  # Supreme Novices Hurdle — confirmed 12 runners
+        {"name": "Mighty Park",      "trainer": "Willie Mullins",          "jockey": "Mark Walsh",
+         "odds": "10/3",  "age": 5, "form": "1",        "rating": 148,
          "cheltenham_record": None},
-        {"name": "Leader D'Allier",  "trainer": "Thomas Fourcy",     "jockey": "TBD",
-         "odds": "14/1", "age": 5,  "form": "1-1-2",  "rating": 137,
+        {"name": "Talk The Talk",    "trainer": "Joseph Patrick O'Brien", "jockey": "J. J. Slevin",
+         "odds": "4/1",   "age": 5, "form": "2-11F1",  "rating": 145,
          "cheltenham_record": None},
-        {"name": "Baron Noir",       "trainer": "Paul Nicholls",     "jockey": "Harry Cobden",
-         "odds": "25/1", "age": 6,  "form": "1-1-3",  "rating": 132,
+        {"name": "El Cairos",        "trainer": "Gordon Elliott",          "jockey": "Jack Kennedy",
+         "odds": "11/2",  "age": 5, "form": "15-2F1",  "rating": 142,
          "cheltenham_record": None},
-        {"name": "Sortudo",          "trainer": "Willie Mullins",    "jockey": "Patrick Mullins",
-         "odds": "33/1", "age": 5,  "form": "1-2",    "rating": 129,
+        {"name": "Mydaddypaddy",     "trainer": "Dan Skelton",             "jockey": "Harry Skelton",
+         "odds": "13/2",  "age": 6, "form": "1-112",   "rating": 140,
+         "cheltenham_record": None},
+        {"name": "Sober Glory",      "trainer": "Philip Hobbs & Johnson White", "jockey": "Ben Jones",
+         "odds": "12/1",  "age": 6, "form": "11-1411", "rating": 133,
+         "cheltenham_record": None},
+        {"name": "Leader Dallier",   "trainer": "Willie Mullins",          "jockey": "P. Townend",
+         "odds": "10/1",  "age": 5, "form": "1-11121", "rating": 145,
+         "cheltenham_record": None},
+        {"name": "Baron Noir",       "trainer": "Alan King",               "jockey": "Tom Bellamy",
+         "odds": "33/1",  "age": 6, "form": "13-1211", "rating": 130,
+         "cheltenham_record": None},
+        {"name": "Koktail Brut",     "trainer": "Gordon Elliott",          "jockey": "Danny Gilligan",
+         "odds": "66/1",  "age": 5, "form": "3-51174", "rating": 118,
+         "cheltenham_record": None},
+        {"name": "Too Bossy For Us", "trainer": "Willie Mullins",          "jockey": "Harry Cobden",
+         "odds": "40/1",  "age": 5, "form": "7-51",    "rating": 122,
+         "cheltenham_record": None},
+        {"name": "Eachtotheirown",   "trainer": "Barry Connell",           "jockey": "Sean Flanagan",
+         "odds": "33/1",  "age": 6, "form": "22-151",  "rating": 120,
+         "cheltenham_record": None},
+        {"name": "Sageborough",      "trainer": "Paul Nolan",              "jockey": "S. F. O'Keeffe",
+         "odds": "100/1", "age": 6, "form": "17",       "rating": 110,
          "cheltenham_record": None},
     ],
 
@@ -343,9 +364,10 @@ def extend_race_entries(race_key: str, base_entries: list) -> list:
 # This is the authoritative runner list per race as of 2026-03-05
 RACE_FULL_FIELDS = {
     "day1_race1": [
-        "Old Park Star", "Talk The Talk", "Mighty Park", "El Cairos",
-        "Mydaddypaddy", "Idaho Sun", "Leader D'Allier",
-        "Sober", "Baron Noir", "Sortudo",
+        "Old Park Star", "Mighty Park", "Talk The Talk", "El Cairos",
+        "Mydaddypaddy", "Sober Glory", "Leader Dallier",
+        "Baron Noir", "Koktail Brut", "Too Bossy For Us",
+        "Eachtotheirown", "Sageborough",
     ],
     "day1_race2": [
         "Kopek Des Bordes", "Lulamba", "Romeo Coolio", "Kargese",
