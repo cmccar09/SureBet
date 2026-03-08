@@ -33,38 +33,38 @@ REGION          = "eu-west-1"
 # ── race catalogue (defines display order + metadata) ─────────────────────────
 # Each entry: (day_num, time, db_name, display_name, grade_css, grade_label, day_label, day_date)
 RACES = [
-    # Day 1
-    (1, "13:20", "Sky Bet Supreme Novices Hurdle",       "Sky Bet Supreme Novices Hurdle",   "g1",   "G1",     "Champion Day",          "Tuesday 10 March 2026"),
-    (1, "14:00", "Arkle Challenge Trophy Chase",         "Arkle Challenge Trophy Chase",     "g1",   "G1",     "Champion Day",          "Tuesday 10 March 2026"),
-    (1, "14:40", "Fred Winter Handicap Hurdle",          "Fred Winter Handicap Hurdle",      "hcap", "Hcap",   "Champion Day",          "Tuesday 10 March 2026"),
-    (1, "15:20", "Ultima Handicap Chase",                "Ultima Handicap Chase",            "hcap", "Hcap",   "Champion Day",          "Tuesday 10 March 2026"),
-    (1, "16:00", "Unibet Champion Hurdle",               "Unibet Champion Hurdle",           "g1",   "G1",     "Champion Day",          "Tuesday 10 March 2026"),
-    (1, "16:40", "Cheltenham Plate Chase",               "Cheltenham Plate Chase",           "hcap", "Hcap",   "Champion Day",          "Tuesday 10 March 2026"),
-    (1, "17:20", "Challenge Cup Chase",                  "Challenge Cup Chase",              "hcap", "Hcap",   "Champion Day",          "Tuesday 10 March 2026"),
-    # Day 2
-    (2, "13:20", "Ballymore Novices Hurdle",             "Ballymore Novices Hurdle",         "g1",   "G1",     "Ladies Day",            "Wednesday 11 March 2026"),
-    (2, "14:00", "Brown Advisory Novices Chase",         "Brown Advisory Novices Chase",     "g1",   "G1",     "Ladies Day",            "Wednesday 11 March 2026"),
-    (2, "14:40", "Coral Cup Handicap Hurdle",            "Coral Cup Handicap Hurdle",        "hcap", "Hcap",   "Ladies Day",            "Wednesday 11 March 2026"),
-    (2, "15:20", "Queen Mother Champion Chase",          "Queen Mother Champion Chase",      "g1",   "G1",     "Ladies Day",            "Wednesday 11 March 2026"),
-    (2, "16:00", "Glenfarclas Chase Cross Country",      "Glenfarclas Cross Country Chase",  "g2",   "G2",     "Ladies Day",            "Wednesday 11 March 2026"),
-    (2, "16:40", "Dawn Run Mares Novices Hurdle",        "Dawn Run Mares Novices Hurdle",    "g2",   "G2",     "Ladies Day",            "Wednesday 11 March 2026"),
-    (2, "17:20", "FBD Hotel & Resorts NH Flat Race",     "FBD Hotels NH Flat Race",          "flat", "Flat",   "Ladies Day",            "Wednesday 11 March 2026"),
-    # Day 3
-    (3, "13:20", "Turners Novices Chase",                "Turners Novices Chase",            "g1",   "G1",     "St Patrick's Thursday", "Thursday 12 March 2026"),
-    (3, "14:00", "Pertemps Final Handicap Hurdle",       "Pertemps Final Handicap Hurdle",   "hcap", "Hcap",   "St Patrick's Thursday", "Thursday 12 March 2026"),
-    (3, "14:40", "Ryanair Chase",                        "Ryanair Chase",                    "g1",   "G1",     "St Patrick's Thursday", "Thursday 12 March 2026"),
-    (3, "15:20", "Paddy Power Stayers Hurdle",           "Paddy Power Stayers Hurdle",       "g1",   "G1",     "St Patrick's Thursday", "Thursday 12 March 2026"),
-    (3, "16:00", "Plate Handicap Chase",                 "Plate Handicap Chase",             "hcap", "Hcap",   "St Patrick's Thursday", "Thursday 12 March 2026"),
-    (3, "16:40", "Boodles Juvenile Handicap Hurdle",     "Boodles Juvenile Handicap Hurdle", "hcap", "Hcap",   "St Patrick's Thursday", "Thursday 12 March 2026"),
-    (3, "17:20", "Martin Pipe Conditional Jockeys Hurdle", "Martin Pipe Conditional Jockeys","hcap", "Hcap",   "St Patrick's Thursday", "Thursday 12 March 2026"),
-    # Day 4
-    (4, "13:20", "JCB Triumph Hurdle",                   "JCB Triumph Hurdle",               "g1",   "G1",     "Gold Cup Day",          "Friday 13 March 2026"),
-    (4, "14:00", "County Handicap Hurdle",               "County Handicap Hurdle",           "hcap", "Hcap",   "Gold Cup Day",          "Friday 13 March 2026"),
-    (4, "14:40", "Albert Bartlett Novices Hurdle",       "Albert Bartlett Novices Hurdle",   "g1",   "G1",     "Gold Cup Day",          "Friday 13 March 2026"),
-    (4, "15:20", "Cheltenham Gold Cup",                  "Cheltenham Gold Cup",              "g1",   "G1",     "Gold Cup Day",          "Friday 13 March 2026"),
-    (4, "16:00", "Grand Annual Handicap Chase",          "Grand Annual Handicap Chase",      "hcap", "Hcap",   "Gold Cup Day",          "Friday 13 March 2026"),
-    (4, "16:40", "Champion Standard Open NH Flat Race",  "Champion Open NH Flat Race",       "flat", "Flat",   "Gold Cup Day",          "Friday 13 March 2026"),
-    (4, "17:20", "St James Place Foxhunter Chase",       "St James Place Foxhunter Chase",   "hunt", "Hunter", "Gold Cup Day",          "Friday 13 March 2026"),
+    # Day 1 — Champion Day (Tuesday 10 March 2026)
+    (1, "13:20", "Sky Bet Supreme Novices' Hurdle",    "Sky Bet Supreme Novices' Hurdle",  "g1",   "G1",     "Champion Day",          "Tuesday 10 March 2026"),
+    (1, "14:00", "Arkle Challenge Trophy Chase",       "Arkle Challenge Trophy Chase",     "g1",   "G1",     "Champion Day",          "Tuesday 10 March 2026"),
+    (1, "14:40", "Fred Winter Handicap Hurdle",        "Fred Winter Handicap Hurdle",      "hcap", "Hcap",   "Champion Day",          "Tuesday 10 March 2026"),
+    (1, "15:20", "Ultima Handicap Chase",              "Ultima Handicap Chase",            "hcap", "Hcap",   "Champion Day",          "Tuesday 10 March 2026"),
+    (1, "16:00", "Unibet Champion Hurdle",             "Unibet Champion Hurdle",           "g1",   "G1",     "Champion Day",          "Tuesday 10 March 2026"),
+    (1, "16:40", "Cheltenham Plate Chase",             "Cheltenham Plate Chase",           "hcap", "Hcap",   "Champion Day",          "Tuesday 10 March 2026"),
+    (1, "17:20", "Challenge Cup Chase",                "Challenge Cup Chase",              "hcap", "Hcap",   "Champion Day",          "Tuesday 10 March 2026"),
+    # Day 2 — Ladies Day (Wednesday 11 March 2026)
+    (2, "13:20", "Turner's Novices' Hurdle",           "Turner's Novices' Hurdle",         "g1",   "G1",     "Ladies Day",            "Wednesday 11 March 2026"),
+    (2, "14:00", "Brown Advisory Novices' Chase",      "Brown Advisory Novices' Chase",    "g1",   "G1",     "Ladies Day",            "Wednesday 11 March 2026"),
+    (2, "14:40", "BetMGM Cup Hurdle",                  "BetMGM Cup Hurdle",                "hcap", "Hcap",   "Ladies Day",            "Wednesday 11 March 2026"),
+    (2, "15:20", "Glenfarclas Cross Country Chase",    "Glenfarclas Cross Country Chase",  "g2",   "G2",     "Ladies Day",            "Wednesday 11 March 2026"),
+    (2, "16:00", "Queen Mother Champion Chase",        "Queen Mother Champion Chase",      "g1",   "G1",     "Ladies Day",            "Wednesday 11 March 2026"),
+    (2, "16:40", "Grand Annual Handicap Chase",        "Grand Annual Handicap Chase",      "hcap", "Hcap",   "Ladies Day",            "Wednesday 11 March 2026"),
+    (2, "17:20", "Champion Bumper",                    "Champion Bumper",                  "flat", "Flat",   "Ladies Day",            "Wednesday 11 March 2026"),
+    # Day 3 — St Patrick's Thursday (Thursday 12 March 2026)
+    (3, "13:20", "Ryanair Mares' Novices' Hurdle",     "Ryanair Mares' Novices' Hurdle",   "g1",   "G1",     "St Patrick's Thursday", "Thursday 12 March 2026"),
+    (3, "14:00", "Jack Richards Novices' Chase",       "Jack Richards Novices' Chase",     "g1",   "G1",     "St Patrick's Thursday", "Thursday 12 March 2026"),
+    (3, "14:40", "Close Brothers Mares' Hurdle",       "Close Brothers Mares' Hurdle",     "g1",   "G1",     "St Patrick's Thursday", "Thursday 12 March 2026"),
+    (3, "15:20", "Paddy Power Stayers' Hurdle",        "Paddy Power Stayers' Hurdle",      "g1",   "G1",     "St Patrick's Thursday", "Thursday 12 March 2026"),
+    (3, "16:00", "Ryanair Chase",                      "Ryanair Chase",                    "g1",   "G1",     "St Patrick's Thursday", "Thursday 12 March 2026"),
+    (3, "16:40", "Pertemps Handicap Hurdle",           "Pertemps Handicap Hurdle",         "hcap", "Hcap",   "St Patrick's Thursday", "Thursday 12 March 2026"),
+    (3, "17:20", "Kim Muir Handicap Chase",            "Kim Muir Handicap Chase",          "hcap", "Hcap",   "St Patrick's Thursday", "Thursday 12 March 2026"),
+    # Day 4 — Gold Cup Day (Friday 13 March 2026)
+    (4, "13:20", "JCB Triumph Hurdle",                 "JCB Triumph Hurdle",               "g1",   "G1",     "Gold Cup Day",          "Friday 13 March 2026"),
+    (4, "14:00", "County Handicap Hurdle",             "County Handicap Hurdle",           "hcap", "Hcap",   "Gold Cup Day",          "Friday 13 March 2026"),
+    (4, "14:40", "Albert Bartlett Novices' Hurdle",    "Albert Bartlett Novices' Hurdle",  "g1",   "G1",     "Gold Cup Day",          "Friday 13 March 2026"),
+    (4, "15:20", "Mrs Paddy Power Mares' Chase",       "Mrs Paddy Power Mares' Chase",     "g2",   "G2",     "Gold Cup Day",          "Friday 13 March 2026"),
+    (4, "16:00", "Cheltenham Gold Cup",                "Cheltenham Gold Cup",              "g1",   "G1",     "Gold Cup Day",          "Friday 13 March 2026"),
+    (4, "16:40", "St James's Place Hunters' Chase",    "St James's Place Hunters' Chase",  "hunt", "Hunter", "Gold Cup Day",          "Friday 13 March 2026"),
+    (4, "17:20", "Martin Pipe Handicap Hurdle",        "Martin Pipe Handicap Hurdle",      "hcap", "Hcap",   "Gold Cup Day",          "Friday 13 March 2026"),
 ]
 
 # Known Cheltenham course winners (shown as notes in MacFitz entry)

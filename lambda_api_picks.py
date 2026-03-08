@@ -751,6 +751,16 @@ def get_cheltenham_picks_lambda(headers, event):
     yest_items  = scan_date(yesterday)
     all_picks   = list(today_items.values()) or list(yest_items.values())
 
+    # Deduplicate by (day, race_time) — keep the record with the most all_horses
+    # Prevents duplicate panels when race was saved under two different name variants
+    seen_slots: dict = {}
+    for item in all_picks:
+        slot = (item.get('day', ''), item.get('race_time', ''))
+        existing = seen_slots.get(slot)
+        if not existing or len(item.get('all_horses', [])) > len(existing.get('all_horses', [])):
+            seen_slots[slot] = item
+    all_picks = list(seen_slots.values())
+
     DAY_ORDER = ['Tuesday_10_March', 'Wednesday_11_March', 'Thursday_12_March', 'Friday_13_March']
     days = {}
     for item in all_picks:
