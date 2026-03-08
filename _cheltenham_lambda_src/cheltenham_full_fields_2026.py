@@ -85,46 +85,12 @@ ADDITIONAL_RUNNERS = {
          "cheltenham_record": None},
     ],
 
-    "day1_race2": [  # Arkle Challenge Trophy Chase
-        {"name": "Steel Ally",         "trainer": "Dan Skelton",       "jockey": "Harry Skelton",
-         "odds": "16/1", "age": 7, "form": "1-2-1-21", "rating": 150,
-         "cheltenham_record": None},
-        {"name": "Kappa Jy Pyke",      "trainer": "Gordon Elliott",    "jockey": "Jack Kennedy",
-         "odds": "16/1", "age": 7, "form": "1-1-3-21", "rating": 146,
-         "cheltenham_record": None},
-        {"name": "Jax Junior",         "trainer": "Gordon Elliott",    "jockey": "Jack Kennedy",
-         "odds": "33/1", "age": 7, "form": "1-2-1-32", "rating": 143,
-         "cheltenham_record": None},
-        {"name": "Sixmilebridge",      "trainer": "Willie Mullins",    "jockey": "Mark Walsh",
-         "odds": "40/1", "age": 7, "form": "1-1-1-42", "rating": 140,
-         "cheltenham_record": None},
-        {"name": "July Flower",        "trainer": "Thomas Mullins",    "jockey": "Patrick Mullins",
-         "odds": "40/1", "age": 6, "form": "1-1-3",    "rating": 138,
-         "cheltenham_record": None},
-        {"name": "No Questions Asked", "trainer": "Henry de Bromhead", "jockey": "Mark Walsh",
-         "odds": "50/1", "age": 8, "form": "2-3-1-23", "rating": 136,
-         "cheltenham_record": None},
-        {"name": "Mambonumberfive",    "trainer": "Gordon Elliott",    "jockey": "Jack Kennedy",
-         "odds": "50/1", "age": 7, "form": "1-1-2-P3", "rating": 135,
-         "cheltenham_record": None},
-        {"name": "Hansard",            "trainer": "Nicky Henderson",   "jockey": "Nico de Boinville",
-         "odds": "100/1", "age": 8, "form": "3-1-2-P4", "rating": 130,
-         "cheltenham_record": None},
-        {"name": "Break My Soul",      "trainer": "Henry de Bromhead", "jockey": "Mark Walsh",
-         "odds": "125/1", "age": 7, "form": "1-1-P-23", "rating": 128,
-         "cheltenham_record": None},
+    "day1_race2": [  # Arkle Challenge Trophy Chase — additional runners (TBC: full field not confirmed)
+        # Kopek Des Bordes is the main pick; below are supplementary where known
     ],
 
-    "day1_race5": [  # Champion Hurdle
-        {"name": "Alexei",    "trainer": "Nicky Henderson",  "jockey": "Nico de Boinville",
-         "odds": "16/1", "age": 6, "form": "4-1-1-21", "rating": 164,
-         "cheltenham_record": None},
-        {"name": "Anzadam",   "trainer": "Willie Mullins",   "jockey": "Patrick Mullins",
-         "odds": "20/1", "age": 6, "form": "1-1-1-61", "rating": 159,
-         "cheltenham_record": None},
-        {"name": "Workahead", "trainer": "Henry de Bromhead","jockey": "Jack Kennedy",
-         "odds": "100/1", "age": 8, "form": "4-2-1-11", "rating": 155,
-         "cheltenham_record": None},
+    "day1_race5": [  # Champion Hurdle — additional runners (TBC: full field not confirmed)
+        # Lossiemouth is the main pick; below are supplementary where known
     ],
 
     "day3_race3": [  # Close Brothers Mares' Hurdle  (moved to Day 3 14:40)
@@ -369,11 +335,8 @@ RACE_FULL_FIELDS = {
         "Baron Noir", "Koktail Brut", "Too Bossy For Us",
         "Eachtotheirown", "Sageborough",
     ],
-    "day1_race2": [
-        "Kopek Des Bordes", "Lulamba", "Romeo Coolio", "Kargese",
-        "Irish Panther", "Steel Ally", "Kappa Jy Pyke", "Jax Junior",
-        "Sixmilebridge", "July Flower", "No Questions Asked",
-        "Mambonumberfive", "Hansard", "Break My Soul",
+    "day1_race2": [  # Arkle Challenge Trophy Chase — full field TBC
+        "Kopek Des Bordes", "Lulamba", "Romeo Coolio", "Kargese", "Irish Panther",
     ],
     "day1_race3": [   # Fred Winter Handicap Hurdle (Class 1, 2m Hcap Hrd, 24 runners)
         "Saratoga", "Winston Junior", "Manlaga", "Munsif", "Glen To Glen",
@@ -382,16 +345,12 @@ RACE_FULL_FIELDS = {
         "Pourquoi Pas Papa", "Harwa", "Macktoad", "Quinta Do Lago",
         "Mino Des Mottes", "Hardy Stuff", "Paddockwood", "Lord", "Bandjo",
     ],
-    "day1_race4": [
-        "The New Lion", "Brighterdaysahead", "Golden Ace",
-        "Poniros", "Alexei", "Anzadam", "Workahead",
+    "day1_race4": [  # Ultima Handicap Chase — full field TBC
+        "Jagwar", "Poniros",
     ],
-    "day1_race5": [
-        "Jade De Grugy", "Feet Of A Dancer",
-        "Golden Ace", "Take No Chances", "Jetara", "Dream On Baby",
-        "Nurse Susan", "Park Princess", "Kateira", "Lavida Adiva",
-        "Listentoyourheart", "Sunset Marquesa", "That'll Do Moss", "Siog Geal",
-        "Baby Kate", "La Pinsonniere", "Sotchi",
+    "day1_race5": [  # Champion Hurdle — full field TBC
+        "Lossiemouth", "State Man", "Constitution Hill", "Brighterdaysahead",
+        "Ballyburn", "Impaire Et Passe",
     ],
     "day1_race6": [
         "McLaurey", "Madara", "Will The Wise", "Downmexicoway", "Zurich",
