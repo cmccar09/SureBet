@@ -13,8 +13,9 @@ Usage:
     python save_cheltenham_picks.py --today    # Print today's picks only (no save)
 """
 
-import sys, os
+import sys, os, json
 import boto3
+import requests
 import argparse
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -290,10 +291,136 @@ RP_LIVE_ODDS = {
     # "waterford whispers":     "12/1",  # non-runner 08/03/2026
 }
 
+# ── Module-level cache – populated once per Lambda invocation ────────────────
+_BETFAIR_LIVE_ODDS: dict = {}
+
+BETFAIR_API_URL = "https://api.betfair.com/exchange/betting/rest/v1.0/"
+
+_BETFAIR_PRICE_MAP = {
+    1.01: "1/100", 1.02: "1/50",  1.05: "1/20",  1.1:  "1/10",  1.2:  "1/5",
+    1.25: "1/4",   1.33: "1/3",   1.4:  "2/5",   1.5:  "1/2",   1.57: "4/7",
+    1.61: "4/6",   1.67: "8/13",  1.72: "8/11",  1.8:  "4/5",   1.83: "5/6",
+    1.91: "10/11", 2.0:  "EVS",   2.1:  "11/10", 2.2:  "6/5",   2.25: "5/4",
+    2.38: "11/8",  2.4:  "7/5",   2.5:  "6/4",   2.63: "13/8",  2.75: "7/4",
+    2.88: "15/8",  3.0:  "2/1",   3.25: "9/4",   3.5:  "5/2",   3.75: "11/4",
+    4.0:  "3/1",   4.5:  "7/2",   5.0:  "4/1",   5.5:  "9/2",   6.0:  "5/1",
+    6.5:  "11/2",  7.0:  "6/1",   7.5:  "13/2",  8.0:  "7/1",   8.5:  "15/2",
+    9.0:  "8/1",   9.5:  "17/2",  10.0: "9/1",   11.0: "10/1",  12.0: "11/1",
+    13.0: "12/1",  14.0: "13/1",  15.0: "14/1",  16.0: "15/1",  17.0: "16/1",
+    19.0: "18/1",  21.0: "20/1",  23.0: "22/1",  26.0: "25/1",  29.0: "28/1",
+    31.0: "30/1",  34.0: "33/1",  36.0: "35/1",  41.0: "40/1",  51.0: "50/1",
+    67.0: "66/1",  81.0: "80/1",  101.0: "100/1", 126.0: "125/1",
+    151.0: "150/1", 201.0: "200/1", 251.0: "250/1",
+}
+
+
+def decimal_to_fractional(dec: float) -> str:
+    """Convert a Betfair decimal price to a UK fractional string e.g. 4.0 → '3/1'."""
+    if dec >= 990:
+        return "NR"
+    closest = min(_BETFAIR_PRICE_MAP.keys(), key=lambda k: abs(k - dec))
+    if abs(closest - dec) < 0.6:
+        return _BETFAIR_PRICE_MAP[closest]
+    # Fallback for unlisted prices: simple integer fraction
+    return f"{max(1, round(dec) - 1)}/1"
+
+
+def get_betfair_live_odds() -> dict:
+    """
+    Fetch live WIN market prices for all Cheltenham races from Betfair Exchange.
+    Reads the session token from Secrets Manager ('betfair-credentials').
+    Returns {horse_name_lower: fractional_odds_string}.
+    Returns {} on any failure — caller falls back to static RP_LIVE_ODDS.
+    """
+    try:
+        # ── Credentials from Secrets Manager ────────────────────────────────
+        sm = boto3.client('secretsmanager', region_name='eu-west-1')
+        raw = sm.get_secret_value(SecretId='betfair-credentials')['SecretString']
+        if raw.startswith('{\\'):
+            raw = raw.replace('\\', '')
+        creds = json.loads(raw)
+        session_token = creds.get('session_token', '')
+        app_key       = creds.get('app_key', '')
+        if not session_token or not app_key:
+            print("WARNING: Betfair credentials missing — using static RP odds")
+            return {}
+
+        headers = {
+            'X-Application':   app_key,
+            'X-Authentication': session_token,
+            'Content-Type':    'application/json',
+        }
+
+        # ── Step 1: Discover all Cheltenham WIN markets ──────────────────────
+        cat = requests.post(
+            BETFAIR_API_URL + 'listMarketCatalogue/',
+            headers=headers,
+            json={
+                'filter': {
+                    'eventTypeIds':    ['7'],
+                    'marketCountries': ['GB'],
+                    'marketTypeCodes': ['WIN'],
+                    'textQuery':       'Cheltenham',
+                },
+                'marketProjection': ['RUNNER_DESCRIPTION', 'EVENT'],
+                'maxResults': 50,
+            },
+            timeout=20,
+        )
+        if cat.status_code != 200:
+            print(f"WARNING: Betfair listMarketCatalogue HTTP {cat.status_code}")
+            return {}
+        markets = cat.json()
+        if not markets:
+            print("WARNING: No Cheltenham WIN markets returned by Betfair")
+            return {}
+
+        market_ids   = [m['marketId'] for m in markets]
+        runner_names = {}   # selectionId (int) → horse name lowercase
+        for m in markets:
+            for r in m.get('runners', []):
+                runner_names[r['selectionId']] = r['runnerName'].lower().strip()
+
+        # ── Step 2: Fetch best available back prices ─────────────────────────
+        book = requests.post(
+            BETFAIR_API_URL + 'listMarketBook/',
+            headers=headers,
+            json={
+                'marketIds':       market_ids,
+                'priceProjection': {'priceData': ['EX_BEST_OFFERS']},
+            },
+            timeout=20,
+        )
+        if book.status_code != 200:
+            print(f"WARNING: Betfair listMarketBook HTTP {book.status_code}")
+            return {}
+
+        live: dict = {}
+        for mkt in book.json():
+            for runner in mkt.get('runners', []):
+                name = runner_names.get(runner['selectionId'])
+                if not name:
+                    continue
+                if runner.get('status') == 'REMOVED':
+                    live[name] = 'NR'
+                    continue
+                back_list = runner.get('ex', {}).get('availableToBack', [])
+                if back_list:
+                    price = back_list[0].get('price', 0)
+                    live[name] = 'NR' if price >= 990 else decimal_to_fractional(price)
+
+        print(f"\u2705 Betfair live odds fetched: {len(live)} horses across {len(market_ids)} markets")
+        return live
+
+    except Exception as exc:
+        print(f"WARNING: Betfair live odds fetch failed ({exc}) — using static RP odds")
+        return {}
+
 
 def get_live_odds(horse_name: str) -> str:
-    """Look up live RP odds for a horse (case-insensitive).  Falls back to '?'."""
-    return RP_LIVE_ODDS.get(horse_name.lower().strip(), "?")
+    """Return live Betfair price if available, else fall back to static RP odds."""
+    key = horse_name.lower().strip()
+    return _BETFAIR_LIVE_ODDS.get(key) or RP_LIVE_ODDS.get(key, "?")
 
 
 def _race_classification(race_name: str):
@@ -491,6 +618,15 @@ def detect_changes(today_pick, yesterday_pick):
 
 def save_picks(dry_run=False):
     """Main function: score races, detect changes, save to DynamoDB"""
+    global _BETFAIR_LIVE_ODDS
+    # Fetch live Betfair exchange prices once — used by all get_live_odds() calls
+    print("Fetching live Betfair odds...")
+    _BETFAIR_LIVE_ODDS = get_betfair_live_odds()
+    if _BETFAIR_LIVE_ODDS:
+        print(f"  ✅ Live prices loaded: {len(_BETFAIR_LIVE_ODDS)} horses")
+    else:
+        print("  ⚠️  No live prices — falling back to static RP odds dict")
+
     today = datetime.now().strftime('%Y-%m-%d')
 
     print(f"\n{'='*70}")
