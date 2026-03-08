@@ -76,7 +76,7 @@ FESTIVAL_RACES = {
     "day1_race4":  {"name": "Unibet Champion Hurdle",                "day": 1, "time": "15:20", "grade": "Grade 1"},
     "day1_race5":  {"name": "Mares Hurdle",                          "day": 1, "time": "16:00", "grade": "Grade 1"},
     "day1_race6":  {"name": "National Hunt Chase",                   "day": 1, "time": "16:40", "grade": "Grade 2"},
-    "day1_race7":  {"name": "Conditional Jockeys Handicap Hurdle",   "day": 1, "time": "17:20", "grade": "Handicap"},
+    "day1_race7":  {"name": "Challenge Cup Chase",                    "day": 1, "time": "17:20", "grade": "Handicap"},
 
     # DAY 2 - Ladies Day (Wednesday 11 March)
     "day2_race1":  {"name": "Ballymore Novices Hurdle",              "day": 2, "time": "13:20", "grade": "Grade 1"},

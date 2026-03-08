@@ -96,8 +96,12 @@ EXTRA_RACES = {
              "last_run": "Won Hunter Chase Jan 2026", "days_off": 42},
         ]
     },
-    "day1_race7": {   # Kim Muir Handicap Chase / Conditional Jockeys (3m2f)
+    "day1_race7": {   # Challenge Cup Chase (Class 2, 3m6f Nov Hcap Chs, 17 runners)
         "entries": [
+            {"name": "Backmersackme", "trainer": "Emmet Mullins", "jockey": "Donagh Meyler",
+             "odds": "7/2", "age": 8, "form": "6-78201", "rating": 152,
+             "cheltenham_record": None,
+             "last_run": "Won Novice Chase (form: 6-78201 last win)", "days_off": 28},
             {"name": "Jeriko Du Reponet", "trainer": "Nicky Henderson", "jockey": "James Bowen",
              "odds": "5/1", "age": 8, "form": "1-2-1-21", "rating": 148,
              "cheltenham_record": None,

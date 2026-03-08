@@ -40,7 +40,7 @@ RACES = [
     (1, "15:20", "Unibet Champion Hurdle",               "Unibet Champion Hurdle",           "g1",   "G1",     "Champion Day",          "Tuesday 10 March 2026"),
     (1, "16:00", "Mares Hurdle",                         "Mares Hurdle",                     "g1",   "G1",     "Champion Day",          "Tuesday 10 March 2026"),
     (1, "16:40", "National Hunt Chase",                  "National Hunt Chase",              "g2",   "G2",     "Champion Day",          "Tuesday 10 March 2026"),
-    (1, "17:20", "Conditional Jockeys Handicap Hurdle",  "Conditional Jockeys Hcap Hurdle",  "hcap", "Hcap",   "Champion Day",          "Tuesday 10 March 2026"),
+    (1, "17:20", "Challenge Cup Chase",                  "Challenge Cup Chase",              "hcap", "Hcap",   "Champion Day",          "Tuesday 10 March 2026"),
     # Day 2
     (2, "13:20", "Ballymore Novices Hurdle",             "Ballymore Novices Hurdle",         "g1",   "G1",     "Ladies Day",            "Wednesday 11 March 2026"),
     (2, "14:00", "Brown Advisory Novices Chase",         "Brown Advisory Novices Chase",     "g1",   "G1",     "Ladies Day",            "Wednesday 11 March 2026"),
