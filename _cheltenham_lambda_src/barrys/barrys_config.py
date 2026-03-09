@@ -70,38 +70,39 @@ STRATEGY_WEIGHTS = {
 # These are the scheduled races - will be confirmed via Betfair
 FESTIVAL_RACES = {
     # DAY 1 - Champion Day (Tuesday 10 March)
-    "day1_race1":  {"name": "Sky Bet Supreme Novices Hurdle",        "day": 1, "time": "13:30", "grade": "Grade 1"},
-    "day1_race2":  {"name": "Arkle Challenge Trophy Chase",          "day": 1, "time": "14:10", "grade": "Grade 1"},
-    "day1_race3":  {"name": "Fred Winter Handicap Hurdle",               "day": 1, "time": "14:40", "grade": "Handicap"},
-    "day1_race4":  {"name": "Unibet Champion Hurdle",                "day": 1, "time": "15:30", "grade": "Grade 1"},
-    "day1_race5":  {"name": "Mares Hurdle",                          "day": 1, "time": "16:10", "grade": "Grade 1"},
-    "day1_race6":  {"name": "Cheltenham Plate Chase",                   "day": 1, "time": "16:40", "grade": "Hcap"},
-    "day1_race7":  {"name": "Conditional Jockeys Handicap Hurdle",   "day": 1, "time": "17:30", "grade": "Handicap"},
+    "day1_race1":  {"name": "Sky Bet Supreme Novices' Hurdle",       "day": 1, "time": "13:20", "grade": "Grade 1"},
+    "day1_race2":  {"name": "Arkle Challenge Trophy Chase",          "day": 1, "time": "14:00", "grade": "Grade 1"},
+    "day1_race3":  {"name": "Fred Winter Handicap Hurdle",           "day": 1, "time": "14:40", "grade": "Handicap"},
+    "day1_race4":  {"name": "Ultima Handicap Chase",                 "day": 1, "time": "15:20", "grade": "Handicap"},
+    "day1_race5":  {"name": "Unibet Champion Hurdle",                "day": 1, "time": "16:00", "grade": "Grade 1"},
+    "day1_race6":  {"name": "Cheltenham Plate Chase",                "day": 1, "time": "16:40", "grade": "Handicap"},
+    "day1_race7":  {"name": "Challenge Cup Chase",                   "day": 1, "time": "17:20", "grade": "Handicap"},
 
     # DAY 2 - Ladies Day (Wednesday 11 March)
-    "day2_race1":  {"name": "Ballymore Novices Hurdle",              "day": 2, "time": "13:30", "grade": "Grade 1"},
-    "day2_race2":  {"name": "Brown Advisory Novices Chase",          "day": 2, "time": "14:10", "grade": "Grade 1"},
-    "day2_race3":  {"name": "Coral Cup Handicap Hurdle",             "day": 2, "time": "14:50", "grade": "Handicap"},
-    "day2_race4":  {"name": "Queen Mother Champion Chase",           "day": 2, "time": "15:30", "grade": "Grade 1"},
-    "day2_race5":  {"name": "Glenfarclas Chase Cross Country",       "day": 2, "time": "16:10", "grade": "Grade 2"},
-    "day2_race6":  {"name": "Dawn Run Mares Novices Hurdle",         "day": 2, "time": "16:50", "grade": "Grade 2"},
-    "day2_race7":  {"name": "FBD Hotel & Resorts NH Flat Race",      "day": 2, "time": "17:30", "grade": "NH Flat"},
+    "day2_race1":  {"name": "Turner's Novices' Hurdle",              "day": 2, "time": "13:20", "grade": "Grade 1"},
+    "day2_race2":  {"name": "Brown Advisory Novices' Chase",         "day": 2, "time": "14:00", "grade": "Grade 1"},
+    "day2_race3":  {"name": "BetMGM Cup Hurdle",                     "day": 2, "time": "14:40", "grade": "Handicap"},
+    "day2_race4":  {"name": "Glenfarclas Cross Country Chase",       "day": 2, "time": "15:20", "grade": "Grade 2"},
+    "day2_race5":  {"name": "Queen Mother Champion Chase",           "day": 2, "time": "16:00", "grade": "Grade 1"},
+    "day2_race6":  {"name": "Grand Annual Handicap Chase",           "day": 2, "time": "16:40", "grade": "Handicap"},
+    "day2_race7":  {"name": "Champion Bumper",                       "day": 2, "time": "17:20", "grade": "NH Flat"},
 
-    # DAY 3 - St Patricks Thursday (Thursday 12 March)
-    "day3_race1":  {"name": "Turners Novices Chase",                 "day": 3, "time": "13:30", "grade": "Grade 1"},
-    "day3_race2":  {"name": "Pertemps Final Handicap Hurdle",        "day": 3, "time": "14:10", "grade": "Handicap"},
-    "day3_race3":  {"name": "Ryanair Chase",                         "day": 3, "time": "14:50", "grade": "Grade 1"},
-    "day3_race4":  {"name": "Paddy Power Stayers Hurdle",            "day": 3, "time": "15:30", "grade": "Grade 1"},
-    "day3_race5":  {"name": "Plate Handicap Chase",                  "day": 3, "time": "16:10", "grade": "Handicap"},
-    "day3_race6":  {"name": "Boodles Juvenile Handicap Hurdle",      "day": 3, "time": "16:50", "grade": "Handicap"},
-    "day3_race7":  {"name": "Martin Pipe Conditional Jockeys Hurdle","day": 3, "time": "17:30", "grade": "Handicap"},
+    # DAY 3 - St Patrick's Thursday (Thursday 12 March)
+    "day3_race1":  {"name": "Ryanair Mares' Novices' Hurdle",        "day": 3, "time": "13:20", "grade": "Grade 1"},
+    "day3_race2":  {"name": "Jack Richards Novices' Chase",          "day": 3, "time": "14:00", "grade": "Grade 1"},
+    "day3_race3":  {"name": "Close Brothers Mares' Hurdle",          "day": 3, "time": "14:40", "grade": "Grade 1"},
+    "day3_race4":  {"name": "Paddy Power Stayers' Hurdle",           "day": 3, "time": "15:20", "grade": "Grade 1"},
+    "day3_race5":  {"name": "Ryanair Chase",                         "day": 3, "time": "16:00", "grade": "Grade 1"},
+    "day3_race6":  {"name": "Pertemps Handicap Hurdle",              "day": 3, "time": "16:40", "grade": "Handicap"},
+    "day3_race7":  {"name": "Kim Muir Handicap Chase",               "day": 3, "time": "17:20", "grade": "Handicap"},
 
     # DAY 4 - Gold Cup Day (Friday 13 March)
-    "day4_race1":  {"name": "JCB Triumph Hurdle",                    "day": 4, "time": "13:30", "grade": "Grade 1"},
-    "day4_race2":  {"name": "County Handicap Hurdle",                "day": 4, "time": "14:10", "grade": "Handicap"},
-    "day4_race3":  {"name": "Albert Bartlett Novices Hurdle",        "day": 4, "time": "14:50", "grade": "Grade 1"},
-    "day4_race4":  {"name": "Cheltenham Gold Cup",                   "day": 4, "time": "15:30", "grade": "Grade 1"},
-    "day4_race5":  {"name": "Grand Annual Handicap Chase",           "day": 4, "time": "16:10", "grade": "Handicap"},
-    "day4_race6":  {"name": "Champion Standard Open NH Flat Race",   "day": 4, "time": "16:50", "grade": "NH Flat"},
-    "day4_race7":  {"name": "St James Place Foxhunter Chase",        "day": 4, "time": "17:30", "grade": "Hunter Chase"},
+    "day4_race1":  {"name": "JCB Triumph Hurdle",                    "day": 4, "time": "13:20", "grade": "Grade 1"},
+    "day4_race2":  {"name": "County Handicap Hurdle",                "day": 4, "time": "14:00", "grade": "Handicap"},
+    "day4_race3":  {"name": "Albert Bartlett Novices' Hurdle",       "day": 4, "time": "14:40", "grade": "Grade 1"},
+    "day4_race4":  {"name": "Mrs Paddy Power Mares' Chase",          "day": 4, "time": "15:20", "grade": "Grade 2"},
+    "day4_race5":  {"name": "Cheltenham Gold Cup",                   "day": 4, "time": "16:00", "grade": "Grade 1"},
+    "day4_race6":  {"name": "St James's Place Hunters' Chase",       "day": 4, "time": "16:40", "grade": "Hunter Chase"},
+    "day4_race7":  {"name": "Martin Pipe Handicap Hurdle",           "day": 4, "time": "17:20", "grade": "Handicap"},
 }
+
