@@ -49,33 +49,17 @@ ADDITIONAL_RUNNERS = {
 
     # ── DAY 1 ─────────────────────────────────────────────────────────────────
 
-    "day1_race1": [  # Supreme Novices Hurdle — confirmed 12 runners
+    "day1_race1": [  # Supreme Novices Hurdle — remaining field after removing Day 2 horses
+        # Talk The Talk, Baron Noir, Koktail Brut, Too Bossy For Us, Leader Dallier, Sober Glory
+        # ALL moved to Turner's (Day 2 13:20) per official Wednesday racecard
         {"name": "Mighty Park",      "trainer": "Willie Mullins",          "jockey": "Mark Walsh",
          "odds": "10/3",  "age": 5, "form": "1",        "rating": 148,
-         "cheltenham_record": None},
-        {"name": "Talk The Talk",    "trainer": "Joseph Patrick O'Brien", "jockey": "J. J. Slevin",
-         "odds": "4/1",   "age": 5, "form": "2-11F1",  "rating": 145,
          "cheltenham_record": None},
         {"name": "El Cairos",        "trainer": "Gordon Elliott",          "jockey": "Jack Kennedy",
          "odds": "11/2",  "age": 5, "form": "15-2F1",  "rating": 142,
          "cheltenham_record": None},
         {"name": "Mydaddypaddy",     "trainer": "Dan Skelton",             "jockey": "Harry Skelton",
          "odds": "13/2",  "age": 6, "form": "1-112",   "rating": 140,
-         "cheltenham_record": None},
-        {"name": "Sober Glory",      "trainer": "Philip Hobbs & Johnson White", "jockey": "Ben Jones",
-         "odds": "12/1",  "age": 6, "form": "11-1411", "rating": 133,
-         "cheltenham_record": None},
-        {"name": "Leader Dallier",   "trainer": "Willie Mullins",          "jockey": "P. Townend",
-         "odds": "10/1",  "age": 5, "form": "1-11121", "rating": 145,
-         "cheltenham_record": None},
-        {"name": "Baron Noir",       "trainer": "Alan King",               "jockey": "Tom Bellamy",
-         "odds": "33/1",  "age": 6, "form": "13-1211", "rating": 130,
-         "cheltenham_record": None},
-        {"name": "Koktail Brut",     "trainer": "Gordon Elliott",          "jockey": "Danny Gilligan",
-         "odds": "66/1",  "age": 5, "form": "3-51174", "rating": 118,
-         "cheltenham_record": None},
-        {"name": "Too Bossy For Us", "trainer": "Willie Mullins",          "jockey": "Harry Cobden",
-         "odds": "40/1",  "age": 5, "form": "7-51",    "rating": 122,
          "cheltenham_record": None},
         {"name": "Eachtotheirown",   "trainer": "Barry Connell",           "jockey": "Sean Flanagan",
          "odds": "33/1",  "age": 6, "form": "22-151",  "rating": 120,
@@ -188,17 +172,11 @@ ADDITIONAL_RUNNERS = {
          "cheltenham_record": None},
     ],
 
-    "day2_race5": [  # Queen Mother Champion Chase
-        # Majborough, L'Eau du Sud, Il Etait Temps, Jonbon, Quilixios already in RACES_2026
-        {"name": "Thistle Ask",   "trainer": "Alan King",        "jockey": "Tom Cannon",
-         "odds": "16/1", "age": 8, "form": "1-1-2-21", "rating": 162,
-         "cheltenham_record": None},
-        {"name": "Found A Fifty", "trainer": "Dan Skelton",      "jockey": "Harry Skelton",
-         "odds": "40/1", "age": 9, "form": "3-1-2-P3", "rating": 155,
-         "cheltenham_record": None},
-        {"name": "Solness",       "trainer": "Nicky Henderson",  "jockey": "Nico de Boinville",
-         "odds": "40/1", "age": 8, "form": "1-2-3-P4", "rating": 152,
-         "cheltenham_record": None},
+    "day2_race5": [  # Queen Mother Champion Chase — 13 runners (full field, RACES_2026 now has all 13)
+        # Majborough, Jonbon, Il Etait Temps, L'Eau du Sud, Quilixios, Irish Panther,
+        # Captain Guinness, Saint Segal, Libberty Hunter, Only By Night, Brookie,
+        # Found A Fifty, Solness — all now in RACES_2026 QMCC entry
+        # Trainer corrections applied: Solness=Joseph Patrick O'Brien; Found A Fifty=Gordon Elliott
     ],
 
     # ── DAY 3 ─────────────────────────────────────────────────────────────────
@@ -357,11 +335,11 @@ def extend_race_entries(race_key: str, base_entries: list) -> list:
 # ─────────────────────────────────────────────────────────────────────────────
 # This is the authoritative runner list per race as of 2026-03-05
 RACE_FULL_FIELDS = {
-    "day1_race1": [
-        "Old Park Star", "Mighty Park", "Talk The Talk", "El Cairos",
-        "Mydaddypaddy", "Sober Glory", "Leader Dallier",
-        "Baron Noir", "Koktail Brut", "Too Bossy For Us",
-        "Eachtotheirown", "Sageborough",
+    "day1_race1": [  # Supreme Novices Hurdle — declared field (Turner's horses removed from Supreme)
+        "Old Park Star", "Mighty Park", "El Cairos",
+        "Mydaddypaddy", "Eachtotheirown", "Sageborough",
+        # Talk The Talk, Sober Glory, Leader Dallier, Baron Noir, Koktail Brut, Too Bossy For Us
+        # ALL confirmed in Turner's Novices' Hurdle (Day 2 13:20) per official Wednesday racecard
     ],
     "day1_race2": [  # Arkle Challenge Trophy Chase — confirmed 7 runners (Betfair 08 Mar 2026)
         "Kopek Des Bordes", "Lulamba", "Kargese", "Steel Ally",
@@ -399,9 +377,15 @@ RACE_FULL_FIELDS = {
         "Walking On Air", "Pic Roc", "Holloway Queen", "First Confession",
         "Kurasso Blue", "Will Do", "Union Station", "Silver Thorn", "Holokea",
     ],
-    "day2_race1": [
-        "No Drama This End", "Skylight Hustle", "King Rasko Grey",
-        "Act Of Innocence", "Espresso Milan",
+    "day2_race1": [  # Turner's Novices Hurdle — full 33-runner official Wednesday 11 March racecard
+        "Talk The Talk", "King Rasko Grey", "Skylight Hustle", "No Drama This End",
+        "I'll Sort That", "Koktail Brut", "Hurricane Pat", "Kripticjim",
+        "Taurus Bay", "Bossman Jack", "Riskaway", "Road Exile",
+        "Came From Nowhere", "Fortune Timmy", "Act Of Innocence", "Ballyfad",
+        "Johnny's Jury", "Shuttle Diplomacy", "Soldier Reeves", "Too Bossy For Us",
+        "Walks In June", "Zeus Power", "Sober", "Leader D'Allier",
+        "Baron Noir", "Jalon D'Oudairies", "Laurets D'Estruval", "Saint Baco",
+        "Sortudo", "Doujadou", "Free Spirit", "It's Top", "Klimt Madrik",
     ],
     "day2_race2": [
         "Final Demand", "The Big Westerner", "Kaid d'Authie", "Wendigo",
@@ -415,9 +399,11 @@ RACE_FULL_FIELDS = {
     "day2_race4": [
         "Favori De Champdou", "Stumptown", "Desertmore House", "Vanillier", "Anibale Fly",
     ],
-    "day2_race5": [
-        "Majborough", "L'Eau du Sud", "Il Etait Temps", "Jonbon", "Quilixios",
-        "Thistle Ask", "Found A Fifty", "Solness",
+    "day2_race5": [  # Queen Mother Champion Chase — full 13-runner official racecard
+        # Trainer corrections: Solness=Joseph Patrick O'Brien; Found A Fifty=Gordon Elliott
+        "Majborough", "Il Etait Temps", "Jonbon", "Solness", "Found A Fifty",
+        "L'Eau du Sud", "Quilixios", "Captain Guinness", "Irish Panther",
+        "Saint Segal", "Libberty Hunter", "Only By Night", "Brookie",
     ],
     "day2_race6": [
         "Inthepocket", "Coeur De Lion", "Dancewiththedevil", "Waterbys Hurricane",
@@ -464,8 +450,9 @@ RACE_FULL_FIELDS = {
         "Anzadam", "Hello Neighbour",
     ],
     "day4_race3": [
-        "Doctor Steinberg", "Thedeviluno", "No Drama This End", "Spinningayarn",
-        "I'll Sort That", "Kazansky", "Perceval Legallois",
+        # No Drama This End & I'll Sort That REMOVED — both confirmed in Turner's (Day 2 13:20)
+        "Doctor Steinberg", "Thedeviluno", "Spinningayarn",
+        "Kazansky", "Perceval Legallois",
     ],
     "day4_race4": [
         "Dinoblue", "Spindleberry", "Panic Attack", "Only By Night",
