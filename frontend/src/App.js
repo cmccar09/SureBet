@@ -9,6 +9,55 @@ const API_BASE_URL = process.env.REACT_APP_API_URL ||
 const DAILY_BUDGET = 100;
 const MAX_PICKS_PER_DAY = 5; // eslint-disable-line no-unused-vars
 
+// Known mares for gender-aware label
+const KNOWN_MARES = new Set([
+  'Lossiemouth','Bambino Fever','Dinoblue','Wodhooh','Jade De Grugy',
+  'Brighterdaysahead','Honeysuckle','Epatante','Impaire Et Passe',
+]);
+
+function buildWhyWins(pick) {
+  if (!pick) return null;
+  const reasons = pick.reasons || [];
+  const parts = [];
+
+  // Trainer / jockey
+  if (pick.trainer && pick.jockey) {
+    parts.push(`${pick.trainer} / ${pick.jockey}`);
+  } else if (pick.trainer) {
+    parts.push(pick.trainer);
+  }
+
+  // Key scoring signals → plain English
+  const r = reasons.map(s => s.toLowerCase());
+  if (r.some(s => s.includes('defending')))         parts.push('defending champion');
+  if (r.some(s => s.includes('won this exact race'))) parts.push('has won this exact race before');
+  if (r.some(s => s.includes('festival winner') || s.includes('previous festival'))) parts.push('previous Festival winner');
+  if (r.some(s => s.includes('grade 1 winner')))    parts.push('Grade 1 winner');
+  if (r.some(s => s.includes('graded winner')))     parts.push('graded winner this season');
+  if (r.some(s => s.includes('unbeaten') || s.includes('4+ wins'))) parts.push('unbeaten run in form');
+  if (r.some(s => s.includes('3+ consecutive') || s.includes('4+ consecutive'))) parts.push('3+ consecutive wins');
+  else if (r.some(s => s.includes('2 consecutive'))) parts.push('2 consecutive wins');
+  if (r.some(s => s.includes('ground suits')))      parts.push('ground suits perfectly');
+  if (r.some(s => s.includes('strong market confidence') || s.includes('odds-on'))) parts.push('strongly backed in market');
+  if (r.some(s => s.includes('improving')))         parts.push('on the upgrade');
+  if (r.some(s => s.includes('finishes strongly'))) parts.push('finishes strongly — festival stamina');
+  if (r.some(s => s.includes('up in distance')))    parts.push('step up in distance suits');
+
+  // Score / gap context
+  const score = parseFloat(pick.score || 0);
+  const gap   = parseFloat(pick.score_gap || 0);
+  const tier  = (pick.tier || '');
+  if (tier.includes('A+'))      parts.push(`A+ ELITE — score ${score}`);
+  else if (tier.includes('A ') || tier.startsWith('A ')) parts.push(`A ELITE — score ${score}`);
+  else if (score > 0)           parts.push(`score ${score}`);
+  if (gap >= 20) parts.push(`dominant ${gap}pt lead over next rival`);
+  else if (gap >= 10) parts.push(`${gap}pt clear of next rival`);
+  else if (gap >= 5)  parts.push(`${gap}pt advantage`);
+
+  if (parts.length === 0) return null;
+  return parts.join(' · ');
+}
+
 function App() {
   return (
     <div className="App">
@@ -292,6 +341,29 @@ function CheltenhamView({ apiUrl }) {
                       {pick.odds}
                     </span>
                   </div>
+                  {/* WHY THIS WINS — NAP card */}
+                  {(() => {
+                    const whyText = buildWhyWins(pick);
+                    if (!whyText) return null;
+                    const isMare = KNOWN_MARES.has(pick.horse);
+                    return (
+                      <div style={{
+                        marginTop: '10px',
+                        padding: '7px 10px',
+                        background: 'rgba(0,0,0,0.2)',
+                        borderRadius: '5px',
+                        borderLeft: `3px solid ${colours[i].border}`,
+                      }}>
+                        <div style={{ fontSize: '9px', fontWeight: '700', textTransform: 'uppercase',
+                          letterSpacing: '0.08em', color: colours[i].border, marginBottom: '2px' }}>
+                          {isMare ? 'Why She Wins' : 'Why He Wins'}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.8)', lineHeight: '1.5' }}>
+                          {whyText}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -407,6 +479,30 @@ function CheltenhamView({ apiUrl }) {
                       </span>
                     )}
                   </div>
+                  {/* WHY THIS WINS — Top 3 card */}
+                  {(() => {
+                    const whyText = buildWhyWins(pick);
+                    if (!whyText) return null;
+                    const isMare = KNOWN_MARES.has(pick.horse);
+                    const accent = tierColour(pick.score);
+                    return (
+                      <div style={{
+                        marginTop: '10px',
+                        padding: '7px 10px',
+                        background: 'rgba(255,255,255,0.06)',
+                        borderRadius: '5px',
+                        borderLeft: `3px solid ${accent}`,
+                      }}>
+                        <div style={{ fontSize: '9px', fontWeight: '700', textTransform: 'uppercase',
+                          letterSpacing: '0.08em', color: accent, marginBottom: '2px' }}>
+                          {isMare ? 'Why She Wins' : 'Why He Wins'}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.75)', lineHeight: '1.5' }}>
+                          {whyText}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ))}
             </div>
@@ -630,6 +726,37 @@ function CheltenhamView({ apiUrl }) {
                       )}
                     </div>
                   </div>
+                  {/* WHY THIS WINS */}
+                  {(() => {
+                    const whyText = buildWhyWins(pick);
+                    if (!whyText) return null;
+                    const isMare = KNOWN_MARES.has(pick.horse);
+                    const label  = isMare ? 'Why She Wins' : 'Why He Wins';
+                    const accent = confText;
+                    return (
+                      <div style={{
+                        marginTop: '12px',
+                        padding: '8px 12px',
+                        background: 'rgba(0,0,0,0.04)',
+                        borderRadius: '6px',
+                        borderLeft: `3px solid ${accent}`,
+                      }}>
+                        <div style={{
+                          fontSize: '10px',
+                          fontWeight: '700',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.08em',
+                          color: accent,
+                          marginBottom: '3px',
+                        }}>
+                          {label}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5' }}>
+                          {whyText}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   {pick.pick_changed && pick.previous_horse && (
                     <div style={{
                       marginTop: '10px',
