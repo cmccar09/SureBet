@@ -27,15 +27,54 @@
       "_deactivated": "Grange Walk not entered for Cheltenham (Betfair ANTEPOST: absent 2026-03-06). Both entries revert to highest remaining scorer (Down Memory Lane)."
     },
     "Cheltenham Plate Chase": {
-      "macfitz_horse": "Madara",
-      "reason": "4pt gap (98 vs 94) — Madara is the defending champion of this exact race (Won 2024 Cheltenham Plate Chase) at 5/1; Down Memory Lane is a first-timer at 18/1. Festival specialist override justified.",
-      "surebet_horse": "Down Memory Lane",
-      "surebet_score": 98,
-      "macfitz_score": 94,
-      "gap": 4,
-      "decided": "2026-03-08",
-      "active": false,
-      "_deactivated": "09/03/2026: Surebet now also picks Madara (score 104 after field corrections) \u2014 both systems agree, override no longer needed"
+      "macfitz_horse": "Zurich",
+      "reason": "3pt gap (104 vs 101) — close call, MacFitz takes Zurich as the alternative",
+      "surebet_horse": "Madara",
+      "surebet_score": 104,
+      "macfitz_score": 101,
+      "gap": 3,
+      "decided": "2026-03-09",
+      "active": true
+    },
+    "Glenfarclas Cross Country Chase": {
+      "macfitz_horse": "Favori De Champdou",
+      "reason": "Dead heat 143-143 — coin flip, MacFitz takes Favori De Champdou (Won 2024 Cross Country)",
+      "surebet_horse": "Stumptown",
+      "surebet_score": 143,
+      "macfitz_score": 143,
+      "gap": 0,
+      "decided": "2026-03-09",
+      "active": true
+    },
+    "Champion Bumper": {
+      "macfitz_horse": "Keep Him Company",
+      "reason": "2pt gap (127 vs 125) — near-tie, MacFitz takes Keep Him Company as the alternative",
+      "surebet_horse": "The Irish Avatar",
+      "surebet_score": 127,
+      "macfitz_score": 125,
+      "gap": 2,
+      "decided": "2026-03-09",
+      "active": true
+    },
+    "Kim Muir Handicap Chase": {
+      "macfitz_horse": "Prends Garde A Toi",
+      "reason": "2pt gap (68 vs 66) — near-tie, MacFitz takes Prends Garde A Toi as the alternative",
+      "surebet_horse": "Jeriko Du Reponet",
+      "surebet_score": 68,
+      "macfitz_score": 66,
+      "gap": 2,
+      "decided": "2026-03-09",
+      "active": true
+    },
+    "County Handicap Hurdle": {
+      "macfitz_horse": "Karbau",
+      "reason": "3pt gap (86 vs 83) — close call, MacFitz takes Karbau as the alternative",
+      "surebet_horse": "Absurde",
+      "surebet_score": 86,
+      "macfitz_score": 83,
+      "gap": 3,
+      "decided": "2026-03-09",
+      "active": true
     },
     "Cheltenham Gold Cup": {
       "macfitz_horse": "Gaelic Warrior",

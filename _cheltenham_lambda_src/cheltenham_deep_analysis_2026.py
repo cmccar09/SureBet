@@ -748,7 +748,8 @@ RACES_2026 = {
              "odds": "2/1", "age": 7, "form": "f-1-1-1-1-2", "rating": 169,
              "cheltenham_record": "Won 2024 Mares Hurdle; Won 2025 Mares Hurdle",
              "last_run": "2nd Irish Champion Hurdle Jan 2026", "days_off": 42,
-             "ground_pref": "soft", "dist_class_form": "Won Grade 1 Mares Hurdle 2m4f Cheltenham x2"},
+             "ground_pref": "soft", "dist_class_form": "Won Grade 1 Mares Hurdle 2m4f Cheltenham x2",
+             "finishes_strongly": True},
             {"name": "The New Lion", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
              "odds": "9/4", "age": 7, "form": "1-1-1F1", "rating": 163,
              "cheltenham_record": "Won 2025 Turners Novices' Hurdle",
@@ -756,7 +757,8 @@ RACES_2026 = {
             {"name": "Brighterdaysahead", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
              "odds": "5/1", "age": 7, "form": "1-2-3-1", "rating": 173,
              "cheltenham_record": "4th 2025 Champion Hurdle",
-             "last_run": "Won Grade 1 Jan 2026", "days_off": 42},
+             "last_run": "Won Grade 1 Jan 2026", "days_off": 42,
+             "improving": True},
             {"name": "Golden Ace", "trainer": "Jeremy Scott", "jockey": "Felix de Giles",
              "odds": "8/1", "age": 8, "form": "1-2-3", "rating": 165,
              "cheltenham_record": "Won 2025 Champion Hurdle",
@@ -806,7 +808,8 @@ RACES_2026 = {
              "odds": "7/4", "age": 6, "form": "1-4-1-11", "rating": 163,
              "cheltenham_record": "Won 2025 Arkle Challenge Trophy",
              "last_run": "Won Grade 1 Novice Chase Feb 2026", "days_off": 28,
-             "ground_pref": "soft", "dist_class_form": "Won Grade 1 Arkle Chase 2m Cheltenham 2025"},
+             "ground_pref": "soft", "dist_class_form": "Won Grade 1 Arkle Chase 2m Cheltenham 2025",
+             "finishes_strongly": True},
             {"name": "Lulamba", "trainer": "Nicky Henderson", "jockey": "Nico de Boinville",
              "odds": "2/1", "age": 5, "form": "1-1-1-12", "rating": 174,
              "cheltenham_record": "2nd 2025 Triumph Hurdle",
@@ -1339,11 +1342,11 @@ def analyze_age_ratings():
 
 # ── Module-level jockey/combo constants (shared with deduplication logic) ─────
 JOCKEY_SCORES = {
-    "Paul Townend":       20,
-    "Nico de Boinville":  15,
-    "Harry Skelton":      12,   # Added: multiple British champion jump jockey
-    "Jack Kennedy":       12,
-    "Rachael Blackmore":  12,
+    "Paul Townend":       12,
+    "Nico de Boinville":  12,
+    "Harry Skelton":      10,   # Added: multiple British champion jump jockey
+    "Jack Kennedy":       10,
+    "Rachael Blackmore":  10,
     "Donagh Meyler":       8,
     "Mark Walsh":          8,
     "Danny Mullins":       8,
@@ -1366,11 +1369,11 @@ JOCKEY_SCORES = {
 }
 
 ELITE_COMBOS = {
-    ("Willie Mullins",       "Paul Townend"):       15,
-    ("Nicky Henderson",      "Nico de Boinville"):  12,
-    ("Gordon Elliott",       "Jack Kennedy"):        8,
-    ("Henry de Bromhead",    "Rachael Blackmore"):   8,
-    ("Gavin Cromwell",       "Danny Mullins"):       8,
+    ("Willie Mullins",       "Paul Townend"):        8,
+    ("Nicky Henderson",      "Nico de Boinville"):   8,
+    ("Gordon Elliott",       "Jack Kennedy"):        6,
+    ("Henry de Bromhead",    "Rachael Blackmore"):   6,
+    ("Gavin Cromwell",       "Danny Mullins"):       6,
 }
 
 
@@ -1456,11 +1459,11 @@ def score_horse_2026(horse, race_name):
     # --- Trainer bonus ---
     trainer = horse.get("trainer", "")
     trainer_scores = {
-        "Willie Mullins":    25,
-        "Nicky Henderson":   20,
-        "Gordon Elliott":    18,
-        "Emmet Mullins":     15,   # Added: top Irish NH trainer, multiple Festival winners
-        "Henry de Bromhead": 15,
+        "Willie Mullins":    15,
+        "Nicky Henderson":   15,
+        "Gordon Elliott":    12,
+        "Emmet Mullins":     12,   # Added: top Irish NH trainer, multiple Festival winners
+        "Henry de Bromhead": 12,
         "Gavin Cromwell":    12,
         "Paul Nicholls":      8,
         "Alan King":          8,
@@ -1471,13 +1474,13 @@ def score_horse_2026(horse, race_name):
         "Ben Pauling":        6,
         "Oliver Greenall & Josh Guerriero": 8,   # Added: won 2024 Ultima with Jagwar
         "Jonjo O'Neill":      6,   # Added: regular UK trainer, multiple Cheltenham runners
-        "W. P. Mullins":     25,   # Added: alias for Willie Mullins (racecard abbreviation)
-        "Joseph Patrick O'Brien": 18, # Added: top Irish trainer, multiple Festival winners
+        "W. P. Mullins":     15,   # Added: alias for Willie Mullins (racecard abbreviation)
+        "Joseph Patrick O'Brien": 12, # Added: top Irish trainer, multiple Festival winners
         "Gavin Patrick Cromwell": 12, # Added: alias for Gavin Cromwell
         "Paul Nolan":         8,   # Added: Irish trainer, Festival winners
         "Faye Bramley":       6,   # Added: UK trainer
-        "Mrs J. Harrington":  15,  # Added: Jessica Harrington, multiple Festival winners
-        "Jessica Harrington": 15,  # Added: alternate name
+        "Mrs J. Harrington":  12,  # Added: Jessica Harrington, multiple Festival winners
+        "Jessica Harrington": 12,  # Added: alternate name
     }
     t_score = trainer_scores.get(trainer, 5)
     score += t_score
@@ -1579,14 +1582,14 @@ def score_horse_2026(horse, race_name):
         falls_form = form.count("F")
         poor_form  = form.count("0") + form.count("P")
         if form.startswith("1111") and falls_form == 0:
-            score += 18
-            tips.append("4+ wins in form string (unbeaten run): +18pts")
+            score += 22
+            tips.append("4+ wins in form string (unbeaten run): +22pts")
         elif form.startswith("111") and falls_form <= 1:
-            score += 14
-            tips.append("3+ consecutive wins in form: +14pts")
+            score += 18
+            tips.append("3+ consecutive wins in form: +18pts")
         elif form.startswith("11"):
-            score += 8
-            tips.append("2 consecutive wins: +8pts")
+            score += 10
+            tips.append("2 consecutive wins: +10pts")
         elif form.startswith("1"):
             score += 5
             tips.append("Won last time out: +5pts")
@@ -1597,20 +1600,63 @@ def score_horse_2026(horse, race_name):
             score -= 5
             warnings.append("One poor run in recent form: -5pts")
 
+    # --- Improvement trajectory (+3) ---
+    # Reward horses showing a clear upward form trend (each run better than last).
+    # Manual flag 'improving' overrides; otherwise auto-detect from form digits.
+    improving = horse.get("improving", False)
+    if improving:
+        score += 3
+        tips.append("Progressive improver (flagged): +3pts")
+    else:
+        form_str = horse.get("form", "").replace("-", "")
+        form_digits = [int(c) for c in form_str if c.isdigit()]
+        if len(form_digits) >= 3:
+            r = form_digits[:3]  # most-recent first
+            # Improving = most recent run best, and previous two also getting better
+            # e.g. form "1-2-3" most-recent-first → r=[1,2,3] → 1<2<3 ✓
+            if r[0] not in (0,) and r[1] not in (0,) and r[2] not in (0,):
+                if r[0] < r[1] and r[1] < r[2]:
+                    score += 3
+                    tips.append(
+                        f"Improving form trend ({r[2]}→{r[1]}→{r[0]} positions): +3pts"
+                    )
+
+    # --- Up in distance / Finishes strongly ---
+    # 'up_in_distance': horse stepping up in trip this race vs recent runs → +2pts
+    # 'finishes_strongly': proven strong stayer / stays on well at target distance → +2pts
+    # Combo bonus if both apply (confirmed stayer being tested over longer trip) → +1pt
+    up_dist   = horse.get("up_in_distance", False)
+    fin_str   = horse.get("finishes_strongly", False)
+    if up_dist:
+        score += 2
+        tips.append("Stepping up in trip: +2pts")
+    if fin_str:
+        score += 2
+        tips.append("Strong finisher / stays well: +2pts")
+    if up_dist and fin_str:
+        score += 1
+        tips.append("Confirmed stayer stepping up in trip: +1pt combo")
+
     # --- Rating ---
     rating = horse.get("rating", 0)
     if rating >= 175:
+        score += 18
+        tips.append(f"Elite rating {rating}: +18pts")
+    elif rating >= 170:
         score += 15
-        tips.append(f"Elite rating {rating}: +15pts")
+        tips.append(f"Very high rating {rating}: +15pts")
     elif rating >= 165:
-        score += 10
-        tips.append(f"High rating {rating}: +10pts")
-    elif rating >= 155:
+        score += 12
+        tips.append(f"High rating {rating}: +12pts")
+    elif rating >= 158:
+        score += 8
+        tips.append(f"Good rating {rating}: +8pts")
+    elif rating >= 150:
         score += 5
         tips.append(f"Solid rating {rating}: +5pts")
-    elif rating < 145:
-        score -= 5
-        warnings.append(f"Below-average rating {rating}: -5pts")
+    elif rating < 140:
+        score -= 8
+        warnings.append(f"Below-average rating {rating}: -8pts")
 
     # --- Freshness / Days off ---
     days = horse.get("days_off", 50)
@@ -1669,26 +1715,12 @@ def score_horse_2026(horse, race_name):
         score += 12
         tips.append("Graded winner this season: +12pts")
 
-    # Elite Irish raider bonus (+8)
-    IRISH_ELITE_TRAINERS = [
-        "Willie Mullins", "W P Mullins", "Gordon Elliott",
-        "Emmet Mullins",   # Added: top Festival trainer
-        "Henry de Bromhead", "Henry De Bromhead",
-        "Gavin Cromwell", "Joseph Patrick O'Brien", "Joseph O'Brien",
-        "Noel Meade", "Peter Fahey", "Paul Nolan",
-    ]
-    if trainer in IRISH_ELITE_TRAINERS:
-        score += 8
-        tips.append(f"Elite Irish raider ({trainer}): +8pts")
-
-    # Champion jockey bonus (+5)
-    CHAMPION_JOCKEYS_CHELT = [
-        "Paul Townend", "Jack Kennedy", "Mark Walsh",
-        "Danny Mullins", "Patrick Mullins", "Rachael Blackmore",
-    ]
-    if jockey in CHAMPION_JOCKEYS_CHELT:
+    # Course & distance double confirmation (+5)
+    # Only when horse has both a Festival win (won_count >= 1) AND
+    # same-distance/class form on record — avoids double-counting trainer/jockey.
+    if won_count >= 1 and dist_class:
         score += 5
-        tips.append(f"Champion jockey ({jockey}): +5pts")
+        tips.append("Course & distance double confirmation: +5pts")
 
     # No upper cap — raw additive score; typical elite range 130-175
     score = max(0, score)

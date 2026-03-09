@@ -26,9 +26,13 @@ import boto3
 # ── file paths ────────────────────────────────────────────────────────────────
 HERE            = pathlib.Path(__file__).resolve().parent
 OVERRIDES_FILE  = HERE / "macfitz_overrides.json"
+RESULTS_FILE    = HERE / "race_results.json"
 HTML_OUT        = HERE / "barrys_cheltenham_2026.html"
 PICKS_TABLE     = "CheltenhamPicks"
 REGION          = "eu-west-1"
+
+# ── scoring ──────────────────────────────────────────────────────────────────
+POINTS = {1: 10, 2: 5, 3: 3}  # position → points
 
 # ── race catalogue (defines display order + metadata) ─────────────────────────
 # Each entry: (day_num, time, db_name, display_name, grade_css, grade_label, day_label, day_date)
@@ -124,6 +128,73 @@ def load_overrides() -> dict:
     return {"overrides": {}}
 
 
+def load_results() -> dict:
+    """Load race_results.json. Returns dict[race_name → {1st, 2nd, 3rd}]."""
+    if RESULTS_FILE.exists():
+        data = json.loads(RESULTS_FILE.read_text(encoding="utf-8"))
+        return data.get("results", {})
+    return {}
+
+
+def compute_competition_scores(assembled: list, results: dict) -> dict:
+    """
+    For each race compute how many points Surebet and MacFitz scored.
+    Returns:
+      {
+        "per_race": [(race_db_name, sb_horse, mf_horse, sb_pts, mf_pts, placed_1, placed_2, placed_3), ...],
+        "sb_total": int,
+        "mf_total": int,
+        "races_run": int,
+      }
+    """
+    per_race = []
+    sb_total = 0
+    mf_total = 0
+    races_run = 0
+
+    for race, sb_pick, mf_pick in assembled:
+        db_name  = race[2]
+        sb_horse = sb_pick.get("horse", "?")
+        mf_horse = mf_pick["horse"]
+        res      = results.get(db_name, {})
+
+        p1 = (res.get("1st") or "").strip()
+        p2 = (res.get("2nd") or "").strip()
+        p3 = (res.get("3rd") or "").strip()
+
+        finished = bool(p1)  # race is complete if 1st is set
+        if finished:
+            races_run += 1
+
+        def pts_for(horse: str) -> int:
+            if not finished:
+                return -1  # sentinel = not run yet
+            h = horse.strip().lower()
+            if h and h == p1.lower():
+                return POINTS[1]
+            if h and h == p2.lower():
+                return POINTS[2]
+            if h and h == p3.lower():
+                return POINTS[3]
+            return 0
+
+        sb_pts = pts_for(sb_horse)
+        mf_pts = pts_for(mf_horse)
+        if finished:
+            sb_total += sb_pts
+            mf_total += mf_pts
+
+        per_race.append((db_name, sb_horse, mf_horse, sb_pts, mf_pts, p1, p2, p3))
+
+    return {
+        "per_race":  per_race,
+        "sb_total":  sb_total,
+        "mf_total":  mf_total,
+        "races_run": races_run,
+    }
+
+
+# ── MacFitz override logic ─────────────────────────────────────────────────────
 def apply_macfitz(pick: dict, overrides: dict) -> dict:
     """
     Given a CheltenhamPicks item, return a MacFitz pick dict:
@@ -166,6 +237,118 @@ def apply_macfitz(pick: dict, overrides: dict) -> dict:
         "surebet_horse":  surebet_horse,
         "surebet_score":  score,
     }
+
+
+def _pts_class(pts: int) -> str:
+    if pts == 10: return "pts-win"
+    if pts == 5:  return "pts-place"
+    if pts == 3:  return "pts-show"
+    if pts == 0:  return "pts-zero"
+    return "pts-pending"
+
+
+def _pts_label(pts: int) -> str:
+    if pts == -1: return "&mdash;"
+    if pts == 10: return "10 &#127949;"
+    if pts == 5:  return "5 &#127948;"
+    if pts == 3:  return "3 &#127947;"
+    return "0"
+
+
+def _build_scorecard_html(assembled: list, score_data: dict | None) -> str:
+    if not score_data:
+        score_data = {"per_race": [], "sb_total": 0, "mf_total": 0, "races_run": 0}
+
+    sb_total   = score_data["sb_total"]
+    mf_total   = score_data["mf_total"]
+    races_run  = score_data["races_run"]
+    per_race   = score_data["per_race"]
+    max_pts    = races_run * 10 if races_run else 28 * 10
+    pct        = round(sb_total / max_pts * 100) if max_pts else 0
+
+    if races_run == 0:
+        status_msg = '<span style="color:var(--muted);font-style:italic;">Festival starts tomorrow &mdash; check back after each race!</span>'
+        leader_badge = ""
+    elif sb_total > mf_total:
+        gap = sb_total - mf_total
+        status_msg = f'<span style="color:var(--green);font-weight:700;">&#128309; SUREBET leads by {gap} point{"s" if gap!=1 else ""}</span>'
+        leader_badge = f'<span style="background:var(--green);color:#0d1117;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:10px;margin-left:10px;">LEADING</span>'
+    elif mf_total > sb_total:
+        gap = mf_total - sb_total
+        status_msg = f'<span style="color:var(--orange);font-weight:700;">&#128992; MACFITZ leads by {gap} point{"s" if gap!=1 else ""}</span>'
+        leader_badge = f'<span style="background:var(--orange);color:#0d1117;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:10px;margin-left:10px;">LEADING</span>'
+    else:
+        status_msg = '<span style="color:var(--gold);font-weight:700;">&#9889; All Square</span>'
+        leader_badge = ""
+
+    # Build per-race rows (only if any races run)
+    race_rows = ""
+    race_order = {r[2]: i for i, (r, _, _) in enumerate(assembled)}
+    if races_run > 0:
+        for db_name, sb_horse, mf_horse, sb_pts, mf_pts, p1, p2, p3 in per_race:
+            if sb_pts == -1:
+                continue  # race not yet run
+            placed_str = ""
+            if p1:
+                placed_str = f'<span style="color:var(--green);font-weight:600">{p1}</span>'
+                if p2: placed_str += f' &middot; <span style="color:var(--blue)">{p2}</span>'
+                if p3: placed_str += f' &middot; <span style="color:var(--gold)">{p3}</span>'
+            same = (sb_horse.lower() == mf_horse.lower())
+            mf_cell = "&mdash; (same)" if same else f'<span style="color:var(--orange)">{mf_horse}</span>'
+            race_display = db_name[:45]
+            race_rows += (
+                f'<tr>'
+                f'<td style="color:var(--muted);font-size:.78rem">{race_display}</td>'
+                f'<td style="color:var(--green)">{sb_horse}</td>'
+                f'<td class="{_pts_class(sb_pts)}">{_pts_label(sb_pts)}</td>'
+                f'<td>{mf_cell}</td>'
+                f'<td class="{_pts_class(mf_pts)}">{_pts_label(mf_pts)}</td>'
+                f'<td style="color:var(--muted);font-size:.78rem">{placed_str}</td>'
+                f'</tr>\n'
+            )
+
+    results_table = ""
+    if race_rows:
+        results_table = f"""
+  <table class="results-table">
+    <thead><tr>
+      <th>Race</th>
+      <th style="color:var(--blue)">&#128309; Surebet Pick</th>
+      <th style="color:var(--green)">Pts</th>
+      <th style="color:var(--orange)">&#128992; MacFitz Pick</th>
+      <th style="color:var(--orange)">Pts</th>
+      <th>Placed 1st / 2nd / 3rd</th>
+    </tr></thead>
+    <tbody>{race_rows}</tbody>
+  </table>"""
+
+    festival_started = races_run == 0
+    fill_tip = (
+        '<div style="font-size:.78rem;color:var(--muted);margin-top:8px;">'
+        '&#9432; Add results to <code>barrys/race_results.json</code> after each race to update the scorecard.</div>'
+    ) if festival_started else ""
+
+    return f"""
+<div class="scorecard">
+  <div class="score-header">
+    <div class="score-big">
+      <div class="pts" style="color:var(--blue)">{sb_total}</div>
+      <div class="lbl">&#128309; Surebet</div>
+    </div>
+    <div class="score-vs">vs</div>
+    <div class="score-big">
+      <div class="pts" style="color:var(--orange)">{mf_total}</div>
+      <div class="lbl">&#128992; MacFitz</div>
+    </div>
+    <div class="score-meta">
+      <div style="font-size:.85rem;color:var(--text);font-weight:600;">{status_msg}{leader_badge}</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:4px;">{races_run} of 28 races complete &middot; Max: 280 pts &middot; &pound;2,500 prize</div>
+      <div class="progress"><div class="bar" style="width:{pct}%"></div></div>
+    </div>
+  </div>
+  {results_table}
+  {fill_tip}
+</div>"""
 
 
 # ── HTML generation ────────────────────────────────────────────────────────────
@@ -242,7 +425,27 @@ CSS = r"""
   .pick-body{flex:1;}
   .day-divider{font-size:.72rem;color:var(--muted);padding:10px 0 8px;border-bottom:1px solid var(--border);margin:6px 0;}
   .footer{text-align:center;padding:20px;border-top:1px solid var(--border);color:var(--muted);font-size:.8rem;}
-  @media(max-width:768px){.strategy-grid,.summary-grid{grid-template-columns:1fr;}}
+  /* ── Scorecard / Leaderboard ── */
+  .scorecard{max-width:1100px;margin:0 auto 24px;padding:0 32px;}
+  .score-header{background:linear-gradient(135deg,#1a1200 0%,#0d1117 100%);border:2px solid var(--gold);border-radius:12px;padding:20px 28px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+  .score-big{display:flex;flex-direction:column;align-items:center;min-width:120px;}
+  .score-big .pts{font-size:2.4rem;font-weight:900;line-height:1;}
+  .score-big .lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:4px;}
+  .score-vs{font-size:1.5rem;font-weight:700;color:var(--muted);padding:0 8px;}
+  .score-meta{flex:1;min-width:180px;}
+  .score-meta .progress{background:rgba(139,148,158,.15);border-radius:4px;height:6px;margin-top:8px;overflow:hidden;}
+  .score-meta .bar{height:100%;border-radius:4px;background:linear-gradient(90deg,var(--gold) 0%,var(--green) 100%);}
+  .results-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:16px;}
+  .results-table thead tr{background:#1c2128;}
+  .results-table th{padding:9px 12px;text-align:left;font-size:.75rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border-bottom:1px solid var(--border);}
+  .results-table td{padding:10px 12px;border-bottom:1px solid rgba(48,54,61,.5);font-size:.82rem;vertical-align:middle;}
+  .results-table tr:last-child td{border-bottom:none;}
+  .pts-win{color:var(--green);font-weight:700;}
+  .pts-place{color:var(--blue);font-weight:700;}
+  .pts-show{color:var(--gold);font-weight:700;}
+  .pts-zero{color:var(--muted);}
+  .pts-pending{color:rgba(139,148,158,.45);font-style:italic;}
+  @media(max-width:768px){.strategy-grid,.summary-grid{grid-template-columns:1fr;}.score-header{flex-direction:column;text-align:center;}}
 """
 
 
@@ -324,7 +527,8 @@ def _pick_list_item(num: int, horse: str, race_display: str, time: str, score: i
     )
 
 
-def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: list) -> str:
+def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: list,
+               score_data: dict | None = None) -> str:
     # assembled: list of (race_info, sb_pick, mf_pick) in order
 
     # Detect day boundaries
@@ -450,6 +654,9 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
         f'(races apply macfitz_overrides.json) &middot; &#127942; = Cheltenham course winner</div>\n'
     )
 
+    # ── Scorecard / Leaderboard HTML ──────────────────────────────────────────
+    scorecard_html = _build_scorecard_html(assembled, score_data)
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -478,6 +685,8 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
   <div class="score-pill zero">&#10060; Unplaced = 0</div>
   <div class="score-pill zero">Max possible: 280 pts (28 &times; 10)</div>
 </div>
+
+{scorecard_html}
 
 <div class="strategy-grid">
   <div class="strategy-card surebet">
@@ -543,6 +752,11 @@ def run(dry_run: bool = False, check_only: bool = False):
     active_overrides = {k: v for k, v in overrides.get("overrides", {}).items() if v.get("active", True)}
     print(f"      {len(active_overrides)} active manual splits loaded")
 
+    print("  [1b] Loading race results ...")
+    results = load_results()
+    races_with_results = sum(1 for v in results.values() if v.get("1st", "").strip())
+    print(f"       {races_with_results} races with results recorded")
+
     print("  [2] Fetching latest picks from CheltenhamPicks DynamoDB ...")
     db_picks = fetch_latest_picks()
     print(f"      {len(db_picks)} races found in DB")
@@ -596,8 +810,12 @@ def run(dry_run: bool = False, check_only: bool = False):
         print("\n  [--check-splits]: no HTML written.")
         return
 
-    print("\n  [3] Generating HTML ...")
-    html = build_html(assembled, run_date, n_splits, new_close_calls)
+    print("\n  [3] Computing competition scores ...")
+    score_data = compute_competition_scores(assembled, results)
+    print(f"      Surebet: {score_data['sb_total']} pts  |  MacFitz: {score_data['mf_total']} pts  |  {score_data['races_run']} races run")
+
+    print("\n  [4] Generating HTML ...")
+    html = build_html(assembled, run_date, n_splits, new_close_calls, score_data=score_data)
 
     if dry_run:
         print(f"\n  [DRY RUN] Would write {len(html):,} bytes to {HTML_OUT}")
@@ -605,7 +823,7 @@ def run(dry_run: bool = False, check_only: bool = False):
         return
 
     HTML_OUT.write_text(html, encoding="utf-8")
-    print(f"\n  [4] Written {len(html):,} bytes → {HTML_OUT}")
+    print(f"\n  [5] Written {len(html):,} bytes → {HTML_OUT}")
     print(f"\n{'='*70}\n")
 
 

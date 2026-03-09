@@ -65,7 +65,8 @@ EXTRA_RACES = {
              "odds": "7/1",  "age": 5, "form": "12-1",      "rating": 145,
              # racecard 1-21: most recent = 1st (WIN)
              "cheltenham_record": None,
-             "last_run": "Won Novice Hurdle Feb 2026", "days_off": 28},
+             "last_run": "Won Novice Hurdle Feb 2026", "days_off": 28,
+             "improving": True},
             {"name": "Munsif",            "trainer": "Charles Byrnes",               "jockey": "sp",
              "odds": "sp",   "age": 5, "form": "353",       "rating": 132,
              # racecard 353: most recent = 3rd
@@ -261,7 +262,8 @@ EXTRA_RACES = {
              "odds": "9/2",  "age": 8, "form": "252489",  "rating": 158,
              # racecard 9/842-52 C (Cheltenham course winner): most recent = 2nd Kempton
              "cheltenham_record": "Won Cheltenham Plate Chase 2024",
-             "last_run": "2nd Handicap Chase Kempton Feb 2026", "days_off": 35},
+             "last_run": "2nd Handicap Chase Kempton Feb 2026", "days_off": 35,
+             "finishes_strongly": True},
             {"name": "Will The Wise",      "trainer": "Gavin Cromwell",          "jockey": "Keith Donoghue",
              "odds": "7/1",  "age": 7, "form": "041225",  "rating": 153,
              # racecard 5-22140 BF: most recent = 0 (tailed off)
