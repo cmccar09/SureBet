@@ -942,18 +942,19 @@ RULED_OUT = {
 # CORE SCORING + PICK SELECTION
 # ────────────────────────────────────────────────────────────────────────────
 
-def score_field(entries, surebet_db):
+def score_field(entries, surebet_db, race_name=""):
     """
     Score every horse in a race field using score_horse_2026().
     Augments score by +10 if horse is already confirmed in SureBetBets.
     Returns list of dicts sorted highest score first.
+    Pass race_name so race-specific bonuses (same-race winner, Grade 1 etc.) fire correctly.
     """
     results = []
     for horse in entries:
         # Skip any horse officially ruled out of the 2026 festival
         if horse["name"].lower() in RULED_OUT:
             continue
-        score, tips, warnings, value_r = score_horse_2026(horse, "")
+        score, tips, warnings, value_r = score_horse_2026(horse, race_name)
         name_lower = horse["name"].lower()
         db_bonus   = 0
         db_note    = None
@@ -1054,7 +1055,7 @@ def build_all_picks(verbose=False):
                 }
                 continue
 
-            scored = score_field(entries, surebet_db)
+            scored = score_field(entries, surebet_db, race_name=race_info["name"])
             sb_pick = pick_for_entry(scored, "form")
             ds_pick = pick_for_entry(scored, "festival_specialist")
 
