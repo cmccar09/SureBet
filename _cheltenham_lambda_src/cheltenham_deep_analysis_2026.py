@@ -742,9 +742,13 @@ RACES_2026 = {
         "distance": "2m 87y",
         "entries": [
             # NB: Constitution Hill officially NR 2026 (Nicky Henderson, flat plans)
-            # LATE CHANGE 09/03/2026: Lossiemouth IS in Close Brothers Mares Hurdle (Thu 13:20)
-            # per official Thursday racecard — NOT Champion Hurdle. Brighterdaysahead becomes top pick.
-            # (was CONFIRMED 08/03 for Champion Hurdle but official Thu racecard shows Mares Hurdle)
+            # FINAL CONFIRMATION 09/03/2026 evening: Willie Mullins confirmed Lossiemouth RUNS CHAMPION HURDLE
+            # (Thu racecard briefly showed Mares Hurdle but Mullins corrected Sat evening — Paddy Power 2/1 fav)
+            {"name": "Lossiemouth", "trainer": "Willie Mullins", "jockey": "Paul Townend",
+             "odds": "2/1", "age": 7, "form": "f-1-1-1-1-2", "rating": 169,
+             "cheltenham_record": "Won 2024 Mares Hurdle; Won 2025 Mares Hurdle",
+             "last_run": "2nd Irish Champion Hurdle Jan 2026", "days_off": 42,
+             "ground_pref": "soft", "dist_class_form": "Won Grade 1 Mares Hurdle 2m4f Cheltenham x2"},
             {"name": "The New Lion", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
              "odds": "9/4", "age": 7, "form": "1-1-1F1", "rating": 163,
              "cheltenham_record": "Won 2025 Turners Novices' Hurdle",
@@ -940,12 +944,8 @@ RACES_2026 = {
         "distance": "2m 4f",
         "entries": [
             # Full 14-runner field from official Thursday 12 March racecard
-            # LATE CHANGE 09/03/2026: Lossiemouth IS running here (not Champion Hurdle)
-            {"name": "Lossiemouth", "trainer": "Willie Mullins", "jockey": "Paul Townend",
-             "odds": "6/4", "age": 7, "form": "2-1-1-1-1-f", "rating": 159,
-             "cheltenham_record": "Won 2024 Mares Hurdle; Won 2025 Mares Hurdle",
-             "last_run": "2nd Irish Champion Hurdle Jan 2026", "days_off": 42,
-             "ground_pref": "soft"},
+            # REVERSAL 09/03/2026 evening: Lossiemouth REMOVED — Mullins confirmed she runs CHAMPION HURDLE
+            # Wodhooh (OR 154, Gordon Elliott, CD winner) becomes top pick here
             {"name": "Wodhooh", "trainer": "Gordon Elliott", "jockey": "TBD",
              "odds": "6/1", "age": 6, "form": "1-1-2-1-1", "rating": 154,
              "cheltenham_record": "CD winner",
@@ -1006,33 +1006,65 @@ RACES_2026 = {
         "grade": "Grade 1",
         "distance": "3m 2f",
         "entries": [
-            # CONFIRMED 09/03/2026: Gaelic Warrior (OR 172) runs RYANAIR CHASE (Thu 16:00) per official racecard
-            # NOT in Gold Cup — defending champion changed race
-            {"name": "The Jukebox Man", "trainer": "Ben Pauling", "jockey": "Jonjo O'Neill Jr",
-             "odds": "4/1", "age": 8, "form": "1-1-11", "rating": 178,
+            # CORRECTED 09/03/2026: Gaelic Warrior IS in the Friday Gold Cup per official racecard
+            # Fastorslow NOT in official Friday racecard — removed
+            # RULED OUT 07/03/2026: Galopin Des Champs withdrawn (Willie Mullins confirmed)
+            {"name": "The Jukebox Man", "trainer": "Ben Pauling", "jockey": "Ben Jones",
+             "odds": "4/1", "age": 8, "form": "1-1-1-1-2", "rating": 168,
              "cheltenham_record": None,
              "last_run": "Won Grade 1 Denman Chase Feb 2026", "days_off": 21},
             {"name": "Jango Baie", "trainer": "Nicky Henderson", "jockey": "Nico de Boinville",
-             "odds": "4/1", "age": 7, "form": "4-1-3-12", "rating": 177,
+             "odds": "4/1", "age": 7, "form": "2-1-3-4-7", "rating": 167,
              "cheltenham_record": "Won 2025 Arkle Challenge Trophy",
              "last_run": "2nd Grade 1 Chase Jan 2026", "days_off": 42},
-            # RULED OUT 07/03/2026: Galopin Des Champs withdrawn with setback (Willie Mullins confirmed)
-            {"name": "Haiti Couleurs", "trainer": "Rebecca Curtis", "jockey": "Adam Wedge",
-             "odds": "8/1", "age": 9, "form": "1-1-P-11", "rating": 172,
-             "cheltenham_record": "Won 2025 Princess Royal NH Challenge Cup",
+            {"name": "Haiti Couleurs", "trainer": "Miss Rebecca Curtis", "jockey": "TBD",
+             "odds": "7/1", "age": 9, "form": "1-1-p-1-1", "rating": 166,
+             "cheltenham_record": "Won 2025 Princess Royal Hunters' Chase (Cheltenham)",
              "last_run": "Won Grade 2 Chase Feb 2026", "days_off": 28},
-            {"name": "Inothewayurthinkin", "trainer": "Gavin Cromwell", "jockey": "Danny Mullins",
-             "odds": "13/2", "age": 8, "form": "9-F-5-14", "rating": 184,
+            {"name": "Inothewayurthinkin", "trainer": "Gavin Patrick Cromwell", "jockey": "TBD",
+             "odds": "6/1", "age": 8, "form": "f-9-5-1-4", "rating": 172,
              "cheltenham_record": "Won 2025 Cheltenham Gold Cup",
              "last_run": "4th King George VI Chase Dec 2025", "days_off": 77},
             {"name": "Grey Dawning", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
-             "odds": "14/1", "age": 9, "form": "3-1-2-P1", "rating": 176,
+             "odds": "12/1", "age": 9, "form": "3-1-2-p-1", "rating": 166,
              "cheltenham_record": "3rd 2025 Gold Cup",
              "last_run": "Won Grade 2 Chase Feb 2026", "days_off": 28},
-            {"name": "Spillane's Tower", "trainer": "James J Mangan", "jockey": "Mark Walsh",
-             "odds": "16/1", "age": 8, "form": "1-3-9-21", "rating": 168,
+            {"name": "Gaelic Warrior", "trainer": "Willie Mullins", "jockey": "Patrick Mullins",
+             "odds": "10/1", "age": 8, "form": "3-1-1-1-3", "rating": 172,
+             "cheltenham_record": "Won 2025 Cheltenham Gold Cup; Won 2024 Turners Novices Chase",
+             "last_run": "3rd Grade 1 Chase Jan 2026", "days_off": 42},
+            {"name": "Spillane's Tower", "trainer": "James Joseph Mangan", "jockey": "Mark Walsh",
+             "odds": "14/1", "age": 8, "form": "5-2-9-3-1", "rating": 163,
              "cheltenham_record": None,
-             "last_run": "2nd Grade 1 Jan 2026", "days_off": 42},
+             "last_run": "Won Grade 2 Chase Feb 2026", "days_off": 28},
+            {"name": "Envoi Allen", "trainer": "Henry de Bromhead", "jockey": "Jack Kennedy",
+             "odds": "16/1", "age": 12, "form": "u-3-1-4-1", "rating": 162,
+             "cheltenham_record": "Won 2020 Ballymore; Won 2021 Marsh Chase",
+             "last_run": "Won Grade 2 Chase Feb 2026", "days_off": 28},
+            {"name": "Banbridge", "trainer": "Joseph Patrick O'Brien", "jockey": "TBD",
+             "odds": "16/1", "age": 10, "form": "2-4-4-7-1", "rating": 167,
+             "cheltenham_record": None,
+             "last_run": "7th Grade 1 Chase Dec 2025", "days_off": 77},
+            {"name": "Affordale Fury", "trainer": "Noel Meade", "jockey": "TBD",
+             "odds": "20/1", "age": 8, "form": "p-2-2-1-1", "rating": 166,
+             "cheltenham_record": None,
+             "last_run": "Won Grade 1 Chase Jan 2026", "days_off": 42},
+            {"name": "Firefox", "trainer": "Gordon Elliott", "jockey": "TBD",
+             "odds": "20/1", "age": 8, "form": "4-2-1-2-6", "rating": 158,
+             "cheltenham_record": None,
+             "last_run": "4th Grade 1 Chase Feb 2026", "days_off": 28},
+            {"name": "L'Homme Presse", "trainer": "Miss Venetia Williams", "jockey": "Charlie Deutsch",
+             "odds": "25/1", "age": 11, "form": "2-2-3-4-1", "rating": 164,
+             "cheltenham_record": "Won 2022 Marsh Novices Chase",
+             "last_run": "2nd Grade 1 Chase Jan 2026", "days_off": 42},
+            {"name": "Gold Tweet", "trainer": "Gabriel Leenders", "jockey": "TBD",
+             "odds": "50/1", "age": 9, "form": "5-3-6-5-2", "rating": 144,
+             "cheltenham_record": None,
+             "last_run": "5th Grade 1 Chase Dec 2025", "days_off": 77},
+            {"name": "Stellar Story", "trainer": "Gordon Elliott", "jockey": "TBD",
+             "odds": "33/1", "age": 9, "form": "8-3-3-2-3", "rating": 155,
+             "cheltenham_record": None,
+             "last_run": "3rd Grade 2 Chase Jan 2026", "days_off": 42},
         ]
     },
     "Champion Bumper": {

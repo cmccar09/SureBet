@@ -34,17 +34,19 @@
       "macfitz_score": 94,
       "gap": 4,
       "decided": "2026-03-08",
-      "active": true
+      "active": false,
+      "_deactivated": "09/03/2026: Surebet now also picks Madara (score 104 after field corrections) \u2014 both systems agree, override no longer needed"
     },
     "Cheltenham Gold Cup": {
-      "macfitz_horse": "Fastorslow",
-      "reason": "5pt gap (164 vs 159) - Fastorslow was 2025 Gold Cup runner-up, outstanding festival form justifies the split on the biggest race",
+      "macfitz_horse": "Gaelic Warrior",
+      "reason": "UPDATED 09/03/2026: Fastorslow NOT in official 14-runner Friday field — removed. Gaelic Warrior (OR 172, defending Ryanair Champion) is the correct top-rated pick for both systems",
       "surebet_horse": "Gaelic Warrior",
-      "surebet_score": 164,
-      "macfitz_score": 159,
-      "gap": 5,
-      "decided": "2026-03-06",
-      "active": true
+      "surebet_score": 143,
+      "macfitz_score": 143,
+      "gap": 0,
+      "decided": "2026-03-09",
+      "active": false,
+      "_deactivated": "09/03/2026: Both systems now agree on Gaelic Warrior \u2014 Fastorslow removed from data as NOT in official 14-runner Gold Cup field"
     }
   }
 }
