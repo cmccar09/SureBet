@@ -20,7 +20,14 @@ function buildWhyWins(pick) {
 
   // Horse-specific overrides — full curated text
   const OVERRIDES = {
-    'Old Park Star': 'Nicky Henderson / Nico de Boinville · 3+ consecutive wins · score 139 · dominant 51pt lead over next rival',
+    // ── Day 1 ────────────────────────────────────────────────────────────────
+    'Old Park Star':     'Nicky Henderson / Nico de Boinville · 3+ consecutive wins · score 139 · dominant 51pt lead over next rival',
+    // ── Day 2 ────────────────────────────────────────────────────────────────
+    'Il Etait Temps':    'Willie Mullins / P. Townend · Grade 1 Champion Chase horse · score 107 · 97pt clear of rivals · relentless two-mile speed · Festival specialist',
+    'No Drama This End': 'Paul Nicholls / Harry Cobden · unbeaten novice hurdler · score 93 · Grade 1 form all season · Nicholls / Cobden in brilliant Festival form',
+    "Kaid D'Authie":     'Willie Mullins / M. P. Walsh · unbeaten novice chaser · score 94 · dominant over fences · Mullins/Walsh Grade 1 combination',
+    'Keep Him Company':  'Gordon Elliott / J. W. Kennedy · dominant bumper performer · score 80 · impressive point-to-point form · Elliott/Kennedy Festival combination',
+    'Stumptown':         'Gavin Cromwell / Keith Donoghue · cross country specialist · score 116 · relishes unique Cheltenham course · proven stamina over fences',
   };
   if (OVERRIDES[pick.horse]) return OVERRIDES[pick.horse];
 
@@ -295,13 +302,21 @@ function CheltenhamView({ apiUrl }) {
           Thursday_12_March:  new Date('2026-03-12T18:00:00'),
           Friday_13_March:    new Date('2026-03-13T23:59:00'),
         };
-        const allPicks = Object.values(cheltenhamPicks).filter(p => {
-          if (p.bet_tier !== 'BETTING_PICK' && p.recommendation !== 'BETTING_PICK') return false;
+        // Best BETTING_PICK from each remaining day (1 per day, sorted by score)
+        const dayBestPick = {};
+        Object.values(cheltenhamPicks).forEach(p => {
+          if (p.bet_tier !== 'BETTING_PICK' && p.recommendation !== 'BETTING_PICK') return;
           const cutoff = dayCutoffs[p.day];
-          return cutoff && now_naps < cutoff; // skip completed days
+          if (!cutoff || now_naps >= cutoff) return; // skip completed/unknown days
+          const existing = dayBestPick[p.day];
+          if (!existing || parseFloat(p.score || 0) > parseFloat(existing.score || 0)) {
+            dayBestPick[p.day] = p;
+          }
         });
-        const top3 = allPicks
-          .slice()
+        const NAP_DAY_ORDER = ['Tuesday_10_March', 'Wednesday_11_March', 'Thursday_12_March', 'Friday_13_March'];
+        const top3 = NAP_DAY_ORDER
+          .filter(d => dayBestPick[d])
+          .map(d => dayBestPick[d])
           .sort((a, b) => parseFloat(b.score || 0) - parseFloat(a.score || 0))
           .slice(0, 3);
         if (top3.length === 0) return null;
@@ -418,10 +433,20 @@ function CheltenhamView({ apiUrl }) {
         const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
         const cutoffMidnight = new Date(activeFestDay.cutoff.getFullYear(), activeFestDay.cutoff.getMonth(), activeFestDay.cutoff.getDate());
         const isToday = todayMidnight.getTime() === cutoffMidnight.getTime();
-        const titleTag = isToday ? "🔥 TODAY'S TOP 3 BETS" : `⏳ NEXT UP — ${activeFestDay.label.toUpperCase()}`;
+        const isTomorrow = !isToday && (() => {
+          const tomorrowDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+          return tomorrowDate.getTime() === cutoffMidnight.getTime();
+        })();
+        const titleTag = isToday
+          ? "🔥 TODAY'S TOP 3 BETS"
+          : isTomorrow
+            ? `🔥 TOMORROW'S TOP 3 BETS — ${activeFestDay.label.toUpperCase()}`
+            : `⏳ NEXT UP — ${activeFestDay.label.toUpperCase()}`;
         const subtitleTag = isToday
           ? `${activeFestDay.label} · ${activeFestDay.short} · Back these NOW`
-          : `${activeFestDay.short} · Prepare your bets`;
+          : isTomorrow
+            ? `${activeFestDay.label} · ${activeFestDay.short} · Line up your stakes for tomorrow`
+            : `${activeFestDay.short} · Prepare your bets`;
 
         // Get all BETTING_PICK picks for that day, sorted by soonest upcoming race time
         const nowHHMM = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
@@ -446,16 +471,17 @@ function CheltenhamView({ apiUrl }) {
 
         return (
           <div style={{
-            background: isToday
+            background: isToday || isTomorrow
               ? 'linear-gradient(135deg,#0d1f0d 0%,#052e16 60%,#0d1117 100%)'
               : 'linear-gradient(135deg,#0d1520 0%,#161b22 100%)',
-            border: `2px solid ${isToday ? '#10b981' : '#3b82f6'}`,
+            border: `2px solid ${(isToday || isTomorrow) ? '#10b981' : '#3b82f6'}`,
+            outline: isTomorrow ? '1px solid rgba(16,185,129,0.3)' : 'none',
             borderRadius: '12px',
             padding: '18px 22px',
             marginBottom: '20px',
           }}>
             <div style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '1.5px',
-              textTransform: 'uppercase', color: isToday ? '#10b981' : '#3b82f6', marginBottom: '2px' }}>
+              textTransform: 'uppercase', color: (isToday || isTomorrow) ? '#10b981' : '#3b82f6', marginBottom: '2px' }}>
               {titleTag}
             </div>
             <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.6)', marginBottom: '14px' }}>
