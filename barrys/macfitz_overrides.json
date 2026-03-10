@@ -26,6 +26,16 @@
       "active": false,
       "_deactivated": "Grange Walk not entered for Cheltenham (Betfair ANTEPOST: absent 2026-03-06). Both entries revert to highest remaining scorer (Down Memory Lane)."
     },
+    "Arkle Challenge Trophy Chase": {
+      "macfitz_horse": "Lulamba",
+      "reason": "LIVE SPLIT 10/03/2026: Lulamba = Kopek Des Bordes at identical Betfair price (13/8 = 2.6). 4/5 RP tipsters on Lulamba. MacFitz follows course wisdom (Kopek is Cheltenham course winner but Lulamba is clear market co-fav). Dead heat — MacFitz takes Lulamba.",
+      "surebet_horse": "Kopek Des Bordes",
+      "surebet_score": 171,
+      "macfitz_score": 158,
+      "gap": 0,
+      "decided": "2026-03-10",
+      "active": true
+    },
     "Cheltenham Plate Chase": {
       "macfitz_horse": "Zurich",
       "reason": "3pt gap (104 vs 101) — close call, MacFitz takes Zurich as the alternative",

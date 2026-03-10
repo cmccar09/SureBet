@@ -82,6 +82,33 @@ COURSE_WINNERS = {
     "Dinoblue":           "Won 2025 Mares Chase",
 }
 
+# ── bumper submission config ──────────────────────────────────────────────────
+SUREBET_GROUP_ID = 34
+FITZMAC_GROUP_ID = 38
+
+# Cloth / race-card numbers per horse at the Festival.
+# Updated each morning before racing. '?' = not yet confirmed (Days 2-4).
+RUNNER_NUMBERS: dict[str, int | str] = {
+    # Day 1 — Champion Day (10 Mar)
+    "Old Park Star":      8,
+    "Talk The Talk":      6,
+    "Kopek Des Bordes":   3,   # Surebet Arkle pick
+    "Lulamba":            7,   # MacFitz Arkle pick (SPLIT)
+    "Manlaga":            8,
+    "Winston Junior":     10,
+    "Jagwar":             4,
+    "Iroko":              14,
+    "Lossiemouth":        9,
+    "The New Lion":       4,
+    "Madara":             9,   # Surebet Plate pick
+    "Zurich":             "?",  # MacFitz Plate pick (SPLIT) — confirm once racecard live
+    "McLaurey":           2,
+    "Backmersackme":      9,
+    "Newton Tornado":     11,
+    "Iceberg Theory":     6,
+    # Day 2-4 horses added as racecards are published
+}
+
 # ── tier cosmetics ─────────────────────────────────────────────────────────────
 TIER_CSS = {
     "A+": ("elite",  "var(--gold)",   "A+ ELITE"),
@@ -425,6 +452,29 @@ CSS = r"""
   .pick-body{flex:1;}
   .day-divider{font-size:.72rem;color:var(--muted);padding:10px 0 8px;border-bottom:1px solid var(--border);margin:6px 0;}
   .footer{text-align:center;padding:20px;border-top:1px solid var(--border);color:var(--muted);font-size:.8rem;}
+  /* ── Submission Numbers panel ── */
+  .submission-panel{max-width:1100px;margin:0 auto 24px;padding:0 32px;}
+  .submission-box{background:linear-gradient(135deg,#0a1a0a 0%,#0d1117 100%);border:2px solid var(--green);border-radius:12px;padding:20px 24px;}
+  .submission-box h3{font-size:1rem;color:var(--green);font-weight:700;letter-spacing:.5px;margin-bottom:14px;display:flex;align-items:center;gap:8px;}
+  .sub-group-row{display:flex;gap:20px;margin-bottom:16px;flex-wrap:wrap;}
+  .sub-group-badge{padding:6px 16px;border-radius:8px;font-weight:700;font-size:.95rem;letter-spacing:.5px;}
+  .sub-group-badge.sb{background:rgba(88,166,255,.2);border:1px solid var(--blue);color:var(--blue);}
+  .sub-group-badge.mf{background:rgba(210,153,34,.2);border:1px solid var(--orange);color:var(--orange);}
+  .sub-day-grid{display:grid;grid-template-columns:auto 1fr 1fr;gap:8px 16px;align-items:start;}
+  .sub-day-label{font-size:.78rem;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:.5px;padding-top:6px;}
+  .sub-num-col{background:rgba(139,148,158,.06);border-radius:8px;padding:8px 12px;}
+  .sub-num-col .col-head{font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:700;}
+  .sub-num-col .col-head.sb{color:var(--blue);}
+  .sub-num-col .col-head.mf{color:var(--orange);}
+  .sub-num-list{display:flex;flex-wrap:wrap;gap:6px;}
+  .sub-horse-chip{display:inline-flex;flex-direction:column;align-items:center;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:.72rem;min-width:38px;}
+  .sub-horse-chip .chip-num{font-size:1.05rem;font-weight:900;line-height:1.1;}
+  .sub-horse-chip .chip-name{font-size:.6rem;color:var(--muted);text-align:center;max-width:58px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .sub-horse-chip.split-sb{border-color:var(--blue);background:rgba(88,166,255,.1);}
+  .sub-horse-chip.split-mf{border-color:var(--orange);background:rgba(210,153,34,.1);}
+  .sub-horse-chip .chip-num.split-sb{color:var(--blue);}
+  .sub-horse-chip .chip-num.split-mf{color:var(--orange);}
+  .sub-nums-flat{font-size:.85rem;font-weight:600;color:var(--text);letter-spacing:.5px;}
   /* ── Scorecard / Leaderboard ── */
   .scorecard{max-width:1100px;margin:0 auto 24px;padding:0 32px;}
   .score-header{background:linear-gradient(135deg,#1a1200 0%,#0d1117 100%);border:2px solid var(--gold);border-radius:12px;padding:20px 28px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
@@ -447,6 +497,91 @@ CSS = r"""
   .pts-pending{color:rgba(139,148,158,.45);font-style:italic;}
   @media(max-width:768px){.strategy-grid,.summary-grid{grid-template-columns:1fr;}.score-header{flex-direction:column;text-align:center;}}
 """
+
+
+def _build_submission_html(assembled: list) -> str:
+    """
+    Build the 'Bumper Submission Numbers' panel.
+    Shows group IDs + per-day cloth numbers for Surebet and MacFitz.
+    """
+    # Group races by day
+    days: dict[int, list] = {}
+    for race, sb, mf in assembled:
+        d = race[0]
+        if d not in days:
+            days[d] = []
+        days[d].append((race, sb, mf))
+
+    day_label_map = {
+        1: "DAY 1 — TUE",
+        2: "DAY 2 — WED",
+        3: "DAY 3 — THU",
+        4: "DAY 4 — FRI",
+    }
+
+    def _chip(horse: str, is_split: bool, side: str) -> str:
+        """Return a chip <div> for one horse with its cloth number."""
+        num = RUNNER_NUMBERS.get(horse, "?")
+        num_str = str(num)
+        short_name = (horse[:9] + "…") if len(horse) > 9 else horse
+        if is_split:
+            cls = f"sub-horse-chip split-{side}"
+            num_cls = f"chip-num split-{side}"
+        else:
+            cls = "sub-horse-chip"
+            num_cls = "chip-num"
+        return (
+            f'<div class="{cls}" title="{horse}">'
+            f'<span class="{num_cls}">{num_str}</span>'
+            f'<span class="chip-name">{short_name}</span>'
+            f'</div>'
+        )
+
+    def _flat_nums(entries: list[tuple[str, bool, str]]) -> str:
+        """Comma-separated numbers string, with splits marked."""
+        parts = []
+        for horse, is_split, side in entries:
+            num = RUNNER_NUMBERS.get(horse, "?")
+            parts.append(str(num))
+        return ", ".join(parts)
+
+    day_rows = ""
+    for d in sorted(days.keys()):
+        races_today = days[d]
+        sb_entries = [(sb.get("horse", "?"), mf["is_split"], "sb") for _, sb, mf in races_today]
+        mf_entries = [(mf["horse"], mf["is_split"], "mf") for _, sb, mf in races_today]
+
+        sb_chips = "".join(_chip(horse, split, "sb") for horse, split, _ in sb_entries)
+        mf_chips = "".join(_chip(horse, split, "mf") for horse, split, _ in mf_entries)
+        sb_flat = _flat_nums(sb_entries)
+        mf_flat = _flat_nums(mf_entries)
+
+        day_rows += f"""
+      <div class="sub-day-label">{day_label_map[d]}</div>
+      <div class="sub-num-col">
+        <div class="col-head sb">&#128309; Surebet &nbsp;<span class="sub-nums-flat">[ {sb_flat} ]</span></div>
+        <div class="sub-num-list">{sb_chips}</div>
+      </div>
+      <div class="sub-num-col">
+        <div class="col-head mf">&#128992; MacFitz &nbsp;<span class="sub-nums-flat">[ {mf_flat} ]</span></div>
+        <div class="sub-num-list">{mf_chips}</div>
+      </div>"""
+
+    return f"""
+<div class="submission-panel">
+  <div class="submission-box">
+    <h3>&#128203; Bumper Submission Numbers &nbsp;
+      <span style="font-size:.72rem;color:var(--muted);font-weight:400;">Horse cloth numbers in race order per day — ready to submit</span>
+    </h3>
+    <div class="sub-group-row">
+      <div class="sub-group-badge sb">&#128309; Surebet Group ID: {SUREBET_GROUP_ID}</div>
+      <div class="sub-group-badge mf">&#128992; FitzMac Group ID: {FITZMAC_GROUP_ID}</div>
+      <div style="font-size:.78rem;color:var(--muted);align-self:center;">Coloured chips = splits &nbsp;| &nbsp;<span style="color:var(--muted);">? = racecard not yet published</span></div>
+    </div>
+    <div class="sub-day-grid">{day_rows}
+    </div>
+  </div>
+</div>"""
 
 
 def _score_tag(score: int, css_class: str) -> str:
@@ -657,6 +792,9 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
     # ── Scorecard / Leaderboard HTML ──────────────────────────────────────────
     scorecard_html = _build_scorecard_html(assembled, score_data)
 
+    # ── Submission Numbers panel ───────────────────────────────────────────────
+    submission_html = _build_submission_html(assembled)
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -687,6 +825,8 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
 </div>
 
 {scorecard_html}
+
+{submission_html}
 
 <div class="strategy-grid">
   <div class="strategy-card surebet">
