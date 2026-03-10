@@ -64,7 +64,8 @@
       "macfitz_score": 125,
       "gap": 2,
       "decided": "2026-03-09",
-      "active": true
+      "active": false,
+      "_deactivated": "10/03/2026: Surebet engine also now picks Keep Him Company (score 93) — both systems agree, split collapses."
     },
     "Kim Muir Handicap Chase": {
       "macfitz_horse": "Prends Garde A Toi",

@@ -302,7 +302,7 @@ def _build_scorecard_html(assembled: list, score_data: dict | None) -> str:
         leader_badge = f'<span style="background:var(--green);color:#0d1117;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:10px;margin-left:10px;">LEADING</span>'
     elif mf_total > sb_total:
         gap = mf_total - sb_total
-        status_msg = f'<span style="color:var(--orange);font-weight:700;">&#128992; MACFITZ leads by {gap} point{"s" if gap!=1 else ""}</span>'
+        status_msg = f'<span style="color:var(--orange);font-weight:700;">&#128992; FITZMAC leads by {gap} point{"s" if gap!=1 else ""}</span>'
         leader_badge = f'<span style="background:var(--orange);color:#0d1117;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:10px;margin-left:10px;">LEADING</span>'
     else:
         status_msg = '<span style="color:var(--gold);font-weight:700;">&#9889; All Square</span>'
@@ -342,7 +342,7 @@ def _build_scorecard_html(assembled: list, score_data: dict | None) -> str:
       <th>Race</th>
       <th style="color:var(--blue)">&#128309; Surebet Pick</th>
       <th style="color:var(--green)">Pts</th>
-      <th style="color:var(--orange)">&#128992; MacFitz Pick</th>
+      <th style="color:var(--orange)">&#128992; FitzMac Pick</th>
       <th style="color:var(--orange)">Pts</th>
       <th>Placed 1st / 2nd / 3rd</th>
     </tr></thead>
@@ -365,7 +365,7 @@ def _build_scorecard_html(assembled: list, score_data: dict | None) -> str:
     <div class="score-vs">vs</div>
     <div class="score-big">
       <div class="pts" style="color:var(--orange)">{mf_total}</div>
-      <div class="lbl">&#128992; MacFitz</div>
+      <div class="lbl">&#128992; FitzMac</div>
     </div>
     <div class="score-meta">
       <div style="font-size:.85rem;color:var(--text);font-weight:600;">{status_msg}{leader_badge}</div>
@@ -563,7 +563,7 @@ def _build_submission_html(assembled: list) -> str:
         <div class="sub-num-list">{sb_chips}</div>
       </div>
       <div class="sub-num-col">
-        <div class="col-head mf">&#128992; MacFitz &nbsp;<span class="sub-nums-flat">[ {mf_flat} ]</span></div>
+        <div class="col-head mf">&#128992; FitzMac &nbsp;<span class="sub-nums-flat">[ {mf_flat} ]</span></div>
         <div class="sub-num-list">{mf_chips}</div>
       </div>"""
 
@@ -623,7 +623,7 @@ def _row_race(race, sb_pick, mf_pick, race_num: int) -> str:
             f'<div style="display:flex;flex-direction:column;gap:4px">'
             f'<div><span style="color:var(--blue);font-size:.72rem;font-weight:700">&#128309; SUREBET:</span> '
             f'<span style="font-weight:700;color:var(--green)">{sb_horse}</span>{sb_note}</div>'
-            f'<div><span style="color:var(--orange);font-size:.72rem;font-weight:700">&#128992; MACFITZ:</span> '
+            f'<div><span style="color:var(--orange);font-size:.72rem;font-weight:700">&#128992; FITZMAC:</span> '
             f'<span style="font-weight:700;color:var(--orange)">{mf_horse}</span>{mf_note} '
             f'<span class="split-tag">&#9889; SPLIT</span></div>'
             f'<div style="font-size:.7rem;color:var(--muted)">{reason}</div>'
@@ -692,7 +692,7 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
         thead = (
             f'  <table class="picks-table">\n'
             f'    <thead><tr><th>Time</th><th>Grade</th><th>Race</th>'
-            f'<th>&#128309; Surebet &amp; &#128992; MacFitz</th>'
+            f'<th>&#128309; Surebet &amp; &#128992; FitzMac</th>'
             f'<th>Score</th><th>Tier</th></tr></thead>\n'
             f'    <tbody>\n'
         )
@@ -746,7 +746,7 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
     if n_splits == 0:
         notice_content = (
             f'<strong>&#9733; All 28 races are BANKERS this cycle</strong> &mdash; '
-            f'both Surebet and MacFitz agree on every race.'
+            f'both Surebet and FitzMac agree on every race.'
         )
         notice_class = "notice-box"
     else:
@@ -754,7 +754,7 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
             f'<em>{race[3]}</em>' for race, sb, mf in assembled if mf["is_split"]
         )
         split_details = " | ".join(
-            f'{race[3]}: MacFitz &rarr; <strong>{mf["horse"]}</strong> (gap={mf["gap"]})'
+            f'{race[3]}: FitzMac &rarr; <strong>{mf["horse"]}</strong> (gap={mf["gap"]})'
             for race, sb, mf in assembled if mf["is_split"]
         )
         notice_content = (
@@ -779,7 +779,7 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
     sb_footer = (
         f'      <div style="margin-top:12px;padding:8px 12px;background:rgba(88,166,255,.08);'
         f'border-radius:6px;font-size:.8rem;color:var(--muted);">'
-        f'{n_bankers} bankers &middot; {n_splits} split{"s" if n_splits!=1 else ""} (see MacFitz list) '
+        f'{n_bankers} bankers &middot; {n_splits} split{"s" if n_splits!=1 else ""} (see FitzMac list) '
         f'&middot; Scores from live SureBet engine {run_date}</div>\n'
     )
     mf_footer = (
@@ -834,7 +834,7 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
     <p><strong>Form-first strategy.</strong> Highest live SureBet score &mdash; best recent form, top trainer/jockey combo, class performer, course &amp; distance winner. Scores auto-refreshed daily from Betfair + Racing Post.</p>
   </div>
   <div class="strategy-card macfitz">
-    <h3>&#128992; MacFitz</h3>
+    <h3>&#128992; FitzMac</h3>
     <p><strong>Festival specialist strategy.</strong> Follows Surebet EXCEPT in dead-heat / near-tie races where a festival specialist or course winner is within striking distance. Splits governed by <code>macfitz_overrides.json</code>.</p>
   </div>
 </div>
@@ -861,7 +861,7 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
     </div>
 
     <div class="solo-list">
-      <h3 class="macfitz-header">&#128992; MACFITZ &mdash; 28 Picks</h3>
+      <h3 class="macfitz-header">&#128992; FITZMAC &mdash; 28 Picks</h3>
 {macfitz_items}
 {mf_footer}
     </div>
