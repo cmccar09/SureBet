@@ -688,7 +688,7 @@ EXTRA_RACES = {
              "odds": "12/1", "age": 8, "form": "3-3-3-4-1-p", "rating": 152,
              "cheltenham_record": None,
              "last_run": "3rd Handicap Hurdle Jan 2026", "days_off": 42},
-            {"name": "Storm Heart", "trainer": "Willie Mullins", "jockey": "Paul Townend",
+            {"name": "Storm Heart", "trainer": "Willie Mullins", "jockey": "Danny Mullins",
              "odds": "8/1", "age": 6, "form": "1-1-2-4-5", "rating": 151,
              "cheltenham_record": None,
              "last_run": "Won Handicap Hurdle Jan 2026", "days_off": 42},
@@ -729,7 +729,7 @@ EXTRA_RACES = {
     },
     "day2_race4": {   # Glenfarclas Cross Country Chase  (Grade 2, ~4m — 18 runners, Wed 11 Mar 15:20)
         "entries": [
-            {"name": "Stumptown", "trainer": "Gavin Cromwell", "jockey": "Danny Mullins",
+            {"name": "Stumptown", "trainer": "Gavin Cromwell", "jockey": "Keith Donoghue",
              "odds": "3/1", "age": 9, "form": "1-1-1-2-1", "rating": 162,
              "cheltenham_record": "Won 2025 Glenfarclas Cross Country Chase",
              "last_run": "Won Cross Country Chase Jan 2026", "days_off": 42},
@@ -929,7 +929,7 @@ EXTRA_RACES = {
              "odds": "5/1", "age": 5, "form": "2-1", "rating": 130,
              "cheltenham_record": None,
              "last_run": "Won INH Flat Feb 2026", "days_off": 28},
-            {"name": "Keep Him Company", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
+            {"name": "Keep Him Company", "trainer": "Willie Mullins", "jockey": "Jack Kennedy",
              "odds": "5/1", "age": 6, "form": "1-1", "rating": 132,
              "cheltenham_record": None,
              "last_run": "Won Grade 1 Bumper Jan 2026", "days_off": 42},
