@@ -369,7 +369,7 @@ def _build_scorecard_html(assembled: list, score_data: dict | None) -> str:
     </div>
     <div class="score-meta">
       <div style="font-size:.85rem;color:var(--text);font-weight:600;">{status_msg}{leader_badge}</div>
-      <div style="font-size:.75rem;color:var(--muted);margin-top:4px;">{races_run} of 28 races complete &middot; Max: 280 pts &middot; &pound;3,000 1st &middot; &pound;1,500 2nd</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:4px;">{races_run} of 28 races complete &middot; Max: 280 pts &middot; &euro;3,000 1st &middot; &euro;1,250 2nd &middot; &euro;500 3rd &middot; &euro;250 4th</div>
       <div class="progress"><div class="bar" style="width:{pct}%"></div></div>
     </div>
   </div>
@@ -811,7 +811,7 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
   <h1>Barry's Cheltenham 2026</h1>
   <div class="subtitle">Cheltenham Festival &middot; 10&ndash;13 March 2026 &middot; 28 Races &middot; Two Entries</div>
   <div>
-    <span class="prize-badge">&pound;3,000 / &pound;1,500 Prize</span>
+    <span class="prize-badge">&euro;3,000 / &euro;1,250 / &euro;500 / &euro;250 Prize</span>
     <span class="updated-tag">&#10003; Live scores &mdash; {run_date}</span>
   </div>
 </div>
@@ -821,7 +821,10 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
   <div class="score-pill place">&#127948; 2nd = 5 pts</div>
   <div class="score-pill show">&#127947; 3rd = 3 pts</div>
   <div class="score-pill zero">&#10060; Unplaced = 0</div>
-  <div class="score-pill zero">Max possible: 280 pts (28 &times; 10)</div>
+  <div class="score-pill zero">Max: 280 pts (28 &times; 10)</div>
+  <div class="score-pill zero">6 races&nbsp;/&nbsp;day</div>
+  <div class="score-pill zero">&#128344; Deadline: 12 noon daily</div>
+  <div class="score-pill zero">&euro;100 entry &middot; Max 50 entries</div>
 </div>
 
 {scorecard_html}
@@ -872,7 +875,7 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
 </div>
 
 <div class="footer">
-  Barry's Cheltenham 2026 &middot; Auto-updated daily via SureBet engine + Betfair + Racing Post &middot; {run_date} &middot; 1st: &pound;3,000 &middot; 2nd: &pound;1,500
+  Barry's Cheltenham 2026 &middot; Auto-updated daily via SureBet engine + Betfair + Racing Post &middot; {run_date} &middot; 1st: &euro;3,000 &middot; 2nd: &euro;1,250 &middot; 3rd: &euro;500 &middot; 4th: &euro;250
 </div>
 
 </body>
