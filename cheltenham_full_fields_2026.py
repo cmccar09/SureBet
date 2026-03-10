@@ -151,31 +151,62 @@ ADDITIONAL_RUNNERS = {
 
     # ── DAY 2 ─────────────────────────────────────────────────────────────────
 
-    "day2_race2": [  # Brown Advisory Novices Chase
-        # Final Demand, The Big Westerner, Kaid d'Authie, Wendigo, Western Fold already in EXTRA_RACES
-        {"name": "Oscars Brother",    "trainer": "Gordon Elliott",   "jockey": "Jack Kennedy",
-         "odds": "12/1", "age": 7, "form": "1-1-1-32", "rating": 151,
+    "day2_race2": [  # Broadway Chase (Brown Advisory Novices') — 16 declared runners, Wed 11 Mar 14:00
+        # Non-runners removed: Gold Dancer, Ol Man Dingle, Kappa Jy Pyke
+        # Romeo Coolio REINSTATED (confirmed NOT in Ryanair)
+        {"name": "Romeo Coolio",      "trainer": "Gordon Elliott",         "jockey": "J. W. Kennedy",
+         "odds": "9/4",  "age": 7, "form": "3-2-1-1-1-1", "rating": 157,
          "cheltenham_record": None},
-        {"name": "Kitzbuhel",         "trainer": "Paul Nicholls",    "jockey": "Harry Cobden",
-         "odds": "12/1", "age": 7, "form": "1-2-1-21", "rating": 150,
+        {"name": "Final Demand",       "trainer": "Willie Mullins",         "jockey": "P. Townend",
+         "odds": "5/1",  "age": 7, "form": "3-1-1-1-3-1", "rating": 156,
          "cheltenham_record": None},
-        {"name": "Salver",            "trainer": "Nicky Henderson",  "jockey": "Nico de Boinville",
-         "odds": "16/1", "age": 6, "form": "2-1-1-31", "rating": 148,
+        {"name": "Kaid D'Authie",      "trainer": "Willie Mullins",         "jockey": "M. P. Walsh",
+         "odds": "13/2", "age": 6, "form": "1-1-2-1-p-4", "rating": 158,
          "cheltenham_record": None},
-        {"name": "Western Fold",      "trainer": "Gordon Elliott",   "jockey": "Jack Kennedy",
-         "odds": "8/1", "age": 7, "form": "2-1-1-31", "rating": 156,
+        {"name": "Koktail Divin",      "trainer": "Henry de Bromhead",      "jockey": "D. J. O'Keeffe",
+         "odds": "15/2", "age": 8, "form": "1-1-2-2-4-1", "rating": 149,
          "cheltenham_record": None},
-        # Kappa Jy Pyke @ 25/1 - already in Arkle, dual entry
-        {"name": "Kappa Jy Pyke",     "trainer": "Gordon Elliott",   "jockey": "Jack Kennedy",
-         "odds": "25/1", "age": 7, "form": "1-1-3-21", "rating": 143,
+        {"name": "Wendigo",            "trainer": "Jamie Snowden",          "jockey": "Gavin Sheehan",
+         "odds": "15/2", "age": 7, "form": "1-3-1-2-5-1", "rating": 147,
+         "cheltenham_record": None},
+        {"name": "Oscars Brother",     "trainer": "Connor King",            "jockey": "D. King",
+         "odds": "10/1", "age": 7, "form": "1-1-1-2-2-f", "rating": 151,
+         "cheltenham_record": None},
+        {"name": "Western Fold",       "trainer": "Gordon Elliott",         "jockey": "Danny Gilligan",
+         "odds": "12/1", "age": 7, "form": "2-3-1-1-1-1", "rating": 157,
+         "cheltenham_record": None},
+        {"name": "The Big Westerner",  "trainer": "Henry de Bromhead",      "jockey": "M. P. O'Connor",
+         "odds": "12/1", "age": 7, "form": "1-1-2-p-2-1", "rating": 143,
+         "cheltenham_record": None},
+        {"name": "Kitzbuhel",          "trainer": "Willie Mullins",         "jockey": "Harry Cobden",
+         "odds": "20/1", "age": 7, "form": "u-1-0-1-3-5", "rating": 153,
+         "cheltenham_record": None},
+        {"name": "Argento Boy",        "trainer": "Willie Mullins",         "jockey": "D. E. Mullins",
+         "odds": "33/1", "age": 6, "form": "1-1-f-5-7-0", "rating": 144,
+         "cheltenham_record": None},
+        {"name": "Predators Gold",     "trainer": "Willie Mullins",         "jockey": "Mr P. W. Mullins",
+         "odds": "33/1", "age": 7, "form": "3-1-3-5-2",   "rating": 146,
+         "cheltenham_record": None},
+        {"name": "Salver",             "trainer": "Gary & Josh Moore",      "jockey": "Caoilin Quinn",
+         "odds": "30/1", "age": 6, "form": "1-1-3-2-3-1", "rating": 149,
+         "cheltenham_record": None},
+        {"name": "Now Is The Hour",    "trainer": "Gavin Patrick Cromwell", "jockey": "Keith Donoghue",
+         "odds": "50/1", "age": 8, "form": "1-4-8-3-1-f-p","rating": 149,
+         "cheltenham_record": "CD winner"},
+        {"name": "Joystick",           "trainer": "Willie Mullins",         "jockey": "B. Hayes",
+         "odds": "150/1","age": 7, "form": "1-6-4-7-p-2", "rating": 130,
+         "cheltenham_record": None},
+        {"name": "Thomas Mor",         "trainer": "Philip Hobbs & Johnson White","jockey": "Ben Jones",
+         "odds": "40/1", "age": 7, "form": "2-2-1-0-4-1", "rating": 147,
+         "cheltenham_record": None},
+        {"name": "Rushmount",          "trainer": "Jonathan Sweeney",       "jockey": "S. F. O'Keeffe",
+         "odds": "100/1","age": 8, "form": "1-1-5-5-4-0", "rating": 143,
          "cheltenham_record": None},
     ],
 
-    "day2_race5": [  # Queen Mother Champion Chase — 13 runners (full field, RACES_2026 now has all 13)
-        # Majborough, Jonbon, Il Etait Temps, L'Eau du Sud, Quilixios, Irish Panther,
-        # Captain Guinness, Saint Segal, Libberty Hunter, Only By Night, Brookie,
-        # Found A Fifty, Solness — all now in RACES_2026 QMCC entry
-        # Trainer corrections applied: Solness=Joseph Patrick O'Brien; Found A Fifty=Gordon Elliott
+    "day2_race5": [  # Queen Mother Champion Chase — 10 declared runners, Wed 11 Mar 16:00
+        # Non-runners: Jonbon, Solness, Only By Night
+        # Full entries in surebet_intel EXTRA_RACES day2_race5 block
     ],
 
     # ── DAY 3 ─────────────────────────────────────────────────────────────────
@@ -341,40 +372,55 @@ RACE_FULL_FIELDS = {
         "Walking On Air", "Pic Roc", "Holloway Queen", "First Confession",
         "Kurasso Blue", "Will Do", "Union Station", "Silver Thorn", "Holokea",
     ],
-    "day2_race1": [  # Turner's Novices Hurdle — full 33-runner official Wednesday 11 March racecard
-        "Talk The Talk", "King Rasko Grey", "Skylight Hustle", "No Drama This End",
-        "I'll Sort That", "Koktail Brut", "Hurricane Pat", "Kripticjim",
-        "Taurus Bay", "Bossman Jack", "Riskaway", "Road Exile",
-        "Came From Nowhere", "Fortune Timmy", "Act Of Innocence", "Ballyfad",
-        "Johnny's Jury", "Shuttle Diplomacy", "Soldier Reeves", "Too Bossy For Us",
-        "Walks In June", "Zeus Power", "Sober", "Leader D'Allier",
-        "Baron Noir", "Jalon D'Oudairies", "Laurets D'Estruval", "Saint Baco",
-        "Sortudo", "Doujadou", "Free Spirit", "It's Top", "Klimt Madrik",
+    "day2_race1": [  # Baring Bingham Hurdle (Turner's) — 22 declared runners Wed 11 Mar 13:20
+        "No Drama This End", "Bossman Jack", "Sober", "Act Of Innocence",
+        "King Rasko Grey", "Sortudo", "Ballyfad", "Skylight Hustle",
+        "I'll Sort That", "Shuttle Diplomacy", "Taurus Bay", "Hurricane Pat",
+        "Zeus Power", "Klimt Madrik", "Saint Baco", "Laurets D'Estruval",
+        "Soldier Reeves", "Came From Nowhere", "Walks In June",
+        "Free Spirit", "Fortune Timmy", "Riskaway",
     ],
-    "day2_race2": [
-        "Final Demand", "The Big Westerner", "Kaid d'Authie", "Wendigo",
-        "Western Fold", "Oscars Brother", "Kitzbuhel", "Salver",
-        "Kappa Jy Pyke",
+    "day2_race2": [  # Broadway Chase — 16 declared
+        "Romeo Coolio", "Final Demand", "Kaid D'Authie", "Koktail Divin",
+        "Wendigo", "Oscars Brother", "Western Fold", "The Big Westerner",
+        "Kitzbuhel", "Argento Boy", "Predators Gold", "Salver",
+        "Now Is The Hour", "Joystick", "Thomas Mor", "Rushmount",
     ],
-    "day2_race3": [
-        "Storm Heart", "I Started A Joke", "Kateira", "The Yellow Clay",
-        "Iberico Lord", "Workahead",
+    "day2_race3": [  # Cup Handicap Hurdle — 26 declared runners Wed 11 Mar 14:40
+        "Kopeck De Mee", "Storm Heart", "The Yellow Clay", "Kateira",
+        "Iberico Lord", "Puturhandstogether", "Forty Coats", "Jingko Blue",
+        "Bunting", "Farren Glory", "Guard Duty", "Lucky Place",
+        "Ballyadam", "Beckett Rock", "Buddy One", "Colonel Mustard",
+        "Chart Topper", "Sony Bill", "Give It To Me Oj", "Franciscan Rock",
+        "Rambo T", "Hms Seahorse", "Dargiannini", "Minella Rescue",
+        "I Started A Joke", "Intense Approach",
     ],
-    "day2_race4": [
-        "Favori De Champdou", "Stumptown", "Desertmore House", "Vanillier", "Anibale Fly",
+    "day2_race4": [  # Glenfarclas Chase (XC) — 14 declared runners, Wed 11 Mar 15:20
+        # Non-runners: Chemical Energy, Anibale Fly
+        "Favori De Champdou", "Stumptown", "Desertmore House", "Final Orders",
+        "Vanillier", "The Goffer", "Pied Piper", "Fakir D'Oudairies",
+        "Conflated", "Latenightpass", "Famous Bridge", "Horantzau Dairy",
+        "Velvet Elvis", "Minella Crooner",
     ],
-    "day2_race5": [  # Queen Mother Champion Chase — full 13-runner official racecard
-        # Trainer corrections: Solness=Joseph Patrick O'Brien; Found A Fifty=Gordon Elliott
-        "Majborough", "Il Etait Temps", "Jonbon", "Solness", "Found A Fifty",
-        "L'Eau du Sud", "Quilixios", "Captain Guinness", "Irish Panther",
-        "Saint Segal", "Libberty Hunter", "Only By Night", "Brookie",
+    "day2_race5": [  # Queen Mother Champion Chase — 10 declared runners, Wed 11 Mar 16:00
+        # Non-runners: Jonbon, Solness, Only By Night
+        "Majborough", "Il Etait Temps", "L'Eau du Sud", "Irish Panther",
+        "Quilixios", "Found A Fifty", "Saint Segal", "Captain Guinness",
+        "Libberty Hunter", "Brookie",
     ],
-    "day2_race6": [
-        "Inthepocket", "Coeur De Lion", "Dancewiththedevil", "Waterbys Hurricane",
+    "day2_race6": [  # Grand Annual Handicap Chase — 22 declared runners, Wed 11 Mar 16:40
+        "Be Aware", "Jazzy Matty", "Vanderpoel", "Release The Beast", "Inthepocket",
+        "Relieved Of Duties", "Jour D'Evasion", "Break My Soul", "Addragoole",
+        "Ballysax Hank", "Jasko Des Dames", "Rubaud", "Western Diego",
+        "Personal Ambition", "Touch Me Not", "Special Cadeau", "Calico",
+        "Boothill", "Martator", "The Other Mozzie", "Golden Joy", "Ryans Rocket",
     ],
-    "day2_race7": [
-        "Love Sign d'Aunou", "The Irish Avatar", "Keep Him Company", "Quiryn",
-        "Bass Hunter", "Charismatic Kid",
+    "day2_race7": [  # Champion Bumper — 22 declared runners, Wed 11 Mar 17:20
+        "Love Sign d'Aunou", "Keep Him Company", "Quiryn", "The Mourne Rambler",
+        "Bass Hunter", "The Irish Avatar", "Its Only A Game", "Our Trigger",
+        "Mets Ta Ceinture", "Broadway Ted", "Charismatic Kid", "Moonverrin",
+        "The Wager", "Boycetown", "With Nolimit", "Diamant Dore", "Wildes Legacy",
+        "Of Land And Sea", "The Skecher", "Chicker", "Tally Ho Back", "Vango Can Go",
     ],
     "day3_race1": [
         "Bambino Fever", "Oldschool Outlaw", "Echoing Silence", "La Conquiere",
