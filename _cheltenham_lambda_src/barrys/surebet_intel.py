@@ -17,7 +17,7 @@ Usage:
     python barrys/surebet_intel.py --json            # JSON output
 """
 
-import sys, os, json, argparse
+import sys, os, json, argparse, re
 from decimal import Decimal
 from datetime import datetime
 
@@ -1820,12 +1820,18 @@ def score_field(entries, surebet_db, race_name=""):
             score   += db_bonus
         has_festival_win = (
             horse.get("cheltenham_record", "") and
-            "won" in (horse.get("cheltenham_record", "") or "").lower()
+            (
+                "won" in (horse.get("cheltenham_record", "") or "").lower() or
+                "winner" in (horse.get("cheltenham_record", "") or "").lower() or
+                # Racing Post shorthand: 'C' = course winner (standalone token e.g. 'C D', 'C')
+                bool(re.search(r'\bC\b', horse.get("cheltenham_record", "") or ""))
+            )
         )
         results.append({
             "name":             horse["name"],
             "trainer":          horse.get("trainer", "?"),
             "jockey":           horse.get("jockey", "?"),
+            "odds":             horse.get("odds", "sp"),
             "score":            score,
             "tips":             tips,
             "warnings":         warnings[:2],

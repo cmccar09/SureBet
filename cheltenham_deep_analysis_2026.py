@@ -1548,21 +1548,48 @@ def score_horse_2026(horse, race_name):
             score -= hcap_penalty
             tips.append(f"Handicap weight equalisation: −{hcap_penalty}pts (BHA weights cap trainer/jockey edge)")
     record = horse.get("cheltenham_record", "") or ""
-    # Normalise "winner" → "won" so "CD winner" scores the same as "Won X race"
+    # Normalise "winner" → "won" so "CD winner" / "Cheltenham winner" score the same as "Won X race"
     _norm_record = re.sub(r'\bwinner\b', 'won', record.lower())
     won_count = _norm_record.count("won")
+
+    # Racing Post shorthand codes stored in cheltenham_record:
+    #   C  = course winner (won at Cheltenham — the strongest possible form signal)
+    #   CD = course & distance winner → same treatment as C
+    #   D  = distance winner at Cheltenham (won at same trip — good form, not full winner)
+    #   BF = beaten favourite at Cheltenham (competitive, close)
+    # Detect standalone tokens so "C" in "Rebecca Curtis" doesn't false-fire.
+    _rp_c  = bool(re.search(r'\bC(?:\s*D)?\b', record))   # C or CD or C D
+    _rp_d  = bool(re.search(r'\bD\b', record)) and not _rp_c  # D only (without C)
+    _rp_bf = bool(re.search(r'\bBF\b', record))
+    _course_runner = "cheltenham course runner" in record.lower()
+
     if won_count >= 3:
         score += 25
         tips.append(f"Three-time Festival winner: +25pts (extremely rare, dominant)")
     elif won_count == 2:
         score += 20
         tips.append(f"Double Festival winner: +20pts")
-    elif won_count == 1:
+    elif won_count >= 1:
         score += 15
         tips.append(f"Previous Festival winner: +15pts")
-    elif "placed" in record.lower() or "2nd" in record.lower() or "3rd" in record.lower():
+    elif _rp_c:
+        # Racing Post 'C' = course winner → previous Cheltenham Festival winner
+        score += 15
+        tips.append(f"Previous Cheltenham course winner (C): +15pts")
+    elif "placed" in record.lower() or "2nd" in record.lower() or "3rd" in record.lower() or "4th" in record.lower():
         score += 8
         tips.append(f"Previous Festival place: +8pts")
+    elif _rp_d:
+        # D alone = won at Cheltenham at this distance, solid Festival form
+        score += 8
+        tips.append(f"Cheltenham distance winner (D): +8pts")
+    elif _rp_bf:
+        # BF = beaten favourite, was competitive at Cheltenham
+        score += 5
+        tips.append(f"Beaten favourite at Cheltenham (BF): +5pts")
+    elif _course_runner:
+        # Ran at Cheltenham but no win/place — no bonus, but no unknown-quantity warning either
+        pass
     else:
         warnings.append("No previous Festival form (unknown quantity)")
 

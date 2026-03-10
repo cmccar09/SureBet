@@ -23,8 +23,8 @@ function buildWhyWins(pick) {
     // ── Day 1 ────────────────────────────────────────────────────────────────
     'Old Park Star':     'Nicky Henderson / Nico de Boinville · 3+ consecutive wins · score 139 · dominant 51pt lead over next rival',
     // ── Day 2 ────────────────────────────────────────────────────────────────
-    'Il Etait Temps':    'Willie Mullins / P. Townend · Grade 1 Champion Chase horse · score 107 · 97pt clear of rivals · relentless two-mile speed · Festival specialist',
-    'No Drama This End': 'Paul Nicholls / Harry Cobden · unbeaten novice hurdler · score 93 · Grade 1 form all season · Nicholls / Cobden in brilliant Festival form',
+    'Majborough':        'Willie Mullins / M. P. Walsh · defending Queen Mother Champion Chase champion · score 118 · course & distance winner · 4/5 market leader · Grade 1 win last time out',
+    'No Drama This End': 'Paul Nicholls / Harry Cobden · CD winner at Cheltenham · score 113 · Grade 1 form all season · unbeaten novice · Nicholls / Cobden brilliant Festival form',
     "Kaid D'Authie":     'Willie Mullins / M. P. Walsh · unbeaten novice chaser · score 94 · dominant over fences · Mullins/Walsh Grade 1 combination',
     'Keep Him Company':  'Gordon Elliott / J. W. Kennedy · dominant bumper performer · score 80 · impressive point-to-point form · Elliott/Kennedy Festival combination',
     'Stumptown':         'Gavin Cromwell / Keith Donoghue · cross country specialist · score 116 · relishes unique Cheltenham course · proven stamina over fences',
