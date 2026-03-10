@@ -1376,6 +1376,9 @@ JOCKEY_SCORES = {
 
 ELITE_COMBOS = {
     ("Willie Mullins",       "Paul Townend"):        8,
+    ("W. P. Mullins",        "Paul Townend"):        8,   # alias
+    ("Willie Mullins",       "Mark Walsh"):          5,   # Arkle 2026: Kargese won (Walsh 2nd jockey when Townend committed elsewhere)
+    ("W. P. Mullins",        "Mark Walsh"):          5,   # alias
     ("Nicky Henderson",      "Nico de Boinville"):   8,
     ("Gordon Elliott",       "Jack Kennedy"):        3,   # reduced — 0 festival wins 2021-2023
     ("Henry de Bromhead",    "Rachael Blackmore"):   6,
@@ -1545,8 +1548,8 @@ def score_horse_2026(horse, race_name):
                                          "champion", "grade", "novice", "stakes"}
         ]
         if race_key_words and any(kw in record.lower() for kw in race_key_words):
-            score += 10
-            tips.append(f"Won this exact race before: +10pts (same race course & distance mastery)")
+            score += 7
+            tips.append(f"Won this exact race before: +7pts (same race course & distance mastery)")
 
     # --- Ground / Going preference bonus (+8/-5) ---
     # Cheltenham March = Good to Soft / Soft almost every year.

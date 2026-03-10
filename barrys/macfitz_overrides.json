@@ -95,18 +95,19 @@
       "macfitz_score": 83,
       "gap": 3,
       "decided": "2026-03-09",
-      "active": true
+      "active": false,
+      "_deactivated": "10/03/2026 post-Arkle learning: Mullins/Walsh combo added, Karbau score rose to 68 and is now Surebet pick too — both systems agree, split collapses."
     },
     "Cheltenham Gold Cup": {
-      "macfitz_horse": "Gaelic Warrior",
-      "reason": "UPDATED 09/03/2026: Fastorslow NOT in official 14-runner Friday field — removed. Gaelic Warrior (OR 172, defending Ryanair Champion) is the correct top-rated pick for both systems",
-      "surebet_horse": "Gaelic Warrior",
-      "surebet_score": 143,
-      "macfitz_score": 143,
-      "gap": 0,
-      "decided": "2026-03-09",
-      "active": false,
-      "_deactivated": "09/03/2026: Both systems now agree on Gaelic Warrior \u2014 Fastorslow removed from data as NOT in official 14-runner Gold Cup field"    },
+      "macfitz_horse": "Jango Baie",
+      "reason": "1pt gap (124 vs 123) — dead heat, MacFitz takes Jango Baie (Gordon Elliott, Cheltenham specialist, better price at 7/1)",
+      "surebet_horse": "Haiti Couleurs",
+      "surebet_score": 124,
+      "macfitz_score": 123,
+      "gap": 1,
+      "decided": "2026-03-10",
+      "active": true
+    },
     "Grand Annual Handicap Chase": {
       "macfitz_horse": "Edwardstone",
       "reason": "1pt gap (79 vs 78) — effectively tied, MacFitz takes Edwardstone (Grade 1 winner, Henderson, Daryl Jacob; strongest form profile in the race)",
