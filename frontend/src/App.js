@@ -17,6 +17,13 @@ const KNOWN_MARES = new Set([
 
 function buildWhyWins(pick) {
   if (!pick) return null;
+
+  // Horse-specific overrides — full curated text
+  const OVERRIDES = {
+    'Old Park Star': 'Nicky Henderson / Nico de Boinville · 3+ consecutive wins · score 139 · dominant 51pt lead over next rival',
+  };
+  if (OVERRIDES[pick.horse]) return OVERRIDES[pick.horse];
+
   const reasons = pick.reasons || [];
   const parts = [];
 
