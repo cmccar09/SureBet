@@ -286,10 +286,19 @@ function CheltenhamView({ apiUrl }) {
 
       {/* ── FESTIVAL TOP 3 NAPS ── */}
       {Object.keys(cheltenhamPicks).length > 0 && (() => {
-        // Compute top 3 picks across the entire festival by score
-        const allPicks = Object.values(cheltenhamPicks).filter(
-          p => p.bet_tier === 'BETTING_PICK' || p.recommendation === 'BETTING_PICK'
-        );
+        // Only include picks from days that haven't finished yet (cutoff 18:00 each day)
+        const now_naps = new Date();
+        const dayCutoffs = {
+          Tuesday_10_March:   new Date('2026-03-10T18:00:00'),
+          Wednesday_11_March: new Date('2026-03-11T18:00:00'),
+          Thursday_12_March:  new Date('2026-03-12T18:00:00'),
+          Friday_13_March:    new Date('2026-03-13T23:59:00'),
+        };
+        const allPicks = Object.values(cheltenhamPicks).filter(p => {
+          if (p.bet_tier !== 'BETTING_PICK' && p.recommendation !== 'BETTING_PICK') return false;
+          const cutoff = dayCutoffs[p.day];
+          return cutoff && now_naps < cutoff; // skip completed days
+        });
         const top3 = allPicks
           .slice()
           .sort((a, b) => parseFloat(b.score || 0) - parseFloat(a.score || 0))
@@ -394,25 +403,20 @@ function CheltenhamView({ apiUrl }) {
 
       {/* ── TODAY'S TOP 3 BETS ── */}
       {Object.keys(cheltenhamPicks).length > 0 && (() => {
-        // Determine which festival day is "today"
+        // Use same 18:00 cutoff as getInitialDay — advance to next day after races finish
         const now = new Date();
         const festivalDays = [
-          { key: 'Tuesday_10_March',   date: new Date('2026-03-10'), label: 'Champion Day',       short: 'Tue 10 Mar' },
-          { key: 'Wednesday_11_March', date: new Date('2026-03-11'), label: "Ladies' Day",         short: 'Wed 11 Mar' },
-          { key: 'Thursday_12_March',  date: new Date('2026-03-12'), label: "St Patrick's Thu",    short: 'Thu 12 Mar' },
-          { key: 'Friday_13_March',    date: new Date('2026-03-13'), label: 'Gold Cup Day',         short: 'Fri 13 Mar' },
+          { key: 'Tuesday_10_March',   cutoff: new Date('2026-03-10T18:00:00'), label: 'Champion Day',       short: 'Tue 10 Mar' },
+          { key: 'Wednesday_11_March', cutoff: new Date('2026-03-11T18:00:00'), label: "Ladies' Day",         short: 'Wed 11 Mar' },
+          { key: 'Thursday_12_March',  cutoff: new Date('2026-03-12T18:00:00'), label: "St Patrick's Thu",    short: 'Thu 12 Mar' },
+          { key: 'Friday_13_March',    cutoff: new Date('2026-03-13T23:59:00'), label: 'Gold Cup Day',         short: 'Fri 13 Mar' },
         ];
-        const toMidnight = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-        const todayMidnight = toMidnight(now);
-
-        // Find today's day, or the next upcoming festival day
-        let activeFestDay = festivalDays.find(fd => toMidnight(fd.date).getTime() === todayMidnight.getTime());
-        if (!activeFestDay) {
-          activeFestDay = festivalDays.find(fd => fd.date > now);
-        }
+        const activeFestDay = festivalDays.find(fd => now < fd.cutoff);
         if (!activeFestDay) return null; // festival over
 
-        const isToday = activeFestDay && toMidnight(activeFestDay.date).getTime() === todayMidnight.getTime();
+        const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const cutoffMidnight = new Date(activeFestDay.cutoff.getFullYear(), activeFestDay.cutoff.getMonth(), activeFestDay.cutoff.getDate());
+        const isToday = todayMidnight.getTime() === cutoffMidnight.getTime();
         const titleTag = isToday ? "🔥 TODAY'S TOP 3 BETS" : `⏳ NEXT UP — ${activeFestDay.label.toUpperCase()}`;
         const subtitleTag = isToday
           ? `${activeFestDay.label} · ${activeFestDay.short} · Back these NOW`
