@@ -16,6 +16,7 @@ Usage:
 """
 
 import argparse
+import re
 from collections import Counter, defaultdict
 from datetime import datetime
 
@@ -1349,9 +1350,9 @@ def analyze_age_ratings():
 
 # ── Module-level jockey/combo constants (shared with deduplication logic) ─────
 JOCKEY_SCORES = {
-    "Paul Townend":       12,
-    "Nico de Boinville":  12,
-    "Harry Skelton":      10,   # Added: multiple British champion jump jockey
+    "Paul Townend":       12,   # Capped at 12 (Option B rebalance — was 20, duplicated by combo+champion bonus)
+    "Nico de Boinville":  12,   # Capped at 12 (was 15)
+    "Harry Skelton":      10,
     "Jack Kennedy":       10,
     "Rachael Blackmore":  10,
     "Donagh Meyler":       8,
@@ -1383,11 +1384,11 @@ JOCKEY_SCORES = {
 }
 
 ELITE_COMBOS = {
-    ("Willie Mullins",       "Paul Townend"):        8,
+    ("Willie Mullins",       "Paul Townend"):        8,   # Capped at 8 (was 15 — Option B rebalance)
     ("W. P. Mullins",        "Paul Townend"):        8,   # alias
-    ("Willie Mullins",       "Mark Walsh"):          5,   # Arkle 2026: Kargese won (Walsh 2nd jockey when Townend committed elsewhere)
+    ("Willie Mullins",       "Mark Walsh"):          5,   # Arkle 2026: Kargese won (Walsh 2nd jockey for Mullins when Townend committed elsewhere)
     ("W. P. Mullins",        "Mark Walsh"):          5,   # alias
-    ("Nicky Henderson",      "Nico de Boinville"):   8,
+    ("Nicky Henderson",      "Nico de Boinville"):   8,   # Capped at 8 (was 12)
     ("Gordon Elliott",       "Jack Kennedy"):        3,   # reduced — 0 festival wins 2021-2023
     ("Henry de Bromhead",    "Rachael Blackmore"):   6,
     ("Gavin Cromwell",       "Danny Mullins"):       6,
@@ -1547,7 +1548,9 @@ def score_horse_2026(horse, race_name):
             score -= hcap_penalty
             tips.append(f"Handicap weight equalisation: −{hcap_penalty}pts (BHA weights cap trainer/jockey edge)")
     record = horse.get("cheltenham_record", "") or ""
-    won_count = record.lower().count("won")
+    # Normalise "winner" → "won" so "CD winner" scores the same as "Won X race"
+    _norm_record = re.sub(r'\bwinner\b', 'won', record.lower())
+    won_count = _norm_record.count("won")
     if won_count >= 3:
         score += 25
         tips.append(f"Three-time Festival winner: +25pts (extremely rare, dominant)")
@@ -1651,6 +1654,7 @@ def score_horse_2026(horse, race_name):
         wins_form  = form.count("1")
         falls_form = form.count("F")
         poor_form  = form.count("0") + form.count("P")
+        # Option B: stronger finishing position trend weighting
         if form.startswith("1111") and falls_form == 0:
             score += 22
             tips.append("4+ wins in form string (unbeaten run): +22pts")
@@ -1707,23 +1711,23 @@ def score_horse_2026(horse, race_name):
         score += 1
         tips.append("Confirmed stayer stepping up in trip: +1pt combo")
 
-    # --- Rating ---
+    # --- Rating (Option B: stronger weight to form/class via OR rating) ---
     rating = horse.get("rating", 0)
     if rating >= 175:
         score += 18
         tips.append(f"Elite rating {rating}: +18pts")
     elif rating >= 170:
         score += 15
-        tips.append(f"Very high rating {rating}: +15pts")
+        tips.append(f"High-class rating {rating}: +15pts")
     elif rating >= 165:
         score += 12
         tips.append(f"High rating {rating}: +12pts")
     elif rating >= 158:
         score += 8
-        tips.append(f"Good rating {rating}: +8pts")
+        tips.append(f"Solid rating {rating}: +8pts")
     elif rating >= 150:
         score += 5
-        tips.append(f"Solid rating {rating}: +5pts")
+        tips.append(f"Useful rating {rating}: +5pts")
     elif rating < 140:
         score -= 8
         warnings.append(f"Below-average rating {rating}: -8pts")
@@ -1785,9 +1789,10 @@ def score_horse_2026(horse, race_name):
         score += 12
         tips.append("Graded winner this season: +12pts")
 
-    # Course & distance double confirmation (+5)
-    # Only when horse has both a Festival win (won_count >= 1) AND
-    # same-distance/class form on record — avoids double-counting trainer/jockey.
+    # Option B: Elite Irish raider and Champion jockey bonuses REMOVED
+    # — already captured in capped trainer_scores and JOCKEY_SCORES above.
+    # Adding course+distance combined bonus instead (+5 on top of separate bonuses)
+    # if horse has both same-race win AND dist_class_form evidence
     if won_count >= 1 and dist_class:
         score += 5
         tips.append("Course & distance double confirmation: +5pts")

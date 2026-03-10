@@ -768,6 +768,13 @@ def get_cheltenham_picks_lambda(headers, event):
                 # Preserve today's scalar fields; only replace all_horses from older richer item
                 merged_item = dict(existing)
                 merged_item['all_horses'] = item['all_horses']
+                # Fix is_surebet_pick flags — old all_horses may mark a stale pick as PICK
+                # (e.g. Day 1 save had Horse A as pick; today's save has Horse B; old all_horses
+                # still has Horse A flagged is_surebet_pick=True, causing wrong PICK badge in UI)
+                current_horse = merged_item.get('horse', '')
+                if current_horse:
+                    for h in merged_item['all_horses']:
+                        h['is_surebet_pick'] = (h.get('name', '') == current_horse)
                 all_items_by_date[rn] = merged_item
     all_picks = list(all_items_by_date.values())
 

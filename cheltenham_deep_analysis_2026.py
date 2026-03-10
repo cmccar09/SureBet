@@ -16,6 +16,7 @@ Usage:
 """
 
 import argparse
+import re
 from collections import Counter, defaultdict
 from datetime import datetime
 
@@ -1547,7 +1548,9 @@ def score_horse_2026(horse, race_name):
             score -= hcap_penalty
             tips.append(f"Handicap weight equalisation: −{hcap_penalty}pts (BHA weights cap trainer/jockey edge)")
     record = horse.get("cheltenham_record", "") or ""
-    won_count = record.lower().count("won")
+    # Normalise "winner" → "won" so "CD winner" scores the same as "Won X race"
+    _norm_record = re.sub(r'\bwinner\b', 'won', record.lower())
+    won_count = _norm_record.count("won")
     if won_count >= 3:
         score += 25
         tips.append(f"Three-time Festival winner: +25pts (extremely rare, dominant)")
