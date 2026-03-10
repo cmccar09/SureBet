@@ -547,7 +547,7 @@ def _build_submission_html(assembled: list) -> str:
 
     day_rows = ""
     for d in sorted(days.keys()):
-        races_today = days[d]
+        races_today = days[d][:6]  # only first 6 races per day are required
         sb_entries = [(sb.get("horse", "?"), mf["is_split"], "sb") for _, sb, mf in races_today]
         mf_entries = [(mf["horse"], mf["is_split"], "mf") for _, sb, mf in races_today]
 
@@ -571,7 +571,7 @@ def _build_submission_html(assembled: list) -> str:
 <div class="submission-panel">
   <div class="submission-box">
     <h3>&#128203; Bumper Submission Numbers &nbsp;
-      <span style="font-size:.72rem;color:var(--muted);font-weight:400;">Horse cloth numbers in race order per day — ready to submit</span>
+      <span style="font-size:.72rem;color:var(--muted);font-weight:400;">First 6 races each day &middot; cloth numbers in race order &middot; deadline 12 noon daily</span>
     </h3>
     <div class="sub-group-row">
       <div class="sub-group-badge sb">&#128309; Surebet Group ID: {SUREBET_GROUP_ID}</div>
