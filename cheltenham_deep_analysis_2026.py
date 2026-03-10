@@ -1458,37 +1458,38 @@ def score_horse_2026(horse, race_name):
 
     # --- Trainer bonus ---
     trainer = horse.get("trainer", "")
-    # DATA-DRIVEN from 10-year history (2016-2025, 70 Grade-1 wins):
-    # Willie Mullins 26/70=37.1%, Henderson 11/70=15.7%, Elliott 9/70=12.9%
-    # de Bromhead 7/70=10.0%, Cromwell 5/70=7.1% — scaled to Mullins=22 anchor
+    # PER-HORSE NORMALIZED from 10-year history (2016-2025, 70 Grade-1 wins):
+    # Adjusted for multi-entry: Mullins avg 3.0 horses/race → per-horse 12.2%
+    # Henderson avg 1.4/race → per-horse 11.1%  Elliott avg 2.2/race → 5.7%
+    # Formula: race_win% / avg_entries_per_race, scaled to 12pt anchor
     trainer_scores = {
-        "Willie Mullins":    22,   # 26/70 = 37.1% — most dominant trainer in history
-        "Nicky Henderson":   12,   # 11/70 = 15.7% — elite UK trainer (Arkle/Champ Hurdle specialist)
-        "Gordon Elliott":     9,   # 9/70  = 12.9% — Gold Cup/Supreme specialist
-        "Henry de Bromhead":  7,   # 7/70  = 10.0% — peak 2021-22, declining since
-        "Gavin Cromwell":     5,   # 5/70  =  7.1% — Stayers Hurdle specialist only
-        "Emmet Mullins":      7,   # Quality Irish raider, some Grade 1 wins
-        "Paul Nicholls":      4,   # 1/70  =  1.4% — festival record modest
+        "Willie Mullins":    13,   # 37.1% race-win / 3.0 avg = 12.2% per horse (+1 premium: stable depth, soft-ground mastery)
+        "Nicky Henderson":   12,   # 15.7% / 1.4 = 11.1% per horse — effectively equal to Mullins
+        "Gordon Elliott":     6,   # 12.9% / 2.2 =  5.7% per horse
+        "Henry de Bromhead":  6,   # 10.0% / 1.6 =  6.2% per horse
+        "Gavin Cromwell":     5,   #  7.1% / 1.3 =  5.6% per horse (Stayers specialist)
+        "Emmet Mullins":      6,   # Quality Irish raider, competitive per horse
+        "Paul Nicholls":      4,   # 1/70 Grade-1s — festival record modest
         "Alan King":          5,
-        "Emma Lavelle":       5,   # 1/70  =  1.4% (Paisley Park)
-        "Rebecca Curtis":     5,   # 1/70  =  1.4%
+        "Emma Lavelle":       4,   # 1/70 (Paisley Park)
+        "Rebecca Curtis":     4,   # 1/70
         "Peter Fahey":        4,
         "Dan Skelton":        4,   # 0 Grade-1 wins in dataset
         "Ben Pauling":        4,
-        "Oliver Greenall & Josh Guerriero": 5,
+        "Oliver Greenall & Josh Guerriero": 4,
         "Jonjo O'Neill":      4,
-        "W. P. Mullins":     22,   # alias for Willie Mullins
-        "Joseph Patrick O'Brien": 8,   # Quality Irish trainer, some Grade 1 wins
+        "W. P. Mullins":     13,   # alias for Willie Mullins
+        "Joseph Patrick O'Brien": 7,   # quality Irish multi-runner trainer
         "Gavin Patrick Cromwell": 5,   # alias
         "Paul Nolan":         5,
-        "Faye Bramley":       5,
-        "Mrs J. Harrington":  5,   # Jessica Harrington alias, 1/70 = 1.4%
-        "Jessica Harrington": 5,   # 1/70  =  1.4% (Sizing John)
-        "Jeremy Scott":       5,   # 1/70  =  1.4% (2025 Champ Hurdle)
-        "Colin Tizzard":      4,   # 2/70 but retired, historical only
-        "Barry Connell":      5,   # 1/70 (2025 Queen Mother)
-        "Sam Curling":        5,   # competitive Irish handicap trainer
-        "Noel Meade":         5,
+        "Faye Bramley":       4,
+        "Mrs J. Harrington":  4,   # Jessica Harrington alias, 1/70 = 1.4%
+        "Jessica Harrington": 4,   # 1/70 = 1.4% (Sizing John)
+        "Jeremy Scott":       4,   # 1/70 = 1.4% (2025 Champ Hurdle)
+        "Colin Tizzard":      4,   # 2/70 but retired
+        "Barry Connell":      4,   # 1/70 (2025 Queen Mother)
+        "Sam Curling":        4,
+        "Noel Meade":         4,
     }
     t_score = trainer_scores.get(trainer, 5)
     score += t_score
