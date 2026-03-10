@@ -1372,6 +1372,7 @@ JOCKEY_SCORES = {
     "Nick Scholfield":      5,
     "Tom O'Brien":          5,
     "Paddy Brennan":        6,
+    "Richie McLernon":      6,   # WON Ultima Handicap Chase 2026 (Johnnywho 18/1)
 }
 
 ELITE_COMBOS = {
@@ -1486,7 +1487,8 @@ def score_horse_2026(horse, race_name):
         "Dan Skelton":        4,   # 0 Grade-1 wins in dataset
         "Ben Pauling":        4,
         "Oliver Greenall & Josh Guerriero": 4,
-        "Jonjo O'Neill":      4,
+        "Jonjo O'Neill":      7,   # WON Ultima Handicap Chase 2026 (Johnnywho 18/1) — bumped from 4
+        "Jonjo & A.J. O'Neill": 7, # alias — race card credit for Jonjo O'Neill yard
         "W. P. Mullins":     13,   # alias for Willie Mullins
         "Joseph Patrick O'Brien": 7,   # quality Irish multi-runner trainer
         "Gavin Patrick Cromwell": 5,   # alias
