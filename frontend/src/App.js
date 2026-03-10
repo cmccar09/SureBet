@@ -6,7 +6,7 @@ const API_BASE_URL = process.env.REACT_APP_API_URL ||
                      'https://mnybvagd5m.execute-api.eu-west-1.amazonaws.com';
 
 // Budget configuration - €100 daily budget on top 5 picks only
-const DAILY_BUDGET = 100;
+const DAILY_BUDGET = 100; // eslint-disable-line no-unused-vars
 const MAX_PICKS_PER_DAY = 5; // eslint-disable-line no-unused-vars
 
 // Known mares for gender-aware label
@@ -110,6 +110,7 @@ function CheltenhamView({ apiUrl }) {
   useEffect(() => {
     loadRaces();
     loadPicks();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadRaces = async () => {
