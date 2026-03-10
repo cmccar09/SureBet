@@ -1491,7 +1491,8 @@ def score_horse_2026(horse, race_name):
         "Joseph Patrick O'Brien": 7,   # quality Irish multi-runner trainer
         "Gavin Patrick Cromwell": 5,   # alias
         "Paul Nolan":         5,
-        "Faye Bramley":       4,
+        "Faye Bramley":       5,   # 2nd Fred Winter 2026 (Winston Junior) — bumped from 4
+        "Padraig Roche":      6,   # WON Fred Winter 2026 (Saratoga) — handicap placement specialist
         "Mrs J. Harrington":  4,   # Jessica Harrington alias, 1/70 = 1.4%
         "Jessica Harrington": 4,   # 1/70 = 1.4% (Sizing John)
         "Jeremy Scott":       4,   # 1/70 = 1.4% (2025 Champ Hurdle)
@@ -1520,7 +1521,22 @@ def score_horse_2026(horse, race_name):
         score += combo_bonus
         tips.append(f"Elite combo bonus: +{combo_bonus}pts")
 
-    # --- Previous Festival record ---
+    # --- Handicap dampening ---
+    # In big-field handicap races, BHA weights already neutralise trainer quality.
+    # Cap the combined trainer+jockey+combo benefit that EXCEEDS the 'average' baseline
+    # (avg trainer=5, avg jockey=3, no combo=0) so elite stables aren't over-rewarded.
+    # Fred Winter 2026 learning: Henderson/de Boinville scored 32pts here vs winner Saratoga 11pts.
+    HCAP_TRAINER_CAP  = 7   # max trainer bonus in handicaps
+    HCAP_JOCKEY_CAP   = 6   # max jockey bonus in handicaps
+    HCAP_COMBO_CAP    = 3   # max combo bonus in handicaps
+    if race_name and "handicap" in race_name.lower():
+        excess_t = max(0, t_score    - HCAP_TRAINER_CAP)
+        excess_j = max(0, j_score    - HCAP_JOCKEY_CAP)
+        excess_c = max(0, combo_bonus - HCAP_COMBO_CAP)
+        hcap_penalty = excess_t + excess_j + excess_c
+        if hcap_penalty > 0:
+            score -= hcap_penalty
+            tips.append(f"Handicap weight equalisation: −{hcap_penalty}pts (BHA weights cap trainer/jockey edge)")
     record = horse.get("cheltenham_record", "") or ""
     won_count = record.lower().count("won")
     if won_count >= 3:

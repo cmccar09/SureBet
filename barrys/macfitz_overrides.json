@@ -96,7 +96,7 @@
       "gap": 3,
       "decided": "2026-03-09",
       "active": false,
-      "_deactivated": "10/03/2026 post-Arkle learning: Mullins/Walsh combo added, Karbau score rose to 68 and is now Surebet pick too — both systems agree, split collapses."
+      "_deactivated": "10/03/2026 post-Arkle: Karbau became Surebet pick (both agreed). 10/03/2026 post-Fred Winter handicap dampening: Surebet now picks Ndaawi (score 62) — MacFitz has no active override so both revert to Ndaawi. Split stays collapsed."
     },
     "Cheltenham Gold Cup": {
       "macfitz_horse": "Jango Baie",
@@ -116,7 +116,8 @@
       "macfitz_score": 78,
       "gap": 1,
       "decided": "2026-03-10",
-      "active": true
+      "active": false,
+      "_deactivated": "10/03/2026 post-Fred Winter handicap dampening: Surebet engine now also picks Edwardstone (score 78) — both systems agree, split collapses."
     },
     "Martin Pipe Handicap Hurdle": {
       "macfitz_horse": "Sony Bill",
