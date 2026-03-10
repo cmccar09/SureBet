@@ -101,7 +101,7 @@ RUNNER_NUMBERS: dict[str, int | str] = {
     "Lossiemouth":        9,
     "The New Lion":       4,
     "Madara":             9,   # Surebet Plate pick
-    "Zurich":             "?",  # MacFitz Plate pick (SPLIT) — confirm once racecard live
+    "Zurich":             15,   # MacFitz Plate pick (SPLIT)
     "McLaurey":           2,
     "Backmersackme":      9,
     "Newton Tornado":     11,
