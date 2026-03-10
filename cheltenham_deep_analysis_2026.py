@@ -1366,6 +1366,12 @@ JOCKEY_SCORES = {
     "James Bowen":         5,   # Added: UK jockey
     "D. E. Mullins":       6,   # Added: Derek Mullins, rides for Margaret Mullins
     "J. W. Kennedy":       5,   # Added: JW Kennedy Irish jockey
+    # ── UPDATED from Festival results ──────────────────────────────────────────
+    "Ben Jones":            7,   # 2nd Supreme 2026 (Sober Glory 9/2) — Philip Hobbs retained jockey, underrated
+    "Gavin Sheehan":        6,   # solid UK NH jockey
+    "Nick Scholfield":      5,
+    "Tom O'Brien":          5,
+    "Paddy Brennan":        6,
 }
 
 ELITE_COMBOS = {
@@ -1490,6 +1496,10 @@ def score_horse_2026(horse, race_name):
         "Barry Connell":      4,   # 1/70 (2025 Queen Mother)
         "Sam Curling":        4,
         "Noel Meade":         4,
+        "Philip Hobbs & Johnson White": 6,   # 2nd Supreme 2026 (Sober Glory) — consistent Cheltenham runner
+        "Philip Hobbs":       6,   # alias without joint suffix
+        "Neil Mulholland":    5,
+        "Dr Richard Newland": 5,
     }
     t_score = trainer_scores.get(trainer, 5)
     score += t_score
