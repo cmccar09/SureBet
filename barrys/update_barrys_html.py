@@ -369,7 +369,7 @@ def _build_scorecard_html(assembled: list, score_data: dict | None) -> str:
     </div>
     <div class="score-meta">
       <div style="font-size:.85rem;color:var(--text);font-weight:600;">{status_msg}{leader_badge}</div>
-      <div style="font-size:.75rem;color:var(--muted);margin-top:4px;">{races_run} of 28 races complete &middot; Max: 280 pts &middot; &pound;2,500 prize</div>
+      <div style="font-size:.75rem;color:var(--muted);margin-top:4px;">{races_run} of 28 races complete &middot; Max: 280 pts &middot; &pound;3,000 1st &middot; &pound;1,500 2nd</div>
       <div class="progress"><div class="bar" style="width:{pct}%"></div></div>
     </div>
   </div>
@@ -811,7 +811,7 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
   <h1>Barry's Cheltenham 2026</h1>
   <div class="subtitle">Cheltenham Festival &middot; 10&ndash;13 March 2026 &middot; 28 Races &middot; Two Entries</div>
   <div>
-    <span class="prize-badge">&pound;2,500 Prize</span>
+    <span class="prize-badge">&pound;3,000 / &pound;1,500 Prize</span>
     <span class="updated-tag">&#10003; Live scores &mdash; {run_date}</span>
   </div>
 </div>
@@ -872,7 +872,7 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
 </div>
 
 <div class="footer">
-  Barry's Cheltenham 2026 &middot; Auto-updated daily via SureBet engine + Betfair + Racing Post &middot; {run_date} &middot; Prize: &pound;2,500
+  Barry's Cheltenham 2026 &middot; Auto-updated daily via SureBet engine + Betfair + Racing Post &middot; {run_date} &middot; 1st: &pound;3,000 &middot; 2nd: &pound;1,500
 </div>
 
 </body>
