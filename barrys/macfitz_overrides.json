@@ -58,14 +58,13 @@
     },
     "Champion Bumper": {
       "macfitz_horse": "Keep Him Company",
-      "reason": "2pt gap (127 vs 125) — near-tie, MacFitz takes Keep Him Company as the alternative",
+      "reason": "2pt gap (127 vs 125) — near-tie, MacFitz takes Keep Him Company; Surebet engine reverted to The Irish Avatar (127) on 11/03",
       "surebet_horse": "The Irish Avatar",
       "surebet_score": 127,
       "macfitz_score": 125,
       "gap": 2,
-      "decided": "2026-03-09",
-      "active": false,
-      "_deactivated": "10/03/2026: Surebet engine also now picks Keep Him Company (score 93) — both systems agree, split collapses."
+      "decided": "2026-03-11",
+      "active": true
     },
     "Kim Muir Handicap Chase": {
       "macfitz_horse": "Prends Garde A Toi",
@@ -75,6 +74,16 @@
       "macfitz_score": 66,
       "gap": 2,
       "decided": "2026-03-09",
+      "active": true
+    },
+    "Brown Advisory Novices' Chase": {
+      "macfitz_horse": "Final Demand",
+      "reason": "5pt gap (128 vs 123) — close call, market has Final Demand (Elliott) as favourite, MacFitz takes Final Demand",
+      "surebet_horse": "Kaid D'Authie",
+      "surebet_score": 128,
+      "macfitz_score": 123,
+      "gap": 5,
+      "decided": "2026-03-11",
       "active": true
     },
     "County Handicap Hurdle": {
