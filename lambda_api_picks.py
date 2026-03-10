@@ -739,17 +739,37 @@ def get_cheltenham_picks_lambda(headers, event):
     db_chelt = dynamodb.Table('CheltenhamPicks')
     qp = event.get('queryStringParameters') or {}
     target_date = qp.get('date', datetime.now().strftime('%Y-%m-%d'))
-    yesterday = (datetime.strptime(target_date, '%Y-%m-%d') - timedelta(days=1)).strftime('%Y-%m-%d')
+
+    # Collect items across a 5-day lookback window so that older full-field
+    # saves (e.g. with 12 all_horses) are not dropped in favour of newer
+    # lighter refreshes that only stored 6.
+    base = datetime.strptime(target_date, '%Y-%m-%d')
+    date_window = [(base - timedelta(days=n)).strftime('%Y-%m-%d') for n in range(5)]
 
     def scan_date(dt):
         resp = db_chelt.scan(
             FilterExpression=Attr('pick_date').eq(dt)
         )
-        return {item['race_name']: decimal_to_float(item) for item in resp.get('Items', [])}
+        return [decimal_to_float(item) for item in resp.get('Items', [])]
 
-    today_items = scan_date(target_date)
-    yest_items  = scan_date(yesterday)
-    all_picks   = list(today_items.values()) or list(yest_items.values())
+    # Flat list of all items across the window (newest dates first so the
+    # (day, race_time) dedup below prefers today's horse/score fields while
+    # also picking up full all_horses lists from older saves).
+    all_items_by_date: dict = {}   # race_name → best item (most all_horses wins)
+    for dt in date_window:   # newest first — dt=today, yesterday, …
+        for item in scan_date(dt):
+            rn = item.get('race_name', '')
+            existing = all_items_by_date.get(rn)
+            # Keep today's fields by default, but upgrade all_horses if an
+            # older date has a fuller field list.
+            if existing is None:
+                all_items_by_date[rn] = item
+            elif len(item.get('all_horses', [])) > len(existing.get('all_horses', [])):
+                # Preserve today's scalar fields; only replace all_horses from older richer item
+                merged_item = dict(existing)
+                merged_item['all_horses'] = item['all_horses']
+                all_items_by_date[rn] = merged_item
+    all_picks = list(all_items_by_date.values())
 
     # Deduplicate by (day, race_time) — keep the record with the most all_horses
     # Prevents duplicate panels when race was saved under two different name variants
