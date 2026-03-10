@@ -106,7 +106,25 @@
       "gap": 0,
       "decided": "2026-03-09",
       "active": false,
-      "_deactivated": "09/03/2026: Both systems now agree on Gaelic Warrior \u2014 Fastorslow removed from data as NOT in official 14-runner Gold Cup field"
-    }
+      "_deactivated": "09/03/2026: Both systems now agree on Gaelic Warrior \u2014 Fastorslow removed from data as NOT in official 14-runner Gold Cup field"    },
+    "Grand Annual Handicap Chase": {
+      "macfitz_horse": "Edwardstone",
+      "reason": "1pt gap (79 vs 78) — effectively tied, MacFitz takes Edwardstone (Grade 1 winner, Henderson, Daryl Jacob; strongest form profile in the race)",
+      "surebet_horse": "Coeur De Lion",
+      "surebet_score": 79,
+      "macfitz_score": 78,
+      "gap": 1,
+      "decided": "2026-03-10",
+      "active": true
+    },
+    "Martin Pipe Handicap Hurdle": {
+      "macfitz_horse": "Sony Bill",
+      "reason": "3pt gap (74 vs 71) — close call, MacFitz takes Sony Bill as the alternative to the 40/1 outsider Nurse Susan",
+      "surebet_horse": "Nurse Susan",
+      "surebet_score": 74,
+      "macfitz_score": 71,
+      "gap": 3,
+      "decided": "2026-03-10",
+      "active": true    }
   }
 }
