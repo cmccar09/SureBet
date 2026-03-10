@@ -887,7 +887,7 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
 def run(dry_run: bool = False, check_only: bool = False):
     run_date = datetime.now().strftime("%d %b %Y")
     print(f"\n{'='*70}")
-    print(f"  BARRY'S HTML REGEN  —  {run_date}")
+    print(f"  BARRY'S HTML REGEN  --  {run_date}")
     print(f"{'='*70}\n")
 
     print("  [1] Loading MacFitz overrides ...")
@@ -943,9 +943,9 @@ def run(dry_run: bool = False, check_only: bool = False):
     print(f"\n  RESULT:  {n_bankers} bankers  |  {n_splits} splits")
     for race, sb, mf in assembled:
         if mf["is_split"]:
-            print(f"    ⚡ SPLIT  {race[1]} {race[3]:45}  Surebet={mf['surebet_horse']}  MacFitz={mf['horse']}  gap={mf['gap']}")
+            print(f"    !! SPLIT  {race[1]} {race[3]:45}  Surebet={mf['surebet_horse']}  MacFitz={mf['horse']}  gap={mf['gap']}")
     if new_close_calls:
-        print(f"\n  ⚠ NEW CLOSE CALLS (not yet in overrides — consider updating macfitz_overrides.json):")
+        print(f"\n  !! NEW CLOSE CALLS (not yet in overrides -- consider updating macfitz_overrides.json):")
         for r, h1, s1, h2, s2, g in new_close_calls:
             print(f"    {r}: {h1}({s1}) vs {h2}({s2}) gap={g}")
 
@@ -966,7 +966,7 @@ def run(dry_run: bool = False, check_only: bool = False):
         return
 
     HTML_OUT.write_text(html, encoding="utf-8")
-    print(f"\n  [5] Written {len(html):,} bytes → {HTML_OUT}")
+    print(f"\n  [5] Written {len(html):,} bytes -> {HTML_OUT}")
     print(f"\n{'='*70}\n")
 
 

@@ -546,6 +546,13 @@ And update both:
 cheltenham_strategy_2026.html
 barrys_cheltenham_2026.html
 ```
+run save_cheltenham_picks.py
+Run: python cheltenham_festival_schema.py
+
+pull latest odds and runners from betfair and check the news sites like https://www.sportinglife.com/racing/news/, tell me if makes any updates to todays picks and review tomorrows as well
+
+The main risk isn't the tech — it's process:
+Tomorrow you need to remember to run save_cheltenham_picks.py before the first race at 13:20, and fill results into race_results.json after each race. If you want, I can build a quick add_result.py shortcut script right now so you're not hand-editing JSON mid-festival.
 
 automatically.
 

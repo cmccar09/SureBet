@@ -759,7 +759,7 @@ RACES_2026 = {
              "cheltenham_record": "4th 2025 Champion Hurdle",
              "last_run": "Won Grade 1 Jan 2026", "days_off": 42,
              "improving": True},
-            {"name": "Golden Ace", "trainer": "Jeremy Scott", "jockey": "Felix de Giles",
+            {"name": "Golden Ace", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
              "odds": "8/1", "age": 8, "form": "1-2-3", "rating": 165,
              "cheltenham_record": "Won 2025 Champion Hurdle",
              "last_run": "3rd Kingwell Hurdle Feb 2026", "days_off": 28},

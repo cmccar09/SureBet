@@ -436,7 +436,7 @@ EXTRA_RACES = {
              "cheltenham_record": None,
              "last_run": "Won Handicap Chase Feb 2026", "days_off": 28},
             {"name": "Kurasso Blue",     "trainer": "Gordon Elliott",           "jockey": "J W Kennedy",
-             "odds": "9/1",  "age": 6, "form": "212151",  "rating": 146,
+             "odds": "5/1",  "age": 6, "form": "212151",  "rating": 146,  # updated from 9/1 — now Betfair FAV 4/1
              # racecard "151-212": most recent = 2(2nd), no consecutive wins from front
              "cheltenham_record": None,
              "last_run": "2nd Novice Chase Jan 2026", "days_off": 42},

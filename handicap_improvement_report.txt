@@ -275,4 +275,5 @@ Signals: festival venue in last 3 runs + soft ground + distance match
   St James's Place Hunters' Chase            Wonderwall                   @ ?        FI= 28  sys= 70
 
   Scan complete: 13 races · 191 horses evaluated · 8 dark horse flags
+  Results saved to DynamoDB table: CheltenhamHandicapFlags
 ══════════════════════════════════════════════════════════════════════════════

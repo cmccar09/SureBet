@@ -85,23 +85,21 @@ ADDITIONAL_RUNNERS = {
          "odds": "100/1", "age": 8, "form": "", "rating": 130, "cheltenham_record": None},
     ],
 
-    "day1_race5": [  # Champion Hurdle — confirmed 9 runners from Betfair
-        # Lossiemouth is top pick; full confirmed field:
-        {"name": "The New Lion",       "trainer": "Gordon Elliott",   "jockey": "Jack Kennedy",
-         "odds": "8/1",   "age": 6, "form": "", "rating": 165, "cheltenham_record": None},
-        {"name": "Brighterdaysahead", "trainer": "Willie Mullins",   "jockey": "Paul Townend",
-         "odds": "12/1",  "age": 6, "form": "", "rating": 162, "cheltenham_record": None},
-        {"name": "Golden Ace",        "trainer": "Willie Mullins",   "jockey": "Mark Walsh",
-         "odds": "14/1",  "age": 5, "form": "", "rating": 158, "cheltenham_record": None},
-        {"name": "Poniros",           "trainer": "Nicky Henderson",  "jockey": "Nico de Boinville",
-         "odds": "16/1",  "age": 7, "form": "", "rating": 155, "cheltenham_record": None},
+    "day1_race5": [  # Champion Hurdle — corrected 10/03/2026 vs ATR official declarations
+        # The New Lion: Dan Skelton / Harry Skelton (NOT Elliott/Kennedy — old stale data)
+        # Golden Ace: Gordon Elliott / Jack Kennedy (not Willie Mullins / Mark Walsh)
+        # Alexei: Jeremy Scott / Lorcan Williams (not Nicky Henderson)
+        {"name": "Brighterdaysahead", "trainer": "Gordon Elliott",   "jockey": "Jack Kennedy",
+         "odds": "9/2",   "age": 6, "form": "", "rating": 162, "cheltenham_record": None},
+        {"name": "Golden Ace",        "trainer": "Gordon Elliott",   "jockey": "Jack Kennedy",
+         "odds": "8/1",   "age": 5, "form": "", "rating": 158, "cheltenham_record": None},
+        {"name": "Alexei",            "trainer": "Jeremy Scott",     "jockey": "Lorcan Williams",
+         "odds": "16/1",  "age": 6, "form": "", "rating": 150, "cheltenham_record": None},
         {"name": "Tutti Quanti",      "trainer": "Henry de Bromhead","jockey": "Rachael Blackmore",
          "odds": "20/1",  "age": 7, "form": "", "rating": 152, "cheltenham_record": None},
-        {"name": "Alexei",            "trainer": "Nicky Henderson",  "jockey": "Nico de Boinville",
-         "odds": "25/1",  "age": 6, "form": "", "rating": 150, "cheltenham_record": None},
         {"name": "Anzadam",           "trainer": "Willie Mullins",   "jockey": "Patrick Mullins",
          "odds": "33/1",  "age": 6, "form": "", "rating": 148, "cheltenham_record": None},
-        {"name": "Workahead",         "trainer": "Henry de Bromhead","jockey": "Jack Kennedy",
+        {"name": "Workahead",         "trainer": "Henry de Bromhead","jockey": "Danny Mullins",
          "odds": "100/1", "age": 8, "form": "", "rating": 140, "cheltenham_record": None},
     ],
 
