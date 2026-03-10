@@ -93,7 +93,7 @@ RUNNER_NUMBERS: dict[str, int | str] = {
     "Old Park Star":      8,
     "Talk The Talk":      6,
     "Kopek Des Bordes":   3,   # Surebet Arkle pick
-    "Lulamba":            7,   # MacFitz Arkle pick (SPLIT)
+    "Lulamba":            4,   # FitzMac Arkle pick (SPLIT)
     "Manlaga":            8,
     "Winston Junior":     10,
     "Jagwar":             4,
