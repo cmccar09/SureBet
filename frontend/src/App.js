@@ -84,7 +84,19 @@ function App() {
 function CheltenhamView({ apiUrl }) {
   const [races, setRaces] = useState({});
   const [loading, setLoading] = useState(true);
-  const [selectedDay, setSelectedDay] = useState('Tuesday_10_March');
+  // Auto-select the current/next festival day (advances after ~18:00 each race day)
+  const getInitialDay = () => {
+    const now = new Date();
+    const cutoffs = [
+      { key: 'Tuesday_10_March',   cutoff: new Date('2026-03-10T18:00:00') },
+      { key: 'Wednesday_11_March', cutoff: new Date('2026-03-11T18:00:00') },
+      { key: 'Thursday_12_March',  cutoff: new Date('2026-03-12T18:00:00') },
+      { key: 'Friday_13_March',    cutoff: new Date('2026-03-13T23:59:00') },
+    ];
+    const active = cutoffs.find(d => now < d.cutoff);
+    return active ? active.key : 'Friday_13_March';
+  };
+  const [selectedDay, setSelectedDay] = useState(getInitialDay);
   const [expandedRace, setExpandedRace] = useState(null);
   const [expandedScores, setExpandedScores] = useState({});
   const [raceHorses, setRaceHorses] = useState({});
@@ -233,11 +245,13 @@ function CheltenhamView({ apiUrl }) {
     return diff > 0 ? diff : 'LIVE';
   };
 
+  // Mark days as complete once their races are done
+  const now_tabs = new Date();
   const dayTabs = [
-    { key: 'Tuesday_10_March', label: 'Tuesday 10', subtitle: 'Champion Hurdle Day' },
-    { key: 'Wednesday_11_March', label: 'Wednesday 11', subtitle: 'Queen Mother Day' },
-    { key: 'Thursday_12_March', label: 'Thursday 12', subtitle: 'Stayers Day' },
-    { key: 'Friday_13_March', label: 'Friday 13', subtitle: 'Gold Cup Day' }
+    { key: 'Tuesday_10_March',   label: 'Tuesday 10',   subtitle: now_tabs >= new Date('2026-03-10T18:00:00') ? '✅ Complete — 7/7 races' : 'Champion Hurdle Day',  complete: now_tabs >= new Date('2026-03-10T18:00:00') },
+    { key: 'Wednesday_11_March', label: 'Wednesday 11', subtitle: now_tabs >= new Date('2026-03-11T18:00:00') ? '✅ Complete — 7/7 races' : 'Ladies Day',             complete: now_tabs >= new Date('2026-03-11T18:00:00') },
+    { key: 'Thursday_12_March',  label: 'Thursday 12',  subtitle: now_tabs >= new Date('2026-03-12T18:00:00') ? '✅ Complete — 7/7 races' : 'St Patrick\'s Day Eve',  complete: now_tabs >= new Date('2026-03-12T18:00:00') },
+    { key: 'Friday_13_March',    label: 'Friday 13',    subtitle: now_tabs >= new Date('2026-03-13T18:00:00') ? '✅ Complete — 7/7 races' : 'Gold Cup Day',           complete: now_tabs >= new Date('2026-03-13T18:00:00') },
   ];
 
   if (loading) {
@@ -584,13 +598,16 @@ function CheltenhamView({ apiUrl }) {
               flex: 1,
               minWidth: '200px',
               padding: '15px',
-              background: selectedDay === day.key ? '#10b981' : '#f3f4f6',
-              color: selectedDay === day.key ? 'white' : '#374151',
-              border: 'none',
+              background: selectedDay === day.key
+                ? (day.complete ? '#6b7280' : '#10b981')
+                : (day.complete ? '#e5e7eb' : '#f3f4f6'),
+              color: selectedDay === day.key ? 'white' : (day.complete ? '#9ca3af' : '#374151'),
+              border: day.complete && selectedDay !== day.key ? '1px solid #d1d5db' : 'none',
               borderRadius: '8px',
               cursor: 'pointer',
               fontWeight: '600',
-              transition: 'all 0.3s'
+              transition: 'all 0.3s',
+              opacity: day.complete && selectedDay !== day.key ? 0.7 : 1,
             }}
           >
             <div>{day.label}</div>
