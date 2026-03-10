@@ -39,6 +39,12 @@ RACES = [
 
 # Detailed 10-year winner database
 # going: GF=Good to Firm, G=Good, GS=Good to Soft, S=Soft, H=Heavy
+
+# ── LIVE FORECAST GOING — update this each day as conditions are reported ───────
+# Day 1 started Good to Soft. Ground drying towards Good (reported 10/03/2026 afternoon).
+FORECAST_GOING = "Good"   # Options: "Good to Firm", "Good", "Good to Soft", "Soft", "Heavy"
+# ─────────────────────────────────────────────────────────────────────────────────
+
 WINNERS = {
 
     # ---- 2016 ----
@@ -1570,26 +1576,49 @@ def score_horse_2026(horse, race_name):
             score += 7
             tips.append(f"Won this exact race before: +7pts (same race course & distance mastery)")
 
-    # --- Ground / Going preference bonus (+8/-5) ---
-    # Cheltenham March = Good to Soft / Soft almost every year.
-    # Use 'ground_pref' field if present; also infer from cheltenham_record + last_run.
+    # --- Ground / Going preference bonus ---
+    # Calibrated against FORECAST_GOING (set at top of file, updated live each day).
+    # Good = drying ground: good-ground horses benefit; soft specialists penalised.
+    # Good to Soft / Soft = normal March Cheltenham: soft preference = positive.
     ground_pref = horse.get("ground_pref", "").lower()
     last_run_txt = (horse.get("last_run", "") or "").lower()
     ch_record_txt = record.lower()
-    soft_signals = any(g in ground_pref for g in ("soft", "good_to_soft", "any", "yielding"))
-    # Cheltenham wins implicitly prove soft-ground ability
-    ch_soft_proof = won_count >= 1  # winning at Cheltenham = can handle the March ground
-    # Explicit preference for good/firm ground is a negative
-    needs_better = any(g in ground_pref for g in ("good", "firm", "fast"))
-    if soft_signals:
-        score += 8
-        tips.append(f"Ground suits (soft/good-to-soft preference): +8pts")
-    elif ch_soft_proof and not needs_better:
-        score += 5
-        tips.append(f"Proven Cheltenham ground handler (course winner): +5pts")
-    elif needs_better:
-        score -= 5
-        warnings.append(f"Preference for better ground (March Cheltenham = Soft): -5pts")
+    ch_soft_proof = won_count >= 1  # Cheltenham winner = proven on course ground
+    forecast = FORECAST_GOING.lower()
+    good_ground = "good" in forecast and "soft" not in forecast  # strictly Good or Good to Firm
+
+    if good_ground:
+        # Ground is drying — good-ground specialists benefit; soft specialists penalised
+        prefers_good = any(g in ground_pref for g in ("good", "firm", "fast"))
+        prefers_gts  = "good_to_soft" in ground_pref
+        prefers_soft = any(g in ground_pref for g in ("soft", "yielding")) and not prefers_gts
+        if prefers_good:
+            score += 8
+            tips.append(f"Ground suits (good ground pref, going is {FORECAST_GOING}): +8pts")
+        elif prefers_gts:
+            score += 3
+            tips.append(f"Ground acceptable (good-to-soft pref, going is {FORECAST_GOING}): +3pts")
+        elif not ground_pref or ground_pref == "any":
+            # No stated preference — Cheltenham winners get small bonus
+            if ch_soft_proof:
+                score += 3
+                tips.append(f"Proven Cheltenham handler (course winner, going is {FORECAST_GOING}): +3pts")
+        elif prefers_soft:
+            score -= 5
+            warnings.append(f"Soft-ground specialist — going {FORECAST_GOING} not ideal: -5pts")
+    else:
+        # Standard soft / good-to-soft going
+        soft_signals = any(g in ground_pref for g in ("soft", "good_to_soft", "any", "yielding"))
+        needs_better = any(g in ground_pref for g in ("good", "firm", "fast"))
+        if soft_signals:
+            score += 8
+            tips.append(f"Ground suits (soft/good-to-soft preference): +8pts")
+        elif ch_soft_proof and not needs_better:
+            score += 5
+            tips.append(f"Proven Cheltenham ground handler (course winner): +5pts")
+        elif needs_better:
+            score -= 5
+            warnings.append(f"Preference for better ground (going is {FORECAST_GOING}): -5pts")
 
     # --- Same distance / class form bonus (+8) ---
     # Reward horses that previously won at the same distance bracket and race class.

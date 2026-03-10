@@ -634,13 +634,29 @@ def save_picks(dry_run=False):
     today_picks = score_all_races()
     yesterday_picks = get_yesterday_picks(table, today) if not dry_run else {}
 
+    # ── Load completed races (lock — never overwrite a pick once the race has run) ──
+    completed_races = set()
+    results_path = os.path.join(ROOT, 'barrys', 'race_results.json')
+    try:
+        with open(results_path) as _rf:
+            _results = json.load(_rf).get('results', {})
+        completed_races = {rn for rn, res in _results.items() if res.get('1st')}
+    except Exception as _e:
+        print(f"  ⚠️  Could not load race_results.json: {_e}")
+
     changes = []
     saved = 0
     unchanged = 0
 
     for race_name, pick in sorted(today_picks.items(), key=lambda x: x[1]['day']):
+        is_completed = race_name in completed_races
         yesterday = yesterday_picks.get(race_name)
         changed, prev_horse, prev_odds, change_reason = detect_changes(pick, yesterday)
+
+        # Completed races: never report as changed, lock the original pick
+        if is_completed:
+            changed = False
+            change_reason = 'Race completed — pick locked'
 
         if changed:
             changes.append({
@@ -650,6 +666,8 @@ def save_picks(dry_run=False):
                 'reason': change_reason,
             })
             marker = '>> CHANGED <<'
+        elif is_completed:
+            marker = '   [LOCKED]  '
         else:
             marker = '             '
 
@@ -660,7 +678,7 @@ def save_picks(dry_run=False):
             print(f"              ** Was: {prev_horse} @ {prev_odds}")
         print()
 
-        if not dry_run:
+        if not dry_run and not is_completed:
             item = {
                 'race_name':         race_name,
                 'pick_date':         today,
