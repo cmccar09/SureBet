@@ -42,7 +42,7 @@ RACES = [
 
 # ── LIVE FORECAST GOING — update this each day as conditions are reported ───────
 # Day 1 started Good to Soft. Ground drying towards Good (reported 10/03/2026 afternoon).
-FORECAST_GOING = "Good"   # Options: "Good to Firm", "Good", "Good to Soft", "Soft", "Heavy"
+FORECAST_GOING = "Good to Soft"   # Options: "Good to Firm", "Good", "Good to Soft", "Soft", "Heavy"
 # ─────────────────────────────────────────────────────────────────────────────────
 
 WINNERS = {
