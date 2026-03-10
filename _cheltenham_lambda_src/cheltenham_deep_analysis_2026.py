@@ -1371,7 +1371,7 @@ JOCKEY_SCORES = {
 ELITE_COMBOS = {
     ("Willie Mullins",       "Paul Townend"):        8,
     ("Nicky Henderson",      "Nico de Boinville"):   8,
-    ("Gordon Elliott",       "Jack Kennedy"):        6,
+    ("Gordon Elliott",       "Jack Kennedy"):        3,   # reduced — 0 festival wins 2021-2023
     ("Henry de Bromhead",    "Rachael Blackmore"):   6,
     ("Gavin Cromwell",       "Danny Mullins"):       6,
 }
@@ -1458,29 +1458,37 @@ def score_horse_2026(horse, race_name):
 
     # --- Trainer bonus ---
     trainer = horse.get("trainer", "")
+    # DATA-DRIVEN from 10-year history (2016-2025, 70 Grade-1 wins):
+    # Willie Mullins 26/70=37.1%, Henderson 11/70=15.7%, Elliott 9/70=12.9%
+    # de Bromhead 7/70=10.0%, Cromwell 5/70=7.1% — scaled to Mullins=22 anchor
     trainer_scores = {
-        "Willie Mullins":    15,
-        "Nicky Henderson":   15,
-        "Gordon Elliott":    12,
-        "Emmet Mullins":     12,   # Added: top Irish NH trainer, multiple Festival winners
-        "Henry de Bromhead": 12,
-        "Gavin Cromwell":    12,
-        "Paul Nicholls":      8,
-        "Alan King":          8,
-        "Emma Lavelle":       8,
-        "Rebecca Curtis":     8,   # Added: top NH trainer, Welsh Champion many times
-        "Peter Fahey":        8,
-        "Dan Skelton":        8,
-        "Ben Pauling":        6,
-        "Oliver Greenall & Josh Guerriero": 8,   # Added: won 2024 Ultima with Jagwar
-        "Jonjo O'Neill":      6,   # Added: regular UK trainer, multiple Cheltenham runners
-        "W. P. Mullins":     15,   # Added: alias for Willie Mullins (racecard abbreviation)
-        "Joseph Patrick O'Brien": 12, # Added: top Irish trainer, multiple Festival winners
-        "Gavin Patrick Cromwell": 12, # Added: alias for Gavin Cromwell
-        "Paul Nolan":         8,   # Added: Irish trainer, Festival winners
-        "Faye Bramley":       6,   # Added: UK trainer
-        "Mrs J. Harrington":  12,  # Added: Jessica Harrington, multiple Festival winners
-        "Jessica Harrington": 12,  # Added: alternate name
+        "Willie Mullins":    22,   # 26/70 = 37.1% — most dominant trainer in history
+        "Nicky Henderson":   12,   # 11/70 = 15.7% — elite UK trainer (Arkle/Champ Hurdle specialist)
+        "Gordon Elliott":     9,   # 9/70  = 12.9% — Gold Cup/Supreme specialist
+        "Henry de Bromhead":  7,   # 7/70  = 10.0% — peak 2021-22, declining since
+        "Gavin Cromwell":     5,   # 5/70  =  7.1% — Stayers Hurdle specialist only
+        "Emmet Mullins":      7,   # Quality Irish raider, some Grade 1 wins
+        "Paul Nicholls":      4,   # 1/70  =  1.4% — festival record modest
+        "Alan King":          5,
+        "Emma Lavelle":       5,   # 1/70  =  1.4% (Paisley Park)
+        "Rebecca Curtis":     5,   # 1/70  =  1.4%
+        "Peter Fahey":        4,
+        "Dan Skelton":        4,   # 0 Grade-1 wins in dataset
+        "Ben Pauling":        4,
+        "Oliver Greenall & Josh Guerriero": 5,
+        "Jonjo O'Neill":      4,
+        "W. P. Mullins":     22,   # alias for Willie Mullins
+        "Joseph Patrick O'Brien": 8,   # Quality Irish trainer, some Grade 1 wins
+        "Gavin Patrick Cromwell": 5,   # alias
+        "Paul Nolan":         5,
+        "Faye Bramley":       5,
+        "Mrs J. Harrington":  5,   # Jessica Harrington alias, 1/70 = 1.4%
+        "Jessica Harrington": 5,   # 1/70  =  1.4% (Sizing John)
+        "Jeremy Scott":       5,   # 1/70  =  1.4% (2025 Champ Hurdle)
+        "Colin Tizzard":      4,   # 2/70 but retired, historical only
+        "Barry Connell":      5,   # 1/70 (2025 Queen Mother)
+        "Sam Curling":        5,   # competitive Irish handicap trainer
+        "Noel Meade":         5,
     }
     t_score = trainer_scores.get(trainer, 5)
     score += t_score
