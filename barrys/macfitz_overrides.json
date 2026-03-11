@@ -67,13 +67,13 @@
       "active": true
     },
     "Kim Muir Handicap Chase": {
-      "macfitz_horse": "Prends Garde A Toi",
-      "reason": "2pt gap (68 vs 66) — near-tie, MacFitz takes Prends Garde A Toi as the alternative",
-      "surebet_horse": "Jeriko Du Reponet",
-      "surebet_score": 68,
-      "macfitz_score": 66,
-      "gap": 2,
-      "decided": "2026-03-09",
+      "macfitz_horse": "Jeriko Du Reponet",
+      "reason": "STRATEGY UPDATE 11/03/2026: SB=Herakles Westwood (model top, 9/1). MF takes Jeriko Du Reponet (7/2 fav) — covers market leader. 24-runner amateur handicap, 5 places. Spreads risk across model pick + market favourite.",
+      "surebet_horse": "Herakles Westwood",
+      "surebet_score": 54,
+      "macfitz_score": 51,
+      "gap": 3,
+      "decided": "2026-03-11",
       "active": true
     },
     "Brown Advisory Novices' Chase": {
@@ -125,6 +125,17 @@
       "macfitz_score": 71,
       "gap": 3,
       "decided": "2026-03-10",
-      "active": true    }
+      "active": true
+    },
+    "Pertemps Handicap Hurdle": {
+      "macfitz_horse": "Gowel Road",
+      "reason": "DEAD HEAT 11/03/2026: Supremely West=Gowel Road both 59pts. SB takes Supremely West (16/5, biggest handicap gamble of the day). MF takes Gowel Road (25/1, Course & Distance winner, 6-place race — maximum E/W value spread in 26-runner field).",
+      "surebet_horse": "Supremely West",
+      "surebet_score": 59,
+      "macfitz_score": 59,
+      "gap": 0,
+      "decided": "2026-03-11",
+      "active": true
+    }
   }
 }
