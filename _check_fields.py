@@ -1,27 +1,18 @@
-"""Audit race runner counts in source data."""
-from cheltenham_deep_analysis_2026 import RACES_2026
-from cheltenham_full_fields_2026 import RACE_FULL_FIELDS as FULL_FIELDS
-from barrys.surebet_intel import ADDITIONAL_RUNNERS
+import sys; sys.path.insert(0,"."); sys.path.insert(0,"barrys")
+from barrys.surebet_intel import EXTRA_RACES
+from cheltenham_deep_analysis_2026 import score_horse_2026
 
-print("=== RACES_2026 Day 2 runner counts ===")
-for rid, r in RACES_2026.items():
-    if r.get('day') == 2:
-        runners = r.get('runners', [])
-        print(f"  [{rid}]  {r.get('name',''):<45}  runners={len(runners)}")
-
-print()
-print("=== FULL_FIELDS Day 2 runner counts ===")
-for rid, runners in FULL_FIELDS.items():
-    # try to match day
-    d = RACES_2026.get(rid, {})
-    if d.get('day') == 2:
-        print(f"  [{rid}]  {d.get('name',''):<45}  full_field={len(runners)}")
+print("=== Gold Cup (day4_race6) field ===")
+entries = EXTRA_RACES.get("day4_race6", {}).get("entries", [])
+results = sorted([(score_horse_2026(h, "Cheltenham Gold Cup")[0], h["name"], h.get("odds","?"), h.get("jockey","?"), h.get("rating","?")) for h in entries], reverse=True)
+for sc, nm, od, jk, rt in results:
+    print(f"  {sc}  {nm}  {od}  OR:{rt}  {jk}")
 
 print()
-print("=== ADDITIONAL_RUNNERS Day 2 ===")
-for rid, runners in ADDITIONAL_RUNNERS.items():
-    d = RACES_2026.get(rid, {})
-    if d.get('day') == 2:
-        print(f"  [{rid}]  {d.get('name',''):<45}  additional={len(runners)}")
-        for h in runners:
-            print(f"    - {h.get('name','')}")
+print("=== Stayers (day3_race4) ===")
+for h in EXTRA_RACES.get("day3_race4", {}).get("entries", []):
+    print(f"  {h['name']}  {h.get('jockey','?')}")
+
+print()
+print("=== All keys in EXTRA_RACES ===")
+print(list(EXTRA_RACES.keys()))
