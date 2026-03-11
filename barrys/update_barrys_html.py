@@ -120,7 +120,7 @@ RUNNER_NUMBERS: dict[str, int | str] = {
     "Keep Him Company":     8,  # Champion Bumper 17:20 — Surebet
     "Quiryn":              21,  # Champion Bumper 17:20 — FitzMac split (Mullins/Townend, 4yo)
     # Day 3 — St Patrick's Thursday (12 Mar) — fill in once declared
-    "Bambino Fever":        None,  # Mares Novices Hurdle 13:20 — SB banker
+    "Bambino Fever":        15,   # Mares Novices Hurdle 13:20 — SB banker (EVS fav, cloth #15)
     "Sixmilebridge":        None,  # Jack Richards Novices' Chase 14:00 — SB banker
     "Jade De Grugy":        None,  # Close Brothers Mares' Hurdle 14:40 — SB SPLIT
     "Wodhooh":              None,  # Close Brothers Mares' Hurdle 14:40 — MF SPLIT

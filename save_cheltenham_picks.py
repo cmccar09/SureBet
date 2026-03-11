@@ -258,9 +258,10 @@ RP_LIVE_ODDS = {
     "macho man":              "8/1",
     "winston junior":         "13/2",
 
-    # Dawn Run Mares' Novices' Hurdle (Day 3)
-    "bambino fever":          "4/5",
-    "oldschool outlaw":       "4/1",
+    # Ryanair Mares' Novices' Hurdle 13:20 (Day 3)
+    "bambino fever":          "EVS",
+    "oldschool outlaw":       "7/2",
+    "carrigmoornaspruce":     "10/1",
     "echoing silence":        "10/1",
     "la conquiere":           "14/1",
 

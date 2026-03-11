@@ -178,12 +178,10 @@ CLOTH_NUMBERS_2026 = {
         "anibale fly":        None,
     },
 
-    "day2_race6": {   # Dawn Run Mares Novices' Hurdle 16:50
-        # Current front-runners: Bambino Fever (4/5)
-        "bambino fever":    None,
-        "oldschool outlaw": None,
-        "echoing silence":  None,
-        "la conquiere":     None,
+    "day2_race6": {   # Grand Annual Handicap Chase 16:40
+        "inthepocket":      5,   # SB pick
+        "jazzy matty":      8,
+        "be aware":         4,   # MF split
     },
 
     "day2_race7": {   # FBD Hotels & Resorts NH Flat Race 17:30
@@ -197,11 +195,11 @@ CLOTH_NUMBERS_2026 = {
     # ── DAY 3: St Patrick's Thursday — Thursday 12 March ──────────────────
 
     "day3_race1": {   # Ryanair Mares' Novices' Hurdle 13:20 (Grade 1)
-        # SB pick: Bambino Fever
-        "bambino fever":     None,
-        "hierba buena":      None,
-        "lady of longfield": None,
-        "il est temps":      None,
+        # SB pick: Bambino Fever (EVS fav, C+D winner)
+        "bambino fever":     15,  # J: P. Townend / T: W. P. Mullins / EVS
+        "oldschool outlaw":   5,  # J: M. P. Walsh / T: Gordon Elliott / 7/2
+        "carrigmoornaspruce": 8,  # J: James Bowen / T: Declan Queally / 10/1
+        "echoing silence":   None,  # J: D. J. O'Keeffe / T: Henry de Bromhead
     },
 
     "day3_race2": {   # Jack Richards Turners Novices' Chase 14:00 (Grade 1)

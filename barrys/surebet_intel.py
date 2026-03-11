@@ -943,7 +943,7 @@ EXTRA_RACES = {
         # Manganese: 4yo unbeaten (4/4), distance winner, dangerous unknown ceiling
         "entries": [
             {"name": "Bambino Fever", "trainer": "Willie Mullins", "jockey": "P. Townend",
-             "odds": "11/10", "age": 6, "form": "111-121", "rating": 148,
+             "odds": "EVS", "age": 6, "form": "111-121", "rating": 148,
              "cheltenham_record": "CD winner",
              "last_run": "Won Mares Novice Hurdle Fairyhouse Jan 2026 (after debut 2nd at Naas)", "days_off": 56,
              "recent_races": [
