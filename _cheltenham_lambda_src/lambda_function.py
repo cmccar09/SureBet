@@ -14,6 +14,7 @@ Usage:
 """
 
 import sys, os
+import json
 import boto3
 import argparse
 from datetime import datetime, timedelta
@@ -677,6 +678,80 @@ def lambda_handler(event, context):
       - Race days (10–13 Mar 2026, 11:00–18:30 UTC): saves every call
         so picks refresh every 30 minutes during live racing.
     """
+    # ── API Gateway GET: always serve current picks from DynamoDB ──────────
+    # The time gate below is for the scheduled save; API reads bypass it.
+    if event.get('httpMethod') == 'GET' or (
+            'requestContext' in event and event.get('httpMethod') != 'POST'):
+        try:
+            table = get_picks_table()
+            resp  = table.scan()
+            items = resp.get('Items', [])
+            # Paginate if necessary
+            while 'LastEvaluatedKey' in resp:
+                resp  = table.scan(ExclusiveStartKey=resp['LastEvaluatedKey'])
+                items.extend(resp.get('Items', []))
+            # Keep only the latest pick per race (highest pick_date then updated_at)
+            latest = {}
+            for item in items:
+                rn = item.get('race_name', '')
+                key = (item.get('pick_date', ''), item.get('updated_at', ''))
+                if rn not in latest or key > (latest[rn].get('pick_date', ''), latest[rn].get('updated_at', '')):
+                    latest[rn] = item
+
+            # Group by festival day key — matches what the React frontend expects:
+            # { success: true, days: { "Wednesday_11_March": [...] }, pick_date, total_changes }
+            day_int_map = {
+                1: 'Tuesday_10_March',
+                2: 'Wednesday_11_March',
+                3: 'Thursday_12_March',
+                4: 'Friday_13_March',
+            }
+            # day_str_map handles items where 'day' was stored as the string key directly
+            valid_day_keys = set(day_int_map.values())
+            days = {}
+            pick_date = None
+            for item in latest.values():
+                raw_day = item.get('day', 0)
+                # 'day' may be an int (1-4) or already a string key like 'Wednesday_11_March'
+                if isinstance(raw_day, str) and raw_day in valid_day_keys:
+                    day_key = raw_day
+                else:
+                    try:
+                        day_key = day_int_map.get(int(raw_day), f'Day_{raw_day}')
+                    except (ValueError, TypeError):
+                        day_key = f'Day_{raw_day}'
+                if day_key not in days:
+                    days[day_key] = []
+                days[day_key].append(item)
+                if not pick_date:
+                    pick_date = item.get('pick_date', '')
+            # Sort each day's picks by race_time
+            for day_key in days:
+                days[day_key].sort(key=lambda x: x.get('race_time', ''))
+
+            payload = {
+                'success': True,
+                'days': days,
+                'pick_date': pick_date or '',
+                'total_changes': 0,
+            }
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Headers': 'Content-Type',
+                },
+                'body': json.dumps(payload, default=str),
+            }
+        except Exception as e:
+            return {
+                'statusCode': 500,
+                'headers': {'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*'},
+                'body': json.dumps({'error': str(e)}),
+            }
+    # ───────────────────────────────────────────────────────────────────────
+
     now_utc  = datetime.utcnow()
     today    = now_utc.date()
 

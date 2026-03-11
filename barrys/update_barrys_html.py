@@ -106,7 +106,19 @@ RUNNER_NUMBERS: dict[str, int | str] = {
     "Backmersackme":      9,
     "Newton Tornado":     11,
     "Iceberg Theory":     6,
-    # Day 2-4 horses added as racecards are published
+    # Day 2 — Ladies' Day (11 Mar)
+    "No Drama This End":  12,   # Turner's 13:20 — 11/4
+    "Final Demand":         2,   # Brown Advisory 14:00 — FitzMac split (alphabetical: A=1,F=2,J=3,K=4)
+    "Kaid D'Authie":       4,   # Brown Advisory 14:00 — 6/1
+    "Iberico Lord":        11,  # BetMGM Cup 14:40 — 9/1
+    "Stumptown":            1,  # Cross Country 15:20 — 3/1
+    "Favori De Champdou":   2,  # Cross Country 15:20 — FitzMac split
+    "Majborough":           8,  # QMCC 16:00 — 10/11
+    "Inthepocket":          5,  # Grand Annual 16:40 — 9/1 Surebet
+    "Jazzy Matty":          8,  # Grand Annual 16:40 — 7/1 (NOT selected)
+    "Be Aware":              4,  # Grand Annual 16:40 — 5/1 fav FitzMac split
+    "Keep Him Company":     8,  # Champion Bumper 17:20 — Surebet
+    "Quiryn":              21,  # Champion Bumper 17:20 — FitzMac split (Mullins/Townend, 4yo)
 }
 
 # ── tier cosmetics ─────────────────────────────────────────────────────────────

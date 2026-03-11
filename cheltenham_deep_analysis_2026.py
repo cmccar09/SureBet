@@ -1361,7 +1361,7 @@ JOCKEY_SCORES = {
     "Patrick Mullins":     8,
     "Davy Russell":        8,
     "Sean Flanagan":        6,
-    "Harry Cobden":        6,
+    "Harry Cobden":        8,   # Bumped 6→8: WON Brown Advisory 2026 (Kitzbuhel, Mullins), WON Turner's 2025 — underrated
     "Tom Cannon":          6,
     "Aidan Coleman":       6,
     "Keith Donoghue":      6,
@@ -1386,8 +1386,10 @@ JOCKEY_SCORES = {
 ELITE_COMBOS = {
     ("Willie Mullins",       "Paul Townend"):        8,   # Capped at 8 (was 15 — Option B rebalance)
     ("W. P. Mullins",        "Paul Townend"):        8,   # alias
-    ("Willie Mullins",       "Mark Walsh"):          5,   # Arkle 2026: Kargese won (Walsh 2nd jockey for Mullins when Townend committed elsewhere)
+    ("Willie Mullins",       "Mark Walsh"):          5,   # Arkle 2026: Kargese won
     ("W. P. Mullins",        "Mark Walsh"):          5,   # alias
+    ("Willie Mullins",       "Harry Cobden"):        6,   # Brown Advisory 2026: Kitzbuhel won — Mullins using Cobden as 3rd jockey at Festival
+    ("W. P. Mullins",        "Harry Cobden"):        6,   # alias
     ("Nicky Henderson",      "Nico de Boinville"):   8,   # Capped at 8 (was 12)
     ("Gordon Elliott",       "Jack Kennedy"):        3,   # reduced — 0 festival wins 2021-2023
     ("Henry de Bromhead",    "Rachael Blackmore"):   6,
@@ -1531,14 +1533,33 @@ def score_horse_2026(horse, race_name):
         score += combo_bonus
         tips.append(f"Elite combo bonus: +{combo_bonus}pts")
 
+    # --- 3lb / 5lb claimer tactical weight booking ---
+    # In non-handicap chases/hurdles, a trainer deliberately booking a 3lb claimer
+    # gains a real weight advantage. Stone-Walsh(3) on Final Orders 2026 = classic example.
+    # In handicaps the claim is already offset by BHA allotted weights, so no bonus.
+    import re as _re_claimer
+    _claimer_match = _re_claimer.search(r'\((\d+)\)', jockey)
+    if _claimer_match:
+        _claim_lbs = int(_claimer_match.group(1))
+        _is_handicap = bool(race_name and "handicap" in race_name.lower())
+        if _claim_lbs == 3 and not _is_handicap:
+            score += 5
+            tips.append(f"3lb claimer in non-handicap (tactical weight booking): +5pts")
+        elif _claim_lbs == 5 and not _is_handicap:
+            score += 3
+            tips.append(f"5lb claimer in non-handicap: +3pts")
+        elif _claim_lbs == 7 and not _is_handicap:
+            score += 2
+            tips.append(f"7lb claimer in non-handicap: +2pts")
+
     # --- Handicap dampening ---
     # In big-field handicap races, BHA weights already neutralise trainer quality.
     # Cap the combined trainer+jockey+combo benefit that EXCEEDS the 'average' baseline
     # (avg trainer=5, avg jockey=3, no combo=0) so elite stables aren't over-rewarded.
     # Fred Winter 2026 learning: Henderson/de Boinville scored 32pts here vs winner Saratoga 11pts.
-    HCAP_TRAINER_CAP  = 7   # max trainer bonus in handicaps
-    HCAP_JOCKEY_CAP   = 6   # max jockey bonus in handicaps
-    HCAP_COMBO_CAP    = 3   # max combo bonus in handicaps
+    HCAP_TRAINER_CAP  = 5   # max trainer bonus in handicaps (tightened 7→5: Cheltenham 2026 data)
+    HCAP_JOCKEY_CAP   = 4   # max jockey bonus in handicaps (tightened 6→4)
+    HCAP_COMBO_CAP    = 2   # max combo bonus in handicaps (tightened 3→2)
     if race_name and "handicap" in race_name.lower():
         excess_t = max(0, t_score    - HCAP_TRAINER_CAP)
         excess_j = max(0, j_score    - HCAP_JOCKEY_CAP)
@@ -1547,6 +1568,13 @@ def score_horse_2026(horse, race_name):
         if hcap_penalty > 0:
             score -= hcap_penalty
             tips.append(f"Handicap weight equalisation: −{hcap_penalty}pts (BHA weights cap trainer/jockey edge)")
+        # Extra dampening for large-field handicaps (>18 runners): random factor dominates
+        field_size = len(race_name)  # placeholder — use race data if available
+        large_field_bonus_note = ""
+        # Check via race_name hint tokens
+        if any(t in race_name.lower() for t in ["betmgm", "fred winter", "county", "martin pipe", "pertemps", "kim muir", "ultimum", "ultima", "grand annual"]):
+            score -= 6
+            tips.append("Large-field handicap dampener: -6pts (20+ runner races, BHA weights equalise field)")
     record = horse.get("cheltenham_record", "") or ""
     # Normalise "winner" → "won" so "CD winner" / "Cheltenham winner" score the same as "Won X race"
     _norm_record = re.sub(r'\bwinner\b', 'won', record.lower())
@@ -1683,11 +1711,11 @@ def score_horse_2026(horse, race_name):
         poor_form  = form.count("0") + form.count("P")
         # Option B: stronger finishing position trend weighting
         if form.startswith("1111") and falls_form == 0:
-            score += 22
-            tips.append("4+ wins in form string (unbeaten run): +22pts")
+            score += 18   # reduced 22→18: class jump at Cheltenham limits recent-form advantage
+            tips.append("4+ wins in form string (unbeaten run): +18pts")
         elif form.startswith("111") and falls_form <= 1:
-            score += 18
-            tips.append("3+ consecutive wins in form: +18pts")
+            score += 14   # reduced 18→14
+            tips.append("3+ consecutive wins in form: +14pts")
         elif form.startswith("11"):
             score += 10
             tips.append("2 consecutive wins: +10pts")
@@ -1815,6 +1843,17 @@ def score_horse_2026(horse, race_name):
             "Won Grade 1" in recent_form_str or "Won Grade 2" in recent_form_str):
         score += 12
         tips.append("Graded winner this season: +12pts")
+
+    # --- Cross-country prep school bonus ---
+    # The January Cheltenham cross-country race is run on the IDENTICAL Prestbury Park
+    # circuit (32 specialist fences). Any horse that ran in it — regardless of finishing
+    # position — has schooled all the fences. This is course familiarisation, not a bad
+    # prep run. Final Orders 2026 (won at 7/1) was 5th in the Jan prep — completely
+    # penalised by the model as a 'poor run'; in reality it was invaluable course school.
+    _is_xc_race = bool(race_name and "cross country" in race_name.lower())
+    if _is_xc_race and "cross country" in last_run_txt:
+        score += 8
+        tips.append("Cross-country prep school (ran same Prestbury XC circuit in Jan): +8pts")
 
     # Option B: Elite Irish raider and Champion jockey bonuses REMOVED
     # — already captured in capped trainer_scores and JOCKEY_SCORES above.

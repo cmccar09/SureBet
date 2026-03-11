@@ -57,15 +57,14 @@
       "active": true
     },
     "Champion Bumper": {
-      "macfitz_horse": "Keep Him Company",
-      "reason": "2pt gap (127 vs 125) — near-tie, MacFitz takes Keep Him Company; Surebet engine reverted to The Irish Avatar (127) on 11/03",
-      "surebet_horse": "The Irish Avatar",
-      "surebet_score": 127,
-      "macfitz_score": 125,
-      "gap": 2,
+      "macfitz_horse": "Quiryn",
+      "reason": "LIVE SPLIT 11/03/2026: System margin only 1pt (KHC=80 vs Broadway Ted=79) — coin flip. FitzMac takes Quiryn (WP Mullins/Paul Townend, 8/1, unbeaten 4yo; Mullins/Townend combo have dominated this race historically). Market has Love Sign d'Aunou 4/1 fav. Quiryn is strong alternative with Festival jockey advantage.",
+      "surebet_horse": "Keep Him Company",
+      "surebet_score": 80,
+      "macfitz_score": 79,
+      "gap": 1,
       "decided": "2026-03-11",
-      "active": false,
-      "_deactivated": "10/03/2026: Post-rebalance Surebet also picks Keep Him Company (score 93) — both systems agree, split collapses."
+      "active": true
     },
     "Kim Muir Handicap Chase": {
       "macfitz_horse": "Prends Garde A Toi",
@@ -109,15 +108,14 @@
       "active": true
     },
     "Grand Annual Handicap Chase": {
-      "macfitz_horse": "Edwardstone",
-      "reason": "1pt gap (79 vs 78) — effectively tied, MacFitz takes Edwardstone (Grade 1 winner, Henderson, Daryl Jacob; strongest form profile in the race)",
-      "surebet_horse": "Coeur De Lion",
-      "surebet_score": 79,
-      "macfitz_score": 78,
-      "gap": 1,
-      "decided": "2026-03-10",
-      "active": false,
-      "_deactivated": "10/03/2026 post-Fred Winter handicap dampening: Surebet engine now also picks Edwardstone (score 78) — both systems agree, split collapses."
+      "macfitz_horse": "Be Aware",
+      "reason": "LIVE SPLIT 11/03/2026: Surebet=Inthepocket (score 73, cloth #5). FitzMac takes Be Aware (cloth #4, score 71, 5/1 fav, form 88-1222 — three consecutive 2nds, Skelton/Skelton, market best-backed). Only 2pt gap; Be Aware is strongly market-supported and arrives in the best form in the race.",
+      "surebet_horse": "Inthepocket",
+      "surebet_score": 73,
+      "macfitz_score": 71,
+      "gap": 2,
+      "decided": "2026-03-11",
+      "active": true
     },
     "Martin Pipe Handicap Hurdle": {
       "macfitz_horse": "Sony Bill",

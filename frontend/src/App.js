@@ -297,9 +297,9 @@ function CheltenhamView({ apiUrl }) {
         // Only include picks from days that haven't finished yet (cutoff 18:00 each day)
         const now_naps = new Date();
         const dayCutoffs = {
-          Tuesday_10_March:   new Date('2026-03-10T18:00:00'),
-          Wednesday_11_March: new Date('2026-03-11T18:00:00'),
-          Thursday_12_March:  new Date('2026-03-12T18:00:00'),
+          Tuesday_10_March:   new Date('2026-03-10T13:00:00'), // remove Day 1 once racing starts
+          Wednesday_11_March: new Date('2026-03-11T13:00:00'),
+          Thursday_12_March:  new Date('2026-03-12T13:00:00'),
           Friday_13_March:    new Date('2026-03-13T23:59:00'),
         };
         // Best BETTING_PICK from each remaining day (1 per day, sorted by score)
@@ -422,9 +422,9 @@ function CheltenhamView({ apiUrl }) {
         // Use same 18:00 cutoff as getInitialDay — advance to next day after races finish
         const now = new Date();
         const festivalDays = [
-          { key: 'Tuesday_10_March',   cutoff: new Date('2026-03-10T18:00:00'), label: 'Champion Day',       short: 'Tue 10 Mar' },
-          { key: 'Wednesday_11_March', cutoff: new Date('2026-03-11T18:00:00'), label: "Ladies' Day",         short: 'Wed 11 Mar' },
-          { key: 'Thursday_12_March',  cutoff: new Date('2026-03-12T18:00:00'), label: "St Patrick's Thu",    short: 'Thu 12 Mar' },
+          { key: 'Tuesday_10_March',   cutoff: new Date('2026-03-10T17:30:00'), label: 'Champion Day',       short: 'Tue 10 Mar' },
+          { key: 'Wednesday_11_March', cutoff: new Date('2026-03-11T17:30:00'), label: "Ladies' Day",         short: 'Wed 11 Mar' },
+          { key: 'Thursday_12_March',  cutoff: new Date('2026-03-12T17:30:00'), label: "St Patrick's Thu",    short: 'Thu 12 Mar' },
           { key: 'Friday_13_March',    cutoff: new Date('2026-03-13T23:59:00'), label: 'Gold Cup Day',         short: 'Fri 13 Mar' },
         ];
         const activeFestDay = festivalDays.find(fd => now < fd.cutoff);

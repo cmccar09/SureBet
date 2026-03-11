@@ -468,7 +468,7 @@ EXTRA_RACES = {
         # Doujadou, It's Top
         "entries": [
             {"name": "No Drama This End", "trainer": "Paul Nicholls", "jockey": "Harry Cobden",
-             "odds": "3/1", "age": 6, "form": "1-1-1-9-1", "rating": 144,
+             "odds": "11/4", "age": 6, "form": "1-1-1-9-1", "rating": 144,
              "cheltenham_record": "CD winner",
              "last_run": "Won Grade 1 Novice Hurdle Feb 2026", "days_off": 28},
             {"name": "Bossman Jack", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
@@ -570,7 +570,7 @@ EXTRA_RACES = {
              "cheltenham_record": None,
              "last_run": "3rd Grade 1 Novice Chase Jan 2026", "days_off": 42},
             {"name": "Kaid D'Authie", "trainer": "Willie Mullins", "jockey": "M. P. Walsh",
-             "odds": "13/2", "age": 6, "form": "1-1-2-1-p-4", "rating": 158,
+             "odds": "6/1", "age": 6, "form": "1-1-2-1-p-4", "rating": 158,
              "cheltenham_record": None,
              "last_run": "Won Grade 1 Novice Chase Feb 2026", "days_off": 28},
             {"name": "Koktail Divin", "trainer": "Henry de Bromhead", "jockey": "D. J. O'Keeffe",
@@ -646,7 +646,7 @@ EXTRA_RACES = {
              "cheltenham_record": None,
              "last_run": "Won Hurdle Jan 2026", "days_off": 42},
             {"name": "Iberico Lord", "trainer": "Nicky Henderson", "jockey": "Nico de Boinville",
-             "odds": "15/2", "age": 7, "form": "40-0991", "rating": 144,
+             "odds": "9/1", "age": 7, "form": "40-0991", "rating": 144,
              "cheltenham_record": "CD winner",
              "last_run": "Won Handicap Hurdle Jan 2026", "days_off": 42},
             {"name": "Puturhandstogether", "trainer": "Joseph Patrick O'Brien", "jockey": "J. J. Slevin",
@@ -744,7 +744,7 @@ EXTRA_RACES = {
              "cheltenham_record": "Won 2024 Glenfarclas Cross Country Chase",
              "last_run": "Won Cross Country Chase Jan 2026", "days_off": 42},
             {"name": "Stumptown", "trainer": "Gavin Patrick Cromwell", "jockey": "Keith Donoghue",
-             "odds": "11/4", "age": 9, "form": "1111P-1", "rating": 162,
+             "odds": "3/1", "age": 9, "form": "1111P-1", "rating": 162,
              "cheltenham_record": "Won 2025 Glenfarclas Cross Country Chase",
              "last_run": "Won Cross Country Chase Jan 2026", "days_off": 42},
             {"name": "Desertmore House", "trainer": "Martin Brassil", "jockey": "R. A. Doyle",
@@ -801,7 +801,7 @@ EXTRA_RACES = {
         # Non-runners: Jonbon, Solness, Only By Night
         "entries": [
             {"name": "Majborough", "trainer": "Willie Mullins", "jockey": "M. P. Walsh",
-             "odds": "4/5", "age": 9, "form": "13-1231", "rating": 168,
+             "odds": "10/11", "age": 9, "form": "13-1231", "rating": 168,
              "cheltenham_record": "C D",
              "last_run": "Won Dublin Chase Grade 1 Feb 2026", "days_off": 35},
             {"name": "Il Etait Temps", "trainer": "Willie Mullins", "jockey": "P. Townend",
@@ -862,7 +862,7 @@ EXTRA_RACES = {
              "cheltenham_record": "BF",
              "last_run": "2nd Handicap Chase Feb 2026", "days_off": 28},
             {"name": "Inthepocket", "trainer": "Henry de Bromhead", "jockey": "M. P. Walsh",
-             "odds": "8/1", "age": 7, "form": "13-F555", "rating": 146,
+             "odds": "9/1", "age": 7, "form": "13-F555", "rating": 146,
              "cheltenham_record": "D",
              "last_run": "5th Handicap Chase Feb 2026", "days_off": 28},
             {"name": "Relieved Of Duties", "trainer": "Gordon Elliott", "jockey": "J. W. Kennedy",
