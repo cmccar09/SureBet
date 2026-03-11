@@ -2040,19 +2040,20 @@ EXTRA_RACES = {
             # Grange Walk removed — not entered for Cheltenham (Betfair ANTEPOST: absent)
         ]
     },
-    "day3_race7": {   # Kim Muir Challenge Cup Amateur Chase  (Class 2, 3m2f — 25 runners, Thu 12 Mar 17:20)
-        # UPDATED 11/03/2026 from detailed racecard. E/W: 1/5 odds, 5 PLACES. All amateur jockeys.
+    "day3_race7": {   # Kim Muir Challenge Cup Amateur Chase  (Class 2, 3m2f — 26 runners, Thu 12 Mar 17:20)
+        # UPDATED 11/03/2026 from official declared racecard (26 runners). E/W: 1/5 odds, 5 PLACES. All amateur jockeys.
         # HANDICAP: no jockey bonuses. Cheekpieces/headgear noted in last_run for context.
-        # Jeriko Du Reponet: age=7 (not 9!), wore CPs in hot hurdle handicaps — ran best races then. OR=145 topweight.
+        # Jeriko Du Reponet: age=7, OR=145 topweight, 10/3 fav → now 3/1; cheekpieces today; top amateur Derek O'Connor.
         # Kim Roque: age=6 (not 8!), OR=131 (not 140!), ex-French. Course record = None (no symbols).
-        # Herakles Westwood (SB pick): age=9, "Course winner" (won C 3m1f Jan 2026, NOT full C&D). Wind surgery since.
-        # Ask Brewster: age=7 (not 9!), OR=128 (not 138), Course winner — hat-trick last year incl Cheltenham spring.
-        # Glengouly: age=10 (not 8!), pulled up last 2 starts (including 12 days ago Newbury). Course winner only.
-        # Lord Accord: age=11 (not 8!), C+D symbols both on racecard = CD winner. Returns from break.
-        # Hung Jury: age=11 (not 9), Course winner (won here Nov + hunter chase May).
+        # Herakles Westwood (SB pick): age=9, OR=137, "Course winner" (won C 3m1f Jan 2026, NOT full C&D). Wind surgery since. 9/1.
+        # Ask Brewster: age=7, OR=128, Course winner — hat-trick last yr incl Cheltenham Apr; tired firm ground at Sandown Dec.
+        # Glengouly: age=10, pulled up last 2 starts (12 days ago Newbury). Course winner only.
+        # Lord Accord: age=11, C+D symbols both on racecard = CD winner. Returns from break.
+        # Hung Jury: age=11, Course winner (won here Nov hdcp + May hunter chase).
+        # Insurrection: BF symbol (beaten favourite in last run); 2m4f specialist, stamina big question at 3m2f.
         "entries": [
             {"name": "Jeriko Du Reponet", "trainer": "Nicky Henderson", "jockey": "Mr D. O'Connor",
-             "odds": "10/3", "age": 7, "form": "32-1225", "rating": 145,
+             "odds": "3/1", "age": 7, "form": "32-1225", "rating": 145,
              "cheltenham_record": None,
              "last_run": "5th Windsor 18 Jan 2026 (3m sft, 5/6) — cheekpieces today; 2nd Pertemps Final here Mar 2025; top amateur up", "days_off": 51,
              "recent_races": [
@@ -2076,7 +2077,7 @@ EXTRA_RACES = {
                  {"date": "07 Dec 24", "venue": "Navan", "race": "2m4f 150yds Sft Ch (2/18)", "pos": 2, "ran": 18},
              ]},
             {"name": "Herakles Westwood", "trainer": "Warren Greatrex", "jockey": "Mr Finian Maguire",
-             "odds": "10/1", "age": 9, "form": "37-5241", "rating": 137,
+             "odds": "9/1", "age": 9, "form": "37-5241", "rating": 137,
              "cheltenham_record": "Course winner",
              "last_run": "Won Cheltenham 01 Jan 2026 (3m1f gd, 1/8, OR135) — wind surgery since; 3 runs at Cheltenham last 4 starts", "days_off": 68,
              "recent_races": [
@@ -2232,7 +2233,7 @@ EXTRA_RACES = {
                  {"date": "28 Jan 25", "venue": "Chepstow", "race": "2m7f 131yds Hy Ch (P/9 OR107)", "pos": "P", "ran": 9},
              ]},
             {"name": "Monbeg Genius", "trainer": "Jonjo & A.J. O'Neill", "jockey": "Mr J. L. Scallan(5)",
-             "odds": "35/1", "age": 10, "form": "1P6-P57", "rating": 141,
+             "odds": "40/1", "age": 10, "form": "1P6-P57", "rating": 141,
              "cheltenham_record": None,
              "last_run": "7th Haydock 14 Feb 2026 (3m4f GS, 7/11, OR142) — ran well Welsh National + Haydock GNT; blinkers today (was CPs)", "days_off": 25,
              "recent_races": [
@@ -2257,8 +2258,8 @@ EXTRA_RACES = {
              ]},
             {"name": "Insurrection", "trainer": "Paul Nicholls", "jockey": "Miss Gina Andrews",
              "odds": "33/1", "age": 9, "form": "3188-38", "rating": 138,
-             "cheltenham_record": None,
-             "last_run": "8th Musselburgh 31 Jan 2026 (2m4f GS, 8/8) — inconsistent; stamina big unknown (won 3m point); 2m4f only", "days_off": 38,
+             "cheltenham_record": "BF",
+             "last_run": "8th Musselburgh 31 Jan 2026 (2m4f GS, 8/8, BF) — inconsistent; stamina big unknown (won 3m point); 2m4f specialist", "days_off": 38,
              "recent_races": [
                  {"date": "31 Jan 26", "venue": "Musselburgh", "race": "2m4f 68yds GS Ch (8/8 OR139 — well beaten)", "pos": 8, "ran": 8},
                  {"date": "01 Jan 26", "venue": "Musselburgh", "race": "2m4f 68yds GS Ch (3/9 OR139)", "pos": 3, "ran": 9},
@@ -2339,10 +2340,10 @@ EXTRA_RACES = {
                  {"date": "24 Oct 25", "venue": "Cheltenham", "race": "3m1f Gd Ch (8/18 OR124)", "pos": 8, "ran": 18},
                  {"date": "13 Jun 25", "venue": "Newton Abbot", "race": "3m1f 170yds GS Ch (4/4 OR125)", "pos": 4, "ran": 4},
              ]},
-            {"name": "JArrive de LEst", "trainer": "Unknown", "jockey": "Unknown",
-             "odds": "50/1", "age": 7, "form": "000000", "rating": 125,
+            {"name": "J'Arrive de L'Est", "trainer": "Unknown", "jockey": "Unknown",
+             "odds": "66/1", "age": 7, "form": "000000", "rating": 120,
              "cheltenham_record": None,
-             "last_run": "Qualifier run", "days_off": 28,
+             "last_run": "Qualifier run for Kim Muir", "days_off": 28,
              "recent_races": []},
         ]
     },

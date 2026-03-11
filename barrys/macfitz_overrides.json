@@ -68,11 +68,11 @@
     },
     "Kim Muir Handicap Chase": {
       "macfitz_horse": "Jeriko Du Reponet",
-      "reason": "UPDATED 11/03/2026 detailed racecard: Gap confirmed 2pts (Jeriko 64 vs Herakles 62). SB=Herakles Westwood (model #2, Course winner, 10/1 — huge value). MF=Jeriko Du Reponet (10/3 fav, Henderson, Mr D. O'Connor, cheekpieces today). 25-runner amateur handicap, 5 places.",
+      "reason": "UPDATED 11/03/2026 official racecard (26 runners): Herakles Westwood now model #1 (59pts, 9/1, Course winner, 3 runs at Cheltenham last 4 starts, Greatrex/Maguire). Jeriko Du Reponet model #2 (55pts, 3/1, topweight OR145, cheekpieces today, top amateur Derek O'Connor). Gap now 4pts. SPLIT maintained: SB=Herakles (model top, 9/1 each-way value, course specialist) / MF=Jeriko (market fav at 3/1, Henderson, proven cheekpiece form in spring handicaps). 5 places EW.",
       "surebet_horse": "Herakles Westwood",
-      "surebet_score": 62,
-      "macfitz_score": 64,
-      "gap": 2,
+      "surebet_score": 59,
+      "macfitz_score": 55,
+      "gap": 4,
       "decided": "2026-03-11",
       "active": true
     },
