@@ -1852,8 +1852,8 @@ def score_horse_2026(horse, race_name):
     # penalised by the model as a 'poor run'; in reality it was invaluable course school.
     _is_xc_race = bool(race_name and "cross country" in race_name.lower())
     if _is_xc_race and "cross country" in last_run_txt:
-        score += 8
-        tips.append("Cross-country prep school (ran same Prestbury XC circuit in Jan): +8pts")
+        score += 15
+        tips.append("Cross-country prep school (ran same Prestbury XC circuit in Jan): +15pts")
 
     # Option B: Elite Irish raider and Champion jockey bonuses REMOVED
     # — already captured in capped trainer_scores and JOCKEY_SCORES above.
