@@ -211,19 +211,15 @@ ADDITIONAL_RUNNERS = {
 
     # ── DAY 3 ─────────────────────────────────────────────────────────────────
 
-    "day3_race5": [  # Ryanair Chase
-        # Fact To File already in EXTRA_RACES day3_race5 (now correctly keyed)
-        # We use RP_LIVE_ODDS runners: Fact To File, Panic Attack, Protektorat, Jagwar,
-        # Energumene, Better Days Ahead, Edwardstone, Master Chewy, Croke Park
+    "day3_race5": [  # Ryanair Chase — 8 runners (Jagwar NOT here — ran Day 1 Ultima Handicap Chase)
+        # Fact To File already in EXTRA_RACES day3_race5
+        # NOTE: Jagwar removed — user confirmed NOT running in Ryanair Chase
         {"name": "Panic Attack",    "trainer": "Dan Skelton",       "jockey": "Harry Skelton",
          "odds": "20/1", "age": 10, "form": "5-1-2-21", "rating": 162,
          "cheltenham_record": "Placed 2025 Mares Chase",},
         {"name": "Protektorat",     "trainer": "Dan Skelton",       "jockey": "Harry Skelton",
          "odds": "25/1", "age": 10, "form": "3-2-1-23", "rating": 165,
          "cheltenham_record": "2nd 2025 Cheltenham Gold Cup"},
-        {"name": "Jagwar",          "trainer": "Willie Mullins",    "jockey": "Paul Townend",
-         "odds": "25/1", "age": 9,  "form": "1-1-2-13", "rating": 168,
-         "cheltenham_record": "Won 2024 National Hunt Chase"},
         {"name": "Energumene",      "trainer": "Willie Mullins",    "jockey": "Paul Townend",
          "odds": "40/1", "age": 12, "form": "4-1-1-2",  "rating": 172,
          "cheltenham_record": "Won 2022 Queen Mother Champion Chase"},
@@ -441,9 +437,9 @@ RACE_FULL_FIELDS = {
         "Feet Of A Dancer", "Potters Charm", "Doddiethegreat", "French Ship",
     ],
     "day3_race5": [
-        "Fact To File", "Panic Attack", "Protektorat", "Jagwar", "Energumene",
+        "Fact To File", "Panic Attack", "Protektorat", "Energumene",
         "Better Days Ahead", "Edwardstone", "Master Chewy", "Croke Park",
-    ],
+    ],  # 8 runners — Jagwar NOT in this race (ran Day 1 Ultima Handicap Chase)
     "day3_race6": [
         "Supremely West", "C'Est Different", "Electric Mason", "Ace Of Spades",
         "Minella Emperor",

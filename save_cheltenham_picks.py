@@ -203,11 +203,10 @@ RP_LIVE_ODDS = {
     "doddiethegreat":         "66/1",
     "french ship":            "80/1",
 
-    # Ryanair Chase (Day 3)
+    # Ryanair Chase (Day 3) — 8 runners (Jagwar NOT running here, ran Day 1 Ultima)
     "fact to file":           "4/5",
     "panic attack":           "20/1",
     "protektorat":            "25/1",
-    "jagwar":                 "25/1",
     "energumene":             "40/1",
     "better days ahead":      "50/1",
     "edwardstone":            "100/1",

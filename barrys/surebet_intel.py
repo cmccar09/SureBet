@@ -1987,12 +1987,11 @@ EXTRA_RACES = {
              ]},
         ]
     },
-    "day3_race5": {   # Ryanair Chase (Grade 1, 2m4f — 9 runners, Thu 12 Mar 16:00)
-        # CORRECTED 11/03/2026: actual field is Fact To File, Panic Attack, Protektorat, Jagwar,
-        # Energumene, Better Days Ahead, Edwardstone, Master Chewy, Croke Park.
-        # Jonbon = QMCC non-runner (2m horse, different race). Banbridge/Impaire/Heart Wood/JPR One not in this race.
-        # Fact To File: 4/5 fav, defending champion (won 2024 + 2025 Ryanair=Festival Trophy), Irish Gold Cup win Feb 2026.
-        # Jagwar: Mullins/Townend, won 2024 National Hunt Chase, OR=168 — model danger. But that was a 4m amateur race.
+    "day3_race5": {   # Ryanair Chase (Grade 1, 2m4f — 8 runners, Thu 12 Mar 16:00)
+        # UPDATED 11/03/2026: Jagwar NOT in this race — ran Day 1 Ultima Handicap Chase.
+        # Corrected 8-runner field: Fact To File, Panic Attack, Protektorat, Energumene,
+        # Better Days Ahead, Edwardstone, Master Chewy, Croke Park.
+        # Fact To File: 4/5 fav, defending champion (won 2024 + 2025 Ryanair/Festival Trophy), Irish Gold Cup win Feb 2026.
         "entries": [
             {"name": "Fact To File", "trainer": "Willie Mullins", "jockey": "M. P. Walsh",
              "odds": "4/5", "age": 9, "form": "31-4261", "rating": 174,

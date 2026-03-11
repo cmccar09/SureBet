@@ -149,13 +149,13 @@
     },
     "Ryanair Chase": {
       "macfitz_horse": "Fact To File",
-      "reason": "CORRECTED 11/03/2026: 6pt gap (Jagwar 127 vs Fact To File 121). SB=Jagwar (Mullins/Townend, 25/1, won 2024 National Hunt Chase — model gives Townend premium). MF=Fact To File (4/5 fav, defending Ryanair champion 2024+2025, won Irish Gold Cup Feb 2026, CD winner, rating 174 — clear form pick). NOTE: Jonbon is NOT in this race (QMCC non-runner); corrected field has 9 runners.",
-      "surebet_horse": "Jagwar",
-      "surebet_score": 127,
+      "reason": "DEACTIVATED 11/03/2026: Jagwar NOT running in Ryanair Chase (ran Day 1 Ultima Handicap Chase). Removed so model picks Fact To File as banker. Fact To File = 4/5 fav, defending champion 2024+2025, Irish Gold Cup Feb 2026, CD winner, OR=174.",
+      "surebet_horse": "Fact To File",
+      "surebet_score": 121,
       "macfitz_score": 121,
-      "gap": 6,
+      "gap": 0,
       "decided": "2026-03-11",
-      "active": true
+      "active": false
     },
     "Pertemps Handicap Hurdle": {
       "macfitz_horse": "Gowel Road",
