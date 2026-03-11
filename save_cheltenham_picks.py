@@ -396,16 +396,26 @@ def get_betfair_live_odds() -> dict:
 
         live: dict = {}
         for mkt in book.json():
+            # Skip already-settled markets (Day 1-2 completed races)
+            mkt_status = mkt.get('status', '')
+            if mkt_status in ('CLOSED',):
+                continue
             for runner in mkt.get('runners', []):
                 name = runner_names.get(runner['selectionId'])
                 if not name:
                     continue
-                if runner.get('status') == 'REMOVED':
-                    live[name] = 'NR'
+                runner_status = runner.get('status', '')
+                # Skip settled or removed runners — their prices are BSP/settled garbage
+                if runner_status in ('REMOVED', 'WINNER', 'LOSER'):
+                    if runner_status == 'REMOVED':
+                        live[name] = 'NR'
                     continue
                 back_list = runner.get('ex', {}).get('availableToBack', [])
                 if back_list:
                     price = back_list[0].get('price', 0)
+                    # Guard: prices ≤ 1.10 are settled-market artefacts (BSP/winning margins)
+                    if price < 1.1:
+                        continue
                     live[name] = 'NR' if price >= 990 else decimal_to_fractional(price)
 
         print(f"\u2705 Betfair live odds fetched: {len(live)} horses across {len(market_ids)} markets")

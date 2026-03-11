@@ -1824,6 +1824,113 @@ def score_horse_2026(horse, race_name):
         score += 5
         tips.append("Course & distance double confirmation: +5pts")
 
+    # ─────────────────────────────────────────────────────────────────────────
+    # --- Recent race history analysis (structured data from 'recent_races') ---
+    # Extracts quality signals unavailable from simple form strings:
+    #   • Win rate over last 3-6 runs  → consistency / current form state
+    #   • Big-field wins (15+ runners) → quality proof vs large competitive fields
+    #   • Cheltenham course experience → verifies / supplements cheltenham_record
+    #   • Ground-matched wins          → proven on today's going type
+    #   • Graded race wins in history  → class proof beyond last_run field
+    # ─────────────────────────────────────────────────────────────────────────
+    recent_races = horse.get("recent_races", [])
+    if recent_races:
+        total_rr   = len(recent_races)
+        wins_rr    = sum(1 for r in recent_races if r.get("pos") == 1)
+        places_rr  = sum(1 for r in recent_races
+                         if isinstance(r.get("pos"), int) and r.get("pos") <= 3)
+
+        # Big-field wins: 20+ runners = elite quality; 15+ = competitive
+        big_field_wins    = sum(1 for r in recent_races
+                                if r.get("pos") == 1 and r.get("ran", 0) >= 15)
+        very_big_fw       = sum(1 for r in recent_races
+                                if r.get("pos") == 1 and r.get("ran", 0) >= 20)
+
+        # Cheltenham course runs from recent history
+        chelt_runs_rr  = [r for r in recent_races
+                          if "cheltenham" in r.get("venue", "").lower()]
+        chelt_wins_rr  = [r for r in chelt_runs_rr if r.get("pos") == 1]
+        chelt_place_rr = [r for r in chelt_runs_rr
+                          if isinstance(r.get("pos"), int) and r.get("pos") <= 3]
+
+        # Ground-matched wins: check race description codes vs today's forecast
+        _fc = FORECAST_GOING.lower()
+        _is_soft_day = any(g in _fc for g in ("soft", "heavy", "yielding"))
+        _is_good_day = "good" in _fc and "soft" not in _fc
+        gm_wins = 0
+        for _r in recent_races:
+            if _r.get("pos") != 1:
+                continue
+            _desc = _r.get("race", "").lower()
+            if _is_soft_day and any(g in _desc for g in ("sft", "hy ", "hvy", "soft", "heavy", "yld", " gs")):
+                gm_wins += 1
+            elif _is_good_day and any(g in _desc for g in (" gd", " gf", " fm", "good", "firm")):
+                gm_wins += 1
+            elif "gs" in _desc or "good to soft" in _desc:
+                gm_wins += 1   # neutral going — partial credit
+
+        # Graded race wins in history (Grade 1 / Grade 2 in race description)
+        graded_wins_rr = sum(1 for _r in recent_races
+                             if _r.get("pos") == 1 and
+                             any(g in _r.get("race", "").lower()
+                                 for g in ("grade 1", "grade 2", "grd1", "grd2",
+                                           " g1 ", " g2 ", "grp1", "grp2")))
+
+        # 1. Win-rate consistency bonus (3+ run sample required)
+        if total_rr >= 3:
+            _wr = wins_rr / total_rr
+            if _wr >= 0.8:
+                score += 8
+                tips.append(f"Outstanding win rate from recent races ({wins_rr}/{total_rr}): +8pts")
+            elif _wr >= 0.6:
+                score += 5
+                tips.append(f"Strong win rate from recent races ({wins_rr}/{total_rr}): +5pts")
+            elif _wr >= 0.4:
+                score += 2
+                tips.append(f"Good win rate from recent races ({wins_rr}/{total_rr}): +2pts")
+
+        # 2. Big-field wins — proof against quality competitive fields
+        if very_big_fw >= 1:
+            score += 6
+            tips.append(f"Won in 20+ runner field ({very_big_fw}x): +6pts (elite quality proof)")
+        elif big_field_wins >= 2:
+            score += 5
+            tips.append(f"Multiple wins in 15+ runner fields ({big_field_wins}x): +5pts")
+        elif big_field_wins == 1:
+            score += 3
+            tips.append(f"Won in competitive 15+ runner field: +3pts")
+
+        # 3. Cheltenham course evidence — only if cheltenham_record hasn't already scored it
+        _ch_already_credited = (won_count >= 1 or _rp_c)
+        _ch_dist_credited    = _rp_d
+        if chelt_wins_rr and not _ch_already_credited:
+            # Course win found in history but not in cheltenham_record — credit it
+            score += 8
+            tips.append("Cheltenham winner (verified from recent race history): +8pts")
+        elif chelt_place_rr and not _ch_already_credited and not _ch_dist_credited:
+            score += 4
+            tips.append(f"Cheltenham placed finisher (recent race history, {len(chelt_place_rr)}x): +4pts")
+        elif len(chelt_runs_rr) >= 3 and not _ch_already_credited and not _ch_dist_credited:
+            score += 3
+            tips.append(f"Regular Cheltenham runner ({len(chelt_runs_rr)} recent course runs): +3pts")
+        elif len(chelt_runs_rr) >= 1 and not _ch_already_credited and not _ch_dist_credited:
+            score += 2
+            tips.append(f"Cheltenham course experience ({len(chelt_runs_rr)} recent run(s) at venue): +2pts")
+
+        # 4. Ground-matched wins (don't double-count with explicit ground_pref bonus)
+        if gm_wins >= 2:
+            score += 4
+            tips.append(f"Multiple wins on today's going type ({gm_wins} races): +4pts")
+        elif gm_wins == 1:
+            score += 2
+            tips.append(f"Won on similar going conditions: +2pts")
+
+        # 5. Graded race wins in history (smaller bonus — avoid overlap with last_run check)
+        _graded_already = any("Graded winner this season" in t for t in tips)
+        if graded_wins_rr >= 1 and not _graded_already:
+            score += 6
+            tips.append(f"Graded race winner (from race history): +6pts")
+
     # No upper cap — raw additive score; typical elite range 130-175
     score = max(0, score)
 

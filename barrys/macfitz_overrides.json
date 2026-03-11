@@ -98,9 +98,9 @@
       "_deactivated": "10/03/2026 post-Arkle: Karbau became Surebet pick (both agreed). 10/03/2026 post-Fred Winter handicap dampening: Surebet now picks Ndaawi (score 62) — MacFitz has no active override so both revert to Ndaawi. Split stays collapsed."
     },
     "Cheltenham Gold Cup": {
-      "macfitz_horse": "Jango Baie",
-      "reason": "UPDATED 11/03/2026: Gaelic Warrior entered (127pts) — new SB. Gap now 4pts (127 vs 123). SB=Gaelic Warrior (model #1, Mullins/Walsh, CD winner). MF=Jango Baie (Elliott, 7/1, CD winner) — value cover.",
-      "surebet_horse": "Gaelic Warrior",
+      "macfitz_horse": "Gaelic Warrior",
+      "reason": "UPDATED 11/03/2026 recent_races scoring: Jango Baie now model #1 (135pts) — Arkle 2025 winner, Grade 2 Ascot Nov, CD winner, Henderson/de Boinville, 9/2. Gaelic Warrior model #3 (120pts) — 2025 Gold Cup defending champion, Mullins/Walsh, 10/1. SB=Jango Baie (algorithm top, CD winner, proven at pace). MF=Gaelic Warrior (outstanding class, defending champion, bigger price cover).",
+      "surebet_horse": "Jango Baie",
       "surebet_score": 127,
       "macfitz_score": 123,
       "gap": 4,
@@ -159,7 +159,7 @@
     },
     "Pertemps Handicap Hurdle": {
       "macfitz_horse": "Gowel Road",
-      "reason": "UPDATED 11/03/2026 detailed racecard: Model now has Staffordshire Knot+Ace Of Spades=58 (joint model top), Gowel Road=54, Supremely West=50. KEEPING STRATEGIC SPLIT: SB=Supremely West (market moved drastically 14/1->11/4 — stable confidence signal from Dan Skelton; 2lb lower than eye-catching Oct run. Targeting on/near-favourite value). MF=Gowel Road (20/1, CD winner, Cheltenham specialist, 6-place E/W value).",
+      "reason": "UPDATED 11/03/2026 recent_races scoring: Model now tops Staffordshire Knot (64pts CD winner 3m Cheltenham Jan 2026) with Supremely West (58pts) and Gowel Road (59/1, drifted from 20/1). KEEPING STRATEGIC SPLIT: SB=Supremely West (7/2 Betfair, 2lb lower than eye-catching Oct Cheltenham 3rd, Dan Skelton targeting this race). MF=Gowel Road (59/1, CD winner, Cheltenham specialist, 6-place E/W at big price in 26-runner field pays 6 places at 1/5 odds).",
       "surebet_horse": "Supremely West",
       "surebet_score": 50,
       "macfitz_score": 54,
