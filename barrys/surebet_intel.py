@@ -943,7 +943,7 @@ EXTRA_RACES = {
         # Manganese: 4yo unbeaten (4/4), distance winner, dangerous unknown ceiling
         "entries": [
             {"name": "Bambino Fever", "trainer": "Willie Mullins", "jockey": "P. Townend",
-             "odds": "EVS", "age": 6, "form": "111-121", "rating": 148,
+             "odds": "5/4", "age": 6, "form": "111-121", "rating": 148,
              "cheltenham_record": "CD winner",
              "last_run": "Won Mares Novice Hurdle Fairyhouse Jan 2026 (after debut 2nd at Naas)", "days_off": 56,
              "recent_races": [
@@ -954,7 +954,7 @@ EXTRA_RACES = {
                  {"date": "02 Feb 25", "venue": "Leopardstown", "race": "2m GS NHF", "pos": 1, "ran": 10},
              ]},
             {"name": "Oldschool Outlaw", "trainer": "Gordon Elliott", "jockey": "M. P. Walsh",
-             "odds": "7/2", "age": 6, "form": "27-111", "rating": 138,
+             "odds": "5/1", "age": 6, "form": "27-111", "rating": 138,
              "cheltenham_record": None,
              "last_run": "Won Grade 3 Mares Novice Hurdle Fairyhouse Feb 2026 (3/3 over hurdles)", "days_off": 36,
              "recent_races": [
@@ -964,7 +964,7 @@ EXTRA_RACES = {
                  {"date": "03 Apr 25", "venue": "Aintree", "race": "2m209y Gd NHF", "pos": 7, "ran": 20},
              ]},
             {"name": "Carrigmoornaspruce", "trainer": "Declan Queally", "jockey": "James Bowen",
-             "odds": "10/1", "age": 6, "form": "32-1122", "rating": 132,
+             "odds": "12/1", "age": 6, "form": "32-1122", "rating": 132,
              "cheltenham_record": "D",
              "last_run": "2nd Grade 1 Mares Hurdle Leopardstown Dec 2025", "days_off": 74,
              "recent_races": [
@@ -1557,7 +1557,7 @@ EXTRA_RACES = {
         # HANDICAP race — no jockey bonuses apply per scoring engine rules.
         "entries": [
             {"name": "Supremely West", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
-             "odds": "11/4", "age": 8, "form": "63-3546", "rating": 135,
+             "odds": "7/2", "age": 8, "form": "63-3546", "rating": 135,
              "cheltenham_record": "D",
              "last_run": "6th Aintree 26 Dec 2025 (2m4f gd, 6/8, OR137) — off since; 3rd of 17 Cheltenham qualifier Oct was eye-catching, now 2lb lower", "days_off": 75,
              "recent_races": [
@@ -1653,7 +1653,7 @@ EXTRA_RACES = {
                  {"date": "23 Feb 25", "venue": "Fontwell Park", "race": "2m1f 162yds Hy Hdl (4/4)", "pos": 4, "ran": 4},
              ]},
             {"name": "Gowel Road", "trainer": "Nigel & Willy Twiston-Davies", "jockey": "Toby McCain-Mitchell(5)",
-             "odds": "20/1", "age": 10, "form": "037442", "rating": 148,
+             "odds": "59/1", "age": 10, "form": "037442", "rating": 148,
              "cheltenham_record": "CD winner",
              "last_run": "2nd Chepstow 21 Feb 2026 (2m7f sft, 2/11, OR146 under McCain-Mitchell) — 6th in this 2024, regularCheltenham performer", "days_off": 18,
              "recent_races": [
@@ -1867,7 +1867,7 @@ EXTRA_RACES = {
         # Doddiethegreat: age=10 (not 8), CD winner (won Pertemps Final C&D 2025)
         "entries": [
             {"name": "Teahupoo", "trainer": "Gordon Elliott", "jockey": "J. W. Kennedy",
-             "odds": "15/4", "age": 9, "form": "122-111", "rating": 170,
+             "odds": "4/1", "age": 9, "form": "122-111", "rating": 170,
              "cheltenham_record": "CD winner",
              "last_run": "Won Grade 1 Christmas Hurdle Leopardstown 28 Dec 2025 (2m7f gd, beat Bob Olinger 7l)", "days_off": 73,
              "recent_races": [
@@ -1878,7 +1878,7 @@ EXTRA_RACES = {
                  {"date": "01 Dec 24", "venue": "Fairyhouse", "race": "2m4f Gd Hdl (Grade 1, 2nd)", "pos": 2, "ran": 4},
              ]},
             {"name": "Kabral Du Mathan", "trainer": "Dan Skelton", "jockey": "Harry Skelton",
-             "odds": "16/5", "age": 6, "form": "1222-11", "rating": 165,
+             "odds": "9/2", "age": 6, "form": "1222-11", "rating": 165,
              "cheltenham_record": "Course winner",
              "last_run": "Won Grade 2 Relkeel Hurdle Cheltenham 01 Jan 2026 (2m4f gd — plenty in hand, powered clear up hill)", "days_off": 69,
              "recent_races": [
@@ -1889,7 +1889,7 @@ EXTRA_RACES = {
                  {"date": "21 Dec 24", "venue": "Ascot", "race": "1m7f 152yds GS Hdl (2nd)", "pos": 2, "ran": 12},
              ]},
             {"name": "Ma Shantou", "trainer": "Emma Lavelle", "jockey": "Harry Cobden",
-             "odds": "13/2", "age": 7, "form": "37-1011", "rating": 157,
+             "odds": "7/1", "age": 7, "form": "37-1011", "rating": 157,
              "cheltenham_record": "CD winner",
              "last_run": "Won Grade 2 Cleeve Hurdle C&D Cheltenham 24 Jan 2026 (3m sft — 7l clear of Impose Toi)", "days_off": 46,
              "recent_races": [
@@ -1900,7 +1900,7 @@ EXTRA_RACES = {
                  {"date": "14 Mar 25", "venue": "Cheltenham", "race": "2m7f 213yds GS Hdl (Pertemps Final 7th)", "pos": 7, "ran": 20},
              ]},
             {"name": "Ballyburn", "trainer": "Willie Mullins", "jockey": "P. Townend",
-             "odds": "6/1", "age": 8, "form": "215-223", "rating": 163,
+             "odds": "13/2", "age": 8, "form": "215-223", "rating": 163,
              "cheltenham_record": "Course winner",
              "last_run": "3rd Grade 1 Christmas Hurdle Leopardstown 28 Dec 2025 (14l behind Teahupoo) — hood first time", "days_off": 73,
              "recent_races": [
@@ -1922,7 +1922,7 @@ EXTRA_RACES = {
                  {"date": "11 Apr 24", "venue": "Aintree", "race": "2m4f Sft Hdl (Grade 1, 2nd)", "pos": 2, "ran": 8},
              ]},
             {"name": "Honesty Policy", "trainer": "Gordon Elliott", "jockey": "M. P. Walsh",
-             "odds": "13/2", "age": 6, "form": "2111-23", "rating": 158,
+             "odds": "10/1", "age": 6, "form": "2111-23", "rating": 158,
              "cheltenham_record": None,
              "last_run": "3rd Grade 1 Long Walk Ascot 20 Dec 2025 (3m gd — behind Impose Toi; lightly raced improver)", "days_off": 81,
              "recent_races": [
@@ -1933,7 +1933,7 @@ EXTRA_RACES = {
                  {"date": "09 Feb 25", "venue": "Navan", "race": "1m7f 150yds Hy Hdl (win)", "pos": 1, "ran": 14},
              ]},
             {"name": "Impose Toi", "trainer": "Nicky Henderson", "jockey": "Nico de Boinville",
-             "odds": "12/1", "age": 8, "form": "4-21112", "rating": 159,
+             "odds": "10/1", "age": 8, "form": "4-21112", "rating": 159,
              "cheltenham_record": "CD winner",
              "last_run": "2nd Grade 2 Cleeve Hurdle C&D Cheltenham 24 Jan 2026 (7l behind Ma Shantou, conceded 6lb)", "days_off": 46,
              "recent_races": [
@@ -1991,10 +1991,10 @@ EXTRA_RACES = {
         # UPDATED 11/03/2026: Jagwar NOT in this race — ran Day 1 Ultima Handicap Chase.
         # Corrected 8-runner field: Fact To File, Panic Attack, Protektorat, Energumene,
         # Better Days Ahead, Edwardstone, Master Chewy, Croke Park.
-        # Fact To File: 4/5 fav, defending champion (won 2024 + 2025 Ryanair/Festival Trophy), Irish Gold Cup win Feb 2026.
+        # Fact To File: 10/11 fav (drifted from 4/5), defending champion (won 2024 + 2025 Ryanair/Festival Trophy), Irish Gold Cup win Feb 2026.
         "entries": [
             {"name": "Fact To File", "trainer": "Willie Mullins", "jockey": "M. P. Walsh",
-             "odds": "4/5", "age": 9, "form": "31-4261", "rating": 174,
+             "odds": "10/11", "age": 9, "form": "31-4261", "rating": 174,
              "cheltenham_record": "CD winner",
              "last_run": "Won Irish Gold Cup Leopardstown 02 Feb 2026 (3m sft, beat top class field — back to best)", "days_off": 37,
              "recent_races": [
@@ -2052,7 +2052,7 @@ EXTRA_RACES = {
         # Insurrection: BF symbol (beaten favourite in last run); 2m4f specialist, stamina big question at 3m2f.
         "entries": [
             {"name": "Jeriko Du Reponet", "trainer": "Nicky Henderson", "jockey": "Mr D. O'Connor",
-             "odds": "3/1", "age": 7, "form": "32-1225", "rating": 145,
+             "odds": "9/2", "age": 7, "form": "32-1225", "rating": 145,
              "cheltenham_record": None,
              "last_run": "5th Windsor 18 Jan 2026 (3m sft, 5/6) — cheekpieces today; 2nd Pertemps Final here Mar 2025; top amateur up", "days_off": 51,
              "recent_races": [
@@ -2076,7 +2076,7 @@ EXTRA_RACES = {
                  {"date": "07 Dec 24", "venue": "Navan", "race": "2m4f 150yds Sft Ch (2/18)", "pos": 2, "ran": 18},
              ]},
             {"name": "Herakles Westwood", "trainer": "Warren Greatrex", "jockey": "Mr Finian Maguire",
-             "odds": "9/1", "age": 9, "form": "37-5241", "rating": 137,
+             "odds": "11/1", "age": 9, "form": "37-5241", "rating": 137,
              "cheltenham_record": "Course winner",
              "last_run": "Won Cheltenham 01 Jan 2026 (3m1f gd, 1/8, OR135) — wind surgery since; 3 runs at Cheltenham last 4 starts", "days_off": 68,
              "recent_races": [
@@ -2879,7 +2879,7 @@ EXTRA_RACES = {
              "cheltenham_record": None,
              "last_run": "3rd Grade 3 Handicap Hurdle Jan 2026 (dual dec County)", "days_off": 42},
             {"name": "Nurse Susan", "trainer": "Dan Skelton", "jockey": "Tristan Durrell",
-             "odds": "9/1", "age": 7, "form": "1-1-2-1", "rating": 140,
+             "odds": "13/1", "age": 7, "form": "1-1-2-1", "rating": 140,
              "cheltenham_record": "CD winner",
              "last_run": "Won Grade 2 Handicap Hurdle Feb 2026 (CD)", "days_off": 28},
             {"name": "Air Of Entitlement", "trainer": "Henry De Bromhead", "jockey": "TBD",

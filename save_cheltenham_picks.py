@@ -185,26 +185,20 @@ RP_LIVE_ODDS = {
     "i'll sort that":         "14/1",
     "doctor steinberg":       "3/1",   # Albert Bartlett FAVOURITE
 
-    # Stayers' Hurdle (Day 3)
-    "teahupoo":               "9/4",
-    "honesty policy":         "9/2",
-    "kabral du mathan":       "5/1",
+    # Stayers' Hurdle (Day 3) — Betfair 11/03 morning prices
+    "teahupoo":               "4/1",
+    "kabral du mathan":       "9/2",
+    "ballyburn":              "13/2",
     "bob olinger":            "7/1",
-    "ma shantou":             "8/1",
-    "ballyburn":              "12/1",
-    "impose toi":             "16/1",
-    "wodhooh":                "16/1",
-    "hewick":                 "33/1",
-    "home by the lee":        "40/1",
-    "flooring porter":        "40/1",
-    "the yellow clay":        "40/1",
-    "feet of a dancer":       "50/1",
-    "potters charm":          "50/1",
-    "doddiethegreat":         "66/1",
-    "french ship":            "80/1",
+    "ma shantou":             "7/1",
+    "honesty policy":         "10/1",
+    "impose toi":             "10/1",
+    "hewick":                 "59/1",
+    "home by the lee":        "47/1",
+    "doddiethegreat":         "33/1",
 
     # Ryanair Chase (Day 3) — 8 runners (Jagwar NOT running here, ran Day 1 Ultima)
-    "fact to file":           "4/5",
+    "fact to file":           "10/11",
     "panic attack":           "20/1",
     "protektorat":            "25/1",
     "energumene":             "40/1",
@@ -220,23 +214,14 @@ RP_LIVE_ODDS = {
     "slade steel":            "9/1",
     "sixmilebridge":          "9/1",
 
-    # Mares' Hurdle (Day 3)
-    "jade de grugy":          "5/1",
-    "take no chances":        "14/1",
-    "murcia":                 "20/1",
-    "jetara":                 "33/1",
-    "dream on baby":          "33/1",
-    "nurse susan":            "40/1",
-    "park princess":          "50/1",
-    "kateira":                "66/1",
-    "lavida adiva":           "66/1",
-    "listentoyourheart":      "66/1",
-    "sunset marquesa":        "66/1",
-    "that'll do moss":        "66/1",
-    "siog geal":              "66/1",
-    "baby kate":              "100/1",
-    "la pinsonniere":         "100/1",
-    "sotchi":                 "250/1",
+    # Mares' Hurdle (Day 3) — Betfair 11/03 morning prices
+    "wodhooh":                "10/11",  # FIT FAVOURITE — was listed wrong
+    "jade de grugy":          "11/4",
+    "feet of a dancer":       "12/1",
+    "take no chances":        "13/1",
+    "dream on baby":          "37/1",
+    "jetara":                 "39/1",
+    "sunset marquesa":        "119/1",
 
     # Brown Advisory Novices' Chase (Day 2)
     "final demand":           "7/2",
@@ -258,12 +243,12 @@ RP_LIVE_ODDS = {
     "macho man":              "8/1",
     "winston junior":         "13/2",
 
-    # Ryanair Mares' Novices' Hurdle 13:20 (Day 3)
-    "bambino fever":          "EVS",
-    "oldschool outlaw":       "7/2",
-    "carrigmoornaspruce":     "10/1",
-    "echoing silence":        "10/1",
-    "la conquiere":           "14/1",
+    # Ryanair Mares' Novices' Hurdle 13:20 (Day 3) — Betfair 11/03 morning prices
+    "bambino fever":          "5/4",
+    "oldschool outlaw":       "5/1",
+    "carrigmoornaspruce":     "12/1",
+    "echoing silence":        "16/1",
+    "la conquiere":           "21/1",
 
     # Champion Bumper (Day 2)
     "love sign d'aunou":      "9/2",
@@ -272,8 +257,28 @@ RP_LIVE_ODDS = {
     "quiryn":                 "10/1",
     "bass hunter":            "14/1",
 
-    # Mrs Paddy Power Mares Chase (Day 3)
-    "dinoblue":               "6/4",
+    # Mrs Paddy Power Mares Chase (Day 4) — Betfair 11/03
+    "dinoblue":               "15/8",
+
+    # Pertemps Handicap Hurdle (Day 3) — Betfair 11/03
+    "supremely west":         "7/2",
+    "cest different":         "17/2",
+    "bold endeavour":         "9/1",
+    "gowel road":             "59/1",
+
+    # Kim Muir Handicap Chase (Day 3) — Betfair 11/03
+    "jeriko du reponet":      "9/2",
+    "waterford whispers":     "11/2",
+    "herakles westwood":      "11/1",
+
+    # Martin Pipe Conditional Jockeys' Hurdle (Day 4) — Betfair 11/03
+    "kel histoire":           "11/2",
+    "roc dino":               "9/1",
+    "air of entitlement":     "9/1",
+    "east india express":     "9/1",
+    "nurse susan":            "13/1",  # was 40/1 in old RP data — massive correction
+    "he cant dance":          "21/1",
+    "sony bill":              "21/1",
 
     # Fred Winter Juvenile Handicap Hurdle (Day 1)
     "manlaga":                "7/1",
