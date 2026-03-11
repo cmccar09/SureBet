@@ -675,7 +675,7 @@ def lambda_handler(event, context):
       - Pre-festival (before 10 Mar 2026): runs once per day.
         A rate(30 minutes) rule triggers this, but only the 06:00 UTC
         invocation actually saves; others are skipped.
-      - Race days (10–13 Mar 2026, 11:00–18:30 UTC): saves every call
+      - Race days (10–13 Mar 2026, 09:00–18:30 UTC): saves every call
         so picks refresh every 30 minutes during live racing.
     """
     # ── API Gateway GET: always serve current picks from DynamoDB ──────────
@@ -767,8 +767,8 @@ def lambda_handler(event, context):
                 'body': f'Skipped — pre-festival non-6am trigger at {now_utc.strftime("%H:%M")} UTC'
             }
     elif festival_start <= today <= festival_end:
-        # Race days: only run between 11:00 and 18:30 UTC
-        if not (11 <= now_utc.hour < 19):
+        # Race days: only run between 09:00 and 18:30 UTC
+        if not (9 <= now_utc.hour < 19):
             return {
                 'statusCode': 200,
                 'body': f'Skipped — outside race hours at {now_utc.strftime("%H:%M")} UTC'

@@ -3015,6 +3015,41 @@ def score_field(entries, surebet_db, race_name=""):
             "has_festival_win": has_festival_win,
             "in_surebet_db":    name_lower in surebet_db,
         })
+    # ── Head-to-head bonus (+8pts per direct win over a rival in THIS field) ─────
+    # Scans each horse's recent_races[*].race descriptions for "beat X" or "(beat X)"
+    # patterns where X = another declared horse in today's field.
+    # Example: Oldschool Outlaw recent_race has "2m Hy Hdl (beat Bambino Fever)" at Naas Dec 25
+    # → if Bambino Fever is also in the field today → +8pts head-to-head bonus.
+    # Capped at +16pts (max 2 recognised H2H wins per horse to avoid runaway stacking).
+    _field_names_lower = {r["name"].lower() for r in results}
+    for _res in results:
+        _he = next((h for h in entries if h["name"] == _res["name"]), None)
+        if not _he:
+            continue
+        _h2h_bonus = 0
+        _h2h_tips  = []
+        for _rr in _he.get("recent_races", []):
+            _desc = _rr.get("race", "").lower()
+            # Match "beat NAME", "(beat NAME)", "beating NAME"
+            for _beaten_raw in re.findall(
+                r'\bbeat(?:ing)?\s+([a-z][a-z\s]{2,34}?)(?=\s+\d|\s+at\b|\s+in\b|\s+\(|,|\)|\.|$)',
+                _desc
+            ):
+                _beaten = _beaten_raw.strip()
+                if len(_beaten) < 6:
+                    continue
+                for _fname in _field_names_lower:
+                    if _fname == _res["name"].lower():
+                        continue
+                    if _fname in _beaten or _beaten in _fname:
+                        if _h2h_bonus < 16:
+                            _h2h_bonus += 8
+                            _h2h_tips.append(
+                                f"Head-to-head: beat {_fname.title()} ({_rr.get('date','?')}): +8pts"
+                            )
+        if _h2h_bonus > 0:
+            _res["score"] += _h2h_bonus
+            _res["tips"]   = _res.get("tips", []) + _h2h_tips
     # One jockey cannot ride two horses — remove bonus from lower scorers
     deduplicate_jockeys_in_field(results)
     results.sort(key=lambda x: x["score"], reverse=True)

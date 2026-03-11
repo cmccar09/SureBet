@@ -885,7 +885,7 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
 <div class="strategy-grid">
   <div class="strategy-card surebet">
     <h3>&#128309; Surebet</h3>
-    <p><strong>Form-first strategy.</strong> Highest live SureBet score &mdash; best recent form, top trainer/jockey combo, class performer, course &amp; distance winner. Scores auto-refreshed daily from Betfair + Racing Post.</p>
+    <p><strong>Form-first strategy.</strong> Highest live SureBet score &mdash; best recent form, top trainer/jockey combo, class performer, course &amp; distance winner. Scores auto-refreshed <strong>every 30 mins from 9:00am UTC</strong> via Betfair Exchange (live odds).</p>
   </div>
   <div class="strategy-card macfitz">
     <h3>&#128992; FitzMac</h3>
@@ -926,7 +926,7 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
 </div>
 
 <div class="footer">
-  Barry's Cheltenham 2026 &middot; Auto-updated daily via SureBet engine + Betfair + Racing Post &middot; {run_date} &middot; 1st: &euro;3,000 &middot; 2nd: &euro;1,250 &middot; 3rd: &euro;500 &middot; 4th: &euro;250
+  Barry's Cheltenham 2026 &middot; Live Betfair odds refreshed every 30 mins from 9:00am UTC &middot; {run_date} &middot; 1st: &euro;3,000 &middot; 2nd: &euro;1,250 &middot; 3rd: &euro;500 &middot; 4th: &euro;250
 </div>
 
 </body>
