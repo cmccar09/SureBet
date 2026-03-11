@@ -68,11 +68,11 @@
     },
     "Kim Muir Handicap Chase": {
       "macfitz_horse": "Jeriko Du Reponet",
-      "reason": "STRATEGY UPDATE 11/03/2026: SB=Herakles Westwood (model top, 9/1). MF takes Jeriko Du Reponet (7/2 fav) — covers market leader. 24-runner amateur handicap, 5 places. Spreads risk across model pick + market favourite.",
+      "reason": "UPDATED 11/03/2026 detailed racecard: Gap confirmed 2pts (Jeriko 64 vs Herakles 62). SB=Herakles Westwood (model #2, Course winner, 10/1 — huge value). MF=Jeriko Du Reponet (10/3 fav, Henderson, Mr D. O'Connor, cheekpieces today). 25-runner amateur handicap, 5 places.",
       "surebet_horse": "Herakles Westwood",
-      "surebet_score": 54,
-      "macfitz_score": 51,
-      "gap": 3,
+      "surebet_score": 62,
+      "macfitz_score": 64,
+      "gap": 2,
       "decided": "2026-03-11",
       "active": true
     },
@@ -99,12 +99,32 @@
     },
     "Cheltenham Gold Cup": {
       "macfitz_horse": "Jango Baie",
-      "reason": "1pt gap (124 vs 123) — dead heat, MacFitz takes Jango Baie (Gordon Elliott, Cheltenham specialist, better price at 7/1)",
-      "surebet_horse": "Haiti Couleurs",
-      "surebet_score": 124,
+      "reason": "UPDATED 11/03/2026: Gaelic Warrior entered (127pts) — new SB. Gap now 4pts (127 vs 123). SB=Gaelic Warrior (model #1, Mullins/Walsh, CD winner). MF=Jango Baie (Elliott, 7/1, CD winner) — value cover.",
+      "surebet_horse": "Gaelic Warrior",
+      "surebet_score": 127,
       "macfitz_score": 123,
-      "gap": 1,
-      "decided": "2026-03-10",
+      "gap": 4,
+      "decided": "2026-03-11",
+      "active": true
+    },
+    "Close Brothers Mares' Hurdle": {
+      "macfitz_horse": "Wodhooh",
+      "reason": "LIVE SPLIT 11/03/2026: 3pt gap (Jade De Grugy 109 vs Wodhooh 106). SB=Jade De Grugy (Mullins/Townend, 11/4, model #1 — Townend bonus decisive). MF=Wodhooh (4/6 market fav, CD winner, won C&D Martin Pipe 2025 + twice this course). Both are live winning chances.",
+      "surebet_horse": "Jade De Grugy",
+      "surebet_score": 109,
+      "macfitz_score": 106,
+      "gap": 3,
+      "decided": "2026-03-11",
+      "active": true
+    },
+    "Paddy Power Stayers' Hurdle": {
+      "macfitz_horse": "Teahupoo",
+      "reason": "LIVE SPLIT 11/03/2026: 5pt gap (Kabral Du Mathan 122 vs Teahupoo 117). SB=Kabral Du Mathan (Skelton/Skelton, 16/5, Course winner, model #1 — Skelton/Skelton bonus + high OR). MF=Teahupoo (15/4, CD winner, multiple wins in this race, Kennedy/Elliott). Kabral stamina unproven at 3m.",
+      "surebet_horse": "Kabral Du Mathan",
+      "surebet_score": 122,
+      "macfitz_score": 117,
+      "gap": 5,
+      "decided": "2026-03-11",
       "active": true
     },
     "Grand Annual Handicap Chase": {
@@ -127,13 +147,23 @@
       "decided": "2026-03-10",
       "active": true
     },
+    "Ryanair Chase": {
+      "macfitz_horse": "Fact To File",
+      "reason": "CORRECTED 11/03/2026: 6pt gap (Jagwar 127 vs Fact To File 121). SB=Jagwar (Mullins/Townend, 25/1, won 2024 National Hunt Chase — model gives Townend premium). MF=Fact To File (4/5 fav, defending Ryanair champion 2024+2025, won Irish Gold Cup Feb 2026, CD winner, rating 174 — clear form pick). NOTE: Jonbon is NOT in this race (QMCC non-runner); corrected field has 9 runners.",
+      "surebet_horse": "Jagwar",
+      "surebet_score": 127,
+      "macfitz_score": 121,
+      "gap": 6,
+      "decided": "2026-03-11",
+      "active": true
+    },
     "Pertemps Handicap Hurdle": {
       "macfitz_horse": "Gowel Road",
-      "reason": "DEAD HEAT 11/03/2026: Supremely West=Gowel Road both 59pts. SB takes Supremely West (16/5, biggest handicap gamble of the day). MF takes Gowel Road (25/1, Course & Distance winner, 6-place race — maximum E/W value spread in 26-runner field).",
+      "reason": "UPDATED 11/03/2026 detailed racecard: Model now has Staffordshire Knot+Ace Of Spades=58 (joint model top), Gowel Road=54, Supremely West=50. KEEPING STRATEGIC SPLIT: SB=Supremely West (market moved drastically 14/1->11/4 — stable confidence signal from Dan Skelton; 2lb lower than eye-catching Oct run. Targeting on/near-favourite value). MF=Gowel Road (20/1, CD winner, Cheltenham specialist, 6-place E/W value).",
       "surebet_horse": "Supremely West",
-      "surebet_score": 59,
-      "macfitz_score": 59,
-      "gap": 0,
+      "surebet_score": 50,
+      "macfitz_score": 54,
+      "gap": 4,
       "decided": "2026-03-11",
       "active": true
     }

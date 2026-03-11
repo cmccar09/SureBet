@@ -258,7 +258,7 @@ def apply_macfitz(pick: dict, overrides: dict) -> dict:
             "override_reason": ovr["reason"],
             "new_close_call": False,
             "gap":            gap,
-            "surebet_horse":  surebet_horse,
+            "surebet_horse":  ovr.get("surebet_horse", surebet_horse),
             "surebet_score":  score,
         }
 
