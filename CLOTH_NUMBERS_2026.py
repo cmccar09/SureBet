@@ -196,46 +196,40 @@ CLOTH_NUMBERS_2026 = {
 
     # ── DAY 3: St Patrick's Thursday — Thursday 12 March ──────────────────
 
-    "day3_race1": {   # Jack Richards Turners Novices' Chase 13:30
-        # Current front-runners: Koktail Divin (9/2), Regent's Stroll (6/1)
+    "day3_race1": {   # Ryanair Mares' Novices' Hurdle 13:20 (Grade 1)
+        # SB pick: Bambino Fever
+        "bambino fever":     None,
+        "hierba buena":      None,
+        "lady of longfield": None,
+        "il est temps":      None,
+    },
+
+    "day3_race2": {   # Jack Richards Turners Novices' Chase 14:00 (Grade 1)
+        # SB pick: Sixmilebridge
         "koktail divin":    None,
         "regent's stroll":  None,
         "meetmebythesea":   None,
         "slade steel":      None,
-        "grey dawning":     None,
+        "sixmilebridge":    None,
     },
 
-    "day3_race2": {   # Pertemps Final Handicap Hurdle 14:10
-        "supremely west":   None,
-        "c'est different":  None,
-        "electric mason":   None,
-        "ace of spades":    None,
-        "minella emperor":  None,
+    "day3_race3": {   # Close Brothers Mares' Hurdle 14:40 (Grade 1)
+        # SPLIT: SB=Jade De Grugy / MF=Wodhooh
+        "jade de grugy":    None,
+        "wodhooh":          None,
+        "brighterdaysahead": None,
+        "brandy love":      None,
     },
 
-    "day3_race3": {   # Ryanair Chase 14:50
-        # Current front-runners: Fact To File (4/5)
-        "fact to file":    None,
-        "panic attack":    None,
-        "protektorat":     None,
-        "jagwar":          None,
-        "energumene":      None,
-        "better days ahead": None,
-        "edwardstone":     None,
-        "master chewy":    None,
-        "croke park":      None,
-    },
-
-    "day3_race4": {   # Paddy Power Stayers' Hurdle 15:30
-        # Current front-runners: Teahupoo (9/4), Honesty Policy (9/2)
+    "day3_race4": {   # Paddy Power Stayers' Hurdle 15:20 (Grade 1)
+        # SPLIT: SB=Kabral Du Mathan / MF=Teahupoo
+        "kabral du mathan": None,
         "teahupoo":         None,
         "honesty policy":   None,
-        "kabral du mathan": None,
         "bob olinger":      None,
         "ma shantou":       None,
         "ballyburn":        None,
         "impose toi":       None,
-        "wodhooh":          None,
         "hewick":           None,
         "home by the lee":  None,
         "flooring porter":  None,
@@ -246,28 +240,37 @@ CLOTH_NUMBERS_2026 = {
         "french ship":      None,
     },
 
-    "day3_race5": {   # Festival Plate Handicap Chase 16:10
-        "madara":          None,
-        "mclaurey":        None,
-        "will the wise":   None,
-        "down memory lane": None,
+    "day3_race5": {   # Ryanair Chase 16:00 (Grade 1)
+        # SB pick: Fact To File (4/5 fav, defending champion)
+        "fact to file":      None,
+        "energumene":        None,
+        "protektorat":       None,
+        "panic attack":      None,
+        "better days ahead": None,
+        "edwardstone":       None,
+        "master chewy":      None,
+        "croke park":        None,
     },
 
-    "day3_race6": {   # Boodles / Fred Winter Handicap Hurdle 16:50
-        "saratoga":      None,
-        "winston junior": None,
-        "manlaga":       None,
-        "munsif":        None,
-        "ammes":         None,
+    "day3_race6": {   # Pertemps Handicap Hurdle 16:40 (Hcap)
+        # SPLIT: SB=Supremely West / MF=Gowel Road
+        "supremely west":   None,
+        "gowel road":       None,
+        "ace of spades":    None,
+        "staffordshire knot": None,
+        "c'est different":  None,
+        "electric mason":   None,
+        "minella emperor":  None,
     },
 
-    "day3_race7": {   # Martin Pipe Conditional Jockeys Hurdle 17:30
-        "roc dino":          None,
-        "a pai de nom":      None,
-        "the passing wife":  None,
-        "kel histoire":      None,
-        "he can't dance":    None,
-        "zanndabad":         None,
+    "day3_race7": {   # Kim Muir Handicap Chase 17:20 (Hcap, 26 runners)
+        # SPLIT: SB=Herakles Westwood / MF=Jeriko Du Reponet
+        "herakles westwood":  None,
+        "jeriko du reponet":  None,
+        "il ridoto":          None,
+        "weveallbeencaught":  None,
+        "daily present":      None,
+        "ask brewster":       None,
     },
 
     # ── DAY 4: Gold Cup Day — Friday 13 March ──────────────────────────────

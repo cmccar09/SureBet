@@ -119,6 +119,27 @@ RUNNER_NUMBERS: dict[str, int | str] = {
     "Be Aware":              4,  # Grand Annual 16:40 — 5/1 fav FitzMac split
     "Keep Him Company":     8,  # Champion Bumper 17:20 — Surebet
     "Quiryn":              21,  # Champion Bumper 17:20 — FitzMac split (Mullins/Townend, 4yo)
+    # Day 3 — St Patrick's Thursday (12 Mar) — fill in once declared
+    "Bambino Fever":        None,  # Mares Novices Hurdle 13:20 — SB banker
+    "Sixmilebridge":        None,  # Jack Richards Novices' Chase 14:00 — SB banker
+    "Jade De Grugy":        None,  # Close Brothers Mares' Hurdle 14:40 — SB SPLIT
+    "Wodhooh":              None,  # Close Brothers Mares' Hurdle 14:40 — MF SPLIT
+    "Kabral Du Mathan":     None,  # Paddy Power Stayers' Hurdle 15:20 — SB SPLIT
+    "Teahupoo":             None,  # Paddy Power Stayers' Hurdle 15:20 — MF SPLIT
+    "Fact To File":         None,  # Ryanair Chase 16:00 — SB banker
+    "Supremely West":       None,  # Pertemps Handicap Hurdle 16:40 — SB SPLIT
+    "Gowel Road":           None,  # Pertemps Handicap Hurdle 16:40 — MF SPLIT
+    "Herakles Westwood":    None,  # Kim Muir Handicap Chase 17:20 — SB SPLIT
+    "Jeriko Du Reponet":    None,  # Kim Muir Handicap Chase 17:20 — MF SPLIT
+    # Day 4 — Gold Cup Day (13 Mar) — fill in once declared
+    "Minella Study":        None,  # JCB Triumph Hurdle 13:20 — SB banker
+    "Absurde":              None,  # County Hurdle 14:00 — SB banker
+    "Doctor Steinberg":     None,  # Albert Bartlett 14:40 — SB banker
+    "Dinoblue":             None,  # Mares' Chase 15:20 — SB banker
+    "Gaelic Warrior":       None,  # Gold Cup 16:00 — SB SPLIT
+    "Jango Baie":           None,  # Gold Cup 16:00 — MF SPLIT
+    "Nurse Susan":          None,  # Martin Pipe 17:20 — SB SPLIT
+    "Sony Bill":            None,  # Martin Pipe 17:20 — MF SPLIT
 }
 
 # ── tier cosmetics ─────────────────────────────────────────────────────────────
@@ -533,8 +554,8 @@ def _build_submission_html(assembled: list) -> str:
 
     def _chip(horse: str, is_split: bool, side: str) -> str:
         """Return a chip <div> for one horse with its cloth number."""
-        num = RUNNER_NUMBERS.get(horse, "?")
-        num_str = str(num)
+        num = RUNNER_NUMBERS.get(horse)
+        num_str = str(num) if num is not None else "?"
         short_name = (horse[:9] + "…") if len(horse) > 9 else horse
         if is_split:
             cls = f"sub-horse-chip split-{side}"
@@ -553,14 +574,14 @@ def _build_submission_html(assembled: list) -> str:
         """Comma-separated numbers string, with splits marked."""
         parts = []
         for horse, is_split, side in entries:
-            num = RUNNER_NUMBERS.get(horse, "?")
-            parts.append(str(num))
+            num = RUNNER_NUMBERS.get(horse)
+            parts.append(str(num) if num is not None else "?")
         return ", ".join(parts)
 
     day_rows = ""
     for d in sorted(days.keys()):
         races_today = days[d][:6]  # only first 6 races per day are required
-        sb_entries = [(sb.get("horse", "?"), mf["is_split"], "sb") for _, sb, mf in races_today]
+        sb_entries = [(mf.get("surebet_horse", sb.get("horse", "?")) if mf["is_split"] else sb.get("horse", "?"), mf["is_split"], "sb") for _, sb, mf in races_today]
         mf_entries = [(mf["horse"], mf["is_split"], "mf") for _, sb, mf in races_today]
 
         sb_chips = "".join(_chip(horse, split, "sb") for horse, split, _ in sb_entries)
@@ -607,21 +628,34 @@ def _row_race(race, sb_pick, mf_pick, race_num: int) -> str:
     sb_score = int(sb_pick.get("score", 0) or 0)
     tier_str = sb_pick.get("tier", "")
     tier_css_class, tier_color, tier_label = _tier_css(tier_str)
-    score_html = _score_tag(sb_score, tier_css_class)
 
     is_split = mf_pick["is_split"]
     mf_horse = mf_pick["horse"]
     gap      = mf_pick["gap"]
     reason   = mf_pick.get("override_reason", "")
 
+    # When a split override specifies a different SureBet horse, use that — not the raw DynamoDB pick
+    if is_split:
+        sb_horse = mf_pick.get("surebet_horse", sb_horse)
+        sb_score = mf_pick.get("surebet_score", sb_score)
+
+    score_html = _score_tag(sb_score, tier_css_class)
+
     tier_span = f'<span style="color:{tier_color};font-size:.8rem">{tier_label}</span>'
     grade_span = f'<span class="grade-badge {grade_css}">{grade_label}</span>'
+
+    def _cloth(horse: str) -> str:
+        """Return a small cloth-number badge if known, else empty string."""
+        num = RUNNER_NUMBERS.get(horse)
+        if num is None:
+            return ""
+        return f' <span style="display:inline-block;background:rgba(88,166,255,.18);border:1px solid rgba(88,166,255,.4);color:var(--blue);font-size:.65rem;font-weight:700;padding:0 5px;border-radius:4px;vertical-align:middle;">#{num}</span>'
 
     if not is_split:
         cw_note = COURSE_WINNERS.get(sb_horse, "")
         agree_text = f"Both entries agree{' &middot; ' + cw_note if cw_note else ''}"
         pick_cell = (
-            f'<div class="horse-pick">{sb_horse} '
+            f'<div class="horse-pick">{sb_horse}{_cloth(sb_horse)} '
             f'<span class="banker-tag">&#9733; BANKER</span></div>'
             f'<div class="both-agree">{agree_text}</div>'
         )
@@ -634,9 +668,9 @@ def _row_race(race, sb_pick, mf_pick, race_num: int) -> str:
         pick_cell = (
             f'<div style="display:flex;flex-direction:column;gap:4px">'
             f'<div><span style="color:var(--blue);font-size:.72rem;font-weight:700">&#128309; SUREBET:</span> '
-            f'<span style="font-weight:700;color:var(--green)">{sb_horse}</span>{sb_note}</div>'
+            f'<span style="font-weight:700;color:var(--green)">{sb_horse}</span>{_cloth(sb_horse)}{sb_note}</div>'
             f'<div><span style="color:var(--orange);font-size:.72rem;font-weight:700">&#128992; FITZMAC:</span> '
-            f'<span style="font-weight:700;color:var(--orange)">{mf_horse}</span>{mf_note} '
+            f'<span style="font-weight:700;color:var(--orange)">{mf_horse}</span>{_cloth(mf_horse)}{mf_note} '
             f'<span class="split-tag">&#9889; SPLIT</span></div>'
             f'<div style="font-size:.7rem;color:var(--muted)">{reason}</div>'
             f'</div>'
@@ -740,6 +774,11 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
         mf_horse = mf["horse"]
         mf_score = mf["score"]
         is_split = mf["is_split"]
+
+        # Use override-specified SureBet horse for split rows
+        if is_split:
+            sb_horse = mf.get("surebet_horse", sb_horse)
+            sb_score = mf.get("surebet_score", sb_score)
 
         surebet_items += _pick_list_item(pick_num, sb_horse, race_display, time, sb_score,
                                          tier_str, "var(--green)")
