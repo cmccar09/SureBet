@@ -169,11 +169,11 @@
     },
     "Pertemps Handicap Hurdle": {
       "macfitz_horse": "Ace Of Spades",
-      "reason": "LIVE OVERRIDE 12/03/2026: Model top is Staffordshire Knot (64pts) but critical flaws for this race: OR 152 TOPWEIGHT (12-22lb more than most rivals), all form wins on heavy Irish mud, no C/D record. Ace Of Spades (62pts, +2 behind) is the handicap-intelligent pick: C/D winner (Cheltenham 2m7f qualifier Jan 2026), OR 139 well-treated, won on soft at Huntingdon Jan 2026. Rain+wind today further favours the course winner on a fair mark over a topweight with a ground question. BOTH SureBet and MacFitz switched to Ace Of Spades (9/1 EW, 6 places).",
-      "surebet_horse": "Ace Of Spades",
-      "surebet_score": 62,
+      "reason": "LIVE SPLIT 12/03/2026: Skelton two-runner race — Supremely West (3/1, H.Skelton) is hammered as stable target; Ace Of Spades (16/1, K.Woods) drifted back after early support. SureBet follows market on Supremely West (D symbol, ran here Oct 2025, 2lb less today, proven progressive handicapper). MacFitz holds Ace Of Spades EW at 16/1 in 6-place Pertemps (C winner, soft/heavy-ground qualifier Jan 2026). Classic Skelton two-hander: back the first string (SW) for points, keep the longer-odds C/D specialist (AOS) for EW coverage.",
+      "surebet_horse": "Supremely West",
+      "surebet_score": 64,
       "macfitz_score": 62,
-      "gap": 0,
+      "gap": 2,
       "decided": "2026-03-12",
       "active": true
     }
