@@ -176,6 +176,26 @@
       "gap": 2,
       "decided": "2026-03-12",
       "active": true
+    },
+    "JCB Triumph Hurdle": {
+      "macfitz_horse": "Maestro Conti",
+      "reason": "DAY4 SPLIT 12/03/2026: SB=Minella Study (101, Adam Nicol/Ryan Mania — small yard, huge step up). MacFitz=Maestro Conti (13/2, Skelton/Skelton, CD winner — WON the Grade 2 Finesse (Triumph Trial) at C+D Jan 2026, 3/3 unbeaten). Finesse is the strongest Triumph form guide historically. Mullins have 5 runners splitting market — Proactif (10/3 fav), Macho Man (10/1), Selma De Vary (4/1), Mon Creuset (11/1), Minella Academy. Maestro Conti is the single most convincing course-form horse at fair value.",
+      "surebet_horse": "Minella Study",
+      "surebet_score": 101,
+      "macfitz_score": 92,
+      "gap": 9,
+      "decided": "2026-03-12",
+      "active": true
+    },
+    "County Handicap Hurdle": {
+      "macfitz_horse": "Bowensonfire",
+      "reason": "DAY4 SPLIT 12/03/2026: SB=Absurde (64, CD winner 2024, OR 155) — but last hurdles run was April 2025 Plumpton, since then Melbourne Cup on Flat (Nov 25). Coming in cold with no hurdles prep this season in a 26-runner handicap cavalry charge — big concern. MacFitz=Bowensonfire (Kennedy/Elliott, D symbol, back-to-back Leopardstown wins off OR 132→140, rapidly progressive, form 333211 last 6 — momentum horse at likely 12/1+). 6 EW places — ideal for a progressive in-form handicapper. Absurde held as SB for the class/CD angle.",
+      "surebet_horse": "Absurde",
+      "surebet_score": 64,
+      "macfitz_score": 55,
+      "gap": 9,
+      "decided": "2026-03-12",
+      "active": true
     }
   }
 }
