@@ -196,6 +196,16 @@
       "gap": 9,
       "decided": "2026-03-12",
       "active": true
+    },
+    "St James's Place Hunters' Chase": {
+      "macfitz_horse": "Its On The Line",
+      "reason": "DAY4 SPLIT 12/03/2026: DB model=Chemical Energy (92pts, C) but not in top market contenders. SB=Wonderwall (4/1, CD winner — WON this race 2025, defending champion, Curling stable, goes well fresh after Nov point win). MacFitz=Its On The Line (9/2, runner-up here 3 consecutive years 2023/24/25 — due to win, won Punchestown festival hunters + Down Royal Dec 2025 — strongest possible course form without the win). Two very different angles with excellent coverage.",
+      "surebet_horse": "Wonderwall",
+      "surebet_score": 92,
+      "macfitz_score": 84,
+      "gap": 8,
+      "decided": "2026-03-12",
+      "active": true
     }
   }
 }
