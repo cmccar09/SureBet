@@ -149,13 +149,13 @@
     },
     "Ryanair Chase": {
       "macfitz_horse": "Fact To File",
-      "reason": "UPDATED 12/03/2026: Jonbon TRANSFERRED from QMCC → Ryanair Chase (4/1). Model now picks JONBON (score 142) over Fact To File (score 125) — +17pt gap. Jonbon: 2x Arkle CD winner, OR=166, Henderson/de Boinville, won G1 Dec 2025. Fact To File: defending champion 2024+2025, OR=174, Irish Gold Cup Feb 2026, 6/5 fav. INACTIVE — both players take Jonbon (model's clear #1). Reactivate for FTF split if wanted.",
+      "reason": "LIVE SPLIT 12/03/2026: Jonbon (4/1, score 142) vs Fact To File (6/5, score 125) — 17pt gap. SureBet=Jonbon (Henderson/de Boinville, 2x Arkle CD winner, OR=166, won G1 Dec 2025 — model #1, value at 4/1). MacFitz=Fact To File (defending champion 2024+2025, OR=174, Irish Gold Cup Feb 2026, 6/5 fav — class and fitness angle).",
       "surebet_horse": "Jonbon",
       "surebet_score": 142,
       "macfitz_score": 125,
       "gap": 17,
-      "decided": "2026-03-11",
-      "active": false
+      "decided": "2026-03-12",
+      "active": true
     },
     "Pertemps Handicap Hurdle": {
       "macfitz_horse": "Gowel Road",

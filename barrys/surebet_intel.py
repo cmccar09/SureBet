@@ -1242,9 +1242,9 @@ EXTRA_RACES = {
              "last_run": "3rd Bumper Feb 2026", "days_off": 28},
         ]
     },
-    "day3_race2": {   # Golden Miller Novice Handicap Chase  (Grade 2, 2m4f — 19 runners, Thu 12 Mar 14:00)
-        # UPDATED 11/03/2026 from detailed racecard. E/W: 1/5 odds, 5 PLACES.
-        # NR: Old Cowboy (Gary & Josh Moore — 3rd at Kempton Feb 26, mark risen again; NR confirmed)
+    "day3_race2": {   # Golden Miller Novice Handicap Chase  (Grade 2, 2m4f — 17 runners, Thu 12 Mar 14:00)
+        # UPDATED 12/03/2026: NRs — Sixmilebridge (Fergal O'Brien/Kielan Woods, cloth #2, was SB pick) + Old Cowboy (#15).
+        # NEW TOP PICK: Jordans Cross (CD winner, Trials Day C&D Jan 2026) or Meetmebythesea (big market move 9/2).
         # KEY MOVES: Meetmebythesea 14/1->9/2 (big fancy, returns from 2m to 2m4f), Slade Steel 9/1->6/1 (market shortener)
         #            Gold Dancer DRIFT 30/1->25/1 (7lb claimer A. McGuinness — top weight 152, non-stayer on heavy)
         # CHELTENHAM RECORDS CORRECTED: Slade Steel=Course (won 2024 Supreme); Bluesman=D only (Haydock win NOT Cheltenham);
@@ -1262,17 +1262,6 @@ EXTRA_RACES = {
                  {"date": "28 Nov 25", "venue": "Newbury", "race": "2m3f 187yds Gd Ch", "pos": 3, "ran": 6},
                  {"date": "05 Apr 25", "venue": "Aintree", "race": "2m4f Gd Hdl", "pos": 2, "ran": 9},
                  {"date": "06 Mar 25", "venue": "Wincanton", "race": "2m3f 179yds Sft Hdl", "pos": 1, "ran": 5},
-             ]},
-            {"name": "Sixmilebridge", "trainer": "Fergal O'Brien", "jockey": "Kielan Woods",
-             "odds": "7/1", "age": 7, "form": "179-111", "rating": 150,
-             "cheltenham_record": "CD winner",
-             "last_run": "Won Grade 1 Scilly Isles Sandown 31 Jan 2026 (2m4f sft) — chasing record 3-3", "days_off": 39,
-             "recent_races": [
-                 {"date": "31 Jan 26", "venue": "Sandown Park", "race": "2m4f 15yds Sft Ch (Grade 1 Scilly Isles)", "pos": 1, "ran": 4},
-                 {"date": "12 Dec 25", "venue": "Cheltenham", "race": "2m4f 127yds Gd Ch (C&D)", "pos": 1, "ran": 3},
-                 {"date": "12 Nov 25", "venue": "Ayr", "race": "2m4f 110yds Sft Ch", "pos": 1, "ran": 3},
-                 {"date": "12 Mar 25", "venue": "Cheltenham", "race": "2m5f GS Hdl", "pos": 9, "ran": 11},
-                 {"date": "25 Jan 25", "venue": "Cheltenham", "race": "2m4f 56yds Sft Hdl", "pos": 7, "ran": 7},
              ]},
             {"name": "Jordans Cross", "trainer": "Anthony Honeyball", "jockey": "Sam Twiston-Davies",
              "odds": "15/2", "age": 6, "form": "12-1F11", "rating": 140,
