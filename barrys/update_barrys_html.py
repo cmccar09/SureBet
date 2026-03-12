@@ -225,7 +225,12 @@ def compute_competition_scores(assembled: list, results: dict) -> dict:
 
     for race, sb_pick, mf_pick in assembled:
         db_name  = race[2]
-        sb_horse = sb_pick.get("horse", "?")
+        # For split races use the override's declared surebet_horse, not the raw DB pick
+        # (the override intentionally assigns a different horse to SureBet for scoring)
+        if mf_pick.get("is_split"):
+            sb_horse = mf_pick.get("surebet_horse", sb_pick.get("horse", "?"))
+        else:
+            sb_horse = sb_pick.get("horse", "?")
         mf_horse = mf_pick["horse"]
         res      = results.get(db_name, {})
 
