@@ -135,9 +135,10 @@ RUNNER_NUMBERS: dict[str, int | str] = {
     "Jonbon":               6,    # Ryanair Chase 16:00 — cloth #6 (4/1)
     "Impaire Et Passe":     5,    # Ryanair Chase 16:00 — cloth #5 (11/2)
     "Banbridge":            1,    # Ryanair Chase 16:00 — cloth #1 (8/1)
-    "Supremely West":       7,    # Pertemps Handicap Hurdle 16:40 — SB SPLIT (4/1, cloth #7)
-    "Gowel Road":           2,    # Pertemps Handicap Hurdle 16:40 — MF SPLIT (59/1, cloth #2)
-    "Staffordshire Knot":   1,    # Pertemps Handicap Hurdle 16:40 — model #1 (25/1, cloth #1)
+    "Supremely West":       7,    # Pertemps Handicap Hurdle 16:40 — market fav (3/1, cloth #7)
+    "Ace Of Spades":        4,    # Pertemps Handicap Hurdle 16:40 — BOTH picks (10/1, cloth #4)
+    "Gowel Road":           2,    # Pertemps Handicap Hurdle 16:40 — cloth #2 (old MF split)
+    "Staffordshire Knot":   1,    # Pertemps Handicap Hurdle 16:40 — cloth #1 (original model pick)
     "Herakles Westwood":    8,    # Kim Muir Handicap Chase 17:20 — SB SPLIT (11/1, cloth #8)
     "Jeriko Du Reponet":    1,    # Kim Muir Handicap Chase 17:20 — MF SPLIT (9/2 fav, cloth #1)
     # Day 4 — Gold Cup Day (13 Mar) — confirmed from Betfair declared runners
