@@ -124,6 +124,7 @@ RUNNER_NUMBERS: dict[str, int | str] = {
     "Oldschool Outlaw":     15,   # Mares Novices Hurdle 13:20 — cloth #15 (beat Bambino Fever Dec 25)
     "Sixmilebridge":        "NR",  # Jack Richards Novices' Chase 14:00 — NR (confirmed 12/03/2026)
     "Jordans Cross":        10,   # Jack Richards Novices' Chase 14:00 — NEW SB pick (CD winner, 6/1, cloth #10)
+    "Regents Stroll":        4,    # Jack Richards Novices' Chase 14:00 — MF SWITCH (9/2, Cobden/Nicholls, D symbol)
     "Meetmebythesea":       11,   # Jack Richards Novices' Chase 14:00 — cloth #11 (9/2 big market mover)
     "Jade De Grugy":        3,    # Close Brothers Mares' Hurdle 14:40 — SB SPLIT (5/2, cloth #3)
     "Wodhooh":              7,    # Close Brothers Mares' Hurdle 14:40 — MF SPLIT (EVS fav, cloth #7)
