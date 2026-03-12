@@ -86,9 +86,10 @@ def main():
         log("ERROR: save_cheltenham_picks failed — aborting deploy")
         return
 
-    # Step 3: Deploy Lambda
-    log("Step 3: Deploying Lambda...")
-    run_ps("deploy_cheltenham_save_lambda.ps1", "deploy_cheltenham_save_lambda")
+    # Step 3: Lambda deploy intentionally skipped here.
+    # The Lambda (cheltenham-picks-save) is deployed once via deploy_cheltenham_save_lambda.ps1
+    # and runs independently on EventBridge every 30 mins in AWS.
+    # This local Task Scheduler job only needs to refresh the local Betfair cache + DynamoDB.
 
     log("Refresh complete")
     log("=" * 60)
