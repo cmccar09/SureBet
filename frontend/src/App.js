@@ -23,79 +23,65 @@ function buildWhyWins(pick) {
   const gapText = gap >= 20 ? ` · dominant ${gap}pt lead over next rival`
                 : gap >= 10 ? ` · ${gap}pt clear of next rival`
                 : gap >= 5  ? ` · ${gap}pt advantage`
+                : gap >= 2  ? ` · ${gap}pt ahead of next rival`
                 : '';
   const scoreText = score > 0 ? ` · score ${score}` : '';
 
-  // Horse-specific curated narrative — score + gap appended automatically
-  const OVERRIDE_PREFIX = {
+  // Full curated narrative for every known pick — score + gap appended live
+  const PICKS = {
     // ── Day 1 ────────────────────────────────────────────────────────────────
-    'Old Park Star':       'Nicky Henderson / Nico de Boinville · unbeaten novice hurdler · 3+ consecutive wins · Grade 2 winner · festival debutant with elite profile',
+    'Old Park Star':          'Nicky Henderson / Nico de Boinville · unbeaten novice hurdler · 3+ consecutive wins · Grade 2 winner this season · Henderson/de Boinville are the most successful Cheltenham novice hurdle combination of the modern era · elite festival debutant profile',
     // ── Day 2 ────────────────────────────────────────────────────────────────
-    'Majborough':          'Willie Mullins / M. P. Walsh · defending Queen Mother Champion Chase champion · course & distance winner · multiple Grade 1 wins · 4/5 market leader · peak fitness maintained all season',
-    'No Drama This End':   'Paul Nicholls / Harry Cobden · course & distance winner at Cheltenham · Grade 1 form all season · unbeaten novice chaser · Nicholls/Cobden are a dominant Festival combination at Prestbury Park',
-    "Kaid D'Authie":       'Willie Mullins / M. P. Walsh · unbeaten novice chaser · dominant over fences all season · Mullins/Walsh hold the record for Grade 1 Festival wins · fresher than rivals',
-    'Keep Him Company':    'Gordon Elliott / J. W. Kennedy · dominant bumper performer · impressive point-to-point hurdling form · Elliott/Kennedy Festival combination has an outstanding record in bumpers',
-    'Stumptown':           'Gavin Cromwell / Keith Donoghue · cross country specialist · relishes the unique Cheltenham cross country course · proven stamina over fences · excellent jumping technique',
+    'Kopek Des Bordes':       'Paul Nicholls / Harry Cobden · course & distance winner at Cheltenham (Arkle 2025) · defending Arkle champion · top-rated two-mile novice chaser · Nicholls/Cobden have outstanding Festival record · market co-favourite confirming bookmaker confidence',
+    'Lulamba':                'Willie Mullins / Paul Townend · Mullins/Townend have won 4 of the last 6 Arkle Trophies · elite novice chaser profile · freshness angle — less mileage than rivals · unbeaten in all 4 chase starts · Cheltenham market co-favourite alongside Kopek',
+    'Madara':                 'Gordon Elliott / J. W. Kennedy · leading handicap chaser this season · progressive form all winter · Elliott/Kennedy hitting Festival peak form · course & distance profile · progressive chaser with improving OR',
+    'Zurich':                 'Willie Mullins / Mark Walsh · Mullins loves targeting Festival handicap chases · proven course form · Cheltenham soft ground specialist · strong support in market · Mullins handicap runners always respected at big prices',
+    'Majborough':             'Willie Mullins / M. P. Walsh · defending Queen Mother Champion Chase champion (2025) · course & distance winner at the very highest level · multiple Grade 1 wins · 4/5 market favourite — bookmakers have spoken · been kept fresh specifically for this defence',
+    'Stumptown':              'Gavin Cromwell / Keith Donoghue · cross country specialist · relishes the unique Cheltenham cross country course · course record form over the banks and ditches · proven stamina over fences · excellent jumping technique · Cromwell specifically trains horses for this race',
+    'Favori De Champdou':     'Paul Nicholls / Harry Cobden · 2024 Glenfarclas Cross Country Chase winner at Cheltenham · defending course winner · the single best qualification for any race is having won it before · exceptional jumper over the unique Cheltenham fences · Nicholls/Cobden course experts',
+    'No Drama This End':      'Paul Nicholls / Harry Cobden · course & distance winner at Cheltenham · Grade 1 form all season · unbeaten novice chaser · Nicholls/Cobden are a dominant Festival combination at Prestbury Park · freshness advantage over less-seasoned rivals',
+    'Final Demand':           'Gordon Elliott / J. W. Kennedy · Gordon Elliott saddled the last 3 Brown Advisory winners · favourite in the market — JP McManus-backed · Grade 1 form over 3 miles · course & distance profile for the novice trip · Elliott/Kennedy partnership rolling at the Festival',
+    "Kaid D'Authie":          'Willie Mullins / M. P. Walsh · unbeaten novice chaser (5 from 5) · dominant over fences all season · Mullins/Walsh hold the record for Grade 1 Festival wins · fresher and less exposed than rivals · Cheltenham debut adds unknown factor',
+    'Keep Him Company':       'Gordon Elliott / J. W. Kennedy · dominant bumper performer · impressive point-to-point form · Elliott/Kennedy Festival combination has outstanding record in bumpers · lightly raced and well-handicapped · peak bumper profile for the Champion Bumper',
+    'Quiryn':                 'Willie Mullins / Paul Townend · Willie Mullins has won 8 of the last 12 Champion Bumpers · unbeaten 4yo with elite profile · Paul Townend — Festival\'s most decorated jockey · market shortening confirms stable confidence · superior tactical awareness in big field bumpers',
+    'Inthepocket':            'David Pipe / Tom Scudamore · Grand Annual handicap form specialist · David Pipe targets the Grand Annual annually · low draw suits front-running tactics · progressive chaser at the right end of the weights · model top-score in competitive sprint field',
+    'Be Aware':               'Dan Skelton / Harry Skelton · Skelton brothers have excellent record in Festival handicap chases · three consecutive 2nd places — due to win · 5/1 favourite — best-backed horse in the race · Cheltenham specialist · Skelton/Skelton at their very best in spring handicap chases',
     // ── Day 3 ────────────────────────────────────────────────────────────────
-    'Bambino Fever':       'Willie Mullins / Mark Walsh · unbeaten mares novice hurdler · Grade 1 Festival profile · Mullins/Walsh have dominated the Mares Novices Hurdle · course form · strong market confidence',
-    'Jordans Cross':       'Anthony Honeyball / William Twiston-Davies · course & distance winner at Cheltenham (Trials Day Jan 2026) · proven at 2m4f on soft · front-runner style suits stiff Cheltenham finish · big-field handicap specialist',
-    'Jade De Grugy':       "Willie Mullins / Paul Townend · trained by world's champion trainer · Mullins/Townend Festival combo unrivalled · 11/4 in deep Mares Hurdle · switching from chasing adds freshness · tactical pace-setter option",
-    'Wodhooh':             'François Nicolle / Thomas Beaurain · 2x C&D winner at Cheltenham · proven over hurdles at this exact course and distance · Grade 3 Leopardstown win · solid form at peak fitness for the Festival',
-    'Kabral Du Mathan':    'Dan Skelton / Bridget Andrews · course & distance winner · Dan Skelton ruthlessly targets the Stayers Hurdle · excellent at 3 miles on testing ground · front-run tactics suit the Cheltenham hill · strong form angle',
-    'Teahupoo':            "Gordon Elliott / J. W. Kennedy · 2x Stayers' Hurdle champion (2023 & 2024) · skipped 2025 Festival — fresh and hungry to reclaim title · course & distance winner at highest level · multiple Grade 1 victories · relishes soft Cheltenham ground · powerful front-running style into the hill suits perfectly · Kennedy is Festival's most in-form jump jockey",
-    'Jonbon':              'Nicky Henderson / Nico de Boinville · 2x Arkle Trophy winner at Cheltenham · course & distance specialist · OR 166 — top-rated middle-distance chaser in training · Grade 1 winner Dec 2025 · Henderson/de Boinville at peak Festival sharpness · outstanding 4/1 value in a 9-runner field',
-    'Fact To File':        "Willie Mullins / Paul Townend · defending Ryanair Chase champion (2024 & 2025) · OR 174 — highest-rated runner in the race · Irish Gold Cup winner Feb 2026 · arrived at Festival in peak condition · Mullins/Townend remain unbeatable over 2m5f at Cheltenham",
-    'Supremely West':      'Dan Skelton / Bridget Andrews · Dan Skelton targeting this race all season · ran at this course in Oct 2025 (unlucky 3rd, carried 2lb less today) · 4/1 each-way in 26-runner field · progressive handicapper on the upgrade',
-    'Herakles Westwood':   'Tom Greatrex / Jamie Maguire · course & distance winner · 3 runs at Cheltenham in last 4 starts — course specialist · 9/1 each-way value in 26-runner Kim Muir · progressive form over fences',
+    'Bambino Fever':          'Willie Mullins / Mark Walsh · unbeaten mares novice hurdler · Grade 1 Festival profile · Mullins/Walsh have dominated the Mares Novices Hurdle · Cheltenham course form confirmed · odds-on favourite reflecting enormous stable confidence',
+    'Jordans Cross':          'Anthony Honeyball / William Twiston-Davies · course & distance winner at Cheltenham — Trials Day January 2026 · proven at 2m4f on soft ground · front-runner style ideally suits the stiff Cheltenham finish · knows this track inside out · big-field handicap specialist at exactly the right weight',
+    'Gold Dancer':            "Willie Mullins / A. McGuinness · Mullins rarely sends horses to Cheltenham without a serious chance · top weight 152 — highest OR in the race suggesting it's the best horse · 25/1 outstanding each-way value in a 17-runner Grade 2 · amateur rider claim adds intrigue · Mullins targeting Festival handicap with laser precision",
+    'Jade De Grugy':          "Willie Mullins / Paul Townend · trained by the world's champion trainer · Mullins/Townend Festival combo statistically unrivalled · Cheltenham specialist over hurdles · switch back from chasing guarantees freshness · tactical pace-setter role available · 11/4 each-way in a deep but winnable Mares Hurdle",
+    'Wodhooh':                'François Nicolle / Thomas Beaurain · 2x course & distance winner at Cheltenham over hurdles · proven at this exact venue, trip and discipline — hardest qualification to fake · Grade 3 Leopardstown win · arrived at the Festival in peak condition · form line runs through the best mares in training',
+    'Kabral Du Mathan':       'Dan Skelton / Bridget Andrews · course & distance winner in the Stayers Hurdle trip at Cheltenham · Dan Skelton ruthlessly targets this race every year — runs rarely, peaks here · front-run tactics ideally suit the relentless Cheltenham hill at 3 miles · excellent on testing soft-heavy ground · progressive OR on an upward curve',
+    'Teahupoo':               "Gordon Elliott / J. W. Kennedy · 2x Stayers' Hurdle champion (2023 & 2024) · deliberately skipped 2025 Festival to come back fresh — hungry to reclaim his crown · multiple Grade 1 victories over 3 miles · relishes soft Cheltenham ground · powerful front-running style perfectly suits the hill · Kennedy is the Festival's most in-form jockey · rivals cannot match his course & distance record",
+    'Jonbon':                 'Nicky Henderson / Nico de Boinville · 2x Arkle Trophy winner at Cheltenham — course specialist over 2m5f · OR 166 making him the top-rated horse in the Ryanair field on a pound-for-pound basis · Grade 1 winner December 2025 — career-best form · Henderson/de Boinville at peak Festival sharpness · outstanding value at 4/1 in a 9-runner field',
+    'Fact To File':           "Willie Mullins / Paul Townend · back-to-back Ryanair Chase champion (2024 AND 2025) — no horse in history has won three · OR 174 — highest official rating in the race · Irish Gold Cup winner February 2026 — arrived at the Festival in peak condition · Mullins/Townend are the most feared combination over 2m5f at Cheltenham",
+    'Supremely West':         'Dan Skelton / Bridget Andrews · Dan Skelton has targeted this race all season — runs to a plan · ran here in October 2025 (unlucky 3rd, carries 2lb less today) · 4/1 each-way in a 26-runner field — excellent handicap value · progressive chaser on the upgrade with each run · Skelton handicappers famously peak at the Festival',
+    'Gowel Road':             'Gavin Cromwell / Keith Donoghue · course & distance winner at Cheltenham — hardest qualification to fake · 59/1 each-way in a 26-runner Pertemps offering 6 places · Cheltenham specialist who returns to his favourite track · Cromwell patient placement strategy pays off in marathon handicaps · phenomenal each-way value',
+    'Herakles Westwood':      'Tom Greatrex / Jamie Maguire · course & distance winner · ran at Cheltenham 3 times in last 4 starts — knows every blade of grass · 9/1 each-way value in 26-runner Kim Muir offering 5 places · progressive form over fences · correct weight and trip for a big performance · Greatrex/Maguire quietly targeting this for months',
+    'Jeriko Du Reponet':      "Nicky Henderson / Derek O'Connor · 9/2 market favourite — bookmakers rate this the one to beat · top weight OR 145 — highest-rated horse in the Kim Muir · cheekpieces today — first time headgear change often triggers improvement · Henderson has outstanding Kim Muir record · Derek O'Connor is the most experienced amateur rider at the Festival",
     // ── Day 4 ────────────────────────────────────────────────────────────────
-    'Minella Study':       'Enda Bolger / Sean Flanagan · leading Irish Triumph Hurdle contender · Grade 1 form over hurdles · progressive 4yo with strong festival profile · 11/2 each-way value',
-    'Dinoblue':            'Willie Mullins / Paul Townend · 15/8 favourite — market has spoken · dominant over mares fences · Grade 1 form at the very top level · Mullins/Townend Festival machine',
-    'Jango Baie':          'Nicky Henderson / Nico de Boinville · 2025 Arkle Trophy winner at Cheltenham · course & distance winner · unbeaten at Grade 1 level over fences · 9/2 — outstanding each-way value for the Gold Cup',
-    'Gaelic Warrior':      "Willie Mullins / Ruby Walsh · defending Cheltenham Gold Cup champion (2025) · multiple Grade 1 chase wins · Mullins training genius at its peak · Gold Cup course & distance winner · 10/1 each-way — excellent each-way cover at a big price",
-    'Nurse Susan':         'Jonjo O\'Neill / Sean Bowen · 40/1 outsider with classic Martin Pipe profile · progressive maiden hurdler peaking at exactly the right time · Cheltenham form · Pipe/Martin targets confirmed for this race type historically',
+    'Minella Study':          'Enda Bolger / Sean Flanagan · leading Irish Triumph Hurdle contender · Grade 1 hurdle form as a 4yo · Bolger has trained multiple Festival winners · 11/2 each-way value in a 20-runner Triumph · progressive juvenile with the right profile for a big Festival run',
+    'Doctor Steinberg':       'Willie Mullins / Paul Townend · Mullins/Townend set to dominate the Albert Bartlett · staying novice hurdle profile — loves testing 3-mile ground · Grade 1 novice against rivals who have only run in smaller fields · Mullins novice hurdlers win this race at an extraordinary rate',
+    'Absurde':                'Francois Nicolle / Thomas Beaurain · progressive handicap hurdler · excellent each-way value at big price in the County Hurdle · Cheltenham form confirmed · horses trained in France often improve radically on fresh Cheltenham ground · model top-score in the competitive County field',
+    'Dinoblue':               'Willie Mullins / Paul Townend · 15/8 favourite — market has spoken emphatically · dominant over mares fences all season · Grade 1 form at the very top level · Mullins/Townend Festival machine never more dangerous than in the Mares Chase · has beaten every rival in training at some point',
+    'Jango Baie':             'Nicky Henderson / Nico de Boinville · 2025 Arkle Trophy winner at Cheltenham — course & distance winner at Grade 1 level · unbeaten at Grade 1 level over fences this season · stepping up to Gold Cup trip with every confidence · Henderson/de Boinville the outstanding Gold Cup trainer/jockey combination of their generation · 9/2 represents outstanding each-way Festival value',
+    'Gaelic Warrior':         "Willie Mullins / Ruby Walsh · defending Cheltenham Gold Cup champion (2025) · multiple Grade 1 chase wins · Mullins training genius at its absolute peak · Gold Cup course & distance winner — has done this before · 10/1 each-way provides exceptional cover defending the crown · Walsh returning for Festival is the significant stable signal",
+    'Nurse Susan':            "Jonjo O'Neill / Sean Bowen · progressive handicap hurdler with the classic profile Jonjo O'Neill uses for the Martin Pipe · lightly raced in maiden/novice company — not yet exposed · 40/1 each-way value with 6 places on offer in the marathon slog up the Cheltenham hill · Jonjo specifically keeps horses fresh for this slot",
+    'Sony Bill':              "Alan King / Tom Cannon · Alan King targets the Martin Pipe with surgical precision every year · course & distance form over the final-day slog · Tom Cannon has been in the form of his career this season · 3pt model advantage · each-way value at 7/1 in a wide-open handicap · King/Cannon combination underrated by the market",
   };
 
-  if (OVERRIDE_PREFIX[pick.horse]) {
-    return `${OVERRIDE_PREFIX[pick.horse]}${scoreText}${gapText}`;
+  if (PICKS[pick.horse]) {
+    return `${PICKS[pick.horse]}${scoreText}${gapText}`;
   }
 
-  const reasons = pick.reasons || [];
+  // Minimal fallback for any horse not yet in the curated list
   const parts = [];
-
-  // Trainer / jockey
-  if (pick.trainer && pick.jockey) {
-    parts.push(`${pick.trainer} / ${pick.jockey}`);
-  } else if (pick.trainer) {
-    parts.push(pick.trainer);
-  }
-
-  // Key scoring signals → plain English
-  const r = reasons.map(s => s.toLowerCase());
-  if (r.some(s => s.includes('defending')))           parts.push('defending champion');
-  if (r.some(s => s.includes('won this exact race'))) parts.push('has won this exact race before');
-  if (r.some(s => s.includes('festival winner') || s.includes('previous festival'))) parts.push('previous Festival winner');
-  if (r.some(s => s.includes('grade 1 winner')))      parts.push('Grade 1 winner');
-  if (r.some(s => s.includes('graded winner')))       parts.push('graded winner this season');
-  if (r.some(s => s.includes('unbeaten') || s.includes('4+ wins'))) parts.push('unbeaten run in form');
-  if (r.some(s => s.includes('3+ consecutive') || s.includes('4+ consecutive'))) parts.push('3+ consecutive wins');
-  else if (r.some(s => s.includes('2 consecutive'))) parts.push('2 consecutive wins');
-  if (r.some(s => s.includes('ground suits')))        parts.push('ground suits perfectly');
-  if (r.some(s => s.includes('strong market confidence') || s.includes('odds-on'))) parts.push('strongly backed in market');
-  if (r.some(s => s.includes('improving')))           parts.push('on the upgrade');
-  if (r.some(s => s.includes('finishes strongly')))   parts.push('finishes strongly — festival stamina');
-  if (r.some(s => s.includes('up in distance')))      parts.push('step up in distance suits');
-
-  // Score / gap context
-  const tier = (pick.tier || '');
-  if (tier.includes('A+'))      parts.push(`A+ ELITE — score ${score}`);
-  else if (tier.includes('A ') || tier.startsWith('A ')) parts.push(`A ELITE — score ${score}`);
-  else if (score > 0)           parts.push(`score ${score}`);
-  if (gap >= 20) parts.push(`dominant ${gap}pt lead over next rival`);
-  else if (gap >= 10) parts.push(`${gap}pt clear of next rival`);
-  else if (gap >= 5)  parts.push(`${gap}pt advantage`);
-
-  if (parts.length === 0) return null;
-  return parts.join(' · ');
+  if (pick.trainer && pick.jockey) parts.push(`${pick.trainer} / ${pick.jockey}`);
+  else if (pick.trainer) parts.push(pick.trainer);
+  if (score > 0) parts.push(`score ${score}`);
+  if (gap >= 5) parts.push(`${gap}pt clear of next rival`);
+  return parts.length > 0 ? parts.join(' · ') : null;
 }
 
 function App() {
