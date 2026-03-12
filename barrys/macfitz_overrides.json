@@ -168,13 +168,13 @@
       "active": true
     },
     "Pertemps Handicap Hurdle": {
-      "macfitz_horse": "Gowel Road",
-      "reason": "UPDATED 11/03/2026 recent_races scoring: Model now tops Staffordshire Knot (64pts CD winner 3m Cheltenham Jan 2026) with Supremely West (58pts) and Gowel Road (59/1, drifted from 20/1). KEEPING STRATEGIC SPLIT: SB=Supremely West (7/2 Betfair, 2lb lower than eye-catching Oct Cheltenham 3rd, Dan Skelton targeting this race). MF=Gowel Road (59/1, CD winner, Cheltenham specialist, 6-place E/W at big price in 26-runner field pays 6 places at 1/5 odds).",
-      "surebet_horse": "Supremely West",
-      "surebet_score": 50,
-      "macfitz_score": 54,
-      "gap": 4,
-      "decided": "2026-03-11",
+      "macfitz_horse": "Ace Of Spades",
+      "reason": "LIVE OVERRIDE 12/03/2026: Model top is Staffordshire Knot (64pts) but critical flaws for this race: OR 152 TOPWEIGHT (12-22lb more than most rivals), all form wins on heavy Irish mud, no C/D record. Ace Of Spades (62pts, +2 behind) is the handicap-intelligent pick: C/D winner (Cheltenham 2m7f qualifier Jan 2026), OR 139 well-treated, won on soft at Huntingdon Jan 2026. Rain+wind today further favours the course winner on a fair mark over a topweight with a ground question. BOTH SureBet and MacFitz switched to Ace Of Spades (9/1 EW, 6 places).",
+      "surebet_horse": "Ace Of Spades",
+      "surebet_score": 62,
+      "macfitz_score": 62,
+      "gap": 0,
+      "decided": "2026-03-12",
       "active": true
     }
   }
