@@ -119,27 +119,34 @@ RUNNER_NUMBERS: dict[str, int | str] = {
     "Be Aware":              4,  # Grand Annual 16:40 — 5/1 fav FitzMac split
     "Keep Him Company":     8,  # Champion Bumper 17:20 — Surebet
     "Quiryn":              21,  # Champion Bumper 17:20 — FitzMac split (Mullins/Townend, 4yo)
-    # Day 3 — St Patrick's Thursday (12 Mar) — fill in once declared
-    "Bambino Fever":        15,   # Mares Novices Hurdle 13:20 — SB banker (EVS fav, cloth #15)
-    "Sixmilebridge":        None,  # Jack Richards Novices' Chase 14:00 — SB banker
-    "Jade De Grugy":        None,  # Close Brothers Mares' Hurdle 14:40 — SB SPLIT
-    "Wodhooh":              None,  # Close Brothers Mares' Hurdle 14:40 — MF SPLIT
-    "Kabral Du Mathan":     None,  # Paddy Power Stayers' Hurdle 15:20 — SB SPLIT
-    "Teahupoo":             None,  # Paddy Power Stayers' Hurdle 15:20 — MF SPLIT
-    "Fact To File":         None,  # Ryanair Chase 16:00 — SB banker
-    "Supremely West":       None,  # Pertemps Handicap Hurdle 16:40 — SB SPLIT
-    "Gowel Road":           None,  # Pertemps Handicap Hurdle 16:40 — MF SPLIT
-    "Herakles Westwood":    None,  # Kim Muir Handicap Chase 17:20 — SB SPLIT
-    "Jeriko Du Reponet":    None,  # Kim Muir Handicap Chase 17:20 — MF SPLIT
-    # Day 4 — Gold Cup Day (13 Mar) — fill in once declared
-    "Minella Study":        None,  # JCB Triumph Hurdle 13:20 — SB banker
-    "Absurde":              None,  # County Hurdle 14:00 — SB banker
-    "Doctor Steinberg":     None,  # Albert Bartlett 14:40 — SB banker
-    "Dinoblue":             None,  # Mares' Chase 15:20 — SB banker
-    "Gaelic Warrior":       None,  # Gold Cup 16:00 — SB SPLIT
-    "Jango Baie":           None,  # Gold Cup 16:00 — MF SPLIT
-    "Nurse Susan":          None,  # Martin Pipe 17:20 — SB SPLIT
-    "Sony Bill":            None,  # Martin Pipe 17:20 — MF SPLIT
+    # Day 3 — St Patrick's Thursday (12 Mar) — confirmed from Betfair declared runners
+    "Bambino Fever":        3,    # Mares Novices Hurdle 13:20 — SB banker (11/10 fav, cloth #3)
+    "Oldschool Outlaw":     15,   # Mares Novices Hurdle 13:20 — cloth #15 (beat Bambino Fever Dec 25)
+    "Sixmilebridge":        2,    # Jack Richards Novices' Chase 14:00 — SB banker (5/1, cloth #2)
+    "Jade De Grugy":        3,    # Close Brothers Mares' Hurdle 14:40 — SB SPLIT (5/2, cloth #3)
+    "Wodhooh":              7,    # Close Brothers Mares' Hurdle 14:40 — MF SPLIT (EVS fav, cloth #7)
+    "Kabral Du Mathan":     9,    # Paddy Power Stayers' Hurdle 15:20 — SB SPLIT (5/1, cloth #9)
+    "Teahupoo":             11,   # Paddy Power Stayers' Hurdle 15:20 — MF SPLIT (7/2, cloth #11)
+    "Impose Toi":           8,    # Paddy Power Stayers' Hurdle 15:20 — cloth #8 (17/2)
+    "Fact To File":         3,    # Ryanair Chase 16:00 — SB banker (6/5 fav, cloth #3)
+    "Jonbon":               6,    # Ryanair Chase 16:00 — cloth #6 (4/1)
+    "Impaire Et Passe":     5,    # Ryanair Chase 16:00 — cloth #5 (11/2)
+    "Banbridge":            1,    # Ryanair Chase 16:00 — cloth #1 (8/1)
+    "Supremely West":       7,    # Pertemps Handicap Hurdle 16:40 — SB SPLIT (4/1, cloth #7)
+    "Gowel Road":           2,    # Pertemps Handicap Hurdle 16:40 — MF SPLIT (59/1, cloth #2)
+    "Staffordshire Knot":   1,    # Pertemps Handicap Hurdle 16:40 — model #1 (25/1, cloth #1)
+    "Herakles Westwood":    8,    # Kim Muir Handicap Chase 17:20 — SB SPLIT (11/1, cloth #8)
+    "Jeriko Du Reponet":    1,    # Kim Muir Handicap Chase 17:20 — MF SPLIT (9/2 fav, cloth #1)
+    # Day 4 — Gold Cup Day (13 Mar) — confirmed from Betfair declared runners
+    "Minella Study":        11,   # JCB Triumph Hurdle 13:20 — SB banker (11/2, cloth #11)
+    "Proactif":             15,   # JCB Triumph Hurdle 13:20 — cloth #15 (4/1 fav)
+    "Absurde":              2,    # County Hurdle 14:00 — SB banker (18/1, cloth #2)
+    "Doctor Steinberg":     2,    # Albert Bartlett 14:40 — SB banker (cloth #2)
+    "Dinoblue":             2,    # Mares' Chase 15:20 — SB banker (15/8 fav, cloth #2)
+    "Gaelic Warrior":       3,    # Gold Cup 16:00 — MF SPLIT (cloth #3)
+    "Jango Baie":           None, # Gold Cup 16:00 — SB SPLIT (cloth TBC)
+    "Nurse Susan":          2,    # Martin Pipe 17:20 — SB SPLIT (cloth #2)
+    "Sony Bill":            None, # Martin Pipe 17:20 — MF SPLIT (cloth TBC)
 }
 
 # ── tier cosmetics ─────────────────────────────────────────────────────────────

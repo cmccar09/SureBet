@@ -1987,14 +1987,14 @@ EXTRA_RACES = {
              ]},
         ]
     },
-    "day3_race5": {   # Ryanair Chase (Grade 1, 2m4f — 8 runners, Thu 12 Mar 16:00)
-        # UPDATED 11/03/2026: Jagwar NOT in this race — ran Day 1 Ultima Handicap Chase.
-        # Corrected 8-runner field: Fact To File, Panic Attack, Protektorat, Energumene,
-        # Better Days Ahead, Edwardstone, Master Chewy, Croke Park.
-        # Fact To File: 10/11 fav (drifted from 4/5), defending champion (won 2024 + 2025 Ryanair/Festival Trophy), Irish Gold Cup win Feb 2026.
+    "day3_race5": {   # Ryanair Chase (Grade 1, 2m4f — 9 runners, Thu 12 Mar 16:00)
+        # UPDATED 12/03/2026 from Betfair live declared field. Jonbon transferred from QMCC → Ryanair.
+        # NRs: Firefox, Romeo Coolio, Energumene, Il Etait Temps.
+        # Live prices (Betfair 12 Mar): Fact To File 6/5, Jonbon 4/1, Impaire Et Passe 11/2,
+        #   Banbridge 8/1, Heart Wood 15/1, Jpr One 49/1, Matata 84/1, Master Chewy 219/1.
         "entries": [
             {"name": "Fact To File", "trainer": "Willie Mullins", "jockey": "M. P. Walsh",
-             "odds": "10/11", "age": 9, "form": "31-4261", "rating": 174,
+             "odds": "6/5", "age": 9, "form": "31-4261", "rating": 174,
              "cheltenham_record": "CD winner",
              "last_run": "Won Irish Gold Cup Leopardstown 02 Feb 2026 (3m sft, beat top class field — back to best)", "days_off": 37,
              "recent_races": [
@@ -2002,19 +2002,85 @@ EXTRA_RACES = {
                  {"date": "26 Dec 25", "venue": "Kempton Park", "race": "3m Gd Ch (King George, 6th/8 — off day)", "pos": 6, "ran": 8},
                  {"date": "23 Nov 25", "venue": "Punchestown", "race": "2m3f 150yds Sft Ch (2nd to Gaelic Warrior)", "pos": 2, "ran": 10},
                  {"date": "29 Apr 25", "venue": "Punchestown", "race": "2m 98yds Gd Ch (4th)", "pos": 4, "ran": 6},
-                 {"date": "13 Mar 25", "venue": "Cheltenham", "race": "2m4f 127yds GS Ch (Ryanair/Festival Trophy WIN 2025)", "pos": 1, "ran": 9},
+                 {"date": "13 Mar 25", "venue": "Cheltenham", "race": "2m4f 127yds GS Ch (Ryanair WIN 2025 — back-to-back)", "pos": 1, "ran": 9},
                  {"date": "01 Feb 25", "venue": "Leopardstown", "race": "3m 70yds GS Ch (IGC 3rd)", "pos": 3, "ran": 10},
              ]},
+            {"name": "Jonbon", "trainer": "Nicky Henderson", "jockey": "Nico de Boinville",
+             "odds": "4/1", "age": 10, "form": "112221", "rating": 166,
+             "cheltenham_record": "CD winner",
+             "last_run": "Won Grade 1 Chase Kempton Dec 2025 — switched from QMCC to Ryanair Chase", "days_off": 72,
+             "recent_races": [
+                 {"date": "26 Dec 25", "venue": "Kempton Park", "race": "2m Gd Ch (Grade 1 WIN, beat top class)", "pos": 1, "ran": 6},
+                 {"date": "15 Nov 25", "venue": "Cheltenham", "race": "2m Gd Ch (2nd at course, close)", "pos": 2, "ran": 8},
+                 {"date": "11 Oct 25", "venue": "Chepstow", "race": "2m Ch (2nd Grade 2)", "pos": 2, "ran": 6},
+                 {"date": "12 Mar 25", "venue": "Cheltenham", "race": "2m Ch (2nd QMCC to Il Etait Temps)", "pos": 2, "ran": 12},
+                 {"date": "15 Feb 25", "venue": "Ascot", "race": "2m3f Gd Ch (1st Grade 1 Clarence House WIN)", "pos": 1, "ran": 8},
+                 {"date": "13 Mar 24", "venue": "Cheltenham", "race": "2m Ch (Won Arkle 2023 — back-to-back Festival wins)", "pos": 1, "ran": 9},
+             ]},
+            {"name": "Impaire Et Passe", "trainer": "Willie Mullins", "jockey": "B. J. Cooper",
+             "odds": "11/2", "age": 8, "form": "1b131", "rating": 160,
+             "cheltenham_record": None,
+             "last_run": "Won Grade 1 Chase Leopardstown 01 Feb 2026 (2m1f)", "days_off": 38,
+             "recent_races": [
+                 {"date": "01 Feb 26", "venue": "Leopardstown", "race": "2m1f Sft Ch (Grade 1 WIN)", "pos": 1, "ran": 8},
+                 {"date": "26 Dec 25", "venue": "Leopardstown", "race": "2m1f Sft Ch (3rd Grade 1)", "pos": 3, "ran": 9},
+                 {"date": "16 Nov 25", "venue": "Navan", "race": "2m1f GS Ch (1st Grade 3)", "pos": 1, "ran": 6},
+                 {"date": "12 Oct 25", "venue": "Tipperary", "race": "2m1f GS Ch (bd — bolted before start)", "pos": 0, "ran": 5},
+             ]},
+            {"name": "Banbridge", "trainer": "Joseph Patrick O'Brien", "jockey": "J. W. Kennedy",
+             "odds": "8/1", "age": 10, "form": "24471", "rating": 167,
+             "cheltenham_record": "CD winner",
+             "last_run": "Won Grade 2 Chase Leopardstown Jan 2026 (2m2f)", "days_off": 42,
+             "recent_races": [
+                 {"date": "11 Jan 26", "venue": "Leopardstown", "race": "2m2f Sft Ch (Grade 2 WIN)", "pos": 1, "ran": 7},
+                 {"date": "26 Dec 25", "venue": "Leopardstown", "race": "2m1f Sft Ch (7th/9 Grade 1)", "pos": 7, "ran": 9},
+                 {"date": "16 Nov 25", "venue": "Punchestown", "race": "2m5f GS Ch (4th Grade 1)", "pos": 4, "ran": 8},
+                 {"date": "12 Apr 25", "venue": "Aintree", "race": "2m4f Gd Ch (4th Grade 1 Melling)", "pos": 4, "ran": 8},
+                 {"date": "13 Mar 25", "venue": "Cheltenham", "race": "2m4f GS Ch (1st Ryanair Trial CD WIN)", "pos": 1, "ran": 9},
+             ]},
+            {"name": "Heart Wood", "trainer": "Henry de Bromhead", "jockey": "J. W. Kennedy",
+             "odds": "15/1", "age": 8, "form": "141p2", "rating": 160,
+             "cheltenham_record": None,
+             "last_run": "Won Grade 2 Chase Tramore Jan 2026 (2m6f)", "days_off": 70,
+             "recent_races": [
+                 {"date": "01 Jan 26", "venue": "Tramore", "race": "2m6f Sft Ch (Grade 2 WIN + beat Croke Park)", "pos": 1, "ran": 7},
+                 {"date": "15 Oct 25", "venue": "Punchestown", "race": "2m7f GS Ch (1st — beat Croke Park)", "pos": 1, "ran": 6},
+                 {"date": "26 Apr 25", "venue": "Punchestown", "race": "2m1f GS Ch (4th Grade 1)", "pos": 4, "ran": 8},
+                 {"date": "13 Mar 24", "venue": "Cheltenham", "race": "2m Ch (pulled up — unsuited by conditions)", "pos": 0, "ran": 12},
+             ]},
+            {"name": "Jpr One", "trainer": "Joe Tizzard", "jockey": "Brendan Powell",
+             "odds": "49/1", "age": 9, "form": "12335", "rating": 160,
+             "cheltenham_record": "CD winner",
+             "last_run": "5th Chase Jan 2026 (2m4f)", "days_off": 42,
+             "recent_races": [
+                 {"date": "18 Jan 26", "venue": "Cheltenham", "race": "2m4f Sft Ch (5th/6)", "pos": 5, "ran": 6},
+                 {"date": "02 Nov 25", "venue": "Cheltenham", "race": "2m4f GS Ch (3rd CD)", "pos": 3, "ran": 8},
+                 {"date": "19 Oct 25", "venue": "Kempton", "race": "2m Ch (3rd)", "pos": 3, "ran": 7},
+                 {"date": "28 Sep 25", "venue": "Naas", "race": "2m1f Gd Ch (2nd)", "pos": 2, "ran": 6},
+             ]},
+            {"name": "Matata", "trainer": "Nigel Twiston-Davies", "jockey": "Sam Twiston-Davies",
+             "odds": "84/1", "age": 8, "form": "37335", "rating": 160,
+             "cheltenham_record": "Course winner",
+             "last_run": "3rd Chase Jan 2026", "days_off": 42,
+             "recent_races": [
+                 {"date": "25 Jan 26", "venue": "Haydock", "race": "2m3f Sft Ch (5th OR155)", "pos": 5, "ran": 8},
+                 {"date": "30 Nov 25", "venue": "Newbury", "race": "2m3f GS Ch (3rd Grade 2)", "pos": 3, "ran": 7},
+             ]},
+            {"name": "Master Chewy", "trainer": "Nigel Twiston-Davies", "jockey": "Sam Twiston-Davies",
+             "odds": "219/1", "age": 9, "form": "527426", "rating": 154,
+             "cheltenham_record": None,
+             "last_run": "5th Chase Jan 2026", "days_off": 42,
+             "recent_races": [
+                 {"date": "25 Jan 26", "venue": "Haydock", "race": "2m3f Sft Ch (4th OR150)", "pos": 4, "ran": 8},
+             ]},
             {"name": "Croke Park", "trainer": "Gordon Elliott", "jockey": "J. W. Kennedy",
-             "odds": "100/1", "age": 8, "form": "27-3330", "rating": 150,
+             "odds": "?", "age": 8, "form": "27-3330", "rating": 150,
              "cheltenham_record": None,
              "last_run": "13th DRF Leopardstown 01 Feb 2026 (2m5f sft hdcp, 23 ran) — poor form all winter", "days_off": 38,
              "recent_races": [
                  {"date": "01 Feb 26", "venue": "Leopardstown", "race": "2m5f 107yds Sft Ch (DRF hdcp, 13/23)", "pos": 13, "ran": 23},
                  {"date": "01 Jan 26", "venue": "Tramore", "race": "2m6f 170yds Sft Ch (3rd behind Heart Wood)", "pos": 3, "ran": 7},
-                 {"date": "01 Nov 25", "venue": "Down Royal", "race": "2m3f 120yds GS Ch (3rd/5)", "pos": 3, "ran": 5},
                  {"date": "15 Oct 25", "venue": "Punchestown", "race": "2m7f 39yds GS Ch (3rd behind Heart Wood)", "pos": 3, "ran": 6},
-                 {"date": "03 Apr 25", "venue": "Aintree", "race": "2m3f 200yds Gd Ch (7th/9)", "pos": 7, "ran": 9},
              ]},
         ]
     },

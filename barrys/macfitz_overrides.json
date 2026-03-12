@@ -149,11 +149,11 @@
     },
     "Ryanair Chase": {
       "macfitz_horse": "Fact To File",
-      "reason": "DEACTIVATED 11/03/2026: Jagwar NOT running in Ryanair Chase (ran Day 1 Ultima Handicap Chase). Removed so model picks Fact To File as banker. Fact To File = 4/5 fav, defending champion 2024+2025, Irish Gold Cup Feb 2026, CD winner, OR=174.",
-      "surebet_horse": "Fact To File",
-      "surebet_score": 121,
-      "macfitz_score": 121,
-      "gap": 0,
+      "reason": "UPDATED 12/03/2026: Jonbon TRANSFERRED from QMCC → Ryanair Chase (4/1). Model now picks JONBON (score 142) over Fact To File (score 125) — +17pt gap. Jonbon: 2x Arkle CD winner, OR=166, Henderson/de Boinville, won G1 Dec 2025. Fact To File: defending champion 2024+2025, OR=174, Irish Gold Cup Feb 2026, 6/5 fav. INACTIVE — both players take Jonbon (model's clear #1). Reactivate for FTF split if wanted.",
+      "surebet_horse": "Jonbon",
+      "surebet_score": 142,
+      "macfitz_score": 125,
+      "gap": 17,
       "decided": "2026-03-11",
       "active": false
     },
