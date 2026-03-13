@@ -65,8 +65,8 @@ RACES = [
     # Day 4 — Gold Cup Day (Friday 13 March 2026)
     (4, "13:20", "JCB Triumph Hurdle",                 "JCB Triumph Hurdle",               "g1",   "G1",     "Gold Cup Day",          "Friday 13 March 2026"),
     (4, "14:00", "County Handicap Hurdle",             "County Handicap Hurdle",           "hcap", "Hcap",   "Gold Cup Day",          "Friday 13 March 2026"),
-    (4, "14:40", "Albert Bartlett Novices' Hurdle",    "Albert Bartlett Novices' Hurdle",  "g1",   "G1",     "Gold Cup Day",          "Friday 13 March 2026"),
-    (4, "15:20", "Mrs Paddy Power Mares' Chase",       "Mrs Paddy Power Mares' Chase",     "g2",   "G2",     "Gold Cup Day",          "Friday 13 March 2026"),
+    (4, "14:40", "Mrs Paddy Power Mares' Chase",       "Mrs Paddy Power Mares' Chase",     "g2",   "G2",     "Gold Cup Day",          "Friday 13 March 2026"),
+    (4, "15:20", "Albert Bartlett Novices' Hurdle",    "Albert Bartlett Novices' Hurdle",  "g1",   "G1",     "Gold Cup Day",          "Friday 13 March 2026"),
     (4, "16:00", "Cheltenham Gold Cup",                "Cheltenham Gold Cup",              "g1",   "G1",     "Gold Cup Day",          "Friday 13 March 2026"),
     (4, "16:40", "St James's Place Hunters' Chase",    "St James's Place Hunters' Chase",  "hunt", "Hunter", "Gold Cup Day",          "Friday 13 March 2026"),
     (4, "17:20", "Martin Pipe Handicap Hurdle",        "Martin Pipe Handicap Hurdle",      "hcap", "Hcap",   "Gold Cup Day",          "Friday 13 March 2026"),
