@@ -150,7 +150,7 @@ RUNNER_NUMBERS: dict[str, int | str] = {
     "Ndaawi":               1,    # County Hurdle 14:00 — MF SPLIT (28/1, cloth #1)
     "Dinoblue":             2,    # Mares' Chase 14:40 — SB banker (21/10 fav, cloth #2)
     "Panic Attack":         7,    # Mares' Chase 14:40 — MF SPLIT (11/4, cloth #7)
-    "Doctor Steinberg":     1,    # Albert Bartlett 15:20 — BOTH banker (3/1 fav, cloth #1 by entry)
+    "Doctor Steinberg":     2,    # Albert Bartlett 15:20 — BOTH banker (3/1 fav, cloth #2)
     "Gaelic Warrior":       3,    # Gold Cup 16:00 — MF SPLIT (7/2 fav, cloth #3)
     "Jango Baie":           8,    # Gold Cup 16:00 — SB SPLIT (4/1, cloth #8)
     "Wonderwall":          23,    # Hunters' Chase 16:40 — SB SPLIT (17/2, cloth #23)
