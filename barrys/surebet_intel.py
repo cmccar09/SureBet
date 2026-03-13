@@ -2924,6 +2924,7 @@ EXTRA_RACES = {
     },
     "day4_race7": {   # Martin Pipe Conditional Jockeys' Handicap Hurdle  (2m179yds — 54 runners, Fri 13 Mar 17:20)
         # UPDATED 09/03/2026: Top-OR runners added from official Friday racecard
+        # UPDATED 13/03/2026: Sony Bill NOT DECLARED (NR). Kel Histoire is actual MF pick at 4/1 (was 16/1)
         "entries": [
             {"name": "Its Bilbo", "trainer": "Henry De Bromhead", "jockey": "TBD",
              "odds": "8/1", "age": 6, "form": "1-2-1-3", "rating": 141,
@@ -2966,7 +2967,7 @@ EXTRA_RACES = {
              "cheltenham_record": None,
              "last_run": "Won Conditional Handicap Hurdle Jan 2026", "days_off": 42},
             {"name": "Kel Histoire", "trainer": "Willie Mullins", "jockey": "Mark Walsh",
-             "odds": "16/1", "age": 6, "form": "4-3-4-18", "rating": 129,
+             "odds": "4/1", "age": 6, "form": "4-3-4-18", "rating": 129,
              "cheltenham_record": None,
              "last_run": "Won Handicap Jan 2026", "days_off": 42},
             {"name": "He Can't Dance", "trainer": "Gordon Elliott", "jockey": "Jack Kennedy",
