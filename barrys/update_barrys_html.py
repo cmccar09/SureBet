@@ -531,6 +531,26 @@ CSS = r"""
   .pb-reason{font-size:.72rem;color:var(--muted);line-height:1.45;margin-top:2px;}
   .pb-outsider-tag{display:inline-block;font-size:.63rem;background:rgba(188,140,255,.15);color:var(--purple);border:1px solid rgba(188,140,255,.3);border-radius:4px;padding:1px 6px;font-weight:700;margin-right:4px;letter-spacing:.3px;vertical-align:middle;}
   .pb-arc{font-size:.7rem;color:var(--purple);font-style:italic;margin-top:2px;}
+  .pb-exch{display:inline-block;font-size:.65rem;font-weight:600;padding:1px 6px;border-radius:4px;background:rgba(139,148,158,.12);color:var(--muted);border:1px solid rgba(139,148,158,.25);margin-left:4px;white-space:nowrap;}
+  .pb-exch-value{display:inline-block;font-size:.65rem;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(63,185,80,.18);color:var(--green);border:1px solid rgba(63,185,80,.45);margin-left:4px;white-space:nowrap;}
+  .pb-exch-signal{display:inline-block;font-size:.65rem;font-weight:700;padding:1px 6px;border-radius:4px;background:rgba(210,153,34,.18);color:var(--orange);border:1px solid rgba(210,153,34,.45);margin-left:4px;white-space:nowrap;}
+  .pb-exch-suspended{display:inline-block;font-size:.65rem;padding:1px 6px;border-radius:4px;background:rgba(139,148,158,.08);color:rgba(139,148,158,.5);border:1px dashed rgba(139,148,158,.2);margin-left:4px;white-space:nowrap;}
+  /* ── SureBet Best Picks panel ── */
+  .sbp-panel{max-width:1100px;margin:0 auto 24px;padding:0 32px;}
+  .sbp-box{background:linear-gradient(135deg,#0d1a2a 0%,#0d1117 100%);border:2px solid var(--gold);border-radius:12px;padding:20px 24px;}
+  .sbp-box h2{font-size:1.05rem;color:var(--gold);font-weight:700;letter-spacing:.5px;margin:0 0 16px;display:flex;align-items:center;gap:8px;}
+  .sbp-grid{display:grid;grid-template-columns:55px 1fr 1fr 1fr;gap:0;border-radius:8px;overflow:hidden;border:1px solid rgba(139,148,158,.15);}
+  .sbp-header{background:rgba(139,148,158,.1);font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);padding:6px 10px;}
+  .sbp-cell{font-size:.8rem;padding:7px 10px;border-top:1px solid rgba(139,148,158,.08);color:var(--fg);}
+  .sbp-cell.time{color:var(--gold);font-weight:700;font-size:.78rem;}
+  .sbp-cell.horse{font-weight:700;color:#e6edf3;}
+  .sbp-cell.odds{color:var(--green);font-weight:600;}
+  .sbp-cell.note{color:var(--muted);font-size:.72rem;}
+  .sbp-badge{display:inline-block;font-size:.6rem;padding:1px 5px;border-radius:3px;font-weight:700;margin-right:3px;vertical-align:middle;}
+  .sbp-badge.banker{background:rgba(63,185,80,.2);color:var(--green);border:1px solid rgba(63,185,80,.4);}
+  .sbp-badge.cd{background:rgba(88,166,255,.15);color:var(--blue);border:1px solid rgba(88,166,255,.3);}
+  .sbp-badge.value{background:rgba(210,153,34,.2);color:var(--orange);border:1px solid rgba(210,153,34,.4);}
+  .sbp-badge.signal{background:rgba(236,105,65,.2);color:#f0876a;border:1px solid rgba(236,105,65,.4);}
   /* ── Submission Numbers panel ── */
   .submission-panel{max-width:1100px;margin:0 auto 24px;padding:0 32px;}
   .submission-box{background:linear-gradient(135deg,#0a1a0a 0%,#0d1117 100%);border:2px solid var(--green);border-radius:12px;padding:20px 24px;}
@@ -615,11 +635,25 @@ def _build_personal_bets_html() -> str:
             # Truncate reason to reasonable length
             reason_short = reason[:220] + "..." if len(reason) > 220 else reason
 
+            # Betfair exchange price display
+            exch_dec  = b.get("betfair_exchange")
+            exch_note = b.get("betfair_note", "")
+            if exch_dec is not None:
+                exch_frac  = f"{exch_dec - 1:.1f}/1".rstrip("0").rstrip(".")
+                value_flag = "VALUE" in exch_note.upper()
+                signal_flag = "SIGNAL" in exch_note.upper() or "FAVOURITE" in exch_note.upper()
+                exch_cls   = "pb-exch-value" if value_flag else ("pb-exch-signal" if signal_flag else "pb-exch")
+                exch_html  = (f' <span class="{exch_cls}" title="{exch_note}">'
+                              f'&#128260; BF {exch_dec}</span>')
+            else:
+                exch_html = ' <span class="pb-exch-suspended">BF susp.</span>'
+
             bet_cards.append(
                 f'<div class="pb-bet {css_bet}">'
                 f'<div><span class="pb-horse">{horse}</span>'
                 f' <span class="pb-odds {css_odds}">{odds}</span>'
                 f' <span class="pb-type {css_type}">{btype}</span>'
+                f'{exch_html}'
                 f'</div>'
                 f'<div>{outsider_tag}<span class="pb-reason">{reason_short}</span></div>'
                 f'</div>'
@@ -649,6 +683,118 @@ def _build_personal_bets_html() -> str:
       <span style="font-size:.75rem;font-weight:400;color:var(--muted);margin-left:8px;">{total_bets} bets incl. {outsider_count} improving outsiders &middot; Updated {last_upd}</span>
     </h2>
     {chr(10).join(race_blocks)}
+  </div>
+</div>"""
+
+
+def _build_surebet_picks_html() -> str:
+    """Build the SureBet Best Picks for today panel — Gold Cup Day 2026."""
+    # Static data for Day 4 Gold Cup Day — SureBet's selections per race
+    # Betfair exchange decimal prices (live 10:08 UTC 13 Mar 2026)
+    picks = [
+        {
+            "time": "13:20",
+            "race": "JCB Triumph Hurdle",
+            "horse": "Minella Study",
+            "cloth": 11,
+            "bf_dec": 7.8,
+            "reason": "C+D winner Dec 2025 (only such form). Timeform #1 &#9733;&#9733;&#9733;&#9733;&#9733;",
+            "badges": ["cd"],
+        },
+        {
+            "time": "14:00",
+            "race": "County Handicap Hurdle",
+            "horse": "Absurde",
+            "cloth": 2,
+            "bf_dec": 30.0,
+            "reason": "2024 County winner. Sussex Champ Hurdle Apr 25. C+D course specialist",
+            "badges": ["cd"],
+        },
+        {
+            "time": "14:40",
+            "race": "Mares&#x27; Chase",
+            "horse": "Dinoblue",
+            "cloth": 2,
+            "bf_dec": 3.15,
+            "reason": "9&#215; C+D course winner. Exchange favourite 2/1. Timeform #2 &#9733;&#9733;&#9733;&#9733;&#9733;",
+            "badges": ["cd"],
+        },
+        {
+            "time": "15:20",
+            "race": "Albert Bartlett",
+            "horse": "Doctor Steinberg",
+            "cloth": 1,
+            "bf_dec": 3.9,
+            "reason": "BANKER &#8212; DB gap 27pts (largest of Festival). 3/3 hurdles. Townend. Timeform #2 &#9733;&#9733;&#9733;&#9733;&#9733;",
+            "badges": ["banker"],
+        },
+        {
+            "time": "16:00",
+            "race": "Cheltenham Gold Cup",
+            "horse": "Jango Baie",
+            "cloth": 8,
+            "bf_dec": 4.6,
+            "reason": "SureBet #1. Timeform #1 &#9733;&#9733;&#9733;&#9733;&#9733;. BF 4.6 (3.6/1). King George 4th. Gap=1 vs Gaelic Warrior",
+            "badges": ["signal"],
+        },
+        {
+            "time": "16:40",
+            "race": "Hunters&#x27; Chase",
+            "horse": "Wonderwall",
+            "cloth": 7,
+            "bf_dec": 10.5,
+            "reason": "Defending champion. Won point Nov 2025 (fresh+first). Patrick Mullins rides",
+            "badges": ["cd"],
+        },
+        {
+            "time": "17:20",
+            "race": "Martin Pipe Handicap",
+            "horse": "Nurse Susan",
+            "cloth": 2,
+            "bf_dec": None,
+            "reason": "C+D advantage. Cloth #2 (historically powerful). Market suspended pre-race",
+            "badges": ["cd"],
+        },
+    ]
+
+    badge_map = {
+        "banker": '<span class="sbp-badge banker">BANKER</span>',
+        "cd":     '<span class="sbp-badge cd">C+D</span>',
+        "value":  '<span class="sbp-badge value">VALUE</span>',
+        "signal": '<span class="sbp-badge signal">&#9650; SIGNAL</span>',
+    }
+
+    rows = [
+        '<div class="sbp-header">Time</div>'
+        '<div class="sbp-header">SureBet Pick</div>'
+        '<div class="sbp-header">BF Exchange</div>'
+        '<div class="sbp-header">Notes</div>'
+    ]
+    for p in picks:
+        # Betfair odds string
+        if p["bf_dec"] is not None:
+            frac = f"{p['bf_dec'] - 1:.1f}/1"
+            bf_str = f"{p['bf_dec']} ({frac})"
+        else:
+            bf_str = "Susp."
+
+        badge_html = "".join(badge_map.get(b, "") for b in p["badges"])
+        rows.append(
+            f'<div class="sbp-cell time">{p["time"]}</div>'
+            f'<div class="sbp-cell horse">{badge_html}#{p["cloth"]} {p["horse"]}</div>'
+            f'<div class="sbp-cell odds">{bf_str}</div>'
+            f'<div class="sbp-cell note">{p["reason"]}</div>'
+        )
+
+    grid_html = "\n".join(rows)
+    return f"""<div class="sbp-panel">
+  <div class="sbp-box">
+    <h2>&#127919; SureBet Best Picks &mdash; Gold Cup Day
+      <span style="font-size:.75rem;font-weight:400;color:var(--muted);margin-left:8px;">7 races &middot; Betfair Exchange prices live 10:08 UTC</span>
+    </h2>
+    <div class="sbp-grid">
+{grid_html}
+    </div>
   </div>
 </div>"""
 
@@ -967,8 +1113,9 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
     # ── Submission Numbers panel ───────────────────────────────────────────────
     submission_html = _build_submission_html(assembled)
 
-    # ── Personal Bets panel ───────────────────────────────────────────────────
+    # ── Personal Bets + SureBet Best Picks panels ─────────────────────────────
     personal_bets_html = _build_personal_bets_html()
+    surebet_picks_html = _build_surebet_picks_html()
 
     html = f"""<!DOCTYPE html>
 <html lang="en">
@@ -1048,6 +1195,8 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
 </div>
 
 </div>
+
+{surebet_picks_html}
 
 {personal_bets_html}
 
