@@ -152,7 +152,7 @@ RUNNER_NUMBERS: dict[str, int | str] = {
     "Panic Attack":         2,    # Mares' Chase 14:40 — MF SPLIT (11/4, cloth #2 by entry)
     "Doctor Steinberg":     1,    # Albert Bartlett 15:20 — BOTH banker (3/1 fav, cloth #1 by entry)
     "Gaelic Warrior":       3,    # Gold Cup 16:00 — MF SPLIT (7/2 fav, cloth #3)
-    "Jango Baie":           2,    # Gold Cup 16:00 — SB SPLIT (4/1, cloth #2 by entry)
+    "Jango Baie":           8,    # Gold Cup 16:00 — SB SPLIT (4/1, cloth #8)
     "Wonderwall":           7,    # Hunters' Chase 16:40 — SB SPLIT (17/2, cloth #7 by entry)
     "Its On The Line":      4,    # Hunters' Chase 16:40 — MF SPLIT (5/1 fav, cloth #4 by entry)
     "Nurse Susan":          2,    # Martin Pipe 17:20 — SB SPLIT (25/1, cloth #2)
