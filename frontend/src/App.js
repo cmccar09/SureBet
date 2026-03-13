@@ -582,6 +582,130 @@ function CheltenhamView({ apiUrl }) {
         );
       })()}
 
+      {/* ── PERSONAL BETS — Gold Cup Day ── */}
+      {(() => {
+        const now_pb = new Date();
+        // Only show on Gold Cup Day (Fri 13 Mar)
+        if (now_pb < new Date('2026-03-13T00:00:00') || now_pb > new Date('2026-03-13T23:59:59')) return null;
+        const races_pb = [
+          {
+            time: '13:20', race: 'JCB Triumph Hurdle',
+            bets: [
+              { horse: 'Highland Crystal', odds: '15/2',  type: 'WIN', bf: 8.4,  note: 'Saratoga franking chain (Fred Winter winner). Elliott/Kennedy. 3/3 unbeaten.' },
+            ],
+          },
+          {
+            time: '14:00', race: 'County Handicap Hurdle',
+            bets: [
+              { horse: 'Ndaawi',  odds: '28/1', type: 'EW', bf: 48.0, value: true, note: 'VALUE: BF 47/1 vs bookie 28/1 — USE BETFAIR. 2025 County runner-up; Kargese franking chain.' },
+            ],
+          },
+          {
+            time: '14:40', race: "Mares' Chase",
+            bets: [
+              { horse: 'Panic Attack',   odds: '11/4',  type: 'WIN', bf: 3.85, note: 'Won exact C+D (Paddy Power Gold Cup). 4/4 over fences for new yard. Skelton/Skelton.' },
+              { horse: 'Telepathique',   odds: '50/1',  type: 'EW',  bf: 55.0, note: 'OUTSIDER — 2nd to Spindleberry Leopardstown; soft specialist; 4 EW places.' },
+            ],
+          },
+          {
+            time: '15:20', race: 'Albert Bartlett Novices Hurdle',
+            bets: [
+              { horse: 'Doctor Steinberg', odds: '3/1',  type: 'WIN', bf: 3.9,  banker: true, note: 'BANKER — 27pt DB gap (largest of Festival). Won DRF Grade 1 x8 lengths. Townend.' },
+              { horse: 'Moneygarrow',      odds: '14/1', type: 'EW',  bf: 16.5, note: 'OUTSIDER — 3-race peaking arc. Wind op unlocked. Course form Nov 2025. Skelton.' },
+              { horse: 'Spinningayarn',    odds: '16/1', type: 'EW',  bf: 17.0, note: 'OUTSIDER — 3-win unbeaten sequence. "3m is a major plus on pedigree." Elliott/Kennedy.' },
+              { horse: 'Ubatuba',          odds: '33/1', type: 'EW',  bf: 38.0, value: true, note: 'VALUE OUTSIDER: BF 37/1 vs bookie 33/1. G2 Haydock 3m placed Feb. Stamina proven.' },
+            ],
+          },
+          {
+            time: '16:00', race: 'Cheltenham Gold Cup',
+            bets: [
+              { horse: 'Gaelic Warrior',  odds: '7/2',  type: 'WIN', bf: 4.4,  note: 'Exchange fav. Mullins/Townend. Fact To File franking (Ryanair winner Thu). Soft specialist.' },
+              { horse: 'Haiti Couleurs',  odds: '7/1',  type: 'EW',  bf: 7.8,  note: 'OUTSIDER — perfect 3-win peaking arc. Denman Chase winner (historic Gold Cup trial).' },
+            ],
+          },
+          {
+            time: '16:40', race: "Hunters' Chase",
+            bets: [
+              { horse: 'Its On The Line', odds: '5/1',  type: 'WIN', bf: 5.7,  signal: true, note: 'SIGNAL: Exchange FAVOURITE 4.7/1. Bridesmaid 3x; won Down Royal Dec vs today\'s rivals.' },
+              { horse: 'Golden Son',      odds: '14/1', type: 'EW',  bf: 17.5, note: 'OUTSIDER — 2-win arc (Warwick+Taunton). Nicholls 4x winners here. 4 EW places.' },
+              { horse: 'Stattler',        odds: '16/1', type: 'EW',  bf: 19.5, note: 'OUTSIDER — Festival winner here 4yrs ago. P.W. Mullins. Cheekpieces first time.' },
+              { horse: 'Panda Boy',       odds: '11/2', type: 'EW',  bf: 6.2,  note: 'OUTSIDER — arc 8/U/3/1/1. 2-win hunter sequence. Grand National form.' },
+            ],
+          },
+          {
+            time: '17:20', race: 'Martin Pipe Handicap',
+            bets: [
+              { horse: 'Kel Histoire',  odds: '4/1',  type: 'WIN', bf: null, note: '16/1→4/1 move. Trip upgrade angle (2m4f first time). Mullins target. Market suspended.' },
+              { horse: 'Roc Dino',      odds: '11/1', type: 'EW',  bf: null, note: 'OUTSIDER — Supreme-frankened form. Lightest mark OR131. 5 EW places.' },
+              { horse: 'Open Secret',   odds: '25/1', type: 'EW',  bf: null, note: 'OUTSIDER — Thurles prep = Elliott Martin Pipe pattern 2017 & 2018. C+D form.' },
+              { horse: 'Stede Bonnet',  odds: '20/1', type: 'EW',  bf: null, note: 'OUTSIDER — 2-win arc Tramore+Ayr. Elliott. Handicap debut.' },
+              { horse: 'Andashan',      odds: '18/1', type: 'EW',  bf: null, note: 'OUTSIDER — won last time out at right trip. D symbol. Improving 6yo OR133.' },
+            ],
+          },
+        ];
+        return (
+          <div style={{
+            background: 'linear-gradient(135deg,#0d1117 0%,#1a1030 60%,#0d1117 100%)',
+            border: '2px solid #7c3aed',
+            borderRadius: '12px',
+            padding: '18px 22px',
+            marginBottom: '20px',
+          }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', letterSpacing: '1.5px', textTransform: 'uppercase', color: '#a78bfa', marginBottom: '3px' }}>
+              🎲 Personal Bets — Gold Cup Day
+            </div>
+            <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', marginBottom: '16px' }}>
+              19 bets · Betfair exchange prices live · 🟢 VALUE = BF better than bookie · ⚡ SIGNAL = BF fav
+            </div>
+            {races_pb.map(r => (
+              <div key={r.time} style={{ marginBottom: '14px' }}>
+                <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#d97706', marginBottom: '7px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ background: 'rgba(217,119,6,0.15)', border: '1px solid rgba(217,119,6,0.4)', borderRadius: '5px', padding: '1px 7px' }}>{r.time}</span>
+                  <span style={{ color: 'rgba(255,255,255,0.6)', textTransform: 'none', letterSpacing: 'normal', fontSize: '12px', fontWeight: '600' }}>{r.race}</span>
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {r.bets.map(b => {
+                    const isWin = b.type === 'WIN';
+                    const borderCol  = b.banker ? '#f59e0b' : b.signal ? '#f97316' : b.value ? '#10b981' : isWin ? '#34d399' : '#60a5fa';
+                    const bgCol      = b.banker ? 'rgba(245,158,11,0.08)' : b.signal ? 'rgba(249,115,22,0.08)' : b.value ? 'rgba(16,185,129,0.07)' : 'rgba(255,255,255,0.04)';
+                    const oddsCol    = isWin ? '#34d399' : '#60a5fa';
+                    const bfLabel    = b.bf != null
+                      ? (b.value ? `🟢 BF ${b.bf}` : b.signal ? `⚡ BF ${b.bf}` : `BF ${b.bf}`)
+                      : 'BF susp.';
+                    const bfCol      = b.bf != null ? (b.value ? '#34d399' : b.signal ? '#fb923c' : 'rgba(255,255,255,0.4)') : 'rgba(255,255,255,0.2)';
+                    return (
+                      <div key={b.horse} style={{
+                        background: bgCol,
+                        border: `1px solid ${borderCol}44`,
+                        borderLeft: `3px solid ${borderCol}`,
+                        borderRadius: '8px',
+                        padding: '10px 14px',
+                        minWidth: '260px',
+                        flex: '1 1 260px',
+                        maxWidth: '380px',
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '7px', flexWrap: 'wrap', marginBottom: '5px' }}>
+                          {b.banker && <span style={{ background: '#f59e0b', color: '#000', fontSize: '9px', fontWeight: '800', padding: '1px 6px', borderRadius: '3px', letterSpacing: '0.5px' }}>BANKER</span>}
+                          {b.signal && <span style={{ background: '#f97316', color: '#fff', fontSize: '9px', fontWeight: '800', padding: '1px 6px', borderRadius: '3px', letterSpacing: '0.5px' }}>⚡SIGNAL</span>}
+                          <span style={{ color: 'white', fontWeight: '700', fontSize: '15px' }}>{b.horse}</span>
+                          <span style={{ color: oddsCol, fontWeight: '800', fontSize: '14px' }}>{b.odds}</span>
+                          <span style={{ color: isWin ? '#34d399' : '#93c5fd', fontSize: '10px', fontWeight: '700', background: isWin ? 'rgba(52,211,153,0.12)' : 'rgba(96,165,250,0.12)', border: isWin ? '1px solid rgba(52,211,153,0.3)' : '1px solid rgba(96,165,250,0.3)', borderRadius: '3px', padding: '1px 5px' }}>{b.type}</span>
+                          <span style={{ color: bfCol, fontSize: '11px', marginLeft: '2px' }}>{bfLabel}</span>
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.4' }}>{b.note}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+            <div style={{ marginTop: '6px', fontSize: '10px', color: 'rgba(255,255,255,0.3)', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '8px' }}>
+              ⚠ For entertainment purposes · Always verify odds before placing · Betfair exchange prices as of 10:08 UTC
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Picks Summary Banner */}
       {Object.keys(cheltenhamPicks).length > 0 && (
         <div style={{
