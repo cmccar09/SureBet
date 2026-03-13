@@ -585,8 +585,8 @@ function CheltenhamView({ apiUrl }) {
       {/* ── PERSONAL BETS — Gold Cup Day ── */}
       {(() => {
         const now_pb = new Date();
-        // Only show on Gold Cup Day (Fri 13 Mar)
-        if (now_pb < new Date('2026-03-13T00:00:00') || now_pb > new Date('2026-03-13T23:59:59')) return null;
+        // Show from Gold Cup Day onwards (final day of festival)
+        if (now_pb < new Date('2026-03-13T00:00:00')) return null;
         const races_pb = [
           {
             time: '13:20', race: 'JCB Triumph Hurdle',
