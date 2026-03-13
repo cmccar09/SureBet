@@ -24,12 +24,13 @@ sys.path.insert(0, str(ROOT))
 import boto3
 
 # ── file paths ────────────────────────────────────────────────────────────────
-HERE            = pathlib.Path(__file__).resolve().parent
-OVERRIDES_FILE  = HERE / "macfitz_overrides.json"
-RESULTS_FILE    = HERE / "race_results.json"
-HTML_OUT        = HERE / "barrys_cheltenham_2026.html"
-PICKS_TABLE     = "CheltenhamPicks"
-REGION          = "eu-west-1"
+HERE              = pathlib.Path(__file__).resolve().parent
+OVERRIDES_FILE    = HERE / "macfitz_overrides.json"
+RESULTS_FILE      = HERE / "race_results.json"
+PERSONAL_BETS_FILE = HERE / "personal_bets.json"
+HTML_OUT          = HERE / "barrys_cheltenham_2026.html"
+PICKS_TABLE       = "CheltenhamPicks"
+REGION            = "eu-west-1"
 
 # ── scoring ──────────────────────────────────────────────────────────────────
 POINTS = {1: 10, 2: 5, 3: 3}  # position → points
@@ -501,6 +502,29 @@ CSS = r"""
   .pick-body{flex:1;}
   .day-divider{font-size:.72rem;color:var(--muted);padding:10px 0 8px;border-bottom:1px solid var(--border);margin:6px 0;}
   .footer{text-align:center;padding:20px;border-top:1px solid var(--border);color:var(--muted);font-size:.8rem;}
+  /* ── Personal Bets Panel ── */
+  .pb-panel{max-width:1100px;margin:0 auto 28px;padding:0 32px;}
+  .pb-box{background:linear-gradient(135deg,#0a0d14 0%,#0d1117 100%);border:2px solid #c9a84c;border-radius:12px;padding:20px 24px;}
+  .pb-box h2{font-size:1.05rem;color:var(--gold2);font-weight:700;letter-spacing:.5px;margin-bottom:18px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(201,168,76,.25);padding-bottom:10px;}
+  .pb-race-block{margin-bottom:18px;}
+  .pb-race-header{display:flex;align-items:baseline;gap:10px;margin-bottom:8px;}
+  .pb-time{background:var(--gold);color:#0d1117;font-size:.72rem;font-weight:800;padding:2px 8px;border-radius:4px;letter-spacing:.5px;white-space:nowrap;}
+  .pb-race-name{font-size:.88rem;font-weight:600;color:var(--text);}
+  .pb-bets{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px;}
+  .pb-bet{display:flex;flex-direction:column;gap:3px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:8px 12px;min-width:180px;max-width:340px;flex:1;}
+  .pb-bet.win-bet{border-color:rgba(63,185,80,.5);background:rgba(63,185,80,.06);}
+  .pb-bet.ew-bet{border-color:rgba(88,166,255,.4);background:rgba(88,166,255,.05);}
+  .pb-bet.outsider-bet{border-color:rgba(188,140,255,.4);background:rgba(188,140,255,.04);}
+  .pb-horse{font-size:.9rem;font-weight:700;color:var(--text);}
+  .pb-odds{font-size:.82rem;font-weight:700;margin-left:4px;}
+  .pb-odds.win-odds{color:var(--green);}
+  .pb-odds.ew-odds{color:var(--blue);}
+  .pb-type{display:inline-block;font-size:.65rem;font-weight:700;padding:1px 6px;border-radius:4px;letter-spacing:.5px;white-space:nowrap;}
+  .pb-type.win-type{background:rgba(63,185,80,.2);color:var(--green);border:1px solid rgba(63,185,80,.4);}
+  .pb-type.ew-type{background:rgba(88,166,255,.15);color:var(--blue);border:1px solid rgba(88,166,255,.3);}
+  .pb-reason{font-size:.72rem;color:var(--muted);line-height:1.45;margin-top:2px;}
+  .pb-outsider-tag{display:inline-block;font-size:.63rem;background:rgba(188,140,255,.15);color:var(--purple);border:1px solid rgba(188,140,255,.3);border-radius:4px;padding:1px 6px;font-weight:700;margin-right:4px;letter-spacing:.3px;vertical-align:middle;}
+  .pb-arc{font-size:.7rem;color:var(--purple);font-style:italic;margin-top:2px;}
   /* ── Submission Numbers panel ── */
   .submission-panel{max-width:1100px;margin:0 auto 24px;padding:0 32px;}
   .submission-box{background:linear-gradient(135deg,#0a1a0a 0%,#0d1117 100%);border:2px solid var(--green);border-radius:12px;padding:20px 24px;}
@@ -546,6 +570,81 @@ CSS = r"""
   .pts-pending{color:rgba(139,148,158,.45);font-style:italic;}
   @media(max-width:768px){.strategy-grid,.summary-grid{grid-template-columns:1fr;}.score-header{flex-direction:column;text-align:center;}}
 """
+
+
+def _build_personal_bets_html() -> str:
+    """Build the personal bets / improving outsiders panel from personal_bets.json."""
+    if not PERSONAL_BETS_FILE.exists():
+        return ""
+    try:
+        data = json.loads(PERSONAL_BETS_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+
+    races = data.get("races", [])
+    if not races:
+        return ""
+
+    race_blocks = []
+    for r in races:
+        time_str  = r.get("time", "")
+        race_name = r.get("race", "")
+        bets      = r.get("bets", [])
+        if not bets:
+            continue
+
+        bet_cards = []
+        for b in bets:
+            horse    = b.get("horse", "")
+            odds     = b.get("odds", "")
+            btype    = b.get("type", "EW").upper()
+            reason   = b.get("reason", "")
+            is_outsider = "IMPROVING OUTSIDER" in reason or "PEAKING" in reason.upper() or "arc" in b
+
+            css_bet   = "win-bet"      if btype == "WIN" else ("outsider-bet" if is_outsider else "ew-bet")
+            css_odds  = "win-odds"     if btype == "WIN" else "ew-odds"
+            css_type  = "win-type"     if btype == "WIN" else "ew-type"
+            outsider_tag = '<span class="pb-outsider-tag">&#8599; OUTSIDER</span>' if is_outsider and btype == "EW" else ""
+
+            # Truncate reason to reasonable length
+            reason_short = reason[:220] + "..." if len(reason) > 220 else reason
+
+            bet_cards.append(
+                f'<div class="pb-bet {css_bet}">'
+                f'<div><span class="pb-horse">{horse}</span>'
+                f' <span class="pb-odds {css_odds}">{odds}</span>'
+                f' <span class="pb-type {css_type}">{btype}</span>'
+                f'</div>'
+                f'<div>{outsider_tag}<span class="pb-reason">{reason_short}</span></div>'
+                f'</div>'
+            )
+
+        race_blocks.append(
+            f'<div class="pb-race-block">'
+            f'<div class="pb-race-header">'
+            f'<span class="pb-time">{time_str}</span>'
+            f'<span class="pb-race-name">{race_name}</span>'
+            f'</div>'
+            f'<div class="pb-bets">{" ".join(bet_cards)}</div>'
+            f'</div>'
+        )
+
+    day_label  = data.get("day", "Gold Cup Day")
+    last_upd   = data.get("last_updated", "")
+    total_bets = sum(len(r.get("bets", [])) for r in races)
+    outsider_count = sum(
+        1 for r in races for b in r.get("bets", [])
+        if "IMPROVING OUTSIDER" in b.get("reason", "") or "PEAKING" in b.get("reason", "").upper()
+    )
+
+    return f"""<div class="pb-panel">
+  <div class="pb-box">
+    <h2>&#127922; Personal Bets &mdash; {day_label}
+      <span style="font-size:.75rem;font-weight:400;color:var(--muted);margin-left:8px;">{total_bets} bets incl. {outsider_count} improving outsiders &middot; Updated {last_upd}</span>
+    </h2>
+    {chr(10).join(race_blocks)}
+  </div>
+</div>"""
 
 
 def _build_submission_html(assembled: list) -> str:
@@ -862,6 +961,9 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
     # ── Submission Numbers panel ───────────────────────────────────────────────
     submission_html = _build_submission_html(assembled)
 
+    # ── Personal Bets panel ───────────────────────────────────────────────────
+    personal_bets_html = _build_personal_bets_html()
+
     html = f"""<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -940,6 +1042,8 @@ def build_html(assembled: list, run_date: str, n_splits: int, new_close_calls: l
 </div>
 
 </div>
+
+{personal_bets_html}
 
 <div class="footer">
   Barry's Cheltenham 2026 &middot; Live Betfair odds refreshed every 30 mins from 9:00am UTC &middot; {run_date} &middot; 1st: &euro;3,000 &middot; 2nd: &euro;1,250 &middot; 3rd: &euro;500 &middot; 4th: &euro;250
