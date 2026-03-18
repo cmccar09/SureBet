@@ -340,6 +340,147 @@ def get_today_results():
             'error': str(e)
         }), 500
 
+@app.route('/api/results/yesterday', methods=['GET'])
+def get_yesterday_results():
+    """Get yesterday's RECOMMENDED PICKS with full results - win/loss analysis"""
+    try:
+        from datetime import timedelta
+        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        day_before = (datetime.now() - timedelta(days=2)).strftime('%Y-%m-%d')
+
+        # Query picks from yesterday (also check day_before in case of timezone edge cases)
+        all_picks = []
+        for date in [yesterday, day_before]:
+            response = table.query(
+                KeyConditionExpression='bet_date = :date',
+                FilterExpression=(
+                    '(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) '
+                    'AND attribute_not_exists(analysis_type) AND attribute_not_exists(learning_type) '
+                    'AND attribute_exists(course) AND attribute_exists(horse)'
+                ),
+                ExpressionAttributeValues={
+                    ':date': date,
+                    ':not_learning': False
+                }
+            )
+            all_picks.extend(response.get('Items', []))
+
+        picks = [decimal_to_float(item) for item in all_picks]
+
+        # Filter to only picks whose race_time falls on yesterday
+        picks = [p for p in picks if p.get('race_time', '').startswith(yesterday)]
+
+        # Only show UI picks (recommended)
+        picks = [p for p in picks
+                 if p.get('course') and p.get('course') != 'Unknown'
+                 and p.get('horse') and p.get('horse') != 'Unknown'
+                 and p.get('show_in_ui') == True]
+
+        # Sort by race time, then score
+        picks.sort(key=lambda x: (x.get('race_time', ''), -float(x.get('comprehensive_score') or 0)))
+
+        # Calculate result analysis for each pick
+        for pick in picks:
+            outcome = (pick.get('outcome') or 'pending').lower()
+            finish  = pick.get('finish_position', 0)
+            winner  = pick.get('result_winner_name', '')
+            horse   = pick.get('horse', '')
+            score   = float(pick.get('comprehensive_score') or pick.get('analysis_score') or 0)
+            odds    = float(pick.get('odds') or 0)
+
+            if outcome == 'win':
+                pick['result_analysis'] = f'Won! {horse} justified selection at {toFractional_py(odds)} odds.'
+                pick['result_emoji'] = 'WIN'
+            elif outcome == 'placed':
+                pos_label = {2: '2nd', 3: '3rd', 4: '4th'}.get(int(finish or 0), f'{finish}th')
+                won_by = f' — won by {winner}' if winner and winner != horse else ''
+                pick['result_analysis'] = f'Placed {pos_label}{won_by}. Each-way return.'
+                pick['result_emoji'] = 'PLACED'
+            elif outcome == 'loss':
+                pos_label = {0: 'Unplaced'}.get(int(finish or 0), f'Finished {finish}{"st" if finish==1 else "nd" if finish==2 else "rd" if finish==3 else "th"}')
+                won_by = f'Won by {winner}' if winner and winner != horse else 'Race winner unknown'
+                # Build reason why AI got it wrong
+                reasons = []
+                if score >= 90:
+                    reasons.append(f'AI gave very high confidence ({score:.0f}) — odds/market may have been misleading')
+                elif score >= 80:
+                    reasons.append(f'Strong AI score ({score:.0f}) — conditions may not have suited on the day')
+                else:
+                    reasons.append(f'Moderate AI confidence ({score:.0f}) — higher-risk selection')
+                if finish and int(finish) <= 3:
+                    reasons.append('Close run — ran well but couldn't quite get there')
+                elif finish and int(finish) >= 6:
+                    reasons.append('Well beaten — race conditions or draw likely worked against selection')
+                pick['result_analysis'] = f'{pos_label}. {won_by}. {" · ".join(reasons)}'
+                pick['result_emoji'] = 'LOSS'
+            else:
+                pick['result_analysis'] = 'Result not yet recorded'
+                pick['result_emoji'] = 'PENDING'
+
+        # Summary stats
+        wins    = sum(1 for p in picks if p.get('outcome') == 'win')
+        places  = sum(1 for p in picks if p.get('outcome') == 'placed')
+        losses  = sum(1 for p in picks if p.get('outcome') == 'loss')
+        pending = sum(1 for p in picks if p.get('outcome') in [None, 'pending'])
+
+        total_stake  = sum(float(p.get('stake', 0)) for p in picks)
+        total_return = 0.0
+        for p in picks:
+            oc    = (p.get('outcome') or '').lower()
+            stake = float(p.get('stake', 0))
+            odds  = float(p.get('odds', 0))
+            if oc == 'win':
+                bet_type = (p.get('bet_type') or 'WIN').upper()
+                if bet_type == 'WIN':
+                    total_return += stake * odds
+                else:
+                    ef = float(p.get('ew_fraction', 0.2))
+                    total_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ef)
+            elif oc == 'placed':
+                ef = float(p.get('ew_fraction', 0.2))
+                total_return += (stake/2) * (1 + (odds-1) * ef)
+
+        profit = total_return - total_stake
+        roi    = (profit / total_stake * 100) if total_stake > 0 else 0
+
+        return jsonify({
+            'success':   True,
+            'date':      yesterday,
+            'summary': {
+                'total_picks': len(picks),
+                'wins':    wins,
+                'places':  places,
+                'losses':  losses,
+                'pending': pending,
+                'total_stake':  round(total_stake, 2),
+                'total_return': round(total_return, 2),
+                'profit': round(profit, 2),
+                'roi':    round(roi, 2),
+                'strike_rate': round((wins / len(picks) * 100) if picks else 0, 1),
+            },
+            'picks': picks,
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def toFractional_py(decimal):
+    """Server-side decimal to fractional odds helper"""
+    if not decimal or decimal <= 1.0:
+        return 'SP'
+    tbl = [
+        (2.00,'EVS'),(2.50,'6/4'),(3.00,'2/1'),(4.00,'3/1'),(5.00,'4/1'),
+        (6.00,'5/1'),(7.00,'6/1'),(8.00,'7/1'),(9.00,'8/1'),(10.0,'9/1'),
+        (11.0,'10/1'),(13.0,'12/1'),(17.0,'16/1'),(21.0,'20/1'),
+    ]
+    best, best_diff = tbl[0], abs(decimal - tbl[0][0])
+    for entry in tbl:
+        diff = abs(decimal - entry[0])
+        if diff < best_diff:
+            best_diff = diff; best = entry
+    return best[1]
+
+
 @app.route('/api/health', methods=['GET'])
 def health():
     """Health check endpoint"""
