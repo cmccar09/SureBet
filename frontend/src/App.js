@@ -630,6 +630,23 @@ function YesterdayResultsView() {
         </div>
       )}
 
+      {/* Win summary headline */}
+      {picks.length > 0 && (() => {
+        const settled = (summary.wins || 0) + (summary.losses || 0) + (summary.places || 0);
+        const winPct  = settled > 0 ? Math.round((summary.wins || 0) / settled * 100) : 0;
+        const isGood  = winPct >= 33;
+        return (
+          <div style={{ background: isGood ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.10)', border:`1px solid ${isGood ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.3)'}`, borderRadius:'10px', padding:'13px 22px', marginBottom:'20px', textAlign:'center', color:'white', fontSize:'17px', fontWeight:'700', letterSpacing:'0.2px' }}>
+            {summary.wins || 0} win{(summary.wins || 0) !== 1 ? 's' : ''} from {settled} settled pick{settled !== 1 ? 's' : ''} &mdash; {winPct}% strike rate
+            {(summary.pending || 0) > 0 && (
+              <span style={{ fontSize:'13px', color:'rgba(255,255,255,0.55)', fontWeight:'500', marginLeft:'12px' }}>
+                ({summary.pending} still pending)
+              </span>
+            )}
+          </div>
+        );
+      })()}
+
       {picks.length === 0 ? (
         <div style={{ background:'rgba(255,255,255,0.08)', borderRadius:'12px', padding:'48px 24px', textAlign:'center', color:'rgba(255,255,255,0.7)' }}>
           <div style={{ fontSize:'18px', fontWeight:'700', color:'white', marginBottom:'8px' }}>No picks found for yesterday</div>
