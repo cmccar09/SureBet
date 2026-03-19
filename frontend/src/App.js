@@ -520,6 +520,8 @@ function YesterdayResultsView() {
   const [results, setResults]   = useState(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(null);
+  const [raceFields,    setRaceFields]    = useState({});
+  const [expandedField, setExpandedField] = useState(null);
 
   useEffect(() => { loadResults(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -530,6 +532,7 @@ function YesterdayResultsView() {
       const data = await res.json();
       if (data.success) {
         setResults(data);
+        setRaceFields(data.race_fields || {});
       } else {
         setError(data.error || 'Failed to load results');
       }
@@ -741,6 +744,64 @@ function YesterdayResultsView() {
                     {pick.result_analysis}
                   </div>
                 </div>
+
+                {/* Full race card — all runners ranked by score */}
+                {(() => {
+                  const raceKey = `${pick.course || pick.venue}|${pick.race_time}`;
+                  const field   = raceFields[raceKey] || [];
+                  if (!field.length) return null;
+                  const open = expandedField === idx;
+                  return (
+                    <div style={{ marginTop:'10px' }}>
+                      <button
+                        onClick={() => setExpandedField(open ? null : idx)}
+                        style={{ background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:'6px', padding:'6px 14px', fontSize:'12px', fontWeight:'700', color:'rgba(255,255,255,0.85)', cursor:'pointer', width:'100%', textAlign:'left', display:'flex', justifyContent:'space-between', alignItems:'center' }}
+                      >
+                        <span>Full race card &mdash; {field.length} runners rated</span>
+                        <span style={{ fontSize:'10px' }}>{open ? '▲ Hide' : '▼ Show'}</span>
+                      </button>
+                      {open && (
+                        <div style={{ marginTop:'8px', background:'#f8fafc', borderRadius:'8px', overflow:'hidden', border:'1px solid #e5e7eb' }}>
+                          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'12px' }}>
+                            <thead>
+                              <tr style={{ background:'#1e3a5f', color:'white' }}>
+                                <th style={{ padding:'7px 10px', textAlign:'left',   fontWeight:'700' }}>Pos</th>
+                                <th style={{ padding:'7px 10px', textAlign:'left',   fontWeight:'700' }}>Horse</th>
+                                <th style={{ padding:'7px 10px', textAlign:'center', fontWeight:'700' }}>Odds</th>
+                                <th style={{ padding:'7px 10px', textAlign:'center', fontWeight:'700' }}>Score</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {field.map((runner, ri) => {
+                                const rScore    = parseFloat(runner.score || 0);
+                                const tier      = scoreLabel(rScore);
+                                const isOurPick = parseInt(runner.pick_rank || 0) > 0;
+                                return (
+                                  <tr key={ri} style={{ background: isOurPick ? '#ecfdf5' : ri % 2 === 0 ? 'white' : '#f9fafb', borderBottom:'1px solid #e5e7eb' }}>
+                                    <td style={{ padding:'6px 10px', fontWeight:'700', color: ri === 0 ? '#d97706' : '#6b7280' }}>
+                                      {ri + 1}{isOurPick && <span style={{ marginLeft:'4px', background:'#059669', color:'white', borderRadius:'3px', padding:'1px 5px', fontSize:'10px' }}>OUR PICK</span>}
+                                    </td>
+                                    <td style={{ padding:'6px 10px', fontWeight: isOurPick ? '700' : '500', color:'#111' }}>
+                                      {runner.horse}
+                                      {runner.jockey  && <div style={{ fontSize:'10px', color:'#6b7280', marginTop:'1px' }}>J: {runner.jockey}</div>}
+                                      {runner.trainer && <div style={{ fontSize:'10px', color:'#6b7280' }}>T: {runner.trainer}</div>}
+                                    </td>
+                                    <td style={{ padding:'6px 10px', textAlign:'center', fontWeight:'700', color:'#1e3a5f' }}>
+                                      {runner.odds > 1 ? toFractional(runner.odds) : '-'}
+                                    </td>
+                                    <td style={{ padding:'6px 10px', textAlign:'center' }}>
+                                      <span style={{ background: tier.bg, color:'white', borderRadius:'4px', padding:'2px 7px', fontSize:'10px', fontWeight:'700' }}>{rScore.toFixed(0)} {tier.label}</span>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Why AI picked this horse */}
                 {Array.isArray(pick.selection_reasons) && pick.selection_reasons.length > 0 && (

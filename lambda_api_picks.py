@@ -463,6 +463,30 @@ def check_yesterday_results(headers):
     total_profit = sum(float(p.get('profit', 0)) for p in picks if p.get('profit') is not None)
     roi = (total_profit / total_stake * 100) if total_stake > 0 else 0
     
+    # Build race_fields: all runners for yesterday grouped by race (for full race card display)
+    race_fields = {}
+    for item in all_picks:
+        if item.get('sport') != 'horses':
+            continue
+        course    = item.get('course', '') or item.get('venue', '')
+        race_time = item.get('race_time', '')
+        if not course or not race_time:
+            continue
+        key = f"{course}|{race_time}"
+        if key not in race_fields:
+            race_fields[key] = []
+        score = float(item.get('comprehensive_score') or item.get('analysis_score') or 0)
+        race_fields[key].append({
+            'horse':     item.get('horse', ''),
+            'jockey':    item.get('jockey', ''),
+            'trainer':   item.get('trainer', ''),
+            'odds':      float(item.get('odds', 0) or 0),
+            'score':     score,
+            'pick_rank': 1 if item.get('show_in_ui') else 0,
+        })
+    for key in race_fields:
+        race_fields[key].sort(key=lambda r: float(r.get('score', 0)), reverse=True)
+
     # Separate by sport
     horse_picks = [p for p in picks if p.get('sport') == 'horses']
     greyhound_picks = [p for p in picks if p.get('sport') == 'greyhounds']
@@ -522,6 +546,7 @@ def check_yesterday_results(headers):
                 'picks': greyhound_picks
             },
             'picks': picks,
+            'race_fields': race_fields,
             'debug_timestamp': datetime.now().isoformat()
         })
     }
