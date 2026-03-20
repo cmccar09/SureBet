@@ -641,23 +641,51 @@ function YesterdayResultsView() {
       </div>
 
       {/* Summary bar */}
-      {picks.length > 0 && (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(110px,1fr))', gap:'12px', marginBottom:'28px' }}>
-          {[
-            { label:'Picks',   value: summary.total_picks || 0, color:'#60a5fa' },
-            { label:'Won',     value: summary.wins || 0,        color:'#10b981' },
-            { label:'Placed',  value: summary.places || 0,      color:'#3b82f6' },
-            { label:'Lost',    value: summary.losses || 0,      color:'#f87171' },
-            { label:'P&L',     value: profit >= 0 ? `+£${profit.toFixed(2)}` : `-£${Math.abs(profit).toFixed(2)}`, color: profit >= 0 ? '#10b981' : '#f87171' },
-            { label:'ROI',     value: `${(summary.roi || 0).toFixed(1)}%`, color: (summary.roi || 0) >= 0 ? '#10b981' : '#f87171' },
-          ].map((stat, i) => (
-            <div key={i} style={{ background:'rgba(255,255,255,0.09)', borderRadius:'10px', padding:'14px 12px', textAlign:'center' }}>
-              <div style={{ fontSize:'22px', fontWeight:'900', color:stat.color }}>{stat.value}</div>
-              <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.6)', marginTop:'2px', textTransform:'uppercase', letterSpacing:'0.8px' }}>{stat.label}</div>
+      {picks.length > 0 && (() => {
+        const statsLeft = [
+          { label:'Picks',  value: summary.total_picks || 0, color:'#93c5fd', bg:'rgba(96,165,250,0.12)', border:'rgba(96,165,250,0.3)',  icon:'🎯' },
+          { label:'Won',    value: summary.wins || 0,        color:'#34d399', bg:'rgba(16,185,129,0.15)', border:'rgba(16,185,129,0.4)',  icon:'✅' },
+          { label:'Placed', value: summary.places || 0,      color:'#818cf8', bg:'rgba(99,102,241,0.15)', border:'rgba(99,102,241,0.35)', icon:'🥈' },
+          { label:'Lost',   value: summary.losses || 0,      color:'#f87171', bg:'rgba(239,68,68,0.13)',  border:'rgba(239,68,68,0.35)',  icon:'❌' },
+        ];
+        const pnlPos   = profit >= 0;
+        const roiVal   = summary.roi || 0;
+        return (
+          <div style={{ marginBottom:'24px' }}>
+            {/* Top row: 4 count stats */}
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'10px', marginBottom:'10px' }}>
+              {statsLeft.map((stat, i) => (
+                <div key={i} style={{ background:stat.bg, border:`1.5px solid ${stat.border}`, borderRadius:'12px', padding:'16px 10px 12px', textAlign:'center' }}>
+                  <div style={{ fontSize:'12px', marginBottom:'4px' }}>{stat.icon}</div>
+                  <div style={{ fontSize:'28px', fontWeight:'900', color:stat.color, lineHeight:1 }}>{stat.value}</div>
+                  <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.55)', marginTop:'5px', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600' }}>{stat.label}</div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+            {/* Bottom row: P&L + ROI spanning full width */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
+              <div style={{ background: pnlPos ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${pnlPos ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding:'14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px' }}>
+                <div>
+                  <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'4px' }}>Profit / Loss</div>
+                  <div style={{ fontSize:'30px', fontWeight:'900', color: pnlPos ? '#34d399' : '#f87171', lineHeight:1 }}>
+                    {pnlPos ? '+' : ''}£{Math.abs(profit).toFixed(2)}
+                  </div>
+                </div>
+                <div style={{ fontSize:'32px' }}>{pnlPos ? '📈' : '📉'}</div>
+              </div>
+              <div style={{ background: roiVal >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${roiVal >= 0 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding:'14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px' }}>
+                <div>
+                  <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'4px' }}>Return on Investment</div>
+                  <div style={{ fontSize:'30px', fontWeight:'900', color: roiVal >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>
+                    {roiVal >= 0 ? '+' : ''}{roiVal.toFixed(1)}%
+                  </div>
+                </div>
+                <div style={{ fontSize:'32px' }}>💰</div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Win summary headline */}
       {picks.length > 0 && (() => {
