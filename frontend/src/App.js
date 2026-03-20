@@ -268,7 +268,7 @@ function DailyPicksView() {
     if (s >= 95) return { bg: '#d97706', label: 'ELITE'  };
     if (s >= 85) return { bg: '#059669', label: 'STRONG' };
     if (s >= 75) return { bg: '#3b82f6', label: 'GOOD'   };
-    return             { bg: '#8b5cf6', label: 'VALUE'  };
+    return             { bg: '#0891b2', label: 'VALUE'  };
   };
 
   if (loading) return (
