@@ -108,7 +108,7 @@ def fetch_betfair_markets(app_key, session_token, sport='horse_racing', market_t
     url = "https://api.betfair.com/exchange/betting/rest/v1.0/listMarketCatalogue/"
 
     now = datetime.datetime.utcnow()
-    to_time = now + datetime.timedelta(hours=24)
+    to_time = now + datetime.timedelta(days=5)
 
     event_type_id = SPORT_EVENT_TYPES.get(sport, '7')  # Default to horse racing
 
@@ -236,11 +236,26 @@ def get_live_betfair_races():
         odds = odds_by_market.get(market_id, {})
         runners_data = odds.get('runners', [])
 
-        # Format runners with odds
+        # Format runners with odds + full metadata (jockey, weight, age, OR, draw)
         runners = []
         for i, runner_meta in enumerate(market.get('runners', [])):
             runner_id = runner_meta['selectionId']
             runner_name = runner_meta['runnerName']
+
+            # Extract all available metadata fields from Betfair RUNNER_METADATA
+            meta = runner_meta.get('metadata', {})
+            w_val = meta.get('WEIGHT_VALUE', '')
+            w_lbs = 0
+            if w_val:
+                try:
+                    w_str = str(w_val)
+                    if '-' in w_str:
+                        p = w_str.split('-')
+                        w_lbs = int(p[0]) * 14 + int(p[1])
+                    else:
+                        w_lbs = int(w_str) * 14
+                except Exception:
+                    w_lbs = 0
 
             # Find odds for this runner
             runner_odds = next((r for r in runners_data if r['selectionId'] == runner_id), None)
@@ -248,9 +263,17 @@ def get_live_betfair_races():
             if runner_odds and runner_odds.get('ex', {}).get('availableToBack'):
                 best_back = runner_odds['ex']['availableToBack'][0]['price']
                 runners.append({
-                    "name": runner_name,
-                    "selectionId": runner_id,
-                    "odds": best_back
+                    "name":            runner_name,
+                    "selectionId":     runner_id,
+                    "odds":            best_back,
+                    "jockey":          meta.get('JOCKEY_NAME', ''),
+                    "trainer":         meta.get('TRAINER_NAME', ''),
+                    "form":            meta.get('FORM', ''),
+                    "weight_lbs":      w_lbs,
+                    "weight_raw":      w_val,
+                    "age":             meta.get('AGE', ''),
+                    "official_rating": meta.get('OFFICIAL_RATING', ''),
+                    "draw":            meta.get('STALL_DRAW', runner_meta.get('metadata', {}).get('CLOTH_NUMBER', '')),
                 })
 
         if runners:

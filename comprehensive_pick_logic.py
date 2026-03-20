@@ -18,6 +18,15 @@ from datetime import datetime
 from weather_going_inference import check_all_tracks_going
 from track_daily_insights import get_track_insights
 
+# Deep form history signals (Racing Post / Sporting Life scraper)
+try:
+    from form_enricher import get_form_signals, _dist_to_furlongs
+    FORM_ENRICHER_AVAILABLE = True
+except ImportError:
+    FORM_ENRICHER_AVAILABLE = False
+    def get_form_signals(*a, **kw): return {}
+    def _dist_to_furlongs(*a, **kw): return None
+
 # Import Cheltenham analyzer when at Cheltenham
 try:
     from cheltenham_analyzer import (
@@ -30,34 +39,52 @@ try:
 except ImportError:
     CHELTENHAM_AVAILABLE = False
 
-# Default weights (fallback if DynamoDB not available)
-# ADJUSTED 2026-02-05: Further increased trainer + favorite bonuses after validation
-# ENHANCED 2026-02-06: Added jockey, weight, age, distance factors for deeper analysis
-# ADJUSTED 2026-02-14: Reduced favorite bias, added novice race penalty, bounce-back detection
-# ADJUSTED 2026-02-26: Reduced recent_win 25->15 (learning: 'poor form' horses outperform 3.6% vs 0.6%)
-#                       sweet_spot now favours 5/1-7/1 range (best odds bucket +£25.20 P/L)
+# REBALANCED 2026-03-16: Tiered trainers/jockeys, reduced sweet_spot & trainer flat bonus,
+#                         increased form/course/distance weights so actual horse evidence matters more.
+# Key principle: FORM + COURSE/DISTANCE knowledge > raw trainer name > odds range
 DEFAULT_WEIGHTS = {
-    'sweet_spot': 20,  # Best performance at 5/1-7/1 odds (£25.20 P/L); 3/1-4/1 loses money (-£11.95)
-    'optimal_odds': 15,  # Reduced from 20 - less weight on odds positioning
-    'recent_win': 15,  # REDUCED from 25: Learning shows 'poor form' horses win more (3.6% vs 0.6%)
-    'total_wins': 5,
-    'consistency': 2,
-    'course_bonus': 10,
-    'database_history': 15,
-    'going_suitability': 14,  # RAISED from 8: Ground is CRITICAL in Feb UK/Ireland NH racing
-    'track_pattern_bonus': 10,  # Bonus based on what's winning today at this track
-    'trainer_reputation': 25,  # INCREASED from 20: Elite trainers are THE critical factor
-    'favorite_correction': 12,  # REDUCED from 20: Ascot 13:15 lesson - favorites can fail
-    'jockey_quality': 15,  # NEW: Top jockeys increase win probability
-    'weight_penalty': 10,  # NEW: Heavy weights reduce chances in handicaps
-    'age_bonus': 10,  # NEW: Peak age horses (4-7 years) perform better
-    'distance_suitability': 12,  # NEW: Distance matching horse's strengths
-    'novice_race_penalty': 15,  # NEW: Novice races are less predictable
-    'bounce_back_bonus': 12,  # NEW: Horses recovering from poor run (e.g., 2-6-1)
-    'short_form_improvement': 10,  # NEW: Limited form in novice = potential improvement
-    'aw_low_class_penalty': 35,  # NEW: AW Class 5/6 handicaps are highly unpredictable (Dandy Khan lesson)
-    'cd_bonus': 12,              # NEW: C (course winner) or D (distance winner) marker = proven here
-    'graded_race_cd_bonus': 8,   # NEW: Extra CD bonus in Graded races (field is hand-selected)
+    'sweet_spot':           12,  # REDUCED 20->12: odds range is a useful filter, not a main signal
+    'optimal_odds':         10,  # REDUCED 15->10: combined odds weighting should not dominate
+    'recent_win':           22,  # INCREASED 15->22: last-race win is the single best predictor
+    'total_wins':            8,  # INCREASED  5->8:  each form win carries more weight
+    'consistency':           4,  # INCREASED  2->4:  places (2nd/3rd) matter more
+    'course_bonus':         12,  # INCREASED 10->12: course familiarity
+    'database_history':     15,  # unchanged
+    'going_suitability':    16,  # INCREASED 14->16: going is critical in UK NH
+    'track_pattern_bonus':   8,  # REDUCED 10->8
+    'trainer_reputation':   15,  # REDUCED 25->15: ELITE tier only (see tiering below)
+    'trainer_tier2':         8,  # NEW: good trainers  (was all getting 25)
+    'trainer_tier3':         4,  # NEW: decent trainers
+    'favorite_correction':   7,  # REDUCED 12->7: cap stacking on top of trainer bonus
+    'jockey_quality':       12,  # REDUCED 15->12: elite jockey tier 1
+    'jockey_tier2':          6,  # NEW: good/champion jockeys (was all getting 15)
+    'weight_penalty':       10,  # unchanged
+    'age_bonus':            10,  # unchanged
+    'distance_suitability': 18,  # INCREASED 12->18: proven distance/course match is very important
+    'novice_race_penalty':  15,  # unchanged
+    'bounce_back_bonus':     8,  # REDUCED 12->8
+    'short_form_improvement':8,  # REDUCED 10->8
+    'aw_low_class_penalty': 50,  # RAISED 35→50 (2026-03-16): Beauzon 91pts finished 6th in AW Class 5; form streak overwhelmed -35 penalty
+    'heavy_going_penalty':    12,  # NEW 2026-03-16: El Gavilan (score=100, 3/1 fav) 5th in Heavy; Heavy ground = unpredictable
+    'cd_bonus':             18,  # INCREASED 12->18: C/D winner is strong evidence
+    'graded_race_cd_bonus':  8,  # unchanged
+    'official_rating_bonus': 8,  # NEW: high official rating = class horse
+    'jockey_course_bonus':   8,  # NEW: jockey course familiarity from history
+    'relative_weight_bonus': 8,  # NEW: carrying less weight than field average
+    # Meeting-focus signals (2026-03-19)
+    'meeting_focus_trainer':  10,  # Trainer sole runner at this meeting today
+    'meeting_focus_jockey':   10,  # Jockey only rides at this meeting today
+    'meeting_focus_combo':    10,  # Trainer+jockey combo only at this meeting today
+    'new_trainer_debut':       5,  # Horse has no prior DB record with this trainer
+    # Deep form signals (2026-03-20) — from Racing Post last-6-race history
+    'form_exact_course_win':  20,  # Proven winner at THIS course
+    'form_exact_distance_win':20,  # Proven winner at THIS distance (±0.5f)
+    'form_going_win':         16,  # Won on same going type as today
+    'form_going_place':        6,  # Placed (2nd/3rd) on same going — consistent
+    'form_fresh_optimal':     10,  # Last run 14-35 days ago (peak freshness window)
+    'form_close_2nd':         14,  # 2nd beaten < 4 lengths last time — unlucky loser
+    'form_or_rising':         10,  # OR trajectory rising over last 3 runs
+    'form_big_field_win':      8,  # Won in field of 10+ — proven in competitive race
 }
 
 # Cache for weights (reload every 5 minutes)
@@ -255,7 +282,7 @@ def apply_cheltenham_scoring(horse_data, race_name=''):
     return bonus_points, cheltenham_reasons
 
 
-def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course_winners_today=0):
+def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course_winners_today=0, field_weights=None, meeting_context=None):
     """
     Comprehensive scoring system for horses
     Returns score and breakdown
@@ -489,7 +516,21 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         else:
             breakdown['going_suitability'] = 0
 
-    # 5a. GRADED RACE GOING PENALTY CORRECTION
+    # 5a. HEAVY GOING SPECIFIC PENALTY (Lesson: 2026-03-16 El Gavilan 5th at 3/1 fav, Class 4 Heavy Ffos Las)
+    # Heavy is fundamentally different from Soft — extreme ground that very few horses handle.
+    # Jack's Jury (9/1) won over Henderson's Jukebox Fury and 3/1 fav El Gavilan.
+    # Apply a flat penalty to ALL horses when going is Heavy — unpredictability surcharge.
+    _going_info_heavy = going_data.get(course, {})
+    _is_heavy_going = str(_going_info_heavy.get('going', '')).startswith('Heavy')
+    if _is_heavy_going:
+        heavy_penalty = int(weights.get('heavy_going_penalty', 12))
+        score -= heavy_penalty
+        breakdown['heavy_going_penalty'] = -heavy_penalty
+        reasons.append(f"Heavy going (unpredictable, field evens out): -{heavy_penalty}pts")
+    else:
+        breakdown['heavy_going_penalty'] = 0
+
+    # 5b. GRADED RACE GOING PENALTY CORRECTION
     # If a going penalty was applied but the race is Graded (Grd1/2/3/Listed),
     # remove the penalty. Graded-class horses are prepared for all conditions;
     # penalising them based on limited form digits is a false negative.
@@ -502,7 +543,7 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         reasons = [r for r in reasons if 'questionable in' not in r and 'unproven in' not in r]
         reasons.append(f"Graded race - going penalty removed (elite field): 0pts")
 
-    # 5b. C/D MARKER BONUS
+    # 5c. C/D MARKER BONUS
     # C = course winner, D = distance winner, CD = both.
     # These are proven performance markers that our form string doesn't capture.
     # We look for them in horse_data['cd_marker'] (if the API provides it)
@@ -583,16 +624,22 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     
     # 8. TRAINER REPUTATION BONUS (Comprehensive UK + Irish trainers)
     # Elite jockeys for jockey quality analysis (added below)
-    elite_jockeys = [
-        # Irish Champion Jockeys
+    elite_jockeys_t1 = [
+        # Truly elite (Champion level, multiple titles)
         'Paul Townend', 'P Townend', 'P. Townend',
         'Jack Kennedy', 'J Kennedy', 'J. Kennedy',
         'Rachael Blackmore', 'R Blackmore', 'R. Blackmore',
         'Mark Walsh', 'M Walsh', 'M. Walsh',
+        'Ryan Moore', 'R Moore', 'R. Moore',
+        'William Buick', 'W Buick', 'W. Buick',
+        'Frankie Dettori', 'F Dettori', 'F. Dettori',
+        'Oisin Murphy', 'O Murphy', 'O. Murphy',
+    ]
+    elite_jockeys_t2 = [
+        # Very good / regular champion
         'Davy Russell', 'D Russell', 'D. Russell',
         'Patrick Mullins', 'P Mullins', 'Mr P. Mullins', 'Mr P Mullins',
         'Danny Mullins', 'D Mullins', 'D. Mullins',
-        # UK Champion Jockeys (National Hunt)
         'Harry Cobden', 'H Cobden', 'H. Cobden',
         'Nico de Boinville', 'N de Boinville', 'N. de Boinville',
         'Harry Skelton', 'H Skelton', 'H. Skelton',
@@ -600,139 +647,136 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         'Bryony Frost', 'B Frost', 'B. Frost',
         'Tom Scudamore', 'T Scudamore', 'T. Scudamore',
         'Aidan Coleman', 'A Coleman', 'A. Coleman',
-        # UK Flat Racing Champions
-        'William Buick', 'W Buick', 'W. Buick',
-        'Frankie Dettori', 'F Dettori', 'F. Dettori',
-        'Ryan Moore', 'R Moore', 'R. Moore',
-        'Oisin Murphy', 'O Murphy', 'O. Murphy',
         'Jim Crowley', 'J Crowley', 'J. Crowley',
         'Tom Marquand', 'T Marquand', 'T. Marquand',
-        'Hollie Doyle', 'H Doyle', 'H. Doyle'
+        'Hollie Doyle', 'H Doyle', 'H. Doyle',
     ]
-    
-    elite_trainers = [
-        # Irish Champions
+
+    # Tiered trainer lists — ELITE (top strike-rate champions) vs GOOD vs DECENT
+    # Tier 1: Truly elite — highest win rates at championship level
+    elite_trainers_t1 = [
         'W P Mullins', 'W. P. Mullins', 'Willie Mullins', 'W Mullins',
         'Gordon Elliott', 'G Elliott', 'G. Elliott',
         'Henry De Bromhead', 'H De Bromhead', 'H. De Bromhead',
-        'Gavin Cromwell', 'G Cromwell', 'Gavin Patrick Cromwell',
-        'J P Dempsey', 'J. P. Dempsey', 'John P Dempsey',
-        'Don Browne', 'D Browne',
-        'John Patrick Ryan', 'J P Ryan',
-        'Michael Winters', 'M Winters',
-        # UK Champions - Established
         'Nicky Henderson', 'N Henderson',
         'Paul Nicholls', 'P Nicholls',
+    ]
+    # Tier 2: Good — solid strike rates, regular winners
+    elite_trainers_t2 = [
         'Dan Skelton', 'D Skelton',
-        'Tim Easterby', 'T Easterby',
-        # UK National Hunt - Winners from today's validation
         'Donald McCain', 'D McCain', 'Donald Mccain',
         'Harry Fry', 'H Fry',
         'Emma Lavelle', 'E Lavelle',
+        'Alan King', 'A King',
+        'Kim Bailey', 'K Bailey',
+        'Venetia Williams', 'V Williams',
+        'Philip Hobbs', 'P Hobbs',
+        'Jonjo O Neill', 'J O Neill', 'Jonjo Oneill', "Jonjo O'Neill", "A.J. O'Neill", "AJ O'Neill",
+        "Fergal O'Brien", 'Fergal O Brien', 'F O Brien', 'Fergal Obrien',
+        'Olly Murphy', 'O Murphy',
+        'Gavin Cromwell', 'G Cromwell', 'Gavin Patrick Cromwell',
+        'Warren Greatrex', 'W Greatrex',
+    ]
+    # Tier 3: Decent — know their horses, worth modest bonus
+    elite_trainers_t3 = [
         'David Pipe', 'D Pipe',
         'Lucy Wadham', 'L Wadham',
         'Neil King', 'N King',
-        'Alan King', 'A King',
         'Neil Mulholland', 'N Mulholland',
-        # UK All-Weather & Flat - Winners from validation
+        'Charlie Longsdon', 'C Longsdon',
+        'Colin Tizzard', 'C Tizzard',
+        'Tim Easterby', 'T Easterby',
         'Michael Dods', 'M Dods',
         'Tony Carroll', 'T Carroll', 'A W Carroll',
-        'David Barron', 'T D Barron', 'T. D. Barron', 'David & Nicola Barron', 'Nicola Barron',
-        # UK National Hunt - Other Established Trainers
-        'Warren Greatrex', 'W Greatrex',
-        'Charlie Longsdon', 'C Longsdon',
-        'Fergal O Brien', 'F O Brien', 'Fergal Obrien', "Fergal O'Brien",
-        'Olly Murphy', 'O Murphy',
-        'Kim Bailey', 'K Bailey',
-        'Colin Tizzard', 'C Tizzard',
-        'Philip Hobbs', 'P Hobbs',
-        'Venetia Williams', 'V Williams',
-        'Jonjo O Neill', 'J O Neill', 'Jonjo Oneill', "Jonjo O'Neill", "A.J. O'Neill", "AJ O'Neill"
+        'David Barron', 'T D Barron', 'T. D. Barron',
+        'J P Dempsey', 'J. P. Dempsey',
+        'Don Browne', 'D Browne',
+        # Added 2026-03-16 after Ffos Las Class 5 result:
+        'Kerry Lee', 'K Lee',
+        'Sam Thomas', 'S Thomas',
+        'Nick Gifford', 'N Gifford',
+        'Jamie Snowden', 'J Snowden',
+        'Joe Tizzard', 'J Tizzard',
+        'Ian Williams', 'I Williams',
+        'George Scott', 'G Scott',
+        'Richard Phillips', 'R Phillips',
+        'Chris Gordon', 'C Gordon',
+        'Gary Moore', 'G L Moore',
+        'John Flint', 'J Flint',
+        'Peter Bowen', 'P Bowen',
+        'Rebecca Curtis', 'R Curtis',
     ]
     
     trainer_bonus = 0
+    trainer_tier = 0
     if trainer:
         trainer_str = str(trainer)
-        for elite in elite_trainers:
-            if elite.lower() in trainer_str.lower():
-                trainer_bonus = int(weights.get('trainer_reputation', 15))
-                
-                # CRITICAL FIX: David Pipe penalty in Heavy/Soft (Feb 20 lesson)
-                # Both River Run Free (93) and Itseemslikeit (107) LOST today
-                if any(x in trainer_str for x in ['David Pipe', 'D Pipe', 'D. Pipe']):
-                    going_desc = going_data.get(course, {}).get('going', '')
-                    if 'Heavy' in going_desc or 'Soft' in going_desc:
-                        penalty = 15  # Remove 60% of trainer bonus in Heavy/Soft
-                        trainer_bonus -= penalty
-                        if trainer_bonus < 5:
-                            trainer_bonus = 5  # Minimum 5pts
-                        reasons.append(f"David Pipe Heavy/Soft record: -{penalty}pts penalty")
-                
-                score += trainer_bonus
-                breakdown['trainer_reputation'] = trainer_bonus
-                reasons.append(f"Elite trainer ({trainer}): +{trainer_bonus}pts")
-                break
-    
-    if trainer_bonus == 0:
-        breakdown['trainer_reputation'] = 0
-    
-    # 9. FAVORITE CORRECTION (Elite trainer boost for all odds ranges)
+        tstr_lower  = trainer_str.lower()
+        if any(e.lower() in tstr_lower for e in elite_trainers_t1):
+            trainer_tier   = 1
+            trainer_bonus  = int(weights.get('trainer_reputation', 15))
+        elif any(e.lower() in tstr_lower for e in elite_trainers_t2):
+            trainer_tier   = 2
+            trainer_bonus  = int(weights.get('trainer_tier2', 8))
+        elif any(e.lower() in tstr_lower for e in elite_trainers_t3):
+            trainer_tier   = 3
+            trainer_bonus  = int(weights.get('trainer_tier3', 4))
+
+        if trainer_bonus:
+            tier_label = ['', 'Elite', 'Good', 'Decent'][trainer_tier]
+
+            # David Pipe penalty in Heavy/Soft (Feb 20 lesson)
+            if any(x in trainer_str for x in ['David Pipe', 'D Pipe', 'D. Pipe']):
+                going_desc = going_data.get(course, {}).get('going', '')
+                if 'Heavy' in going_desc or 'Soft' in going_desc:
+                    penalty = trainer_bonus // 2
+                    trainer_bonus = max(2, trainer_bonus - penalty)
+                    reasons.append(f"David Pipe Heavy/Soft record: -{penalty}pts penalty")
+
+            score += trainer_bonus
+            breakdown['trainer_reputation'] = trainer_bonus
+            reasons.append(f"{tier_label} trainer ({trainer}): +{trainer_bonus}pts")
+
+    # 9. FAVORITE CORRECTION — capped, doesn't stack heavily on trainer
+    # Only applies when trainer_tier=1 (truly elite) to avoid inflating mediocre picks
     favorite_bonus = 0
     if trainer_bonus > 0:
-        # Elite trainer gets boost regardless of odds
-        if odds < 2.0:
-            # Heavy favorite with elite trainer
-            favorite_bonus = int(weights.get('favorite_correction', 10) * 1.5)
-            
-            # David Pipe penalty for favorites in Heavy/Soft (Feb 20 lesson)
-            if any(x in str(trainer) for x in ['David Pipe', 'D Pipe', 'D. Pipe']):
-                going_desc = going_data.get(course, {}).get('going', '')
-                if 'Heavy' in going_desc or 'Soft' in going_desc:
-                    favorite_bonus = int(favorite_bonus * 0.4)  # 60% reduction
-                    reasons.append(f"David Pipe favorite in Heavy/Soft: reduced to +{favorite_bonus}pts")
-                else:
-                    reasons.append(f"Heavy favorite + elite trainer: +{favorite_bonus}pts")
-            else:
-                reasons.append(f"Heavy favorite + elite trainer: +{favorite_bonus}pts")
-        elif odds < 4.0:
-            # Short odds with elite trainer
-            favorite_bonus = int(weights.get('favorite_correction', 10))
-            
-            # David Pipe penalty in Heavy/Soft
-            if any(x in str(trainer) for x in ['David Pipe', 'D Pipe', 'D. Pipe']):
-                going_desc = going_data.get(course, {}).get('going', '')
-                if 'Heavy' in going_desc or 'Soft' in going_desc:
-                    favorite_bonus = int(favorite_bonus * 0.5)  # 50% reduction
-                    reasons.append(f"David Pipe Heavy/Soft: reduced to +{favorite_bonus}pts")
-                else:
-                    reasons.append(f"Elite trainer bonus: +{favorite_bonus}pts")
-            else:
-                reasons.append(f"Elite trainer bonus: +{favorite_bonus}pts")
-        else:
-            # Any odds with elite trainer gets smaller boost
-            favorite_bonus = int(weights.get('favorite_correction', 10) * 0.5)
-            reasons.append(f"Elite trainer (underdog): +{favorite_bonus}pts")
-        
-        score += favorite_bonus
-        breakdown['favorite_correction'] = favorite_bonus
+        max_fav = int(weights.get('favorite_correction', 7))
+        if odds < 2.0 and trainer_tier == 1:
+            favorite_bonus = max_fav
+            reasons.append(f"Heavy favorite + elite trainer: +{favorite_bonus}pts")
+        elif odds < 4.0 and trainer_tier == 1:
+            favorite_bonus = max_fav // 2
+            reasons.append(f"Short odds + elite trainer: +{favorite_bonus}pts")
+        elif odds < 4.0 and trainer_tier == 2:
+            favorite_bonus = max_fav // 3
+            if favorite_bonus > 0:
+                reasons.append(f"Short odds + good trainer: +{favorite_bonus}pts")
+        if favorite_bonus:
+            score += favorite_bonus
+            breakdown['favorite_correction'] = favorite_bonus
     else:
         breakdown['favorite_correction'] = 0
     
-    # 10. JOCKEY QUALITY (NEW - Elite jockeys boost)
-    jockey_quality_pts = int(weights.get('jockey_quality', 15))
+    # 10. JOCKEY QUALITY — tiered by actual calibre
     jockey_name = horse_data.get('jockey', '')
     is_elite_jockey = False
-    
+
     if jockey_name:
-        jockey_lower = jockey_name.lower()
-        for elite in elite_jockeys:
-            if elite.lower() in jockey_lower:
-                is_elite_jockey = True
-                score += jockey_quality_pts
-                breakdown['jockey_quality'] = jockey_quality_pts
-                reasons.append(f"Elite jockey ({jockey_name}): +{jockey_quality_pts}pts")
-                break
-    
+        jl = jockey_name.lower()
+        if any(e.lower() in jl for e in elite_jockeys_t1):
+            jq_pts = int(weights.get('jockey_quality', 12))
+            score += jq_pts
+            breakdown['jockey_quality'] = jq_pts
+            reasons.append(f"Elite jockey ({jockey_name}): +{jq_pts}pts")
+            is_elite_jockey = True
+        elif any(e.lower() in jl for e in elite_jockeys_t2):
+            jq_pts = int(weights.get('jockey_tier2', 6))
+            score += jq_pts
+            breakdown['jockey_quality'] = jq_pts
+            reasons.append(f"Champion jockey ({jockey_name}): +{jq_pts}pts")
+            is_elite_jockey = True
+
     if not is_elite_jockey:
         breakdown['jockey_quality'] = 0
     
@@ -747,11 +791,11 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['novice_penalty'] = 0
 
-    # 11b. AW LOW CLASS PENALTY (Lesson: 2026-02-28 Lingfield 15:52)
-    # Class 5/6 AW handicaps are designed by handicappers to produce unpredictable results.
-    # Our scoring rewards form/trainer consistency - exactly what is discounted in these races.
-    # Going advantage (our main edge) is also zero on AW Standard.
-    # Royal Jet scored 105 (trainer +25, wins +20, form 3111) yet lost to Dandy Khan (42) at 8/1.
+    # 11b. LOW CLASS PENALTY (Lesson: 2026-02-28 Lingfield + 2026-03-16 Ffos Las 14:30)
+    # Class 5/6 handicaps are designed by handicappers to produce unpredictable results.
+    # AW Class 5/6: full penalty (going advantage = 0, form consistency unreliable).
+    # Turf Class 5/6: reduced penalty — going still matters but fields are weaker/randomised.
+    # Lesson: Queen Of Steel scored 99 but finished 3rd in Class 5 Soft, Hellfire Princess (67) won.
     aw_low_class_penalty = 0
     aw_marker = horse_data.get('race_class', horse_data.get('class', ''))
     aw_name_check = str(horse_data.get('race_name', horse_data.get('market_name', race_name))).lower()
@@ -760,18 +804,25 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         'class 5' in aw_name_check or 'class 6' in aw_name_check or
         'class5' in aw_name_check or 'class6' in aw_name_check
     )
-    # Only apply to AW (going_suitability_pts sourced from is_all_weather check above)
-    # We re-derive the AW flag here safely from going_data
     _going_info_for_class = going_data.get(course, {})
     _is_aw_for_class = (
         _going_info_for_class.get('surface', '') == 'all-weather' or
         'Standard' in str(_going_info_for_class.get('going', ''))
     )
-    if _is_aw_for_class and is_low_class:
-        aw_low_class_penalty = int(weights.get('aw_low_class_penalty', 20))
-        score -= aw_low_class_penalty
-        breakdown['aw_low_class_penalty'] = -aw_low_class_penalty
-        reasons.append(f"AW Class 5/6 (unpredictable handicap): -{aw_low_class_penalty}pts")
+    if is_low_class:
+        if _is_aw_for_class:
+            # Full penalty on AW — no going edge AND handicapper-levelled field
+            aw_low_class_penalty = int(weights.get('aw_low_class_penalty', 35))
+            score -= aw_low_class_penalty
+            breakdown['aw_low_class_penalty'] = -aw_low_class_penalty
+            reasons.append(f"AW Class 5/6 (unpredictable handicap): -{aw_low_class_penalty}pts")
+        else:
+            # Reduced penalty on turf — going suitability still differentiates, but
+            # Class 5 fields are weak and high scores are unreliable (Ffos Las 14:30 lesson)
+            turf_class5_penalty = int(weights.get('aw_low_class_penalty', 35)) // 2
+            score -= turf_class5_penalty
+            breakdown['aw_low_class_penalty'] = -turf_class5_penalty
+            reasons.append(f"Turf Class 5/6 (weaker field, results less predictable): -{turf_class5_penalty}pts")
     else:
         breakdown['aw_low_class_penalty'] = 0
 
@@ -813,32 +864,159 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['short_form_improvement'] = 0
     
-    # 14. WEIGHT PENALTY (NEW - for handicap races)
-    weight_penalty_pts = int(weights.get('weight_penalty', 10))
-    weight_carried = horse_data.get('weight', None)
-    
-    if weight_carried:
+    # 14. WEIGHT ANALYSIS — relative within field + absolute heavy-weight penalty
+    weight_penalty_pts   = int(weights.get('weight_penalty', 10))
+    relative_weight_pts  = int(weights.get('relative_weight_bonus', 8))
+
+    # Prefer weight_lbs (already converted by fetcher), fall back to parsing 'weight' field
+    horse_weight_lbs = int(horse_data.get('weight_lbs', 0) or 0)
+    if horse_weight_lbs == 0:
+        weight_raw = horse_data.get('weight', horse_data.get('weight_raw', ''))
+        if weight_raw:
+            try:
+                w_str = str(weight_raw)
+                if '-' in w_str:
+                    p = w_str.split('-')
+                    horse_weight_lbs = int(p[0]) * 14 + int(p[1])
+                else:
+                    horse_weight_lbs = int(float(w_str))
+            except Exception:
+                horse_weight_lbs = 0
+
+    weight_net = 0
+    if horse_weight_lbs > 0:
+        # Absolute heavy-weight penalty (top weight handicap burden)
+        if horse_weight_lbs > 158:  # over 11st 4lb — top weight territory
+            abs_penalty = min(weight_penalty_pts, (horse_weight_lbs - 158) // 2)
+            weight_net -= abs_penalty
+            reasons.append(f"Top weight burden ({horse_weight_lbs}lbs): -{abs_penalty}pts")
+
+        # Relative weight within field (key competitive edge)
+        valid_fw = [w for w in (field_weights or []) if isinstance(w, (int, float)) and w > 0]
+        if len(valid_fw) >= 2:
+            avg_fw = sum(valid_fw) / len(valid_fw)
+            diff = avg_fw - horse_weight_lbs  # positive = carrying LESS than average
+            if diff >= 10:          # 10+ lbs below average — significant weight advantage
+                bonus = min(relative_weight_pts, int(diff / 3))
+                weight_net += bonus
+                reasons.append(f"Light weight advantage ({horse_weight_lbs}lbs vs {avg_fw:.0f}avg): +{bonus}pts")
+            elif diff >= 5:         # 5-9 lbs below — modest advantage
+                bonus = relative_weight_pts // 3
+                weight_net += bonus
+                reasons.append(f"Slightly lighter ({horse_weight_lbs}lbs vs {avg_fw:.0f}avg): +{bonus}pts")
+            elif diff <= -10:        # 10+ lbs above average — significant burden
+                penalty = min(weight_penalty_pts, int(abs(diff) / 3))
+                weight_net -= penalty
+                reasons.append(f"Weight burden ({horse_weight_lbs}lbs vs {avg_fw:.0f}avg): -{penalty}pts")
+
+    score += weight_net
+    breakdown['weight_penalty'] = weight_net
+
+    # 14b. OFFICIAL RATING BONUS — class horse indicator
+    or_bonus_pts = int(weights.get('official_rating_bonus', 8))
+    official_rating = horse_data.get('official_rating', '')
+    if official_rating:
         try:
-            # Parse weight (e.g., "10-7" = 10 stone 7 pounds = 147 lbs)
-            if isinstance(weight_carried, str) and '-' in weight_carried:
-                parts = weight_carried.split('-')
-                total_lbs = int(parts[0]) * 14 + int(parts[1])
+            or_val = int(str(official_rating).strip())
+            if or_val >= 155:       # Championship / Grade1 class
+                or_net = or_bonus_pts
+                score += or_net
+                breakdown['official_rating_bonus'] = or_net
+                reasons.append(f"High official rating ({or_val}): +{or_net}pts")
+            elif or_val >= 140:     # Listed / Grade2-3 class
+                or_net = or_bonus_pts // 2
+                score += or_net
+                breakdown['official_rating_bonus'] = or_net
+                reasons.append(f"Good official rating ({or_val}): +{or_net}pts")
             else:
-                total_lbs = float(weight_carried)
-            
-            # Penalty for heavy weights (over 150 lbs)
-            if total_lbs > 150:
-                penalty = min(weight_penalty_pts, (total_lbs - 150) // 2)
-                score -= penalty
-                breakdown['weight_penalty'] = -penalty
-                reasons.append(f"Heavy weight ({weight_carried}): -{penalty}pts")
-            else:
-                breakdown['weight_penalty'] = 0
-        except:
-            breakdown['weight_penalty'] = 0
+                breakdown['official_rating_bonus'] = 0
+        except Exception:
+            breakdown['official_rating_bonus'] = 0
     else:
-        breakdown['weight_penalty'] = 0
-    
+        breakdown['official_rating_bonus'] = 0
+
+    # 14c. JOCKEY-COURSE FAMILIARITY — bonus if jockey has won here before
+    jc_bonus_pts = int(weights.get('jockey_course_bonus', 8))
+    jockey_for_course = str(horse_data.get('jockey', '')).strip()
+    if jockey_for_course and course:
+        try:
+            jc_key = f"JOCKEY_COURSE_{jockey_for_course.replace(' ', '_')}_{course.replace(' ', '_')}"
+            _db_jc = boto3.resource('dynamodb', region_name='eu-west-1')
+            _tbl_jc = _db_jc.Table('SureBetBets')
+            jc_resp = _tbl_jc.get_item(Key={'bet_id': jc_key, 'bet_date': 'HISTORY'})
+            jc_item = jc_resp.get('Item', {})
+            jc_wins = int(jc_item.get('course_wins', 0))
+            jc_runs = int(jc_item.get('course_runs', 0))
+            if jc_runs >= 2 and jc_wins >= 1:
+                jc_win_rate = jc_wins / jc_runs
+                if jc_win_rate >= 0.30:
+                    jc_pts = jc_bonus_pts
+                elif jc_win_rate >= 0.15:
+                    jc_pts = jc_bonus_pts // 2
+                else:
+                    jc_pts = 0
+                if jc_pts > 0:
+                    score += jc_pts
+                    breakdown['jockey_course_bonus'] = jc_pts
+                    reasons.append(f"Jockey {jockey_for_course} {jc_wins}/{jc_runs} wins at {course}: +{jc_pts}pts")
+                else:
+                    breakdown['jockey_course_bonus'] = 0
+            else:
+                breakdown['jockey_course_bonus'] = 0
+        except Exception:
+            breakdown['jockey_course_bonus'] = 0
+    else:
+        breakdown['jockey_course_bonus'] = 0
+
+    # 14d. MEETING FOCUS SIGNALS (2026-03-19)
+    # Trainer or jockey appearing ONLY at this meeting today signals a targeted, focused effort.
+    # If they're not spread across multiple meetings they likely fancy this horse.
+    # meeting_context must be pre-built by the caller (workflow) before scoring begins.
+    if meeting_context:
+        t = str(horse_data.get('trainer', '')).strip()
+        j = str(horse_data.get('jockey', '')).strip()
+        focus_pts = 0
+        focus_reasons = []
+
+        # Signal 1: Trainer's only horse at this meeting today across ALL meetings
+        trainer_meetings = meeting_context.get('trainer_meetings', {})  # trainer -> set of courses
+        if t and t in trainer_meetings and len(trainer_meetings[t]) == 1:
+            sig1_pts = int(weights.get('meeting_focus_trainer', 10))
+            focus_pts += sig1_pts
+            focus_reasons.append(f"Trainer sole at {course} today (focused effort): +{sig1_pts}pts")
+
+        # Signal 2: Jockey only rides at this meeting today (not spread across multiple courses)
+        jockey_meetings = meeting_context.get('jockey_meetings', {})  # jockey -> set of courses
+        if j and j in jockey_meetings and len(jockey_meetings[j]) == 1:
+            sig2_pts = int(weights.get('meeting_focus_jockey', 10))
+            focus_pts += sig2_pts
+            focus_reasons.append(f"Jockey committed to {course} only today: +{sig2_pts}pts")
+
+        # Signal 3: Trainer+jockey combo only paired at this meeting today
+        combo_meetings = meeting_context.get('combo_meetings', {})  # (trainer,jockey) -> set of courses
+        combo_key = f"{t}|{j}"
+        if t and j and combo_key in combo_meetings and len(combo_meetings[combo_key]) == 1:
+            sig3_pts = int(weights.get('meeting_focus_combo', 10))
+            focus_pts += sig3_pts
+            focus_reasons.append(f"Trainer/jockey duo solely at {course} today: +{sig3_pts}pts")
+
+        # Signal 4: New trainer debut — horse has no prior DB pick with this trainer
+        new_trainer_horses = meeting_context.get('new_trainer_horses', set())
+        horse_trainer_key = f"{name}|{t}"
+        if horse_trainer_key in new_trainer_horses:
+            sig4_pts = int(weights.get('new_trainer_debut', 5))
+            focus_pts += sig4_pts
+            focus_reasons.append(f"Debut run for new trainer {t}: +{sig4_pts}pts")
+
+        if focus_pts > 0:
+            score += focus_pts
+            breakdown['meeting_focus'] = focus_pts
+            reasons.extend(focus_reasons)
+        else:
+            breakdown['meeting_focus'] = 0
+    else:
+        breakdown['meeting_focus'] = 0
+
     # 15. AGE BONUS (peak age varies by race type)
     age_bonus_pts = int(weights.get('age_bonus', 10))
     horse_age = horse_data.get('age', None)
@@ -880,23 +1058,103 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['age_bonus'] = 0
     
-    # 13. DISTANCE SUITABILITY (NEW - match horse to race distance)
-    distance_pts = int(weights.get('distance_suitability', 12))
-    # Distance bonus based on wins + form consistency
-    if wins >= 2 and recent_win:
-        # Proven winner likely at preferred distance
+    # 13. DISTANCE SUITABILITY — actual distance matching using CD marker + form evidence
+    distance_pts = int(weights.get('distance_suitability', 18))
+    # Priority 1: CD marker proves this horse has won at this course/distance
+    if cd_pts > 0:
+        # Already rewarded via cd_bonus - give a smaller additional confirming bonus
+        dist_bonus = distance_pts // 3
+        score += dist_bonus
+        breakdown['distance_suitability'] = dist_bonus
+        reasons.append(f"Confirmed distance evidence (C/D): +{dist_bonus}pts")
+    elif recent_win and wins >= 2:
+        # Won last time + multiple form wins = proven at the trip
         score += distance_pts
         breakdown['distance_suitability'] = distance_pts
-        reasons.append(f"Proven distance performer: +{distance_pts}pts")
+        reasons.append(f"Proven distance performer (recent win + {wins} wins): +{distance_pts}pts")
     elif wins >= 3:
-        # Versatile performer
-        bonus = distance_pts // 2
+        # Multiple wins suggests versatile/settled at a distance
+        bonus = distance_pts * 2 // 3
         score += bonus
         breakdown['distance_suitability'] = bonus
-        reasons.append(f"Versatile performer: +{bonus}pts")
+        reasons.append(f"Versatile/proven performer ({wins} form wins): +{bonus}pts")
+    elif wins >= 1 and places >= 2:
+        # Won once, placed twice — consistent, probably distance suited
+        bonus = distance_pts // 3
+        score += bonus
+        breakdown['distance_suitability'] = bonus
+        reasons.append(f"Consistent at distance (1W {places}P): +{bonus}pts")
     else:
         breakdown['distance_suitability'] = 0
     
+    # 16. DEEP FORM SIGNALS (2026-03-20) — from Racing Post last-6-race history
+    # These use the detailed per-run table (course, distance, going, pos, OR) scraped by
+    # form_enricher.py.  If no form_runs data is present, all signals score 0 gracefully.
+    if FORM_ENRICHER_AVAILABLE and horse_data.get('form_runs'):
+        today_going_str = going_data.get(course, {}).get('going', '')
+        today_dist_f = horse_data.get('race_distance_f')   # injected by get_comprehensive_pick
+        fs = get_form_signals(horse_data, course, today_dist_f, today_going_str)
+
+        form_detail_pts = 0
+
+        # Override/augment the CD marker bonus with hard evidence from run history
+        if fs.get('exact_course_win') and breakdown.get('cd_bonus', 0) == 0:
+            pts = int(weights.get('form_exact_course_win', 20))
+            form_detail_pts += pts
+            reasons.append(f"Proven course winner at {course} (from run history): +{pts}pts")
+
+        if fs.get('exact_distance_win') and breakdown.get('cd_bonus', 0) == 0:
+            pts = int(weights.get('form_exact_distance_win', 20))
+            form_detail_pts += pts
+            reasons.append(f"Proven distance winner (from run history): +{pts}pts")
+
+        # Going match — replaces/augments the inference-based going_suitability
+        if fs.get('going_win_match'):
+            gw = fs['going_win_count']
+            pts = int(weights.get('form_going_win', 16)) * min(gw, 2)  # up to 2× for multiple wins
+            pts = min(pts, int(weights.get('form_going_win', 16)) * 2)  # cap at 2×
+            form_detail_pts += pts
+            reasons.append(f"Won {gw}× on {today_going_str} ground (proven going suitability): +{pts}pts")
+        elif fs.get('going_place_match'):
+            pts = int(weights.get('form_going_place', 6))
+            form_detail_pts += pts
+            reasons.append(f"Placed on {today_going_str} ground (consistent going form): +{pts}pts")
+
+        # Freshness window
+        days = fs.get('days_since_last_run')
+        if fs.get('fresh_days_optimal'):
+            pts = int(weights.get('form_fresh_optimal', 10))
+            form_detail_pts += pts
+            reasons.append(f"Optimal freshness ({days} days since last run): +{pts}pts")
+        elif days is not None and days > 60:
+            reasons.append(f"Long time off ({days} days) — fitness unknown")
+
+        # Close 2nd last time — unlucky loser
+        if fs.get('close_2nd_last_time'):
+            pts = int(weights.get('form_close_2nd', 14))
+            form_detail_pts += pts
+            reasons.append(f"Beaten by < 4 lengths last run (close unlucky 2nd): +{pts}pts")
+
+        # OR trajectory
+        if fs.get('or_trajectory_up'):
+            pts = int(weights.get('form_or_rising', 10))
+            form_detail_pts += pts
+            reasons.append(f"Rising OR trajectory (improving horse): +{pts}pts")
+
+        # Big field winner
+        if fs.get('big_field_win'):
+            pts = int(weights.get('form_big_field_win', 8))
+            form_detail_pts += pts
+            reasons.append(f"Won in competitive field (10+ runners): +{pts}pts")
+
+        if form_detail_pts > 0:
+            score += form_detail_pts
+            breakdown['deep_form'] = form_detail_pts
+        else:
+            breakdown['deep_form'] = 0
+    else:
+        breakdown['deep_form'] = 0
+
     # 14. CHELTENHAM FESTIVAL BONUS (CRITICAL FOR SYSTEM SURVIVAL)
     # Apply Championship-specific scoring if at Cheltenham Festival (March 10-13, 2026)
     if is_cheltenham_festival(course):
@@ -915,7 +1173,20 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
             reasons.append("⚠️ CHELTENHAM: No elite connections - HIGH RISK")
     else:
         breakdown['cheltenham_festival'] = 0
-    
+
+    # ── FINAL CAP: Class 5/6 races — hard ceiling of 80pts (v4.4 lesson)
+    # Lesson: El Gavilan 100pts → 5th (Heavy), Beauzon 91pts → 6th (AW Class5),
+    # Queen Of Steel 99pts → 3rd, El Rojo Grande 98pts → 2nd.
+    # No Class 5/6 horse should be presented as a 90-100pt certainty.
+    # A cap of 80 still allows strong picks to be flagged, but prevents
+    # form-streak inflation from overwhelming the class/unpredictability signals.
+    CLASS5_CAP = 80
+    if is_low_class and score > CLASS5_CAP:
+        cap_reduction = score - CLASS5_CAP
+        score = CLASS5_CAP
+        breakdown['class5_cap'] = -cap_reduction
+        reasons.append(f"Class 5/6 score capped at {CLASS5_CAP}pts (was {score + cap_reduction:.0f}): -{cap_reduction:.0f}pts")
+
     return score, breakdown, reasons
 
 
@@ -962,7 +1233,7 @@ def should_skip_race(race_data):
     return False, None
 
 
-def get_comprehensive_pick(race_data, course_stats=None):
+def get_comprehensive_pick(race_data, course_stats=None, meeting_context=None):
     """
     Get best pick from race using comprehensive analysis
     SKIP RACE if multiple horses score 85+ (too close to call)
@@ -975,7 +1246,12 @@ def get_comprehensive_pick(race_data, course_stats=None):
     
     course = race_data.get('venue') or race_data.get('course')
     runners = race_data.get('runners', [])
-    
+
+    # Parse today's race distance from market_name (e.g. "2m4f Nov Hrd" -> 20.0f)
+    # Injected into each runner so analyze_horse_comprehensive can use it for form signals
+    _market_name = str(race_data.get('market_name', race_data.get('race_name', '')))
+    _today_dist_f = _dist_to_furlongs(_market_name)
+
     analyzed_horses = []
     
     # Calculate coverage: % of runners with form data
@@ -989,12 +1265,17 @@ def get_comprehensive_pick(race_data, course_stats=None):
         # Count as having data if has form and odds
         if form and form not in ['N/A', '', None] and odds and float(odds) > 0:
             runners_with_data += 1
-        
+
+        # Inject today's race distance so form_enricher signals can use it
+        if _today_dist_f:
+            runner['race_distance_f'] = _today_dist_f
+
         score, breakdown, reasons = analyze_horse_comprehensive(
             runner, 
             course,
             avg_winner_odds=course_stats.get('avg_winner_odds', 4.65),
-            course_winners_today=course_stats.get('winners_today', 0)
+            course_winners_today=course_stats.get('winners_today', 0),
+            meeting_context=meeting_context
         )
         
         if score > 0:  # Only include horses in sweet spot
@@ -1040,7 +1321,19 @@ def get_comprehensive_pick(race_data, course_stats=None):
     best_pick['coverage'] = round(coverage, 1)
     best_pick['total_runners'] = total_runners
     best_pick['analyzed_runners'] = runners_with_data
-    
+
+    # Summarise ALL runners for race card display (name, jockey, trainer, odds, score)
+    best_pick['all_horses'] = [
+        {
+            'horse':   h['horse'].get('name', '') if isinstance(h['horse'], dict) else str(h['horse']),
+            'jockey':  h['horse'].get('jockey', '') if isinstance(h['horse'], dict) else '',
+            'trainer': h['horse'].get('trainer', '') if isinstance(h['horse'], dict) else '',
+            'odds':    float(h['horse'].get('odds', 0) or 0) if isinstance(h['horse'], dict) else 0,
+            'score':   round(float(h['score']), 0),
+        }
+        for h in analyzed_horses
+    ]
+
     return best_pick
 
 

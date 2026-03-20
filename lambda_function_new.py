@@ -58,8 +58,6 @@ def lambda_handler(event, context):
             return get_yesterday_picks(headers)
         elif 'picks/today' in path:
             return get_today_picks(headers)
-        elif 'picks/week' in path:
-            return get_week_naps(headers)
         elif 'workflow/run' in path or 'workflow' in path:
             return trigger_workflow(headers)
         elif 'picks' in path:
@@ -147,172 +145,52 @@ def get_today_picks(headers):
     
     items = response.get('Items', [])
     items = [decimal_to_float(item) for item in items]
-
-    # Normalise field names: add aliases so frontend works regardless of schema version
-    def normalise(it):
-        if 'score' not in it:
-            it['score'] = it.get('comprehensive_score', it.get('combined_confidence', 0))
-        if 'horse_name' not in it:
-            it['horse_name'] = it.get('horse', '')
-        if 'venue' not in it:
-            it['venue'] = it.get('course', it.get('race_course', ''))
-        raw_show = it.get('show_in_ui', False)
-        it['show_in_ui'] = raw_show is True or str(raw_show).lower() == 'true'
-        return it
-
-    items = [normalise(it) for it in items]
-
-    # Separate horse-racing items from other sports
-    horse_all = [it for it in items if it.get('sport', 'horses') in ('horses', 'Horse Racing')]
-
-    # Build race_fields: group ALL today's horse runners by race (venue + race_time)
-    # Each entry is a list of runners sorted by score descending
-    from collections import defaultdict
-    race_buckets = defaultdict(list)
-    for it in horse_all:
-        race_key = f"{it.get('venue','')}|{it.get('race_time','')}"
-        race_buckets[race_key].append({
-            'horse':     it.get('horse', it.get('horse_name', '')),
-            'odds':      it.get('odds', 0),
-            'score':     it.get('score', 0),
-            'jockey':    it.get('jockey', ''),
-            'trainer':   it.get('trainer', ''),
-            'form':      it.get('form', ''),
-            'pick_rank': it.get('pick_rank', 0),
-            'score_breakdown': it.get('score_breakdown', {}),
-        })
-    race_fields = {}
-    for key, runners in race_buckets.items():
-        runners.sort(key=lambda x: float(x.get('score', 0)), reverse=True)
-        race_fields[key] = runners
-
-    # Filter to UI picks only (show_in_ui=True)
-    horse_items = [it for it in horse_all if it.get('show_in_ui') is True]
-
-    # Filter out races that have already started
-    now = datetime.utcnow()
-    future_picks = []
-
-    for item in horse_items:
-        race_time_str = item.get('race_time', '')
-        if race_time_str:
-            try:
-                # Try ISO format first, then US date format
-                try:
-                    race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
-                except ValueError:
-                    race_time = datetime.strptime(race_time_str, '%m/%d/%Y %H:%M:%S')
-                # Only include if race is in the future
-                if race_time.replace(tzinfo=None) > now:
-                    future_picks.append(item)
-            except Exception as e:
-                print(f"Error parsing race time {race_time_str}: {e}")
-                future_picks.append(item)
-        else:
-            future_picks.append(item)
-
-    # Sort by pick_rank (1→2→3), then score as tiebreak; limit to exactly 3 picks
-    ranked = [p for p in future_picks if int(p.get('pick_rank', 0) or 0) in (1, 2, 3)]
-    ranked.sort(key=lambda x: (int(x.get('pick_rank', 99) or 99), -float(x.get('score', 0))))
-
-    if ranked:
-        # New-style data: selection engine chose exactly 3
-        final_picks = ranked[:3]
+    
+    # Filter out greyhounds - only show horses
+    horse_items = [item for item in items if item.get('sport', 'horses') == 'horses']
+    
+    # DEMO MODE: On Jan 20, 2026, show ALL picks regardless of time
+    # This allows showing past races during the demo
+    if today == '2026-01-20':
+        print(f"DEMO MODE: Showing all {len(horse_items)} picks for {today}")
+        future_picks = horse_items
     else:
-        # Legacy/fallback: no pick_rank set → return top 3 by score
-        future_picks.sort(key=lambda x: float(x.get('score', 0)), reverse=True)
-        final_picks = future_picks[:3]
-
-    print(f"Total items: {len(items)}, Horse items: {len(horse_all)}, UI picks: {len(horse_items)}, Future picks: {len(future_picks)}, Serving: {len(final_picks)}")
+        # Filter out races that have already started
+        now = datetime.utcnow()
+        future_picks = []
+        
+        for item in horse_items:
+            race_time_str = item.get('race_time', '')
+            if race_time_str:
+                try:
+                    # Parse race time (ISO format)
+                    race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
+                    # Only include if race is in the future
+                    if race_time.replace(tzinfo=None) > now:
+                        future_picks.append(item)
+                except Exception as e:
+                    print(f"Error parsing race time {race_time_str}: {e}")
+                    # Include if we can't parse (safer than excluding)
+                    future_picks.append(item)
+            else:
+                # Include if no race time (safer than excluding)
+                future_picks.append(item)
+    
+    # Sort by race time ascending (earliest races first)
+    future_picks.sort(key=lambda x: x.get('race_time', ''))
+    
+    print(f"Total picks: {len(items)}, Horse picks: {len(horse_items)}, Future picks: {len(future_picks)}")
     
     return {
         'statusCode': 200,
         'headers': headers,
         'body': json.dumps({
             'success': True,
-            'picks': final_picks,
-            'count': len(final_picks),
-            'date': today,
-            'race_fields': race_fields,
+            'picks': future_picks,
+            'count': len(future_picks),
+            'date': today
         })
     }
-
-def get_week_naps(headers):
-    """Return top 3 highest-scoring picks across the next 5 days ('Naps of the Week').
-    These are the best value bets across all upcoming racing."""
-    from datetime import timezone
-    now = datetime.utcnow()
-    today = now.strftime('%Y-%m-%d')
-    end_date = (now.replace(hour=23, minute=59, second=59) 
-                .__class__(now.year, now.month, now.day, 23, 59, 59)
-                ).__str__()  # unused — scan by bet_date range instead
-
-    # Collect picks from today through +4 days
-    from boto3.dynamodb.conditions import Attr
-    days = []
-    from datetime import timedelta
-    for delta in range(5):
-        d = (now + timedelta(days=delta)).strftime('%Y-%m-%d')
-        days.append(d)
-
-    all_picks = []
-    paginator_kwargs = {
-        'FilterExpression': Attr('show_in_ui').eq(True) & Attr('bet_date').is_in(days)
-    }
-    while True:
-        resp = table.scan(**paginator_kwargs)
-        all_picks.extend(resp.get('Items', []))
-        lk = resp.get('LastEvaluatedKey')
-        if not lk:
-            break
-        paginator_kwargs['ExclusiveStartKey'] = lk
-
-    all_picks = [decimal_to_float(p) for p in all_picks]
-
-    # Normalise fields
-    for it in all_picks:
-        if 'score' not in it:
-            it['score'] = it.get('comprehensive_score', it.get('combined_confidence', 0))
-        if 'horse_name' not in it:
-            it['horse_name'] = it.get('horse', '')
-        if 'venue' not in it:
-            it['venue'] = it.get('course', it.get('race_course', ''))
-        raw_show = it.get('show_in_ui', False)
-        it['show_in_ui'] = raw_show is True or str(raw_show).lower() == 'true'
-
-    # Filter to future races only
-    future = []
-    for item in all_picks:
-        rt = item.get('race_time', '')
-        if rt:
-            try:
-                try:
-                    race_dt = datetime.fromisoformat(rt.replace('Z', '+00:00'))
-                except ValueError:
-                    race_dt = datetime.strptime(rt, '%m/%d/%Y %H:%M:%S')
-                if race_dt.replace(tzinfo=None) > now:
-                    future.append(item)
-            except Exception:
-                future.append(item)
-        else:
-            future.append(item)
-
-    # Top 3 by score — these are the naps
-    naps = sorted(future, key=lambda x: float(x.get('score', 0)), reverse=True)[:3]
-
-    print(f"Week naps: scanned {len(all_picks)} picks, {len(future)} future, returning {len(naps)} naps")
-
-    return {
-        'statusCode': 200,
-        'headers': headers,
-        'body': json.dumps({
-            'success': True,
-            'naps': naps,
-            'count': len(naps),
-            'days_covered': days,
-        })
-    }
-
 
 def get_greyhound_picks(headers):
     """Get today's greyhound picks only - filter to show only upcoming races"""

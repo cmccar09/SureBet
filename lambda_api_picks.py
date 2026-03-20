@@ -3,6 +3,8 @@ AWS Lambda function to serve betting picks from DynamoDB
 Provides REST API for frontend hosted on Amplify
 """
 import json
+import urllib.request
+import urllib.parse
 import boto3
 from datetime import datetime, timedelta
 from decimal import Decimal
@@ -39,7 +41,12 @@ def lambda_handler(event, context):
             'headers': headers,
             'body': ''
         }
-    
+
+    # ── EventBridge scheduled trigger (no HTTP path) ─────────────────────────
+    if event.get('source') == 'aws.events' or event.get('source') == 'scheduled-results':
+        print('EventBridge scheduled trigger – running auto_record_pending_results')
+        return auto_record_pending_results(headers)
+
     # Get path - handle both API Gateway and Lambda URL formats
     path = event.get('rawPath', event.get('path', ''))
     method = event.get('requestContext', {}).get('http', {}).get('method', event.get('httpMethod', 'GET'))
@@ -56,6 +63,8 @@ def lambda_handler(event, context):
             return get_cheltenham_picks_lambda(headers, event)
         elif 'cheltenham/races' in path:
             return get_cheltenham_races_lambda(headers)
+        elif 'results/auto-record' in path:
+            return auto_record_pending_results(headers)
         elif 'results/yesterday' in path:
             return check_yesterday_results(headers)
         elif 'results/today' in path or path.endswith('/results'):
@@ -230,7 +239,17 @@ def get_today_picks(headers):
     
     # Sort by race time ascending (earliest races first)
     future_picks.sort(key=lambda x: x.get('race_time', ''))
-    
+
+    # Build race_fields from stored all_horses (full race card per race)
+    # Also map reasons -> selection_reasons for UI compatibility
+    race_fields = {}
+    for pick in future_picks:
+        pick['selection_reasons'] = pick.get('reasons', [])
+        race_key = f"{pick.get('course', '')}|{pick.get('race_time', '')}"
+        all_h = pick.get('all_horses', [])
+        if all_h:
+            race_fields[race_key] = all_h
+
     print(f"Total picks: {len(items)}, Horse picks: {len(horse_items)}, Future picks: {len(future_picks)}")
     
     # Calculate workflow schedule (runs every 30 min at :15 and :45)
@@ -270,6 +289,7 @@ def get_today_picks(headers):
             'date': today,
             'last_run': last_run.isoformat() + 'Z',
             'next_run': next_run.isoformat() + 'Z',
+            'race_fields': race_fields,
             'message': 'No selections met the criteria' if len(future_picks) == 0 else f'{len(future_picks)} upcoming races'
         })
     }
@@ -976,10 +996,10 @@ def save_cheltenham_picks_lambda(headers):
 
 def trigger_workflow(headers):
     """Trigger the betting workflow Lambda to generate new picks"""
-    import boto3
-    
-    lambda_client = boto3.client('lambda', region_name='eu-west-1')
-    
+    import boto3 as _boto3
+
+    lambda_client = _boto3.client('lambda', region_name='eu-west-1')
+
     try:
         # Invoke the workflow Lambda asynchronously
         response = lambda_client.invoke(
@@ -1011,4 +1031,200 @@ def trigger_workflow(headers):
                 'message': 'Failed to trigger workflow. Make sure betting-workflow Lambda exists and API has invoke permissions.'
             })
         }
+
+
+def auto_record_pending_results(headers):
+    """
+    Fetch Betfair results for any pending picks whose race finished >30 min ago.
+    Triggered by EventBridge every 15 minutes, or manually via /api/results/auto-record.
+    """
+    now_utc = datetime.utcnow()
+    today     = now_utc.strftime('%Y-%m-%d')
+    yesterday = (now_utc - timedelta(days=1)).strftime('%Y-%m-%d')
+
+    # ── 1. Scan DynamoDB for pending picks (today + yesterday) ────────────────
+    from boto3.dynamodb.conditions import Attr
+    pending = []
+    for date in [today, yesterday]:
+        resp = table.scan(
+            FilterExpression=Attr('bet_date').eq(date) & Attr('outcome').eq('pending') & Attr('show_in_ui').eq(True)
+        )
+        pending.extend(decimal_to_float(item) for item in resp.get('Items', []))
+
+    # Keep only races that finished >30 minutes ago and have a market_id
+    to_check = []
+    for pick in pending:
+        rt_str    = pick.get('race_time', '')
+        market_id = str(pick.get('market_id', '')).strip()
+        if not market_id or not rt_str:
+            continue
+        try:
+            rt = datetime.fromisoformat(rt_str.replace('Z', '+00:00')).replace(tzinfo=None)
+            if rt + timedelta(minutes=30) < now_utc:
+                to_check.append(pick)
+        except Exception:
+            continue
+
+    if not to_check:
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({'success': True, 'message': 'No pending results ready to check', 'checked': 0})
+        }
+
+    print(f'auto_record: checking {len(to_check)} pending picks')
+
+    # ── 2. Authenticate to Betfair ────────────────────────────────────────────
+    sm = boto3.client('secretsmanager', region_name='eu-west-1')
+    creds = json.loads(sm.get_secret_value(SecretId='betfair-credentials')['SecretString'])
+    app_key = creds['app_key']
+    BF_BASE = 'https://api.betfair.com/exchange/betting/rest/v1.0'
+
+    session_token = None
+    try:
+        login_data = urllib.parse.urlencode(
+            {'username': creds['username'], 'password': creds['password']}
+        ).encode('utf-8')
+        login_req = urllib.request.Request(
+            'https://identitysso.betfair.com/api/login',
+            data=login_data,
+            headers={'X-Application': app_key, 'Content-Type': 'application/x-www-form-urlencoded'},
+            method='POST'
+        )
+        with urllib.request.urlopen(login_req, timeout=10) as r:
+            result = json.loads(r.read())
+            session_token = result.get('sessionToken') or result.get('token')
+    except Exception as e:
+        print(f'Betfair login error: {e}')
+        session_token = creds.get('session_token', '')
+
+    if not session_token:
+        return {
+            'statusCode': 500, 'headers': headers,
+            'body': json.dumps({'success': False, 'error': 'Could not authenticate to Betfair'})
+        }
+
+    bf_hdrs = {
+        'X-Application':  app_key,
+        'X-Authentication': session_token,
+        'Content-Type':   'application/json',
+        'Accept':         'application/json',
+    }
+
+    def bf_post(endpoint, payload):
+        data = json.dumps(payload).encode('utf-8')
+        req  = urllib.request.Request(f'{BF_BASE}/{endpoint}/', data=data, headers=bf_hdrs, method='POST')
+        with urllib.request.urlopen(req, timeout=15) as r:
+            return json.loads(r.read())
+
+    # ── 3. Group picks by market_id ───────────────────────────────────────────
+    by_market = {}
+    for pick in to_check:
+        mid = str(pick['market_id']).strip()
+        by_market.setdefault(mid, []).append(pick)
+
+    updated = 0
+    errors  = []
+    results_summary = []
+
+    for market_id, picks in by_market.items():
+        try:
+            # ── listMarketBook: statuses + sort priority (= finish position) ──
+            book_resp = bf_post('listMarketBook', {
+                'marketIds': [market_id],
+                'priceProjection': {'priceData': []},
+                'orderProjection': 'EXECUTABLE',
+                'matchProjection': 'NO_ROLLUP',
+            })
+            if not book_resp:
+                errors.append(f'{market_id}: empty book response')
+                continue
+
+            market_book  = book_resp[0] if isinstance(book_resp, list) else book_resp
+            market_status = market_book.get('status', '')
+            runners_book  = market_book.get('runners', [])
+
+            # If market not CLOSED yet, skip — check again next cycle
+            if market_status not in ('CLOSED',):
+                print(f'{market_id}: status={market_status} – not settled yet, will retry')
+                continue
+
+            # ── listMarketCatalogue: horse names by selectionId ───────────────
+            runner_names = {}
+            try:
+                cat_resp = bf_post('listMarketCatalogue', {
+                    'filter': {'marketIds': [market_id]},
+                    'marketProjection': ['RUNNER_DESCRIPTION'],
+                })
+                cat_market = (cat_resp[0] if isinstance(cat_resp, list) else cat_resp) or {}
+                for r in cat_market.get('runners', []):
+                    runner_names[str(r.get('selectionId'))] = r.get('runnerName', '')
+            except Exception as ce:
+                print(f'Catalogue fetch failed for {market_id}: {ce}')
+
+            # Build lookup dicts from book
+            sort_by_sel   = {str(r.get('selectionId')): r.get('sortPriority', 99) for r in runners_book}
+            status_by_sel = {str(r.get('selectionId')): r.get('status', '')      for r in runners_book}
+
+            # Winner = runner with sortPriority==1 (or status==WINNER)
+            winner_sel_id = None
+            winner_name   = 'Unknown'
+            for r in runners_book:
+                if r.get('sortPriority') == 1 or r.get('status') == 'WINNER':
+                    winner_sel_id = str(r.get('selectionId'))
+                    winner_name   = runner_names.get(winner_sel_id, 'Unknown')
+                    break
+
+            # ── Update each pick in this market ───────────────────────────────
+            for pick in picks:
+                pick_sel   = str(pick.get('selection_id', '')).strip()
+                sel_status = status_by_sel.get(pick_sel, '')
+                finish     = int(sort_by_sel.get(pick_sel, 99))
+
+                if sel_status == 'WINNER' or finish == 1:
+                    outcome = 'win'
+                elif finish in (2, 3):
+                    outcome = 'placed'
+                elif sel_status in ('LOSER', 'REMOVED') or finish > 3:
+                    outcome = 'loss'
+                else:
+                    print(f"  {pick.get('horse')}: sel_id={pick_sel} not found in book (may have been a non-runner)")
+                    continue
+
+                dynamo_table = boto3.resource('dynamodb', region_name='eu-west-1').Table('SureBetBets')
+                dynamo_table.update_item(
+                    Key={'bet_id': pick['bet_id'], 'bet_date': pick['bet_date']},
+                    UpdateExpression='SET outcome = :o, finish_position = :f, winner_horse = :w, result_recorded_at = :t',
+                    ExpressionAttributeValues={
+                        ':o': outcome,
+                        ':f': finish,
+                        ':w': winner_name,
+                        ':t': now_utc.isoformat() + 'Z',
+                    }
+                )
+                updated += 1
+                results_summary.append({
+                    'horse':   pick.get('horse'),
+                    'course':  pick.get('course'),
+                    'outcome': outcome,
+                    'finish':  finish,
+                    'winner':  winner_name,
+                })
+                print(f"  Recorded: {pick.get('horse')} @ {pick.get('course')} → {outcome} pos={finish} winner={winner_name}")
+
+        except Exception as e:
+            errors.append(f'{market_id}: {str(e)}')
+            print(f'Error processing market {market_id}: {e}')
+
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'success':  True,
+            'checked':  len(to_check),
+            'updated':  updated,
+            'results':  results_summary,
+            'errors':   errors,
+        })
+    }
 

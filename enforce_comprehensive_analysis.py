@@ -121,6 +121,17 @@ def add_pick_to_ui(pick_data, race_data):
         'combined_confidence': Decimal(str(score)),  # For UI compatibility
         'score_breakdown': pick_data.get('breakdown', {}),
         'reasoning': reasoning,
+        'reasons': reasons,          # Full list of scoring reasons for UI
+        'all_horses': [              # All runners ranked by score (floats → Decimal for DynamoDB)
+            {
+                'horse':   h.get('horse', ''),
+                'jockey':  h.get('jockey', ''),
+                'trainer': h.get('trainer', ''),
+                'odds':    Decimal(str(round(float(h.get('odds', 0) or 0), 2))),
+                'score':   Decimal(str(int(h.get('score', 0) or 0))),
+            }
+            for h in pick_data.get('all_horses', [])
+        ],
         'confidence': confidence,
         'analysis_method': 'COMPREHENSIVE',
         

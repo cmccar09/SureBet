@@ -1,11 +1,12 @@
 """
 auto_refresh_betfair.py
 -----------------------
-Regular daily refresh (post-Cheltenham): runs 3x per day at 12:00, 14:00, 16:00 local time.
+Regular daily refresh: runs every 2 hours from 12:00-18:00 (12:00, 14:00, 16:00, 18:00).
 
 Pipeline:
-  1. betfair_odds_fetcher.py   → fetches next 3 days of races → response_horses.json
-  2. complete_daily_analysis.py → scores all horses, picks top 5 for UI, saves to DynamoDB
+  1. betfair_odds_fetcher.py   → fetches next 5 days of races → response_horses.json
+  2. complete_daily_analysis.py → scores all horses, picks top UI candidates, saves to DynamoDB
+  3. daily_learning.py          → (runs separately at 20:00) fetches results, updates weights
 
 Usage:
     python auto_refresh_betfair.py           # normal run (always executes)

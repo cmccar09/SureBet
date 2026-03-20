@@ -28,6 +28,14 @@ from decimal import Decimal
 from comprehensive_pick_logic import analyze_horse_comprehensive, get_comprehensive_pick, should_skip_race
 from enforce_comprehensive_analysis import validate_pick_for_ui, add_pick_to_ui
 
+# Optional: enrich runners with detailed last-6-race history from Racing Post
+try:
+    from form_enricher import enrich_runners
+    FORM_ENRICHER_AVAILABLE = True
+except ImportError:
+    FORM_ENRICHER_AVAILABLE = False
+    def enrich_runners(races, verbose=True): return races
+
 def fetch_upcoming_races(hours_ahead=6):
     """
     Get upcoming races from Betfair or JSON file
@@ -60,7 +68,7 @@ def fetch_upcoming_races(hours_ahead=6):
         print("⚠️  response_horses.json not found - run betfair_odds_fetcher.py first")
         return []
 
-def process_race_comprehensive(race):
+def process_race_comprehensive(race, meeting_context=None):
     """
     Process a single race using comprehensive analysis
     Returns pick dict if suitable horse found, None otherwise
@@ -97,7 +105,7 @@ def process_race_comprehensive(race):
         'race_time': race_time,
         'race_name': race_name,
         'runners': runners
-    }, course_stats)
+    }, course_stats, meeting_context=meeting_context)
     
     if pick:
         # Validate for UI
@@ -120,6 +128,95 @@ def process_race_comprehensive(race):
     else:
         print(f"\n[SKIPPED] No horses meet comprehensive criteria")
         return None
+
+def build_meeting_context(races):
+    """
+    Pre-compute meeting-level signals for all races fetched today.
+    Returns a dict consumed by analyze_horse_comprehensive (meeting_context param).
+
+    Signals built:
+      trainer_meetings : {trainer_name -> set of courses running at today}
+      jockey_meetings  : {jockey_name  -> set of courses running at today}
+      combo_meetings   : {"trainer|jockey" -> set of courses}
+      new_trainer_horses: set of "horse_name|trainer" keys where the trainer
+                          has never appeared for this horse in our DynamoDB history.
+    """
+    from collections import defaultdict
+    trainer_meetings = defaultdict(set)
+    jockey_meetings  = defaultdict(set)
+    combo_meetings   = defaultdict(set)
+
+    all_horse_names = []
+    horse_trainer_map = {}  # horse_name -> current trainer
+
+    for race in races:
+        course = race.get('venue', race.get('course', ''))
+        for runner in race.get('runners', []):
+            t = str(runner.get('trainer', '')).strip()
+            j = str(runner.get('jockey', '')).strip()
+            h = str(runner.get('name', '')).strip()
+            if t and course:
+                trainer_meetings[t].add(course)
+            if j and course:
+                jockey_meetings[j].add(course)
+            if t and j and course:
+                combo_key = f"{t}|{j}"
+                combo_meetings[combo_key].add(course)
+            if h:
+                all_horse_names.append(h)
+                if h not in horse_trainer_map and t:
+                    horse_trainer_map[h] = t
+
+    # Build new_trainer_horses via DynamoDB scan (one-shot batch)
+    new_trainer_horses = set()
+    if all_horse_names:
+        try:
+            import boto3
+            from boto3.dynamodb.conditions import Attr
+            db = boto3.resource('dynamodb', region_name='eu-west-1')
+            table = db.Table('SureBetBets')
+            unique_names = list(set(all_horse_names))
+            # Scan in chunks of 50 to avoid expression limits
+            horse_trainers_seen = defaultdict(set)
+            chunk_size = 50
+            for i in range(0, len(unique_names), chunk_size):
+                chunk = unique_names[i:i + chunk_size]
+                if len(chunk) == 1:
+                    fe = Attr('horse').eq(chunk[0])
+                else:
+                    fe = Attr('horse').eq(chunk[0])
+                    for name_val in chunk[1:]:
+                        fe = fe | Attr('horse').eq(name_val)
+                resp = table.scan(FilterExpression=fe, ProjectionExpression='horse, trainer')
+                for item in resp.get('Items', []):
+                    h_name = str(item.get('horse', '')).strip()
+                    h_trainer = str(item.get('trainer', '')).strip()
+                    if h_name and h_trainer:
+                        horse_trainers_seen[h_name].add(h_trainer)
+            # A horse's current trainer is "new" if it has DB history but none with this trainer
+            for horse_name, current_trainer in horse_trainer_map.items():
+                if current_trainer and horse_name in horse_trainers_seen:
+                    seen = horse_trainers_seen[horse_name]
+                    if current_trainer not in seen:
+                        new_trainer_horses.add(f"{horse_name}|{current_trainer}")
+        except Exception as e:
+            print(f"  [build_meeting_context] DB lookup failed: {e}")
+
+    context = {
+        'trainer_meetings': dict(trainer_meetings),
+        'jockey_meetings':  dict(jockey_meetings),
+        'combo_meetings':   dict(combo_meetings),
+        'new_trainer_horses': new_trainer_horses,
+    }
+
+    # Summary
+    sole_trainers = sum(1 for v in trainer_meetings.values() if len(v) == 1)
+    sole_jockeys  = sum(1 for v in jockey_meetings.values()  if len(v) == 1)
+    print(f"  Meeting context: {sole_trainers} trainer(s) and {sole_jockeys} jockey(s) focused on a single meeting today")
+    if new_trainer_horses:
+        print(f"  New trainer debuts detected: {len(new_trainer_horses)}")
+    return context
+
 
 def load_intraday_learnings():
     """Load insights from earlier races today"""
@@ -165,14 +262,25 @@ def run_comprehensive_workflow():
         return
     
     print(f"Found {len(races)} upcoming races\n")
-    
+
+    # Enrich runners with detailed last-6-race form from Racing Post (with disk cache)
+    if FORM_ENRICHER_AVAILABLE:
+        print("Fetching detailed form history from Racing Post (cached)...")
+        races = enrich_runners(races, verbose=True)
+        print()
+
+    # Build meeting-level context for focus signals (sole trainer/jockey at a meeting)
+    print("Building meeting context...")
+    meeting_context = build_meeting_context(races)
+    print()
+
     approved_picks = []
     rejected_count = 0
     skipped_too_close = 0
     
     # Process each race
     for race in races:
-        pick = process_race_comprehensive(race)
+        pick = process_race_comprehensive(race, meeting_context=meeting_context)
         
         if pick:
             # Add to database
