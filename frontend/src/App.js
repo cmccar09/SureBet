@@ -128,7 +128,7 @@ function App() {
       <div style={{ display:'flex', justifyContent:'center', gap:'12px', marginBottom:'32px', flexWrap:'wrap' }}>
         {[
           { key:'picks',  label:"Today's Picks",    emoji:'\ud83c\udfaf', sub:'Top 5 value bets'     },
-          { key:'yesterday', label:"Yesterday's Results", emoji:'\ud83d\udcca', sub:'How our tips did'     },
+          { key:'yesterday', label:'Latest Results', emoji:'\ud83d\udcca', sub:'Today & yesterday'     },
           { key:'majors', label:'Major Races',        emoji:'\ud83c\udfc6', sub:'Group 1 calendar'    },
         ].map(tab => (
           <button key={tab.key} onClick={() => setPage(tab.key)} style={{
@@ -528,13 +528,37 @@ function YesterdayResultsView() {
   const loadResults = async () => {
     setLoading(true); setError(null);
     try {
-      const res  = await fetch(API_BASE_URL + '/api/results/yesterday');
-      const data = await res.json();
-      if (data.success) {
-        setResults(data);
-        setRaceFields(data.race_fields || {});
+      const [todayRes, yestRes] = await Promise.all([
+        fetch(API_BASE_URL + '/api/results/today'),
+        fetch(API_BASE_URL + '/api/results/yesterday'),
+      ]);
+      const [todayData, yestData] = await Promise.all([todayRes.json(), yestRes.json()]);
+
+      const todayPicks = (todayData.success ? todayData.picks || [] : []).map(p => ({ ...p, _dayLabel: 'Today' }));
+      const yestPicks  = (yestData.success  ? yestData.picks  || [] : []).map(p => ({ ...p, _dayLabel: 'Yesterday' }));
+      const allPicks   = [...todayPicks, ...yestPicks];
+
+      const allRaceFields = { ...(yestData.race_fields || {}), ...(todayData.race_fields || {}) };
+
+      const ts = todayData.success ? (todayData.summary || {}) : {};
+      const ys = yestData.success  ? (yestData.summary  || {}) : {};
+      const combinedSummary = {
+        total_picks:  (ts.total_picks  || 0) + (ys.total_picks  || 0),
+        wins:         (ts.wins         || 0) + (ys.wins         || 0),
+        places:       (ts.places       || 0) + (ys.places       || 0),
+        losses:       (ts.losses       || 0) + (ys.losses       || 0),
+        pending:      (ts.pending      || 0) + (ys.pending      || 0),
+        profit:       (ts.profit       || 0) + (ys.profit       || 0),
+        total_stake:  (ts.total_stake  || 0) + (ys.total_stake  || 0),
+      };
+      combinedSummary.roi = combinedSummary.total_stake > 0
+        ? (combinedSummary.profit / combinedSummary.total_stake * 100) : 0;
+
+      if (allPicks.length === 0 && !todayData.success && !yestData.success) {
+        setError('Failed to load results');
       } else {
-        setError(data.error || 'Failed to load results');
+        setResults({ picks: allPicks, summary: combinedSummary });
+        setRaceFields(allRaceFields);
       }
     } catch (err) {
       setError('Network error: ' + err.message);
@@ -577,14 +601,16 @@ function YesterdayResultsView() {
     return             { bg:'#8b5cf6', label:'VALUE'  };
   };
 
-  const yesterdayLabel = () => {
-    const d = new Date(); d.setDate(d.getDate() - 1);
-    return d.toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+  const dateRangeLabel = () => {
+    const today = new Date();
+    const yest  = new Date(); yest.setDate(yest.getDate() - 1);
+    const fmt = d => d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+    return `${fmt(yest)} – ${fmt(today)}`;
   };
 
   if (loading) return (
     <div style={{ textAlign:'center', padding:'60px 20px', color:'white' }}>
-      <div style={{ fontSize:'18px', opacity:0.8 }}>Loading yesterday's results...</div>
+      <div style={{ fontSize:'18px', opacity:0.8 }}>Loading latest results...</div>
     </div>
   );
 
@@ -606,8 +632,8 @@ function YesterdayResultsView() {
       <div style={{ background:'linear-gradient(135deg,#1e3a5f 0%,#1e40af 50%,#1e3a5f 100%)', border:'2px solid #3b82f6', borderRadius:'12px', padding:'24px 28px', marginBottom:'24px', color:'white', display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'12px' }}>
         <div>
           <div style={{ fontSize:'13px', textTransform:'uppercase', letterSpacing:'1px', color:'#93c5fd', opacity:0.9 }}>Post-Race Analysis</div>
-          <div style={{ fontSize:'22px', fontWeight:'800', marginTop:'4px' }}>Yesterday's Results</div>
-          <div style={{ fontSize:'13px', opacity:0.75, marginTop:'4px' }}>{yesterdayLabel()}</div>
+          <div style={{ fontSize:'22px', fontWeight:'800', marginTop:'4px' }}>Latest Results</div>
+          <div style={{ fontSize:'13px', opacity:0.75, marginTop:'4px' }}>{dateRangeLabel()}</div>
         </div>
         <button onClick={loadResults} style={{ background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.4)', borderRadius:'8px', color:'white', padding:'8px 18px', cursor:'pointer', fontSize:'13px', fontWeight:'600' }}>
           Refresh
@@ -652,8 +678,8 @@ function YesterdayResultsView() {
 
       {picks.length === 0 ? (
         <div style={{ background:'rgba(255,255,255,0.08)', borderRadius:'12px', padding:'48px 24px', textAlign:'center', color:'rgba(255,255,255,0.7)' }}>
-          <div style={{ fontSize:'18px', fontWeight:'700', color:'white', marginBottom:'8px' }}>No picks found for yesterday</div>
-          <div style={{ fontSize:'14px' }}>Yesterday's AI selections will appear here once the day's picks have been generated and results recorded.</div>
+          <div style={{ fontSize:'18px', fontWeight:'700', color:'white', marginBottom:'8px' }}>No picks found for today or yesterday</div>
+          <div style={{ fontSize:'14px' }}>Today's and yesterday's AI selections will appear here once picks have been generated and results recorded.</div>
         </div>
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
@@ -677,6 +703,11 @@ function YesterdayResultsView() {
                   <div>
                     <div style={{ fontSize:'21px', fontWeight:'900', color:'white' }}>{pick.horse || 'Unknown'}</div>
                     <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', marginTop:'6px', alignItems:'center' }}>
+                      {pick._dayLabel && (
+                        <span style={{ background: pick._dayLabel === 'Today' ? '#7c3aed' : '#374151', color:'white', padding:'3px 10px', borderRadius:'6px', fontSize:'11px', fontWeight:'800', textTransform:'uppercase', letterSpacing:'0.5px' }}>
+                          {pick._dayLabel}
+                        </span>
+                      )}
                       {pick.course && (
                         <span style={{ background:'#1e3a5f', color:'white', padding:'3px 10px', borderRadius:'6px', fontSize:'12px', fontWeight:'700' }}>
                           {pick.course}
