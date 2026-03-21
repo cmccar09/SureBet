@@ -206,6 +206,13 @@ function DailyPicksView() {
   const [expandedPick,  setExpandedPick]  = useState(null);
   const [expandedField, setExpandedField] = useState(null);
   const [raceFields,    setRaceFields]    = useState({});
+  const [isMobile,      setIsMobile]      = useState(typeof window !== 'undefined' && window.innerWidth < 480);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 480);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   const formatRaceTime = rt => {
     if (!rt) return { date: '', time: '' };
@@ -399,65 +406,116 @@ function DailyPicksView() {
                 )}
                 {/* Full race card — all runners ranked by score */}
                 {(() => {
-                  const raceKey = `${pick.venue || pick.course}|${pick.race_time}`;
-                  const field   = raceFields[raceKey] || [];
-                  if (!field.length) return null;
-                  const open    = expandedField === idx;
+                  // Use all_horses from pick data (DynamoDB), fall back to raceFields from API
+                  const raceKey  = `${pick.venue || pick.course}|${pick.race_time}`;
+                  const rawField = (pick.all_horses && pick.all_horses.length > 0)
+                    ? pick.all_horses
+                    : (raceFields[raceKey] || []);
+                  if (!rawField.length) return null;
+
+                  // Sort by score descending; mark our pick
+                  const ourHorse = (pick.horse || pick.horse_name || '').toLowerCase();
+                  const field = [...rawField]
+                    .map(h => ({ ...h, score: parseFloat(h.score || 0), odds: parseFloat(h.odds || 0) }))
+                    .sort((a, b) => b.score - a.score);
+                  const topScore  = field[0]?.score || 1;
+                  const open      = expandedField === idx;
+                  const ourRank   = field.findIndex(h => (h.horse||'').toLowerCase() === ourHorse);
+                  const nextBest  = field.find(h => (h.horse||'').toLowerCase() !== ourHorse);
+                  const gap       = ourRank === 0 && nextBest ? (field[0].score - nextBest.score).toFixed(0) : null;
+
                   return (
                     <div style={{ marginTop:'10px' }}>
                       <button
                         onClick={() => setExpandedField(open ? null : idx)}
-                        style={{ background:'none', border:'1px solid #d1d5db', borderRadius:'6px', padding:'5px 14px', fontSize:'12px', fontWeight:'700', color:'#374151', cursor:'pointer', width:'100%', textAlign:'left', display:'flex', justifyContent:'space-between', alignItems:'center' }}
+                        style={{ background: open ? '#f0fdf4' : 'none', border:`1px solid ${open ? '#86efac' : '#d1d5db'}`, borderRadius:'6px', padding:'6px 14px', fontSize:'12px', fontWeight:'700', color: open ? '#166534' : '#374151', cursor:'pointer', width:'100%', textAlign:'left', display:'flex', justifyContent:'space-between', alignItems:'center', transition:'all 0.15s' }}
                       >
-                        <span>Full race card &mdash; {field.length} runners rated</span>
-                        <span style={{ fontSize:'10px' }}>{open ? '\u25b2 Hide' : '\u25bc Show'}</span>
+                        <span>
+                          🏇 See how all {field.length} runners rated
+                          {gap && <span style={{ marginLeft:'8px', background:'#dcfce7', color:'#166534', borderRadius:'4px', padding:'1px 7px', fontSize:'11px' }}>+{gap}pt clear</span>}
+                        </span>
+                        <span style={{ fontSize:'10px', color:'#6b7280' }}>{open ? '▲ Hide' : '▼ Show'}</span>
                       </button>
+
                       {open && (
-                        <div style={{ marginTop:'8px', background:'#f8fafc', borderRadius:'8px', overflow:'hidden', border:'1px solid #e5e7eb' }}>
-                          <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'12px' }}>
-                            <thead>
-                              <tr style={{ background:'#1e3a5f', color:'white' }}>
-                                <th style={{ padding:'7px 10px', textAlign:'left',   fontWeight:'700' }}>Pos</th>
-                                <th style={{ padding:'7px 10px', textAlign:'left',   fontWeight:'700' }}>Horse</th>
-                                <th style={{ padding:'7px 10px', textAlign:'center', fontWeight:'700' }}>Odds</th>
-                                <th style={{ padding:'7px 10px', textAlign:'center', fontWeight:'700' }}>Score</th>
-                                <th style={{ padding:'7px 10px', textAlign:'center', fontWeight:'700' }}>Rating</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {field.map((runner, ri) => {
-                                const rScore = parseFloat(runner.score || 0);
-                                const t      = tierInfo(rScore);
-                                const isOurPick = parseInt(runner.pick_rank || 0) > 0;
-                                return (
-                                  <tr key={ri} style={{ background: isOurPick ? '#ecfdf5' : ri % 2 === 0 ? 'white' : '#f9fafb', borderBottom:'1px solid #e5e7eb' }}>
-                                    <td style={{ padding:'6px 10px', fontWeight:'700', color: ri === 0 ? '#d97706' : '#6b7280' }}>
-                                      {ri + 1}{isOurPick && <span style={{ marginLeft:'4px', background:'#059669', color:'white', borderRadius:'3px', padding:'1px 5px', fontSize:'10px' }}>OUR PICK</span>}
-                                    </td>
-                                    <td style={{ padding:'6px 10px', fontWeight: isOurPick ? '700' : '500', color:'#111' }}>
+                        <div style={{ marginTop:'6px', background:'#f8fafc', borderRadius:'10px', overflow:'hidden', border:'1px solid #e5e7eb' }}>
+                          {/* Column headers */}
+                          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '22px 1fr 42px 52px' : '28px 1fr 64px 160px 60px', gap:'0', background:'#1e3a5f', padding:'7px 12px', fontSize:'10px', fontWeight:'800', color:'rgba(255,255,255,0.7)', textTransform:'uppercase', letterSpacing:'0.8px', alignItems:'center' }}>
+                            <span>#</span>
+                            <span>Horse</span>
+                            <span style={{ textAlign:'center' }}>Odds</span>
+                            <span style={{ textAlign:'center' }}>{isMobile ? 'Pts' : 'Model Score'}</span>
+                            {!isMobile && <span style={{ textAlign:'center' }}>Tier</span>}
+                          </div>
+                          {field.map((runner, ri) => {
+                            const rScore    = runner.score;
+                            const t         = tierInfo(rScore);
+                            const isOurPick = (runner.horse||'').toLowerCase() === ourHorse;
+                            const barPct    = topScore > 0 ? Math.min(rScore / topScore * 100, 100) : 0;
+                            const scoreDiff = ri > 0 ? (rScore - field[0].score).toFixed(0) : null;
+                            return (
+                              <div key={ri} style={{ display:'grid', gridTemplateColumns: isMobile ? '22px 1fr 42px 52px' : '28px 1fr 64px 160px 60px', gap:'0', padding: isMobile ? '7px 10px' : '8px 12px', alignItems:'center', background: isOurPick ? 'rgba(5,150,105,0.08)' : ri % 2 === 0 ? 'white' : '#f9fafb', borderBottom:'1px solid #f0f0f0', borderLeft: isOurPick ? '3px solid #059669' : '3px solid transparent' }}>
+                                {/* Rank */}
+                                <span style={{ fontSize:'11px', fontWeight:'800', color: ri === 0 ? '#d97706' : '#9ca3af' }}>
+                                  {ri === 0 ? '★' : ri + 1}
+                                </span>
+                                {/* Horse name */}
+                                <div>
+                                  <div style={{ display:'flex', alignItems:'center', gap:'5px', flexWrap:'wrap' }}>
+                                    <span style={{ fontWeight: isOurPick ? '800' : '600', color: isOurPick ? '#065f46' : '#111', fontSize:'13px' }}>
                                       {runner.horse}
-                                      {runner.jockey  && <div style={{ fontSize:'10px', color:'#6b7280', marginTop:'1px' }}>J: {runner.jockey}</div>}
-                                      {runner.trainer && <div style={{ fontSize:'10px', color:'#6b7280' }}>T: {runner.trainer}</div>}
-                                    </td>
-                                    <td style={{ padding:'6px 10px', textAlign:'center', fontWeight:'700', color:'#1e3a5f' }}>
-                                      {runner.odds > 1 ? toFractional(runner.odds) : '-'}
-                                    </td>
-                                    <td style={{ padding:'6px 10px', textAlign:'center' }}>
-                                      <div style={{ display:'flex', alignItems:'center', gap:'6px', justifyContent:'center' }}>
-                                        <div style={{ width:'50px', height:'8px', background:'#e5e7eb', borderRadius:'4px', overflow:'hidden' }}>
-                                          <div style={{ width: Math.min(rScore, 100)+'%', height:'100%', background: t.bg, borderRadius:'4px' }} />
-                                        </div>
-                                        <span style={{ fontSize:'11px', fontWeight:'700', color:'#374151', minWidth:'24px' }}>{rScore.toFixed(0)}</span>
-                                      </div>
-                                    </td>
-                                    <td style={{ padding:'6px 10px', textAlign:'center' }}>
-                                      <span style={{ background: t.bg, color:'white', borderRadius:'4px', padding:'2px 7px', fontSize:'10px', fontWeight:'700' }}>{t.label}</span>
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
+                                    </span>
+                                    {isOurPick && (
+                                      <span style={{ background:'#059669', color:'white', borderRadius:'3px', padding:'1px 6px', fontSize:'9px', fontWeight:'800', textTransform:'uppercase' }}>Our Pick</span>
+                                    )}
+                                  </div>
+                                  {(runner.jockey || runner.trainer) && (
+                                    <div style={{ fontSize:'10px', color:'#9ca3af', marginTop:'2px' }}>
+                                      {runner.jockey  && `J: ${runner.jockey}`}
+                                      {runner.jockey && runner.trainer && ' · '}
+                                      {runner.trainer && `T: ${runner.trainer}`}
+                                    </div>
+                                  )}
+                                </div>
+                                {/* Odds */}
+                                <div style={{ textAlign:'center', fontWeight:'700', color:'#1e3a5f', fontSize:'12px' }}>
+                                  {runner.odds > 1 ? toFractional(runner.odds) : '—'}
+                                </div>
+                                {/* Score bar — full on desktop, compact number on mobile */}
+                                {isMobile ? (
+                                  <div style={{ textAlign:'center' }}>
+                                    <span style={{ fontSize:'13px', fontWeight:'900', color: isOurPick ? '#065f46' : t.bg }}>{rScore.toFixed(0)}</span>
+                                    {scoreDiff !== null && <div style={{ fontSize:'9px', fontWeight:'700', color:'#ef4444', lineHeight:1 }}>{scoreDiff}</div>}
+                                  </div>
+                                ) : (
+                                  <div style={{ display:'flex', alignItems:'center', gap:'7px' }}>
+                                    <div style={{ flex:1, height:'10px', background:'#e5e7eb', borderRadius:'5px', overflow:'hidden' }}>
+                                      <div style={{ width:`${barPct}%`, height:'100%', background: isOurPick ? '#059669' : t.bg, borderRadius:'5px', transition:'width 0.3s' }} />
+                                    </div>
+                                    <span style={{ fontSize:'12px', fontWeight:'800', color: isOurPick ? '#065f46' : '#374151', minWidth:'26px', textAlign:'right' }}>
+                                      {rScore.toFixed(0)}
+                                    </span>
+                                    {scoreDiff !== null && (
+                                      <span style={{ fontSize:'10px', fontWeight:'700', color:'#ef4444', minWidth:'28px', textAlign:'right' }}>
+                                        {scoreDiff}
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                {/* Tier badge — desktop only */}
+                                {!isMobile && (
+                                  <div style={{ textAlign:'center' }}>
+                                    <span style={{ background: isOurPick ? '#059669' : t.bg, color:'white', borderRadius:'4px', padding:'2px 6px', fontSize:'10px', fontWeight:'700' }}>
+                                      {t.label}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                          <div style={{ padding:'8px 14px', background:'#f1f5f9', fontSize:'11px', color:'#64748b', textAlign:'right' }}>
+                            Score = AI model rating out of 100 · Red numbers = points behind our pick
+                          </div>
                         </div>
                       )}
                     </div>
@@ -520,8 +578,13 @@ function YesterdayResultsView() {
   const [results, setResults]   = useState(null);
   const [loading, setLoading]   = useState(true);
   const [error, setError]       = useState(null);
-  const [raceFields,    setRaceFields]    = useState({});
-  const [expandedField, setExpandedField] = useState(null);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 480);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 480);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => { loadResults(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -538,7 +601,7 @@ function YesterdayResultsView() {
       const yestPicks  = (yestData.success  ? yestData.picks  || [] : []).map(p => ({ ...p, _dayLabel: 'Yesterday' }));
       const allPicks   = [...todayPicks, ...yestPicks];
 
-      const allRaceFields = { ...(yestData.race_fields || {}), ...(todayData.race_fields || {}) };
+      const allRaceFields = { ...(yestData.race_fields || {}), ...(todayData.race_fields || {}) }; // eslint-disable-line no-unused-vars
 
       const ts = todayData.success ? (todayData.summary || {}) : {};
       const ys = yestData.success  ? (yestData.summary  || {}) : {};
@@ -560,7 +623,6 @@ function YesterdayResultsView() {
         setError('Failed to load results');
       } else {
         setResults({ picks: allPicks, summary: combinedSummary });
-        setRaceFields(allRaceFields);
       }
     } catch (err) {
       setError('Network error: ' + err.message);
@@ -713,7 +775,8 @@ function YesterdayResultsView() {
         </div>
       ) : (
         <div style={{ background:'rgba(255,255,255,0.05)', borderRadius:'14px', overflow:'hidden', border:'1px solid rgba(255,255,255,0.12)' }}>
-          {/* Table header */}
+          {/* Table header — desktop only */}
+          {!isMobile && (
           <div style={{ display:'grid', gridTemplateColumns:'90px 55px 110px 1fr 70px minmax(0,2fr) 80px 70px', gap:'0', background:'rgba(30,58,95,0.9)', padding:'10px 16px', fontSize:'11px', fontWeight:'800', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'0.8px', alignItems:'center' }}>
             <span>Result</span>
             <span>Day</span>
@@ -724,20 +787,64 @@ function YesterdayResultsView() {
             <span style={{textAlign:'center'}}>Odds</span>
             <span style={{textAlign:'right'}}>P&amp;L</span>
           </div>
+          )}
           {picks.map((pick, idx) => {
-            const oc    = outcomeStyle(pick.result_emoji);
+            // Derive display emoji: prefer stored result_emoji, fall back to outcome field
+            const rawOutcome = pick.result_emoji
+              || (pick.outcome === 'win'    || pick.outcome === 'WON'   ? 'WIN'
+                : pick.outcome === 'placed'                             ? 'PLACED'
+                : pick.outcome === 'loss'   || pick.outcome === 'LOST'  ? 'LOSS'
+                : null);
+            const oc    = outcomeStyle(rawOutcome);
             const tier  = scoreLabel(pick.comprehensive_score || pick.analysis_score);
             const ft    = formatRaceTime(pick.race_time);
             const score = parseFloat(pick.comprehensive_score || pick.analysis_score || 0);
-            const winner = pick.result_winner_name;
+            const winner = pick.result_winner_name || pick.winner_name;
             const pnl   = parseFloat(pick.profit || 0);
-            const isPending = !pick.result_emoji || pick.result_emoji === 'PENDING';
-            const keyReason = Array.isArray(pick.selection_reasons) && pick.selection_reasons.length > 0
-              ? pick.selection_reasons[0].replace(/:\s*[+-]?\d+pts?/i,'').trim()
-              : (pick.result_analysis ? pick.result_analysis.substring(0,80) : '');
-            const winnerNote = winner && winner !== pick.horse ? `Winner: ${winner}` : '';
+            const isPending = !rawOutcome || rawOutcome === 'PENDING';
+            // Key reason: for settled picks show result_analysis; for pending show pre-race reason
+            const keyReason = !isPending && pick.result_analysis
+              ? pick.result_analysis
+              : (Array.isArray(pick.selection_reasons) && pick.selection_reasons.length > 0
+                  ? pick.selection_reasons[0].replace(/:\s*[+-]?\d+pts?/i,'').trim()
+                  : (pick.result_analysis ? pick.result_analysis.substring(0,80) : ''));
+            const winnerNote = !isPending && winner && winner !== pick.horse ? `Winner: ${winner}` : '';
 
+            if (isMobile) return (
+              /* ── Mobile card layout ── */
+              <div key={idx} style={{ padding:'12px 14px', borderBottom:'1px solid rgba(255,255,255,0.08)', background: idx % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent', borderLeft:`3px solid ${oc.border}` }}>
+                {/* Row 1: result + horse + P&L */}
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:'8px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'8px', flex:1, minWidth:0 }}>
+                    <span style={{ flexShrink:0, display:'inline-block', background:oc.bg, color:'white', padding:'3px 7px', borderRadius:'5px', fontSize:'10px', fontWeight:'800' }}>
+                      {isPending ? '⏳' : oc.text}
+                    </span>
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ fontWeight:'800', color:'white', fontSize:'14px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{pick.horse || '—'}</div>
+                      <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)', marginTop:'1px' }}>
+                        {ft.time}{ft.time && pick.course ? ' · ' : ''}{pick.course || ''}
+                        {score > 0 && <span style={{ marginLeft:'6px', background:tier.bg, color:'white', padding:'1px 6px', borderRadius:'4px', fontSize:'10px', fontWeight:'700' }}>{score.toFixed(0)} {tier.label}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ textAlign:'right', flexShrink:0 }}>
+                    <div style={{ fontWeight:'900', fontSize:'15px', color: pnl > 0 ? '#34d399' : pnl < 0 ? '#f87171' : 'rgba(255,255,255,0.4)' }}>
+                      {isPending ? '—' : pnl >= 0 ? `+£${pnl.toFixed(2)}` : `-£${Math.abs(pnl).toFixed(2)}`}
+                    </div>
+                    <div style={{ fontSize:'11px', color:'#93c5fd', fontWeight:'700' }}>{pick.odds ? toFractional(pick.odds) : ''}</div>
+                  </div>
+                </div>
+                {/* Row 2: key reason + winner note */}
+                {(keyReason || winnerNote) && (
+                  <div style={{ marginTop:'5px', fontSize:'11px', lineHeight:1.4 }}>
+                    {keyReason && <span style={{ color:'rgba(255,255,255,0.5)' }}>{keyReason.length > 90 ? keyReason.substring(0,90)+'…' : keyReason}</span>}
+                    {winnerNote && <div style={{ color:'#f87171', marginTop:'2px' }}>{winnerNote}</div>}
+                  </div>
+                )}
+              </div>
+            );
             return (
+              /* ── Desktop table row ── */
               <div key={idx} style={{ display:'grid', gridTemplateColumns:'90px 55px 110px 1fr 70px minmax(0,2fr) 80px 70px', gap:'0', padding:'11px 16px', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.07)', background: idx % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent', borderLeft:`3px solid ${oc.border}` }}>
 
                 {/* Result badge */}
@@ -793,6 +900,184 @@ function YesterdayResultsView() {
         </div>
 
       )}
+
+      {/* ── Loss Analysis ─────────────────────────────────────────── */}
+      {(() => {
+        const losses = picks.filter(p => {
+          const re = p.result_emoji
+            || (p.outcome === 'loss' || p.outcome === 'LOSS' || p.outcome === 'LOST' ? 'LOSS' : null);
+          return re === 'LOSS';
+        });
+        if (losses.length === 0) return null;
+
+        const getFlags = pick => {
+          const sb      = pick.score_breakdown || {};
+          const odds    = parseFloat(pick.odds || 0);
+          const score   = parseFloat(pick.comprehensive_score || pick.analysis_score || 1);
+          const allH    = pick.all_horses || [];
+          const runners = parseFloat(pick.total_runners || pick.analyzed_runners || allH.length || 1);
+          const winner  = (pick.result_winner_name || '').toLowerCase();
+          const flags   = [];
+
+          if (odds > 20)
+            flags.push({ icon:'💸', flag:`Odds ${(odds-1).toFixed(0)}/1 — extreme outsider; market strongly disagreed`, fix:'Fixed: >20/1 now carries −24pt penalty; >30/1 hidden from UI entirely' });
+          else if (odds > 12)
+            flags.push({ icon:'⚠️', flag:`Odds ${(odds-1).toFixed(0)}/1 — market disagreed with model`, fix:'Model now penalises outsiders more heavily to align with market signal' });
+
+          const goingPts = parseFloat(sb.going_suitability || 0);
+          if (goingPts >= 20)
+            flags.push({ icon:'🌧️', flag:`Going suitability: ${goingPts}pts (${(goingPts/score*100).toFixed(0)}% of total score)`, fix:'Fixed: Going suitability capped at 20pts — was contributing up to 32pts' });
+
+          if (parseFloat(sb.jockey_quality || 0) === 0 && parseFloat(sb.jockey_tier2 || 0) === 0)
+            flags.push({ icon:'🏇', flag:'Zero jockey score — no jockey data in model', fix:'NH jockey data gap identified; being addressed in next model update' });
+
+          if (parseFloat(sb.cd_bonus || 0) === 0 && parseFloat(sb.course_performance || 0) === 0)
+            flags.push({ icon:'📍', flag:'No C&D bonus — horse unproven at this course/distance combination', fix:'Unproven C&D runners should receive lower base scores going forward' });
+
+          const analyzed = allH.length;
+          const coverage = analyzed > 0 && runners > 0 ? analyzed / runners : 1;
+          if (coverage < 0.6 && analyzed > 0)
+            flags.push({ icon:'🔭', flag:`Only ${analyzed}/${Math.round(runners)} runners had Betfair data (${Math.round(coverage*100)}% coverage)`, fix:'Fixed: Races with <40% field coverage now excluded — winner may not be in scored set' });
+
+          const winnerInField = allH.some(h => (h.horse||'').toLowerCase() === winner);
+          if (winner && !winnerInField)
+            flags.push({ icon:'❓', flag:`Winner was not in our scored field — invisible to the model`, fix:'Field coverage gate prevents picks in data-sparse races' });
+
+          return flags;
+        };
+
+        const SCORE_LABELS_MAP = {
+          going_suitability:'Going Suitability', recent_win:'Last Race Win', total_wins:'Form Wins',
+          form:'Recent Form', form_score:'Recent Form', sweet_spot:'Odds Sweet Spot',
+          consistency:'Consistency', course_performance:'C&D Wins', cd_bonus:'C&D Bonus',
+          trainer_strike_rate:'Trainer Strike Rate', meeting_focus_trainer:'Trainer @ Meeting',
+          jockey_quality:'Jockey Quality', database_history:'DB History', age_factor:'Age Factor',
+        };
+
+        return (
+          <div style={{ marginTop:'32px' }}>
+            {/* Section heading */}
+            <div style={{ marginBottom:'16px' }}>
+              <div style={{ fontSize:'17px', fontWeight:'800', color:'white', marginBottom:'3px' }}>🔍 Loss Analysis</div>
+              <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.45)' }}>
+                Why each losing selection was missed — and the model updates applied to prevent recurrence
+              </div>
+            </div>
+
+            {losses.map((pick, idx) => {
+              const sb     = pick.score_breakdown || {};
+              const odds   = parseFloat(pick.odds || 0);
+              const score  = parseFloat(pick.comprehensive_score || pick.analysis_score || 0);
+              const allH   = pick.all_horses || [];
+              const winner = pick.result_winner_name || pick.winner_name || '?';
+              const ft     = formatRaceTime(pick.race_time);
+              const flags  = getFlags(pick);
+
+              const topBreakdown = Object.entries(sb)
+                .filter(([,v]) => parseFloat(v) > 0)
+                .sort(([,a],[,b]) => parseFloat(b) - parseFloat(a))
+                .slice(0, 5);
+
+              const winnerRow = allH.find(h => (h.horse||'').toLowerCase() === winner.toLowerCase());
+
+              return (
+                <div key={idx} style={{ background:'#1a1a2e', border:'1px solid rgba(239,68,68,0.4)', borderRadius:'12px', padding:'20px 24px', marginBottom:'18px', borderLeft:'4px solid #ef4444' }}>
+
+                  {/* Horse header */}
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'10px', marginBottom:'16px' }}>
+                    <div>
+                      <div style={{ fontSize:'18px', fontWeight:'800', color:'white' }}>{pick.horse}</div>
+                      <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.5)', marginTop:'3px' }}>
+                        {ft.time} {pick.course}
+                        &nbsp;&bull;&nbsp;Model score: <strong style={{color:'white'}}>{score.toFixed(0)}/100</strong>
+                        &nbsp;&bull;&nbsp;Odds: <strong style={{color:'#93c5fd'}}>{(odds-1).toFixed(0)}/1</strong>
+                      </div>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                      <div style={{ background:'rgba(239,68,68,0.25)', border:'1px solid rgba(239,68,68,0.5)', color:'#fca5a5', borderRadius:'7px', padding:'5px 13px', fontSize:'12px', fontWeight:'700', marginBottom:'4px' }}>
+                        ✗ {pick.result_analysis || `${pick.finish_position || '?'} of ${pick.total_runners || '?'}, winner: ${winner}`}
+                      </div>
+                      {winnerRow && (
+                        <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.4)' }}>
+                          Winner scored {parseFloat(winnerRow.score||0).toFixed(0)}/100 @ {(parseFloat(winnerRow.odds||2)-1).toFixed(0)}/1
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'20px' }}>
+
+                    {/* Failure reasons column */}
+                    <div>
+                      <div style={{ fontSize:'10px', fontWeight:'800', color:'#ef4444', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'10px' }}>🚨 Failure Reasons</div>
+                      {flags.length === 0
+                        ? <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.35)' }}>No specific flags identified</div>
+                        : flags.map((f, fi) => (
+                          <div key={fi} style={{ marginBottom:'12px' }}>
+                            <div style={{ display:'flex', gap:'6px', alignItems:'flex-start', marginBottom:'4px' }}>
+                              <span style={{ flexShrink:0, fontSize:'13px' }}>{f.icon}</span>
+                              <span style={{ fontSize:'12px', color:'#fca5a5', lineHeight:1.4 }}>{f.flag}</span>
+                            </div>
+                            <div style={{ marginLeft:'20px', fontSize:'11px', color:'#86efac', lineHeight:1.4 }}>↳ {f.fix}</div>
+                          </div>
+                        ))
+                      }
+                    </div>
+
+                    {/* Score breakdown column */}
+                    <div>
+                      <div style={{ fontSize:'10px', fontWeight:'800', color:'#f59e0b', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'10px' }}>📊 What inflated the score</div>
+                      {topBreakdown.length === 0
+                        ? <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.35)' }}>No breakdown data</div>
+                        : topBreakdown.map(([k, v], bi) => {
+                          const pts    = parseFloat(v);
+                          const pct    = score > 0 ? pts / score * 100 : 0;
+                          const isHigh = k === 'going_suitability' || pts > 22;
+                          const label  = SCORE_LABELS_MAP[k] || k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+                          return (
+                            <div key={bi} style={{ marginBottom:'8px' }}>
+                              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'3px' }}>
+                                <span style={{ fontSize:'11px', color: isHigh ? '#fbbf24' : 'rgba(255,255,255,0.55)' }}>
+                                  {isHigh ? '⚠️ ' : ''}{label}
+                                </span>
+                                <span style={{ fontSize:'11px', fontWeight:'700', color: isHigh ? '#fbbf24' : '#93c5fd' }}>
+                                  +{pts.toFixed(0)} pts&nbsp;({pct.toFixed(0)}%)
+                                </span>
+                              </div>
+                              <div style={{ background:'rgba(255,255,255,0.08)', borderRadius:'3px', height:'6px', overflow:'hidden' }}>
+                                <div style={{ width:`${Math.min(pct,100)}%`, height:'100%', background: isHigh ? '#f59e0b' : '#3b82f6', borderRadius:'3px', transition:'width 0.4s' }} />
+                              </div>
+                            </div>
+                          );
+                        })
+                      }
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Model fixes summary card */}
+            <div style={{ background:'rgba(16,185,129,0.08)', border:'1px solid rgba(16,185,129,0.3)', borderRadius:'12px', padding:'18px 22px' }}>
+              <div style={{ fontSize:'13px', fontWeight:'800', color:'#34d399', marginBottom:'14px' }}>✅ Model Updates Already Applied</div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'10px' }}>
+                {[
+                  { icon:'💸', title:'Outsider Penalty',       desc:'Odds >20/1 carry a −24pt penalty. Odds >30/1 are hidden from UI entirely.' },
+                  { icon:'🌧️', title:'Going Cap',              desc:'Going suitability contribution capped at 20pts max (was up to 32pts in extreme going).' },
+                  { icon:'🔭', title:'Field Coverage Gate',     desc:'Races where <40% of runners have data are excluded — avoids picks where the winner is invisible.' },
+                ].map((u, ui) => (
+                  <div key={ui} style={{ background:'rgba(255,255,255,0.06)', borderRadius:'8px', padding:'12px 14px' }}>
+                    <div style={{ fontSize:'13px', marginBottom:'5px' }}>
+                      {u.icon}&nbsp;<span style={{ fontWeight:'800', color:'white', fontSize:'12px' }}>{u.title}</span>
+                    </div>
+                    <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.5)', lineHeight:1.55 }}>{u.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       <div style={{ marginTop:'28px', padding:'14px 18px', background:'rgba(255,255,255,0.06)', borderRadius:'10px', color:'rgba(255,255,255,0.45)', fontSize:'12px', textAlign:'center', lineHeight:'1.6' }}>
         Results are recorded after each race. Pending picks update as results come in. \u00b7 Always bet responsibly.
