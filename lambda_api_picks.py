@@ -211,46 +211,78 @@ def get_today_picks(headers):
     future_picks = list(seen_races.values())
     print(f"After dedup (1 pick per race): {len(future_picks)} picks")
 
-    # Calculate next_best_score for each pick (to show competition level)
+    # Build full race card for each pick by scanning all items for the same (course, race_time)
     for pick in future_picks:
-        pick_course = pick.get('course', '')
+        pick_course    = pick.get('course', '')
         pick_race_time = pick.get('race_time', '')
-        pick_score = float(pick.get('comprehensive_score', 0))
-        
-        # Find all OTHER horses in the same race (from full items list)
-        same_race_horses = [
-            item for item in items 
-            if item.get('course') == pick_course 
+        pick_score     = float(pick.get('comprehensive_score', 0) or 0)
+
+        # All candidates for this race with a valid score
+        race_candidates = [
+            item for item in items
+            if item.get('course') == pick_course
             and item.get('race_time') == pick_race_time
-            and item.get('horse') != pick.get('horse')
-            and item.get('comprehensive_score')
+            and item.get('comprehensive_score') is not None
+            and float(item.get('comprehensive_score', 0) or 0) != 0
         ]
-        
-        if same_race_horses:
-            same_race_horses.sort(key=lambda h: float(h.get('comprehensive_score', 0)), reverse=True)
-            best_rival = same_race_horses[0]
-            pick['next_best_score'] = float(best_rival.get('comprehensive_score', 0))
-            pick['next_best_horse'] = best_rival.get('horse', '')
-            pick['score_gap'] = pick_score - pick['next_best_score']
+
+        # Deduplicate by horse name — keep highest-scoring entry
+        seen_runners = {}
+        for h in race_candidates:
+            hname  = (h.get('horse') or '').strip()
+            hscore = float(h.get('comprehensive_score', 0) or 0)
+            if hname not in seen_runners or hscore > seen_runners[hname]:
+                seen_runners[hname] = hscore
+
+        # Build sorted race card (best score first)
+        race_card = sorted(
+            [{'name': n, 'score': s} for n, s in seen_runners.items()],
+            key=lambda x: x['score'], reverse=True
+        )
+
+        # Attach full all_horses list to pick (with jockey/trainer from item)
+        horse_lookup = {}
+        for h in race_candidates:
+            hname  = (h.get('horse') or '').strip()
+            hscore = float(h.get('comprehensive_score', 0) or 0)
+            if hname not in horse_lookup or hscore > float(horse_lookup[hname].get('comprehensive_score', 0) or 0):
+                horse_lookup[hname] = h
+
+        pick['all_horses'] = [
+            {
+                'horse':   entry['name'],
+                'jockey':  horse_lookup[entry['name']].get('jockey', '') if entry['name'] in horse_lookup else '',
+                'trainer': horse_lookup[entry['name']].get('trainer', '') if entry['name'] in horse_lookup else '',
+                'odds':    float(horse_lookup[entry['name']].get('odds', 0) or 0) if entry['name'] in horse_lookup else 0,
+                'score':   round(entry['score'], 0),
+            }
+            for entry in race_card
+        ]
+
+        # next_best / score_gap from rivals (exclude our pick)
+        rivals = [r for r in race_card if r['name'] != pick.get('horse', '')]
+        if rivals:
+            best_rival = rivals[0]
+            pick['next_best_score'] = best_rival['score']
+            pick['next_best_horse'] = best_rival['name']
+            pick['score_gap'] = pick_score - best_rival['score']
         else:
             pick['next_best_score'] = 0
             pick['next_best_horse'] = ''
             pick['score_gap'] = 0
-    
-    # Sort by race time ascending (earliest races first)
+
+    # Sort by score and limit to top 5 picks per day
+    future_picks.sort(key=lambda x: float(x.get('comprehensive_score') or x.get('analysis_score') or 0), reverse=True)
+    future_picks = future_picks[:5]
+    # Re-sort top 5 by race time for display
     future_picks.sort(key=lambda x: x.get('race_time', ''))
 
-    # Build race_fields from stored all_horses (full race card per race)
-    # Also map reasons -> selection_reasons for UI compatibility
+    # Map reasons -> selection_reasons for UI compatibility
     race_fields = {}
     for pick in future_picks:
         pick['selection_reasons'] = pick.get('reasons', [])
-        race_key = f"{pick.get('course', '')}|{pick.get('race_time', '')}"
-        all_h = pick.get('all_horses', [])
-        if all_h:
-            race_fields[race_key] = all_h
 
-    print(f"Total picks: {len(items)}, Horse picks: {len(horse_items)}, Future picks: {len(future_picks)}")
+    print(f"Total picks: {len(items)}, Horse picks: {len(horse_items)}, Future picks: {len(future_picks)} (top 5 by score)")
     
     # Calculate workflow schedule (runs every 30 min at :15 and :45)
     now = datetime.utcnow()
@@ -607,7 +639,10 @@ def check_today_results(headers):
         if not existing or score > existing_score:
             seen_races[race_key] = pick
     picks = list(seen_races.values())
-    print(f"After dedup (1 pick/race): {len(picks)} picks")
+    # Sort by score and keep top 5
+    picks.sort(key=lambda x: float(x.get('comprehensive_score') or x.get('analysis_score') or 0), reverse=True)
+    picks = picks[:5]
+    print(f"After dedup + top-5 filter: {len(picks)} picks")
 
     # Normalize outcome values for frontend compatibility
     # Database uses: 'won', 'WON', 'lost', 'LOST'
