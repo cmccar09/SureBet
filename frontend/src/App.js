@@ -717,34 +717,34 @@ function YesterdayResultsView() {
         return (
           <div style={{ marginBottom:'24px' }}>
             {/* Top row: 4 count stats */}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'10px', marginBottom:'10px' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap: isMobile ? '6px' : '10px', marginBottom:'10px' }}>
               {statsLeft.map((stat, i) => (
-                <div key={i} style={{ background:stat.bg, border:`1.5px solid ${stat.border}`, borderRadius:'12px', padding:'16px 10px 12px', textAlign:'center' }}>
-                  <div style={{ fontSize:'12px', marginBottom:'4px' }}>{stat.icon}</div>
-                  <div style={{ fontSize:'28px', fontWeight:'900', color:stat.color, lineHeight:1 }}>{stat.value}</div>
-                  <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.55)', marginTop:'5px', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600' }}>{stat.label}</div>
+                <div key={i} style={{ background:stat.bg, border:`1.5px solid ${stat.border}`, borderRadius:'10px', padding: isMobile ? '10px 4px 8px' : '16px 10px 12px', textAlign:'center' }}>
+                  <div style={{ fontSize: isMobile ? '14px' : '12px', marginBottom:'2px' }}>{stat.icon}</div>
+                  <div style={{ fontSize: isMobile ? '20px' : '28px', fontWeight:'900', color:stat.color, lineHeight:1 }}>{stat.value}</div>
+                  <div style={{ fontSize: isMobile ? '9px' : '11px', color:'rgba(255,255,255,0.55)', marginTop: isMobile ? '3px' : '5px', textTransform:'uppercase', letterSpacing: isMobile ? '0.5px' : '1px', fontWeight:'600' }}>{stat.label}</div>
                 </div>
               ))}
             </div>
             {/* Bottom row: P&L + ROI spanning full width */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
-              <div style={{ background: pnlPos ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${pnlPos ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding:'14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px' }}>
+              <div style={{ background: pnlPos ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${pnlPos ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding: isMobile ? '10px 12px' : '14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px' }}>
                 <div>
-                  <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'4px' }}>Profit / Loss</div>
-                  <div style={{ fontSize:'30px', fontWeight:'900', color: pnlPos ? '#34d399' : '#f87171', lineHeight:1 }}>
+                  <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'3px' }}>Profit / Loss</div>
+                  <div style={{ fontSize: isMobile ? '22px' : '30px', fontWeight:'900', color: pnlPos ? '#34d399' : '#f87171', lineHeight:1 }}>
                     {pnlPos ? '+' : ''}£{Math.abs(profit).toFixed(2)}
                   </div>
                 </div>
-                <div style={{ fontSize:'32px' }}>{pnlPos ? '📈' : '📉'}</div>
+                <div style={{ fontSize: isMobile ? '22px' : '32px' }}>{pnlPos ? '📈' : '📉'}</div>
               </div>
-              <div style={{ background: roiVal >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${roiVal >= 0 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding:'14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px' }}>
+              <div style={{ background: roiVal >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${roiVal >= 0 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding: isMobile ? '10px 12px' : '14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px' }}>
                 <div>
-                  <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'4px' }}>Return on Investment</div>
-                  <div style={{ fontSize:'30px', fontWeight:'900', color: roiVal >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>
+                  <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'3px' }}>{isMobile ? 'ROI' : 'Return on Investment'}</div>
+                  <div style={{ fontSize: isMobile ? '22px' : '30px', fontWeight:'900', color: roiVal >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>
                     {roiVal >= 0 ? '+' : ''}{roiVal.toFixed(1)}%
                   </div>
                 </div>
-                <div style={{ fontSize:'32px' }}>💰</div>
+                <div style={{ fontSize: isMobile ? '22px' : '32px' }}>💰</div>
               </div>
             </div>
           </div>
@@ -757,12 +757,12 @@ function YesterdayResultsView() {
         const winPct  = settled > 0 ? Math.round((summary.wins || 0) / settled * 100) : 0;
         const isGood  = winPct >= 33;
         return (
-          <div style={{ background: isGood ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.10)', border:`1px solid ${isGood ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.3)'}`, borderRadius:'10px', padding:'13px 22px', marginBottom:'20px', textAlign:'center', color:'white', fontSize:'17px', fontWeight:'700', letterSpacing:'0.2px' }}>
-            {summary.wins || 0} win{(summary.wins || 0) !== 1 ? 's' : ''} from {settled} settled pick{settled !== 1 ? 's' : ''} &mdash; {winPct}% strike rate
+          <div style={{ background: isGood ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.10)', border:`1px solid ${isGood ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.3)'}`, borderRadius:'10px', padding: isMobile ? '10px 14px' : '13px 22px', marginBottom:'20px', textAlign:'center', color:'white', fontSize: isMobile ? '14px' : '17px', fontWeight:'700', letterSpacing:'0.2px', lineHeight:1.4 }}>
+            {summary.wins || 0} win{(summary.wins || 0) !== 1 ? 's' : ''} from {settled} settled &mdash; {winPct}% strike rate
             {(summary.pending || 0) > 0 && (
-              <span style={{ fontSize:'13px', color:'rgba(255,255,255,0.55)', fontWeight:'500', marginLeft:'12px' }}>
-                ({summary.pending} still pending)
-              </span>
+              <div style={{ fontSize: isMobile ? '11px' : '13px', color:'rgba(255,255,255,0.55)', fontWeight:'500', marginTop: isMobile ? '3px' : '0', display: isMobile ? 'block' : 'inline' }}>
+                {isMobile ? '' : <span style={{marginLeft:'12px'}} />}({summary.pending} still pending)
+              </div>
             )}
           </div>
         );
@@ -981,24 +981,24 @@ function YesterdayResultsView() {
               const winnerRow = allH.find(h => (h.horse||'').toLowerCase() === winner.toLowerCase());
 
               return (
-                <div key={idx} style={{ background:'#1a1a2e', border:'1px solid rgba(239,68,68,0.4)', borderRadius:'12px', padding:'20px 24px', marginBottom:'18px', borderLeft:'4px solid #ef4444' }}>
+                <div key={idx} style={{ background:'#1a1a2e', border:'1px solid rgba(239,68,68,0.4)', borderRadius:'12px', padding: isMobile ? '14px 14px' : '20px 24px', marginBottom:'18px', borderLeft:'4px solid #ef4444' }}>
 
                   {/* Horse header */}
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'10px', marginBottom:'16px' }}>
-                    <div>
-                      <div style={{ fontSize:'18px', fontWeight:'800', color:'white' }}>{pick.horse}</div>
-                      <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.5)', marginTop:'3px' }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'8px', marginBottom:'14px' }}>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize: isMobile ? '15px' : '18px', fontWeight:'800', color:'white' }}>{pick.horse}</div>
+                      <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.5)', marginTop:'3px', flexWrap:'wrap' }}>
                         {ft.time} {pick.course}
-                        &nbsp;&bull;&nbsp;Model score: <strong style={{color:'white'}}>{score.toFixed(0)}/100</strong>
+                        &nbsp;&bull;&nbsp;Score: <strong style={{color:'white'}}>{score.toFixed(0)}/100</strong>
                         &nbsp;&bull;&nbsp;Odds: <strong style={{color:'#93c5fd'}}>{(odds-1).toFixed(0)}/1</strong>
                       </div>
                     </div>
-                    <div style={{ textAlign:'right' }}>
-                      <div style={{ background:'rgba(239,68,68,0.25)', border:'1px solid rgba(239,68,68,0.5)', color:'#fca5a5', borderRadius:'7px', padding:'5px 13px', fontSize:'12px', fontWeight:'700', marginBottom:'4px' }}>
+                    <div style={{ textAlign: isMobile ? 'left' : 'right', flexShrink:0, maxWidth: isMobile ? '100%' : 'none' }}>
+                      <div style={{ background:'rgba(239,68,68,0.25)', border:'1px solid rgba(239,68,68,0.5)', color:'#fca5a5', borderRadius:'7px', padding:'5px 10px', fontSize:'11px', fontWeight:'700', marginBottom:'4px', lineHeight:1.4 }}>
                         ✗ {pick.result_analysis || `${pick.finish_position || '?'} of ${pick.total_runners || '?'}, winner: ${winner}`}
                       </div>
                       {winnerRow && (
-                        <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.4)' }}>
+                        <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.4)' }}>
                           Winner scored {parseFloat(winnerRow.score||0).toFixed(0)}/100 @ {(parseFloat(winnerRow.odds||2)-1).toFixed(0)}/1
                         </div>
                       )}
