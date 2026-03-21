@@ -156,9 +156,9 @@ def get_today_picks():
             if not existing or float(pick.get('comprehensive_score', 0)) > float(existing.get('comprehensive_score', 0)):
                 seen_races[race_key] = pick
         future_items = list(seen_races.values())
-        # Re-sort by score after dedup, then keep top 3
+        # Re-sort by score after dedup, then keep top 5
         future_items.sort(key=lambda x: float(x.get('comprehensive_score') or x.get('analysis_score') or 0), reverse=True)
-        future_items = future_items[:3]
+        future_items = future_items[:5]
         future_items.sort(key=lambda x: x.get('race_time', ''))
 
         # Calculate next_best_score for each pick (to show competition level)
@@ -256,7 +256,7 @@ def get_today_results():
             comp_score = item.get('comprehensive_score') or item.get('analysis_score') or 0
             item['_sort_score'] = float(comp_score)
         picks.sort(key=lambda x: x.get('_sort_score', 0), reverse=True)
-        picks = picks[:3]  # Top 3 picks per day only
+        picks = picks[:5]  # Top 5 picks per day only
         
         # Remove temporary sort field
         for item in picks:
