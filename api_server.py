@@ -144,9 +144,6 @@ def get_today_picks():
             item['_sort_score'] = float(comp_score)
         future_items.sort(key=lambda x: x.get('_sort_score', 0), reverse=True)
         
-        # Limit to maximum 10 picks per day
-        future_items = future_items[:10]
-        
         # Remove temporary sort field
         for item in future_items:
             item.pop('_sort_score', None)
@@ -159,6 +156,9 @@ def get_today_picks():
             if not existing or float(pick.get('comprehensive_score', 0)) > float(existing.get('comprehensive_score', 0)):
                 seen_races[race_key] = pick
         future_items = list(seen_races.values())
+        # Re-sort by score after dedup, then keep top 3
+        future_items.sort(key=lambda x: float(x.get('comprehensive_score') or x.get('analysis_score') or 0), reverse=True)
+        future_items = future_items[:3]
         future_items.sort(key=lambda x: x.get('race_time', ''))
 
         # Calculate next_best_score for each pick (to show competition level)
@@ -242,12 +242,21 @@ def get_today_results():
         # Don't filter by time - show ALL today's picks (past and future)
         # This is the RESULTS page, not the upcoming picks page
         
-        # Sort by comprehensive score (highest first) and limit to 10 per day
+        # ONE PICK PER RACE: keep only the highest-scoring pick per race
+        seen_races = {}
+        for pick in picks:
+            race_key = (pick.get('course', ''), pick.get('race_time', ''))
+            existing = seen_races.get(race_key)
+            if not existing or float(pick.get('comprehensive_score', 0)) > float(existing.get('comprehensive_score', 0)):
+                seen_races[race_key] = pick
+        picks = list(seen_races.values())
+
+        # Sort by comprehensive score (highest first) and limit to top 3 per day
         for item in picks:
             comp_score = item.get('comprehensive_score') or item.get('analysis_score') or 0
             item['_sort_score'] = float(comp_score)
         picks.sort(key=lambda x: x.get('_sort_score', 0), reverse=True)
-        picks = picks[:10]  # Maximum 10 picks per day
+        picks = picks[:3]  # Top 3 picks per day only
         
         # Remove temporary sort field
         for item in picks:
