@@ -217,6 +217,10 @@ def get_today_picks(headers):
         pick_race_time = pick.get('race_time', '')
         pick_score     = float(pick.get('comprehensive_score', 0) or 0)
 
+        # Preserve the all_horses list saved by the workflow (full race card with all runners scored)
+        # This is used as fallback if DynamoDB only has one record for this race (the pick itself)
+        stored_all_horses = pick.get('all_horses', [])
+
         # All candidates for this race with a valid score
         race_candidates = [
             item for item in items
@@ -258,6 +262,20 @@ def get_today_picks(headers):
             }
             for entry in race_card
         ]
+
+        # If race_candidates only found our pick (1 entry), fall back to the full all_horses list
+        # stored by the workflow in DynamoDB — this contains all scored runners in the race
+        if len(pick['all_horses']) <= 1 and stored_all_horses and len(stored_all_horses) > 1:
+            pick['all_horses'] = [
+                {
+                    'horse':   h.get('horse', ''),
+                    'jockey':  h.get('jockey', ''),
+                    'trainer': h.get('trainer', ''),
+                    'odds':    float(h.get('odds', 0) or 0),
+                    'score':   float(h.get('score', 0) or 0),
+                }
+                for h in stored_all_horses
+            ]
 
         # next_best / score_gap from rivals (exclude our pick)
         rivals = [r for r in race_card if r['name'] != pick.get('horse', '')]
