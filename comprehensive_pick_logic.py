@@ -656,7 +656,36 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         breakdown['cd_bonus'] = cd_pts
         reasons.append(f"Distance winner (D): +{cd_pts}pts")
     else:
-        breakdown['cd_bonus'] = 0
+        # LESSON 2026-03-22: Hello Judge won Carlisle 2m3f (exact C&D) but cd_bonus=0
+        # because cd_marker/form annotation wasn't set. Fallback: scan prev_results directly.
+        if not cd_pts and _prev_results and course:
+            _race_dist = str(horse_data.get('distance', horse_data.get('race_distance', ''))).strip().lower()
+            _c_win = False
+            _cd_win = False
+            for _pr in _prev_results:
+                if str(_pr.get('position', '')).strip() == '1':
+                    _pr_course = str(_pr.get('course', '')).strip()
+                    _pr_dist = str(_pr.get('distance', '')).strip().lower()
+                    _course_match = _pr_course.lower() == course.lower()
+                    _dist_match = _pr_dist == _race_dist if _race_dist else False
+                    if _course_match and _dist_match:
+                        _cd_win = True; break
+                    elif _course_match:
+                        _c_win = True
+            if _cd_win:
+                cd_pts = base_cd + extra_cd
+                score += cd_pts
+                breakdown['cd_bonus'] = cd_pts
+                reasons.append(f"Course & Distance winner (from run history, C&D): +{cd_pts}pts")
+            elif _c_win:
+                cd_pts = base_cd // 2 + extra_cd
+                score += cd_pts
+                breakdown['cd_bonus'] = cd_pts
+                reasons.append(f"Course winner (from run history, C): +{cd_pts}pts")
+            else:
+                breakdown['cd_bonus'] = 0
+        else:
+            breakdown['cd_bonus'] = 0
 
     # 6. DATABASE HISTORY
     db = boto3.resource('dynamodb', region_name='eu-west-1')
@@ -1090,10 +1119,21 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
             focus_pts += sig4_pts
             focus_reasons.append(f"Debut run for new trainer {t}: +{sig4_pts}pts")
 
+        # LESSON 2026-03-22: trainer+jockey+combo each fired separately = 30pts for small NH yards
+        # where trainer/jockey always run exclusively at their local track. These three signals are
+        # not independent — if trainer is sole at course AND jockey is sole at course, the combo is
+        # definitionally true. Take MAX, not sum.
         if focus_pts > 0:
+            # Cap: take value of whichest single signal fired rather than additive sum
+            max_single = max(
+                int(weights.get('meeting_focus_trainer', 10)) if any('sole at' in r for r in focus_reasons) else 0,
+                int(weights.get('meeting_focus_jockey', 10)) if any('committed to' in r for r in focus_reasons) else 0,
+                int(weights.get('meeting_focus_combo', 10)) if any('duo solely' in r for r in focus_reasons) else 0,
+            )
+            focus_pts = max_single
             score += focus_pts
             breakdown['meeting_focus'] = focus_pts
-            reasons.extend(focus_reasons)
+            reasons.append(focus_reasons[0])  # report only highest-priority signal
         else:
             breakdown['meeting_focus'] = 0
     else:
