@@ -16,7 +16,11 @@ import boto3
 from decimal import Decimal
 from datetime import datetime
 from weather_going_inference import check_all_tracks_going
-from track_daily_insights import get_track_insights
+
+try:
+    from track_daily_insights import get_track_insights
+except ImportError:
+    def get_track_insights(*a, **kw): return {}
 
 # Deep form history signals (Racing Post / Sporting Life scraper)
 try:
@@ -327,10 +331,17 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         # Partial points for medium outsiders
         sweet_spot_pts = int(weights['sweet_spot'] * 0.5)
         reasons.append(f"Medium outsider (9-15): {sweet_spot_pts}pts")
-    elif odds > 15.0:
-        # Minimal points for long shots
+    elif 15.0 < odds <= 20.0:
+        # Small points for larger outsiders
         sweet_spot_pts = int(weights['sweet_spot'] * 0.2)
-        reasons.append(f"Long shot (>15): {sweet_spot_pts}pts")
+        reasons.append(f"Long shot (15-20): {sweet_spot_pts}pts")
+    elif odds > 20.0:
+        # Hard penalty: market strongly disagrees — flag as high-risk
+        # LESSON 2026-03-20: Spit Spot 60/1 scored 92pts (same as Light Fandango 4/1 which WON)
+        # The market price contains information our model lacks. Heavily penalise extreme outsiders.
+        longshot_penalty = int(weights['sweet_spot'] * 2)   # = ~24pts deducted
+        sweet_spot_pts = -longshot_penalty
+        reasons.append(f"Extreme outsider (>{odds:.0f}/1) — market disagrees: -{longshot_penalty}pts")
     
     score += sweet_spot_pts
     breakdown['sweet_spot'] = sweet_spot_pts
@@ -354,6 +365,32 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     wins = form.count('1')
     places = form.count('2') + form.count('3')
     recent_win = form.split('-')[-1] == '1' if '-' in form else False
+
+    # Surface-aware win counts (Bug fix 2026-03-22: AW wins ≠ soft turf wins)
+    # LESSON: Quatre Bras (6 AW wins, 0 turf wins) and Flanker Jet (6 AW runs, 0 turf wins)
+    # both scored going_suitability=20 because old code only checked total wins.
+    # Now we split wins by surface using prev_results.going field.
+    _AW_GOING_KEYWORDS = {'standard', 'fibresand', 'polytrack', 'slow'}  # SL going for AW
+    _prev_results = horse_data.get('prev_results', [])
+    turf_wins = 0           # wins on any turf ground
+    turf_soft_wins = 0      # wins specifically on soft/yielding/heavy turf
+    aw_wins = 0             # wins on all-weather surfaces
+    for _pr in _prev_results:
+        _pos = str(_pr.get('position', '')).strip()
+        _going = str(_pr.get('going', '')).lower()
+        _is_aw = any(kw in _going for kw in _AW_GOING_KEYWORDS)
+        _is_soft = any(kw in _going for kw in ['soft', 'heavy', 'yielding', 'sloppy'])
+        if _pos == '1':
+            if _is_aw:
+                aw_wins += 1
+            else:
+                turf_wins += 1
+                if _is_soft:
+                    turf_soft_wins += 1
+    # Fallback: if no prev_results available, assume all wins are turf (can't verify)
+    if not _prev_results:
+        turf_wins = wins
+        turf_soft_wins = wins
     
     # Recent win bonus
     recent_win_pts = int(weights['recent_win'])
@@ -380,6 +417,28 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     if places > 0:
         reasons.append(f"{places} places (2nd/3rd): {place_points}pts")
     
+    # 3b. UNEXPOSED HORSE BONUS
+    # LESSON 2026-03-22: Causeway (2 runs, 1 win on soft turf +Irish Lincoln form franked)
+    # scored only 57 because total_wins=1 gave minimal wins pts and consistency=0.
+    # Lightly-raced horses with a high win rate are UNDERVALUED by win-count scoring.
+    # Applies to horses with <=5 career runs, 1+ win, and a good win-rate.
+    _unexposed_bonus = 0
+    if _prev_results and len(_prev_results) <= 5 and wins >= 1:
+        try:
+            _age_val = int(str(horse_data.get('age', '99')))
+        except (ValueError, TypeError):
+            _age_val = 99
+        _win_rate = wins / max(len(_prev_results), 1)
+        if _age_val <= 4:  # 3/4yo lightly raced
+            if _win_rate >= 0.4:   # 40%+ win rate in few runs = highly promising
+                _unexposed_bonus = 15
+                reasons.append(f"Unexposed {_age_val}yo ({len(_prev_results)} runs, {wins}W, {_win_rate:.0%} rate): +{_unexposed_bonus}pts")
+            elif _win_rate >= 0.2:  # at least 1 win from 5 runs
+                _unexposed_bonus = 8
+                reasons.append(f"Lightly raced {_age_val}yo with upside ({len(_prev_results)} runs): +{_unexposed_bonus}pts")
+    score += _unexposed_bonus
+    breakdown['unexposed_bonus'] = _unexposed_bonus
+
     # 4. COURSE BONUS
     course_bonus_pts = int(weights['course_bonus'])
     if course_winners_today > 0:
@@ -450,7 +509,9 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         is_all_weather = going_info.get('surface', '') == 'all-weather' or 'Standard' in going_description
         
         # Double weight in extreme conditions (absolutely critical discriminator)
-        going_suitability_pts = base_going_pts * 2 if is_extreme else base_going_pts
+        # LESSON 2026-03-20: Kalista Love & Spit Spot had going_suitability=32pts (35% of total score).
+        # Capped at 20pts max — going should inform, not dominate.
+        going_suitability_pts = min(base_going_pts * 2 if is_extreme else base_going_pts, 20)
         
         if is_all_weather:
             # All-weather: ground irrelevant, give neutral bonus for all runners
@@ -472,21 +533,42 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
                     suited = True
             
             if not suited:
-                # Form-based proxy:
-                # 3+ wins = proven versatile performer (adapts to most going)
-                # 2 wins + extreme going = give benefit of doubt
-                # Recent win in similar conditions = suited
-                if wins >= 3:
-                    suited = True   # Multiple wins across varied conditions = adaptable
-                elif wins >= 2 and not is_extreme:
-                    suited = True   # Consistent performer in moderate conditions
-                elif wins >= 1 and is_soft_ground and 'Heavy' not in going_description:
-                    suited = True   # Has won before, moderate soft = probably handles it
+                # Form-based proxy — surface-aware (fix: 2026-03-22)
+                # LESSON: AW wins do NOT prove soft turf suitability.
+                # Use turf_wins/turf_soft_wins from prev_results surface detection.
+                if is_soft_ground:
+                    if turf_soft_wins >= 1:
+                        suited = True   # Proven specifically on soft/heavy turf
+                    elif turf_wins >= 2:
+                        suited = True   # Multiple turf wins = handles varied going
+                    elif turf_wins >= 1 and not is_extreme and 'Heavy' not in going_description:
+                        suited = True   # 1 turf win in moderate soft = probably handles it
+                    # NOTE: AW-only horses (turf_wins==0) deliberately NOT marked suited
+                else:
+                    # Good/Firm ground — AW wins count as speed/form proof
+                    if wins >= 3:
+                        suited = True
+                    elif wins >= 2 and not is_extreme:
+                        suited = True
+                    elif wins >= 1:
+                        suited = True
             
+            # AW-specialist penalty on soft turf: no turf wins at all = unknown quantity
+            # LESSON 2026-03-22: Quatre Bras & Flanker Jet had 0 turf wins. Previously got
+            # going_suitability=+20. Now penalised to correctly rank them below turf horses.
+            _aw_specialist_on_soft = (
+                is_soft_ground and aw_wins >= 2 and turf_wins == 0 and not suited
+            )
+
             if suited:
                 score += going_suitability_pts
                 breakdown['going_suitability'] = going_suitability_pts
                 reasons.append(f"Proven/suited to {going_description}: +{going_suitability_pts}pts")
+            elif _aw_specialist_on_soft:
+                aw_penalty = base_going_pts
+                score -= aw_penalty
+                breakdown['going_suitability'] = -aw_penalty
+                reasons.append(f"AW specialist ({aw_wins} AW wins, 0 turf) on soft ground: -{aw_penalty}pts")
             elif is_extreme and wins == 0:
                 # No wins at all in extreme going = flag risk
                 penalty = base_going_pts
@@ -600,7 +682,7 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         breakdown['database_history'] = 0
     
     # 7. TRACK PATTERN BONUS (Learning from today's earlier races at this track)
-    if track_insights['has_data'] and track_insights.get('suggested_boost'):
+    if track_insights.get('has_data') and track_insights.get('suggested_boost'):
         pattern_bonus = 0
         
         for factor, boost_amount in track_insights['suggested_boost'].items():
@@ -1357,9 +1439,17 @@ def format_pick_for_database(pick_data, race_data):
     # Show only recommended picks on UI
     # LEARNING 2026-02-26: 90-100 = +33% ROI, 80-84 = +8% ROI, 85-89 = -21.8% ROI (BUT tiny sample)
     # 2026-02-28: AW Class 5/6 penalty applied - pushed below 75 threshold automatically
-    aw_penalised = float(best_pick.get('breakdown', {}).get('aw_low_class_penalty', 0)) < 0
-    show_on_ui = (score >= 85) and not aw_penalised  # AW Class 5/6 never shown regardless of score
+    # LESSON 2026-03-20: Kalista Love (9/1, 2/11 field scored) & Spit Spot (60/1) both lost.
+    #   Added: extreme odds gate + field coverage gate.
+    aw_penalised   = float(best_pick.get('breakdown', {}).get('aw_low_class_penalty', 0)) < 0
+    extreme_odds   = float(horse.get('odds', 0)) > 30.0   # 30/1+: never recommend regardless of score
+    low_coverage   = pick_data.get('coverage', 100) < 40   # <40% field scored = blind spot too large
+    show_on_ui     = (score >= 85) and not aw_penalised and not extreme_odds and not low_coverage
     recommended_bet = show_on_ui
+    # Add gates to pick metadata so UI can show why something was filtered
+    if extreme_odds:  pick_data['reasons'].append('FILTERED: Odds >30/1 (market confidence too low)')
+    if low_coverage:  pick_data['reasons'].append(f"FILTERED: Only {pick_data.get('coverage',0):.0f}% of field scored (<40% threshold)")
+    if aw_penalised:  pick_data['reasons'].append('FILTERED: AW Class 5/6 penalty applied')
     
     # Create bet_id
     bet_id = f"{race_time}_" + course + "_" + horse.get('name', '').replace(' ', '_')
