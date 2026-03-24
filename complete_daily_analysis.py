@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-COMPLETE DAILY WORKFLOW -- 3-PICK SELECTION ENGINE
+COMPLETE DAILY WORKFLOW -- 5-PICK SELECTION ENGINE
 ===================================================
 Strategy:
   1. Score EVERY horse in EVERY race with the comprehensive 7-factor model
   2. For each race, identify the single best-scoring horse  (race winner candidate)
-  3. Across all races, rank those race-bests by score — select TOP 3
-  4. Mark exactly those 3 as show_in_ui=True; everything else is learning data
+  3. Across all races, rank those race-bests by score — select TOP 5
+  4. Mark exactly those 5 as show_in_ui=True; everything else is learning data
   5. Minimum confidence gate: a race-best must score >= 60 to be eligible as a UI pick
      (if a race has no horse above 60, we consider it too unpredictable and skip it)
 
@@ -27,7 +27,7 @@ from comprehensive_pick_logic import analyze_horse_comprehensive
 db    = boto3.resource('dynamodb', region_name='eu-west-1')
 table = db.Table('SureBetBets')
 
-TARGET_PICKS   = 3      # How many UI picks to surface each day
+TARGET_PICKS   = 5      # How many UI picks to surface each day
 MIN_CONFIDENCE = 60     # Minimum score for a race-best to qualify as a UI pick
 
 
@@ -86,7 +86,7 @@ def analyze_and_save_all():
     """
     Two-pass algorithm:
       Pass 1 — Score every horse, collect per-race bests.
-      Select top-3 cross-race bests.
+      Select top-5 cross-race bests.
       Pass 2 — Save everything with correct show_in_ui flag.
     """
     races = load_races()
@@ -204,7 +204,7 @@ def analyze_and_save_all():
                 'show_in_ui':          False,   # will be set in pass 2
                 'recommended_bet':     False,   # will be set in pass 2
                 'is_learning_pick':    True,    # will be set in pass 2
-                'pick_rank':           0,       # 1/2/3 for top picks; 0 = learning
+                'pick_rank':           0,       # 1-5 for top picks; 0 = learning
                 'analysis_type':       'comprehensive_7factor',
                 'score_breakdown':     breakdown,
                 'selection_reasons':   reasons,
@@ -238,7 +238,7 @@ def analyze_and_save_all():
             'best':      best,
         })
 
-    # ── SELECT TOP 3 CROSS-RACE BESTS ────────────────────────────────────────
+    # ── SELECT TOP 5 CROSS-RACE BESTS ────────────────────────────────────────
     eligible = [r for r in all_races_data if r['best']['score'] >= MIN_CONFIDENCE]
     eligible.sort(key=lambda r: r['best']['score'], reverse=True)
     top_picks = eligible[:TARGET_PICKS]

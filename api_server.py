@@ -251,7 +251,7 @@ def get_today_results():
                 seen_races[race_key] = pick
         picks = list(seen_races.values())
 
-        # Sort by comprehensive score (highest first) and limit to top 3 per day
+        # Sort by comprehensive score (highest first) and limit to top 5 per day
         for item in picks:
             comp_score = item.get('comprehensive_score') or item.get('analysis_score') or 0
             item['_sort_score'] = float(comp_score)
@@ -385,8 +385,31 @@ def get_yesterday_results():
                  and p.get('horse') and p.get('horse') != 'Unknown'
                  and p.get('show_in_ui') == True]
 
-        # Sort by race time, then score
-        picks.sort(key=lambda x: (x.get('race_time', ''), -float(x.get('comprehensive_score') or 0)))
+        # Apply same high-confidence filter as the daily picks tab
+        # (excludes picks with low combined_confidence even if show_in_ui=True)
+        # Upper bound of 100 excludes scores from off-schedule analysis runs
+        # which can exceed the model's intended 0-100 range
+        filtered = []
+        for p in picks:
+            comp_score = float(p.get('comprehensive_score') or p.get('analysis_score') or 0)
+            comb_conf  = float(p.get('combined_confidence') or 0)
+            if 85 <= comp_score <= 100 and (comb_conf == 0 or comb_conf >= 55):
+                filtered.append(p)
+        picks = filtered
+
+        # ONE PICK PER RACE: keep only the highest-scoring pick per race
+        seen_races = {}
+        for pick in picks:
+            race_key = (pick.get('course', ''), pick.get('race_time', ''))
+            existing = seen_races.get(race_key)
+            if not existing or float(pick.get('comprehensive_score', 0)) > float(existing.get('comprehensive_score', 0)):
+                seen_races[race_key] = pick
+        picks = list(seen_races.values())
+
+        # Sort by score desc, keep top 5, then re-sort by race time for display
+        picks.sort(key=lambda x: float(x.get('comprehensive_score') or x.get('analysis_score') or 0), reverse=True)
+        picks = picks[:5]
+        picks.sort(key=lambda x: x.get('race_time', ''))
 
         # Calculate result analysis for each pick
         for pick in picks:
@@ -471,6 +494,138 @@ def get_yesterday_results():
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+def compute_winner_analysis(pick):
+    """
+    For a non-winning pick, compare our selection against the actual winner.
+    Returns a dict with:
+      winner_found        – bool: was the winner in our scored field?
+      winner_score        – int:  our model's score for the winner (0 if not found)
+      winner_rank         – int:  position in our ranked field (1 = top rated)
+      winner_odds         – float
+      score_gap           – float: our_score - winner_score (>0 means we still preferred our pick)
+      why_missed          – list[str]: human-readable explanation bullets
+      weight_nudges       – dict: suggested weight adjustments for the learning system
+    """
+    our_score  = float(pick.get('comprehensive_score') or pick.get('analysis_score') or 0)
+    our_odds   = float(pick.get('odds') or 0)
+    our_horse  = (pick.get('horse') or '').strip().lower()
+    winner_name = (pick.get('result_winner_name') or '').strip()
+    all_horses  = pick.get('all_horses') or []
+    sb          = pick.get('score_breakdown') or {}
+
+    if not winner_name:
+        return {'winner_found': False, 'why_missed': ['Winner not yet recorded']}
+
+    # Sort field by score to compute ranks
+    sorted_field = sorted(
+        [h for h in all_horses if h.get('horse')],
+        key=lambda h: float(h.get('score', 0)), reverse=True
+    )
+
+    winner_horse = next(
+        (h for h in sorted_field if h.get('horse', '').strip().lower() == winner_name.lower()),
+        None
+    )
+
+    winner_score = float(winner_horse.get('score', 0)) if winner_horse else 0
+    winner_odds  = float(winner_horse.get('odds', 0)) if winner_horse else 0
+    winner_rank  = next(
+        (i + 1 for i, h in enumerate(sorted_field) if h.get('horse', '').strip().lower() == winner_name.lower()),
+        0
+    )
+    score_gap = our_score - winner_score
+
+    why_missed   = []
+    weight_nudges = {}
+
+    if not winner_horse:
+        why_missed.append(f'Winner "{winner_name}" was not in our scored Betfair field — model could not see them')
+        return {
+            'winner_found': False, 'winner_score': 0, 'winner_rank': 0,
+            'winner_odds': 0, 'score_gap': score_gap,
+            'why_missed': why_missed, 'weight_nudges': weight_nudges,
+        }
+
+    # Market signal: winner was shorter odds than our pick
+    if winner_odds > 0 and our_odds > 0 and winner_odds < our_odds * 0.80:
+        why_missed.append(
+            f'Market disagreed: winner went off at {toFractional_py(winner_odds)} '
+            f'vs our pick at {toFractional_py(our_odds)} — odds signal should have flagged this'
+        )
+        weight_nudges['optimal_odds'] = weight_nudges.get('optimal_odds', 0) + 1.0
+
+    # Score gap: we massively over-scored our pick
+    if score_gap > 15:
+        why_missed.append(
+            f'Model over-confidence: we scored {our_horse.title()} {our_score:.0f}/100 '
+            f'vs {winner_name} {winner_score:.0f}/100 — {score_gap:.0f}pt gap too large'
+        )
+
+    # Winner ranked well — not a blind spot, just a close call
+    if 0 < winner_rank <= 3 and score_gap <= 10:
+        why_missed.append(
+            f'{winner_name} ranked {winner_rank}{"st" if winner_rank==1 else "nd" if winner_rank==2 else "rd"} '
+            f'in our model at {winner_score:.0f}/100 — narrow margin, pick was defensible'
+        )
+
+    # Winner was buried deep in our field
+    if winner_rank > 5:
+        why_missed.append(
+            f'{winner_name} ranked {winner_rank}th of {len(sorted_field)} in our model '
+            f'({winner_score:.0f}/100) — significant model blind spot'
+        )
+
+    # Going suitability over-contribution
+    going_pts = float(sb.get('going_suitability', 0))
+    if going_pts > 0 and our_score > 0 and (going_pts / our_score) > 0.25:
+        why_missed.append(
+            f'Going suitability dominated our score ({going_pts:.0f}pts = '
+            f'{going_pts/our_score*100:.0f}% of total) — may have been misleading'
+        )
+        weight_nudges['going_suitability'] = weight_nudges.get('going_suitability', 0) - 0.5
+
+    # C&D bonus over-contribution
+    cd_pts = float(sb.get('cd_bonus', 0)) + float(sb.get('course_performance', 0))
+    if cd_pts > 20:
+        why_missed.append(
+            f'Course & distance bonus inflated score ({cd_pts:.0f}pts) — '
+            f'winner may have had stronger recent form on the day'
+        )
+        weight_nudges['cd_bonus'] = weight_nudges.get('cd_bonus', 0) - 0.3
+
+    # Form signal: if winner had recent winner form and we under-scored them
+    if winner_score < our_score * 0.85:
+        weight_nudges['recent_win'] = weight_nudges.get('recent_win', 0) + 0.5
+
+    # Winner was a short price in a small field — market was very confident
+    field_size = len(sorted_field)
+    if field_size <= 5 and winner_odds > 0 and winner_odds < 2.5:
+        why_missed.append(
+            f'Small field ({field_size} runners) with a well-backed winner — '
+            f'in small fields the market price is highly predictive'
+        )
+        weight_nudges['optimal_odds'] = weight_nudges.get('optimal_odds', 0) + 0.5
+
+    if not why_missed:
+        why_missed.append(
+            f'{winner_name} scored {winner_score:.0f}/100 in our model '
+            f'(rank {winner_rank}) — race result was within normal variance'
+        )
+
+    return {
+        'winner_found':   True,
+        'winner_name':    winner_name,
+        'winner_score':   int(winner_score),
+        'winner_rank':    winner_rank,
+        'winner_rank_of': len(sorted_field),
+        'winner_odds':    winner_odds,
+        'winner_odds_fractional': toFractional_py(winner_odds) if winner_odds > 0 else '?',
+        'score_gap':      round(score_gap, 1),
+        'why_missed':     why_missed,
+        'weight_nudges':  weight_nudges,
+    }
 
 
 def toFractional_py(decimal):
@@ -757,6 +912,212 @@ def get_cheltenham_picks():
             'success': False,
             'error':   str(e)
         }), 500
+
+
+@app.route('/api/learning/apply', methods=['POST'])
+def apply_learning():
+    """
+    Analyse settled results for a given date, compute weight nudges from
+    missed winners and apply them to the SYSTEM_WEIGHTS record in DynamoDB.
+    Body (JSON, optional): { "date": "YYYY-MM-DD" }  — defaults to yesterday.
+    Returns a summary of which weights changed and by how much.
+    """
+    from flask import request as flask_req
+    from datetime import timedelta
+    try:
+        data = flask_req.get_json(silent=True) or {}
+        target_date = data.get('date') or (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+
+        # Fetch all settled UI picks for the date
+        all_items = []
+        for date in [target_date]:
+            resp = table.query(
+                KeyConditionExpression='bet_date = :date',
+                FilterExpression=(
+                    '(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) '
+                    'AND attribute_not_exists(analysis_type) AND attribute_not_exists(learning_type) '
+                    'AND attribute_exists(course) AND attribute_exists(horse)'
+                ),
+                ExpressionAttributeValues={':date': date, ':not_learning': False}
+            )
+            all_items.extend(resp.get('Items', []))
+
+        picks = [decimal_to_float(i) for i in all_items]
+        picks = [p for p in picks
+                 if p.get('show_in_ui') == True
+                 and p.get('result_winner_name')
+                 and (p.get('outcome') or '').lower() in ('loss', 'placed')]
+
+        if not picks:
+            return jsonify({'success': True, 'message': 'No settled losses found — nothing to learn from', 'changes': {}})
+
+        # Load current weights from DynamoDB
+        WEIGHT_MIN, WEIGHT_MAX, MAX_NUDGE = 2.0, 40.0, 1.5
+        try:
+            wt_resp = table.get_item(Key={'bet_id': 'SYSTEM_WEIGHTS', 'bet_date': 'CONFIG'})
+            raw_wt  = wt_resp.get('Item', {}).get('weights', {})
+            weights = {k: float(v) for k, v in raw_wt.items()} if raw_wt else {}
+        except Exception:
+            weights = {}
+
+        # Accumulate nudges from every missed winner
+        all_nudges    = []
+        race_summaries = []
+        for pick in picks:
+            wa = compute_winner_analysis(pick)
+            nudges = wa.get('weight_nudges', {})
+            if nudges:
+                all_nudges.append(nudges)
+            race_summaries.append({
+                'horse':   pick.get('horse'),
+                'course':  pick.get('course'),
+                'winner':  wa.get('winner_name', pick.get('result_winner_name', '?')),
+                'why':     wa.get('why_missed', []),
+                'nudges':  nudges,
+            })
+
+        # Average and apply nudges
+        changes = {}
+        if all_nudges and weights:
+            totals = {}
+            for nd in all_nudges:
+                for k, v in nd.items():
+                    totals[k] = totals.get(k, 0) + v
+            n = len(all_nudges)
+            for factor, total in totals.items():
+                if factor not in weights:
+                    continue
+                nudge  = max(-MAX_NUDGE, min(MAX_NUDGE, total / n))
+                old_v  = weights[factor]
+                new_v  = round(max(WEIGHT_MIN, min(WEIGHT_MAX, old_v + nudge)), 2)
+                if abs(new_v - old_v) > 0.01:
+                    weights[factor] = new_v
+                    changes[factor] = {'from': old_v, 'to': new_v, 'nudge': round(nudge, 2)}
+
+            if changes:
+                table.put_item(Item={
+                    'bet_id':     'SYSTEM_WEIGHTS',
+                    'bet_date':   'CONFIG',
+                    'weights':    {k: Decimal(str(v)) for k, v in weights.items()},
+                    'updated_at': datetime.now().isoformat(),
+                    'source':     'api_learning_apply',
+                    'learning_date': target_date,
+                })
+
+        return jsonify({
+            'success':        True,
+            'date':           target_date,
+            'picks_analysed': len(picks),
+            'changes':        changes,
+            'races':          race_summaries,
+            'message':        f"Applied {len(changes)} weight update(s) from {len(picks)} missed winner(s)" if changes
+                              else "No weight changes needed",
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/learning/apply', methods=['POST'])
+def apply_learning():
+    """
+    Analyse settled results for a given date, compute weight nudges from
+    missed winners and apply them to the SYSTEM_WEIGHTS record in DynamoDB.
+    Body (JSON, optional): { "date": "YYYY-MM-DD" }  — defaults to yesterday.
+    Returns a summary of which weights changed and by how much.
+    """
+    from flask import request as flask_req
+    from datetime import timedelta
+    try:
+        data = flask_req.get_json(silent=True) or {}
+        target_date = data.get('date') or (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+
+        # Fetch all settled UI picks for the date
+        all_items = []
+        resp = table.query(
+            KeyConditionExpression='bet_date = :date',
+            FilterExpression=(
+                '(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) '
+                'AND attribute_not_exists(analysis_type) AND attribute_not_exists(learning_type) '
+                'AND attribute_exists(course) AND attribute_exists(horse)'
+            ),
+            ExpressionAttributeValues={':date': target_date, ':not_learning': False}
+        )
+        all_items.extend(resp.get('Items', []))
+
+        picks = [decimal_to_float(i) for i in all_items]
+        picks = [p for p in picks
+                 if p.get('show_in_ui') == True
+                 and p.get('result_winner_name')
+                 and (p.get('outcome') or '').lower() in ('loss', 'placed')]
+
+        if not picks:
+            return jsonify({'success': True, 'message': 'No settled losses found — nothing to learn from', 'changes': {}})
+
+        # Load current weights from DynamoDB
+        WEIGHT_MIN, WEIGHT_MAX, MAX_NUDGE = 2.0, 40.0, 1.5
+        try:
+            wt_resp = table.get_item(Key={'bet_id': 'SYSTEM_WEIGHTS', 'bet_date': 'CONFIG'})
+            raw_wt  = wt_resp.get('Item', {}).get('weights', {})\
+                      if 'Item' in wt_resp else {}
+            weights = {k: float(v) for k, v in raw_wt.items()} if raw_wt else {}
+        except Exception:
+            weights = {}
+
+        # Accumulate nudges from every missed winner
+        all_nudges     = []
+        race_summaries = []
+        for pick in picks:
+            wa     = compute_winner_analysis(pick)
+            nudges = wa.get('weight_nudges', {})
+            if nudges:
+                all_nudges.append(nudges)
+            race_summaries.append({
+                'horse':  pick.get('horse'),
+                'course': pick.get('course'),
+                'winner': wa.get('winner_name', pick.get('result_winner_name', '?')),
+                'why':    wa.get('why_missed', []),
+                'nudges': nudges,
+            })
+
+        # Average and apply nudges
+        changes = {}
+        if all_nudges and weights:
+            totals = {}
+            for nd in all_nudges:
+                for k, v in nd.items():
+                    totals[k] = totals.get(k, 0) + v
+            n = len(all_nudges)
+            for factor, total in totals.items():
+                if factor not in weights:
+                    continue
+                nudge = max(-MAX_NUDGE, min(MAX_NUDGE, total / n))
+                old_v = weights[factor]
+                new_v = round(max(WEIGHT_MIN, min(WEIGHT_MAX, old_v + nudge)), 2)
+                if abs(new_v - old_v) > 0.01:
+                    weights[factor] = new_v
+                    changes[factor] = {'from': old_v, 'to': new_v, 'nudge': round(nudge, 2)}
+
+            if changes:
+                table.put_item(Item={
+                    'bet_id':        'SYSTEM_WEIGHTS',
+                    'bet_date':      'CONFIG',
+                    'weights':       {k: Decimal(str(v)) for k, v in weights.items()},
+                    'updated_at':    datetime.now().isoformat(),
+                    'source':        'api_learning_apply',
+                    'learning_date': target_date,
+                })
+
+        return jsonify({
+            'success':        True,
+            'date':           target_date,
+            'picks_analysed': len(picks),
+            'changes':        changes,
+            'races':          race_summaries,
+            'message': (f"Applied {len(changes)} weight update(s) from {len(picks)} missed winner(s)"
+                        if changes else "No weight changes needed"),
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/cheltenham/picks/save', methods=['POST'])

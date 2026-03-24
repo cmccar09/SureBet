@@ -113,8 +113,8 @@ def add_pick_to_ui(pick_data, race_data):
         'stake': Decimal('6.0'),
         'bet_type': 'WIN',
         'outcome': 'pending',
-        'show_in_ui': (score >= 75),  # BACKTESTED: 75+ = 45.4% ROI (was 85+ = 4.1% ROI)
-        'recommended_bet': (score >= 75),
+        'show_in_ui': (score >= 85),  # Threshold: 85+ matches the daily picks tab filter
+        'recommended_bet': (score >= 85),
         
         # Comprehensive analysis data
         'comprehensive_score': Decimal(str(score)),

@@ -575,10 +575,11 @@ function DailyPicksView() {
 
 // ---- Yesterday's Results ----
 function YesterdayResultsView() {
-  const [results, setResults]   = useState(null);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState(null);
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 480);
+  const [results, setResults]         = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState(null);
+  const [isMobile, setIsMobile]       = useState(typeof window !== 'undefined' && window.innerWidth < 480);
+  const [learningStatus, setLearning] = useState({ state: 'idle', message: '', changes: {} });
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 480);
@@ -614,10 +615,9 @@ function YesterdayResultsView() {
         profit:       (ts.profit       || 0) + (ys.profit       || 0),
         total_stake:  (ts.total_stake  || 0) + (ys.total_stake  || 0),
       };
-      // ROI = (wins + placed/3) / settled bets * 100
-      const settled = combinedSummary.wins + combinedSummary.places + combinedSummary.losses;
-      combinedSummary.roi = settled > 0
-        ? ((combinedSummary.wins + combinedSummary.places / 3) / settled * 100) : 0;
+      // ROI = profit / total_stake * 100  (standard financial ROI)
+      combinedSummary.roi = combinedSummary.total_stake > 0
+        ? (combinedSummary.profit / combinedSummary.total_stake * 100) : 0;
 
       if (allPicks.length === 0 && !todayData.success && !yestData.success) {
         setError('Failed to load results');
@@ -901,50 +901,16 @@ function YesterdayResultsView() {
 
       )}
 
-      {/* ── Loss Analysis ─────────────────────────────────────────── */}
+      {/* ── Loss / Placed Analysis ───────────────────────────────── */}
       {(() => {
-        const losses = picks.filter(p => {
+        const nonWins = picks.filter(p => {
           const re = p.result_emoji
-            || (p.outcome === 'loss' || p.outcome === 'LOSS' || p.outcome === 'LOST' ? 'LOSS' : null);
-          return re === 'LOSS';
+            || (p.outcome === 'loss'   || p.outcome === 'LOSS'   || p.outcome === 'LOST'   ? 'LOSS'
+              : p.outcome === 'placed' || p.outcome === 'PLACED'                           ? 'PLACED'
+              : null);
+          return re === 'LOSS' || re === 'PLACED';
         });
-        if (losses.length === 0) return null;
-
-        const getFlags = pick => {
-          const sb      = pick.score_breakdown || {};
-          const odds    = parseFloat(pick.odds || 0);
-          const score   = parseFloat(pick.comprehensive_score || pick.analysis_score || 1);
-          const allH    = pick.all_horses || [];
-          const runners = parseFloat(pick.total_runners || pick.analyzed_runners || allH.length || 1);
-          const winner  = (pick.result_winner_name || '').toLowerCase();
-          const flags   = [];
-
-          if (odds > 20)
-            flags.push({ icon:'💸', flag:`Odds ${(odds-1).toFixed(0)}/1 — extreme outsider; market strongly disagreed`, fix:'Fixed: >20/1 now carries −24pt penalty; >30/1 hidden from UI entirely' });
-          else if (odds > 12)
-            flags.push({ icon:'⚠️', flag:`Odds ${(odds-1).toFixed(0)}/1 — market disagreed with model`, fix:'Model now penalises outsiders more heavily to align with market signal' });
-
-          const goingPts = parseFloat(sb.going_suitability || 0);
-          if (goingPts >= 20)
-            flags.push({ icon:'🌧️', flag:`Going suitability: ${goingPts}pts (${(goingPts/score*100).toFixed(0)}% of total score)`, fix:'Fixed: Going suitability capped at 20pts — was contributing up to 32pts' });
-
-          if (parseFloat(sb.jockey_quality || 0) === 0 && parseFloat(sb.jockey_tier2 || 0) === 0)
-            flags.push({ icon:'🏇', flag:'Zero jockey score — no jockey data in model', fix:'NH jockey data gap identified; being addressed in next model update' });
-
-          if (parseFloat(sb.cd_bonus || 0) === 0 && parseFloat(sb.course_performance || 0) === 0)
-            flags.push({ icon:'📍', flag:'No C&D bonus — horse unproven at this course/distance combination', fix:'Unproven C&D runners should receive lower base scores going forward' });
-
-          const analyzed = allH.length;
-          const coverage = analyzed > 0 && runners > 0 ? analyzed / runners : 1;
-          if (coverage < 0.6 && analyzed > 0)
-            flags.push({ icon:'🔭', flag:`Only ${analyzed}/${Math.round(runners)} runners had Betfair data (${Math.round(coverage*100)}% coverage)`, fix:'Fixed: Races with <40% field coverage now excluded — winner may not be in scored set' });
-
-          const winnerInField = allH.some(h => (h.horse||'').toLowerCase() === winner);
-          if (winner && !winnerInField)
-            flags.push({ icon:'❓', flag:`Winner was not in our scored field — invisible to the model`, fix:'Field coverage gate prevents picks in data-sparse races' });
-
-          return flags;
-        };
+        if (nonWins.length === 0) return null;
 
         const SCORE_LABELS_MAP = {
           going_suitability:'Going Suitability', recent_win:'Last Race Win', total_wins:'Form Wins',
@@ -954,126 +920,163 @@ function YesterdayResultsView() {
           jockey_quality:'Jockey Quality', database_history:'DB History', age_factor:'Age Factor',
         };
 
+        const applyLearning = async () => {
+          setLearning({ state: 'loading', message: 'Analysing missed winners and updating model weights…', changes: {} });
+          try {
+            const res  = await fetch(API_BASE_URL + '/api/learning/apply', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({}) });
+            const data = await res.json();
+            if (data.success) {
+              setLearning({ state: 'done', message: data.message, changes: data.changes || {} });
+            } else {
+              setLearning({ state: 'error', message: data.error || 'Unknown error', changes: {} });
+            }
+          } catch (e) {
+            setLearning({ state: 'error', message: 'Network error: ' + e.message, changes: {} });
+          }
+        };
+
         return (
           <div style={{ marginTop:'32px' }}>
-            {/* Section heading */}
             <div style={{ marginBottom:'16px' }}>
-              <div style={{ fontSize:'17px', fontWeight:'800', color:'white', marginBottom:'3px' }}>🔍 Loss Analysis</div>
+              <div style={{ fontSize:'17px', fontWeight:'800', color:'white', marginBottom:'3px' }}>🔍 Why We Missed — &amp; What The Model Learned</div>
               <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.45)' }}>
-                Why each losing selection was missed — and the model updates applied to prevent recurrence
+                For each non-win: how the real winner ranked in our model, and which scoring factors to adjust
               </div>
             </div>
 
-            {losses.map((pick, idx) => {
-              const sb     = pick.score_breakdown || {};
-              const odds   = parseFloat(pick.odds || 0);
-              const score  = parseFloat(pick.comprehensive_score || pick.analysis_score || 0);
-              const allH   = pick.all_horses || [];
-              const winner = pick.result_winner_name || pick.winner_name || '?';
-              const ft     = formatRaceTime(pick.race_time);
-              const flags  = getFlags(pick);
+            {nonWins.map((pick, idx) => {
+              const sb       = pick.score_breakdown || {};
+              const odds     = parseFloat(pick.odds || 0);
+              const score    = parseFloat(pick.comprehensive_score || pick.analysis_score || 0);
+              const winner   = pick.result_winner_name || pick.winner_name || '?';
+              const ft       = formatRaceTime(pick.race_time);
+              const wa       = pick.winner_analysis || {};
+              const isPlaced = (pick.result_emoji || pick.outcome || '').toUpperCase().includes('PLACED');
 
               const topBreakdown = Object.entries(sb)
                 .filter(([,v]) => parseFloat(v) > 0)
                 .sort(([,a],[,b]) => parseFloat(b) - parseFloat(a))
                 .slice(0, 5);
 
-              const winnerRow = allH.find(h => (h.horse||'').toLowerCase() === winner.toLowerCase());
-
               return (
-                <div key={idx} style={{ background:'#1a1a2e', border:'1px solid rgba(239,68,68,0.4)', borderRadius:'12px', padding: isMobile ? '14px 14px' : '20px 24px', marginBottom:'18px', borderLeft:'4px solid #ef4444' }}>
+                <div key={idx} style={{ background:'#1a1a2e', border:`1px solid ${isPlaced ? 'rgba(59,130,246,0.4)' : 'rgba(239,68,68,0.4)'}`, borderRadius:'12px', padding: isMobile ? '14px' : '20px 24px', marginBottom:'18px', borderLeft:`4px solid ${isPlaced ? '#3b82f6' : '#ef4444'}` }}>
 
-                  {/* Horse header */}
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'8px', marginBottom:'14px' }}>
+                  {/* Header row */}
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'8px', marginBottom:'16px' }}>
                     <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize: isMobile ? '15px' : '18px', fontWeight:'800', color:'white' }}>{pick.horse}</div>
-                      <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.5)', marginTop:'3px', flexWrap:'wrap' }}>
-                        {ft.time} {pick.course}
-                        &nbsp;&bull;&nbsp;Score: <strong style={{color:'white'}}>{score.toFixed(0)}/100</strong>
-                        &nbsp;&bull;&nbsp;Odds: <strong style={{color:'#93c5fd'}}>{(odds-1).toFixed(0)}/1</strong>
+                      <div style={{ fontSize: isMobile ? '15px' : '18px', fontWeight:'800', color:'white' }}>
+                        {isPlaced ? '🥈' : '✗'} {pick.horse}
+                        <span style={{ marginLeft:'8px', fontSize:'12px', fontWeight:'600', color: isPlaced ? '#60a5fa' : '#f87171' }}>{isPlaced ? 'PLACED' : 'LOSS'}</span>
+                      </div>
+                      <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.5)', marginTop:'3px' }}>
+                        {ft.time} · {pick.course}
+                        &nbsp;·&nbsp;Our score: <strong style={{color:'white'}}>{score.toFixed(0)}/100</strong>
+                        &nbsp;·&nbsp;Odds: <strong style={{color:'#93c5fd'}}>{(odds-1).toFixed(0)}/1</strong>
                       </div>
                     </div>
-                    <div style={{ textAlign: isMobile ? 'left' : 'right', flexShrink:0, maxWidth: isMobile ? '100%' : 'none' }}>
-                      <div style={{ background:'rgba(239,68,68,0.25)', border:'1px solid rgba(239,68,68,0.5)', color:'#fca5a5', borderRadius:'7px', padding:'5px 10px', fontSize:'11px', fontWeight:'700', marginBottom:'4px', lineHeight:1.4 }}>
-                        ✗ {pick.result_analysis || `${pick.finish_position || '?'} of ${pick.total_runners || '?'}, winner: ${winner}`}
-                      </div>
-                      {winnerRow && (
-                        <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.4)' }}>
-                          Winner scored {parseFloat(winnerRow.score||0).toFixed(0)}/100 @ {(parseFloat(winnerRow.odds||2)-1).toFixed(0)}/1
+                    <div style={{ background: isPlaced ? 'rgba(59,130,246,0.2)' : 'rgba(239,68,68,0.2)', border:`1px solid ${isPlaced ? 'rgba(59,130,246,0.45)' : 'rgba(239,68,68,0.45)'}`, color: isPlaced ? '#93c5fd' : '#fca5a5', borderRadius:'7px', padding:'6px 12px', fontSize:'11px', fontWeight:'700', lineHeight:1.5, textAlign:'right', flexShrink:0 }}>
+                      {pick.result_analysis || (winner !== '?' ? `Winner: ${winner}` : 'Result recorded')}
+                    </div>
+                  </div>
+
+                  {/* Winner comparison bar */}
+                  {wa.winner_found && (
+                    <div style={{ background:'rgba(255,255,255,0.06)', borderRadius:'10px', padding:'14px 16px', marginBottom:'16px' }}>
+                      <div style={{ fontSize:'10px', fontWeight:'800', color:'#fbbf24', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'12px' }}>🏆 Winner Comparison — {wa.winner_name}</div>
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', marginBottom:'12px' }}>
+                        {/* Our pick */}
+                        <div style={{ background:'rgba(239,68,68,0.12)', borderRadius:'8px', padding:'10px 12px', border:'1px solid rgba(239,68,68,0.25)' }}>
+                          <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)', marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.8px' }}>Our Pick</div>
+                          <div style={{ fontWeight:'800', color:'white', fontSize:'14px' }}>{pick.horse}</div>
+                          <div style={{ fontSize:'20px', fontWeight:'900', color:'#f87171', marginTop:'4px' }}>{score.toFixed(0)}<span style={{fontSize:'11px',fontWeight:'500',color:'rgba(255,255,255,0.4)'}}>/100</span></div>
+                          <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)', marginTop:'2px' }}>Ranked #1 in field · {(odds-1).toFixed(0)}/1</div>
                         </div>
-                      )}
+                        {/* Actual winner */}
+                        <div style={{ background:'rgba(16,185,129,0.12)', borderRadius:'8px', padding:'10px 12px', border:'1px solid rgba(16,185,129,0.25)' }}>
+                          <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)', marginBottom:'4px', textTransform:'uppercase', letterSpacing:'0.8px' }}>Actual Winner</div>
+                          <div style={{ fontWeight:'800', color:'white', fontSize:'14px' }}>{wa.winner_name}</div>
+                          <div style={{ fontSize:'20px', fontWeight:'900', color:'#34d399', marginTop:'4px' }}>{wa.winner_score}<span style={{fontSize:'11px',fontWeight:'500',color:'rgba(255,255,255,0.4)'}}>/100</span></div>
+                          <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)', marginTop:'2px' }}>Ranked #{wa.winner_rank} of {wa.winner_rank_of} · {wa.winner_odds_fractional}</div>
+                        </div>
+                      </div>
+                      {/* Score gap bar */}
+                      <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)', marginBottom:'6px' }}>
+                        Model gap: <strong style={{color: wa.score_gap > 10 ? '#fbbf24' : '#a3a3a3'}}>{wa.score_gap > 0 ? '+' : ''}{wa.score_gap} pts</strong> in favour of our pick
+                      </div>
+                      {/* Why missed bullets */}
+                      {(wa.why_missed || []).map((reason, ri) => (
+                        <div key={ri} style={{ display:'flex', gap:'7px', alignItems:'flex-start', marginTop:'6px' }}>
+                          <span style={{ color:'#fbbf24', flexShrink:0, marginTop:'1px' }}>›</span>
+                          <span style={{ fontSize:'12px', color:'rgba(255,255,255,0.65)', lineHeight:1.5 }}>{reason}</span>
+                        </div>
+                      ))}
                     </div>
-                  </div>
+                  )}
 
-                  <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'20px' }}>
-
-                    {/* Failure reasons column */}
+                  {/* Score breakdown */}
+                  {topBreakdown.length > 0 && (
                     <div>
-                      <div style={{ fontSize:'10px', fontWeight:'800', color:'#ef4444', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'10px' }}>🚨 Failure Reasons</div>
-                      {flags.length === 0
-                        ? <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.35)' }}>No specific flags identified</div>
-                        : flags.map((f, fi) => (
-                          <div key={fi} style={{ marginBottom:'12px' }}>
-                            <div style={{ display:'flex', gap:'6px', alignItems:'flex-start', marginBottom:'4px' }}>
-                              <span style={{ flexShrink:0, fontSize:'13px' }}>{f.icon}</span>
-                              <span style={{ fontSize:'12px', color:'#fca5a5', lineHeight:1.4 }}>{f.flag}</span>
+                      <div style={{ fontSize:'10px', fontWeight:'800', color:'#f59e0b', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'8px' }}>📊 What inflated our score</div>
+                      {topBreakdown.map(([k, v], bi) => {
+                        const pts    = parseFloat(v);
+                        const pct    = score > 0 ? pts / score * 100 : 0;
+                        const isHigh = k === 'going_suitability' || pts > 22;
+                        const label  = SCORE_LABELS_MAP[k] || k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
+                        return (
+                          <div key={bi} style={{ marginBottom:'7px' }}>
+                            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'3px' }}>
+                              <span style={{ fontSize:'11px', color: isHigh ? '#fbbf24' : 'rgba(255,255,255,0.5)' }}>{isHigh ? '⚠️ ' : ''}{label}</span>
+                              <span style={{ fontSize:'11px', fontWeight:'700', color: isHigh ? '#fbbf24' : '#93c5fd' }}>+{pts.toFixed(0)} pts ({pct.toFixed(0)}%)</span>
                             </div>
-                            <div style={{ marginLeft:'20px', fontSize:'11px', color:'#86efac', lineHeight:1.4 }}>↳ {f.fix}</div>
+                            <div style={{ background:'rgba(255,255,255,0.08)', borderRadius:'3px', height:'5px', overflow:'hidden' }}>
+                              <div style={{ width:`${Math.min(pct,100)}%`, height:'100%', background: isHigh ? '#f59e0b' : '#3b82f6', borderRadius:'3px' }} />
+                            </div>
                           </div>
-                        ))
-                      }
+                        );
+                      })}
                     </div>
-
-                    {/* Score breakdown column */}
-                    <div>
-                      <div style={{ fontSize:'10px', fontWeight:'800', color:'#f59e0b', textTransform:'uppercase', letterSpacing:'1px', marginBottom:'10px' }}>📊 What inflated the score</div>
-                      {topBreakdown.length === 0
-                        ? <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.35)' }}>No breakdown data</div>
-                        : topBreakdown.map(([k, v], bi) => {
-                          const pts    = parseFloat(v);
-                          const pct    = score > 0 ? pts / score * 100 : 0;
-                          const isHigh = k === 'going_suitability' || pts > 22;
-                          const label  = SCORE_LABELS_MAP[k] || k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
-                          return (
-                            <div key={bi} style={{ marginBottom:'8px' }}>
-                              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'3px' }}>
-                                <span style={{ fontSize:'11px', color: isHigh ? '#fbbf24' : 'rgba(255,255,255,0.55)' }}>
-                                  {isHigh ? '⚠️ ' : ''}{label}
-                                </span>
-                                <span style={{ fontSize:'11px', fontWeight:'700', color: isHigh ? '#fbbf24' : '#93c5fd' }}>
-                                  +{pts.toFixed(0)} pts&nbsp;({pct.toFixed(0)}%)
-                                </span>
-                              </div>
-                              <div style={{ background:'rgba(255,255,255,0.08)', borderRadius:'3px', height:'6px', overflow:'hidden' }}>
-                                <div style={{ width:`${Math.min(pct,100)}%`, height:'100%', background: isHigh ? '#f59e0b' : '#3b82f6', borderRadius:'3px', transition:'width 0.4s' }} />
-                              </div>
-                            </div>
-                          );
-                        })
-                      }
-                    </div>
-                  </div>
+                  )}
                 </div>
               );
             })}
 
-            {/* Model fixes summary card */}
-            <div style={{ background:'rgba(16,185,129,0.08)', border:'1px solid rgba(16,185,129,0.3)', borderRadius:'12px', padding:'18px 22px' }}>
-              <div style={{ fontSize:'13px', fontWeight:'800', color:'#34d399', marginBottom:'14px' }}>✅ Model Updates Already Applied</div>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'10px' }}>
-                {[
-                  { icon:'💸', title:'Outsider Penalty',       desc:'Odds >20/1 carry a −24pt penalty. Odds >30/1 are hidden from UI entirely.' },
-                  { icon:'🌧️', title:'Going Cap',              desc:'Going suitability contribution capped at 20pts max (was up to 32pts in extreme going).' },
-                  { icon:'🔭', title:'Field Coverage Gate',     desc:'Races where <40% of runners have data are excluded — avoids picks where the winner is invisible.' },
-                ].map((u, ui) => (
-                  <div key={ui} style={{ background:'rgba(255,255,255,0.06)', borderRadius:'8px', padding:'12px 14px' }}>
-                    <div style={{ fontSize:'13px', marginBottom:'5px' }}>
-                      {u.icon}&nbsp;<span style={{ fontWeight:'800', color:'white', fontSize:'12px' }}>{u.title}</span>
-                    </div>
-                    <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.5)', lineHeight:1.55 }}>{u.desc}</div>
+            {/* Apply Learning button + status */}
+            <div style={{ background:'rgba(16,185,129,0.08)', border:'1px solid rgba(16,185,129,0.3)', borderRadius:'12px', padding:'20px 24px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'12px', marginBottom: learningStatus.state !== 'idle' ? '16px' : '0' }}>
+                <div>
+                  <div style={{ fontSize:'13px', fontWeight:'800', color:'#34d399', marginBottom:'4px' }}>🧠 Auto-Update Model Weights</div>
+                  <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.5)', lineHeight:1.5 }}>
+                    Analyses every missed winner above and nudges the scoring weights in DynamoDB so tomorrow's picks improve.
                   </div>
-                ))}
+                </div>
+                <button
+                  onClick={applyLearning}
+                  disabled={learningStatus.state === 'loading'}
+                  style={{ background: learningStatus.state === 'done' ? '#059669' : '#1d4ed8', border:'none', borderRadius:'8px', color:'white', padding:'10px 20px', cursor: learningStatus.state === 'loading' ? 'not-allowed' : 'pointer', fontWeight:'700', fontSize:'13px', opacity: learningStatus.state === 'loading' ? 0.7 : 1, flexShrink:0, whiteSpace:'nowrap' }}
+                >
+                  {learningStatus.state === 'loading' ? '⏳ Updating…' : learningStatus.state === 'done' ? '✅ Applied' : '⚡ Apply Learning Now'}
+                </button>
               </div>
+              {learningStatus.state === 'done' && (
+                <div>
+                  <div style={{ fontSize:'12px', color:'#34d399', marginBottom:'10px', fontWeight:'700' }}>{learningStatus.message}</div>
+                  {Object.keys(learningStatus.changes).length > 0 && (
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:'8px' }}>
+                      {Object.entries(learningStatus.changes).map(([factor, ch]) => (
+                        <div key={factor} style={{ background:'rgba(255,255,255,0.07)', borderRadius:'6px', padding:'5px 10px', fontSize:'11px' }}>
+                          <span style={{ color:'rgba(255,255,255,0.5)', textTransform:'capitalize' }}>{factor.replace(/_/g,' ')}</span>
+                          <span style={{ marginLeft:'6px', fontWeight:'800', color: ch.nudge > 0 ? '#34d399' : '#f87171' }}>
+                            {ch.from.toFixed(1)} → {ch.to.toFixed(1)} ({ch.nudge > 0 ? '+' : ''}{ch.nudge.toFixed(2)})
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              {learningStatus.state === 'error' && (
+                <div style={{ fontSize:'12px', color:'#f87171', marginTop:'8px' }}>⚠️ {learningStatus.message}</div>
+              )}
             </div>
           </div>
         );
