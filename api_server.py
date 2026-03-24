@@ -914,7 +914,7 @@ def get_cheltenham_picks():
         }), 500
 
 
-@app.route('/api/learning/apply', methods=['POST'])
+@app.route('/api/learning/apply', methods=['POST', 'OPTIONS'])
 def apply_learning():
     """
     Analyse settled results for a given date, compute weight nudges from
@@ -924,6 +924,8 @@ def apply_learning():
     """
     from flask import request as flask_req
     from datetime import timedelta
+    if flask_req.method == 'OPTIONS':
+        return '', 204
     try:
         data = flask_req.get_json(silent=True) or {}
         target_date = data.get('date') or (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
@@ -1016,108 +1018,6 @@ def apply_learning():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
-@app.route('/api/learning/apply', methods=['POST'])
-def apply_learning():
-    """
-    Analyse settled results for a given date, compute weight nudges from
-    missed winners and apply them to the SYSTEM_WEIGHTS record in DynamoDB.
-    Body (JSON, optional): { "date": "YYYY-MM-DD" }  — defaults to yesterday.
-    Returns a summary of which weights changed and by how much.
-    """
-    from flask import request as flask_req
-    from datetime import timedelta
-    try:
-        data = flask_req.get_json(silent=True) or {}
-        target_date = data.get('date') or (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-
-        # Fetch all settled UI picks for the date
-        all_items = []
-        resp = table.query(
-            KeyConditionExpression='bet_date = :date',
-            FilterExpression=(
-                '(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) '
-                'AND attribute_not_exists(analysis_type) AND attribute_not_exists(learning_type) '
-                'AND attribute_exists(course) AND attribute_exists(horse)'
-            ),
-            ExpressionAttributeValues={':date': target_date, ':not_learning': False}
-        )
-        all_items.extend(resp.get('Items', []))
-
-        picks = [decimal_to_float(i) for i in all_items]
-        picks = [p for p in picks
-                 if p.get('show_in_ui') == True
-                 and p.get('result_winner_name')
-                 and (p.get('outcome') or '').lower() in ('loss', 'placed')]
-
-        if not picks:
-            return jsonify({'success': True, 'message': 'No settled losses found — nothing to learn from', 'changes': {}})
-
-        # Load current weights from DynamoDB
-        WEIGHT_MIN, WEIGHT_MAX, MAX_NUDGE = 2.0, 40.0, 1.5
-        try:
-            wt_resp = table.get_item(Key={'bet_id': 'SYSTEM_WEIGHTS', 'bet_date': 'CONFIG'})
-            raw_wt  = wt_resp.get('Item', {}).get('weights', {})\
-                      if 'Item' in wt_resp else {}
-            weights = {k: float(v) for k, v in raw_wt.items()} if raw_wt else {}
-        except Exception:
-            weights = {}
-
-        # Accumulate nudges from every missed winner
-        all_nudges     = []
-        race_summaries = []
-        for pick in picks:
-            wa     = compute_winner_analysis(pick)
-            nudges = wa.get('weight_nudges', {})
-            if nudges:
-                all_nudges.append(nudges)
-            race_summaries.append({
-                'horse':  pick.get('horse'),
-                'course': pick.get('course'),
-                'winner': wa.get('winner_name', pick.get('result_winner_name', '?')),
-                'why':    wa.get('why_missed', []),
-                'nudges': nudges,
-            })
-
-        # Average and apply nudges
-        changes = {}
-        if all_nudges and weights:
-            totals = {}
-            for nd in all_nudges:
-                for k, v in nd.items():
-                    totals[k] = totals.get(k, 0) + v
-            n = len(all_nudges)
-            for factor, total in totals.items():
-                if factor not in weights:
-                    continue
-                nudge = max(-MAX_NUDGE, min(MAX_NUDGE, total / n))
-                old_v = weights[factor]
-                new_v = round(max(WEIGHT_MIN, min(WEIGHT_MAX, old_v + nudge)), 2)
-                if abs(new_v - old_v) > 0.01:
-                    weights[factor] = new_v
-                    changes[factor] = {'from': old_v, 'to': new_v, 'nudge': round(nudge, 2)}
-
-            if changes:
-                table.put_item(Item={
-                    'bet_id':        'SYSTEM_WEIGHTS',
-                    'bet_date':      'CONFIG',
-                    'weights':       {k: Decimal(str(v)) for k, v in weights.items()},
-                    'updated_at':    datetime.now().isoformat(),
-                    'source':        'api_learning_apply',
-                    'learning_date': target_date,
-                })
-
-        return jsonify({
-            'success':        True,
-            'date':           target_date,
-            'picks_analysed': len(picks),
-            'changes':        changes,
-            'races':          race_summaries,
-            'message': (f"Applied {len(changes)} weight update(s) from {len(picks)} missed winner(s)"
-                        if changes else "No weight changes needed"),
-        })
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/cheltenham/picks/save', methods=['POST'])
