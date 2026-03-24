@@ -608,6 +608,58 @@ def compute_winner_analysis(pick):
         )
         weight_nudges['optimal_odds'] = weight_nudges.get('optimal_odds', 0) + 0.5
 
+    # ── Why the winner won ──────────────────────────────────────────────────
+    winner_sb   = winner_horse.get('score_breakdown') or {}
+    winner_reasons = []
+
+    # Better market support
+    if winner_odds > 0 and our_odds > 0 and winner_odds < our_odds:
+        winner_reasons.append(
+            f'better market confidence ({toFractional_py(winner_odds)} vs our pick at {toFractional_py(our_odds)})'
+        )
+
+    # Stronger recent form
+    w_form = float(winner_sb.get('form', 0) or winner_sb.get('form_score', 0) or winner_sb.get('recent_win', 0))
+    o_form = float(sb.get('form', 0) or sb.get('form_score', 0) or sb.get('recent_win', 0))
+    if w_form > o_form + 3:
+        winner_reasons.append(
+            f'stronger recent form score ({w_form:.0f}pts vs our pick\'s {o_form:.0f}pts)'
+        )
+
+    # Better C&D record
+    w_cd = float(winner_sb.get('cd_bonus', 0) or winner_sb.get('course_performance', 0))
+    o_cd = float(sb.get('cd_bonus', 0) or sb.get('course_performance', 0))
+    if w_cd > o_cd + 5:
+        winner_reasons.append(
+            f'superior C&D record ({w_cd:.0f}pts vs our pick\'s {o_cd:.0f}pts)'
+        )
+
+    # Better going suitability
+    w_going = float(winner_sb.get('going_suitability', 0))
+    o_going = float(sb.get('going_suitability', 0))
+    if w_going > o_going + 5:
+        winner_reasons.append(
+            f'better going suitability on the day ({w_going:.0f}pts vs {o_going:.0f}pts)'
+        )
+
+    # Trainer / jockey edge
+    w_tr = float(winner_sb.get('trainer_strike_rate', 0) or winner_sb.get('meeting_focus_trainer', 0))
+    o_tr = float(sb.get('trainer_strike_rate', 0) or sb.get('meeting_focus_trainer', 0))
+    if w_tr > o_tr + 5:
+        winner_reasons.append(
+            f'trainer in better form ({w_tr:.0f}pts vs our pick\'s {o_tr:.0f}pts)'
+        )
+
+    if winner_reasons:
+        why_missed.append(
+            f'{winner_name} won on: {"; ".join(winner_reasons)}'
+        )
+    elif winner_score > 0:
+        why_missed.append(
+            f'{winner_name} (scored {winner_score:.0f}/100 in our model, rank {winner_rank}) '
+            f'outperformed expectations on the day'
+        )
+
     if not why_missed:
         why_missed.append(
             f'{winner_name} scored {winner_score:.0f}/100 in our model '
