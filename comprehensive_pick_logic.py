@@ -49,19 +49,19 @@ except ImportError:
 DEFAULT_WEIGHTS = {
     'sweet_spot':           12,  # REDUCED 20->12: odds range is a useful filter, not a main signal
     'optimal_odds':         10,  # REDUCED 15->10: combined odds weighting should not dominate
-    'recent_win':           22,  # INCREASED 15->22: last-race win is the single best predictor
+    'recent_win':           16,  # REDUCED 22->16 (2026-03-25): last-race win still #1 signal but was dominating too heavily
     'total_wins':            8,  # INCREASED  5->8:  each form win carries more weight
     'consistency':           4,  # INCREASED  2->4:  places (2nd/3rd) matter more
     'course_bonus':         12,  # INCREASED 10->12: course familiarity
     'database_history':     15,  # unchanged
     'going_suitability':    16,  # INCREASED 14->16: going is critical in UK NH
     'track_pattern_bonus':   8,  # REDUCED 10->8
-    'trainer_reputation':   15,  # REDUCED 25->15: ELITE tier only (see tiering below)
-    'trainer_tier2':         8,  # NEW: good trainers  (was all getting 25)
-    'trainer_tier3':         4,  # NEW: decent trainers
-    'favorite_correction':   7,  # REDUCED 12->7: cap stacking on top of trainer bonus
-    'jockey_quality':       12,  # REDUCED 15->12: elite jockey tier 1
-    'jockey_tier2':          6,  # NEW: good/champion jockeys (was all getting 15)
+    'trainer_reputation':   15,  # restored: elite trainer tier 1
+    'trainer_tier2':         8,  # unchanged: good trainers
+    'trainer_tier3':         4,  # unchanged: decent trainers
+    'favorite_correction':   7,  # unchanged: cap stacking on top of trainer bonus
+    'jockey_quality':       12,  # restored: elite jockey tier 1
+    'jockey_tier2':          6,  # restored: good/champion jockeys
     'weight_penalty':       10,  # unchanged
     'age_bonus':            10,  # unchanged
     'distance_suitability': 18,  # INCREASED 12->18: proven distance/course match is very important
@@ -70,15 +70,15 @@ DEFAULT_WEIGHTS = {
     'short_form_improvement':8,  # REDUCED 10->8
     'aw_low_class_penalty': 50,  # RAISED 35→50 (2026-03-16): Beauzon 91pts finished 6th in AW Class 5; form streak overwhelmed -35 penalty
     'heavy_going_penalty':    12,  # NEW 2026-03-16: El Gavilan (score=100, 3/1 fav) 5th in Heavy; Heavy ground = unpredictable
-    'cd_bonus':             18,  # INCREASED 12->18: C/D winner is strong evidence
+    'cd_bonus':             18,  # restored: C/D winner strong evidence
     'graded_race_cd_bonus':  8,  # unchanged
     'official_rating_bonus': 8,  # NEW: high official rating = class horse
     'jockey_course_bonus':   8,  # NEW: jockey course familiarity from history
     'relative_weight_bonus': 8,  # NEW: carrying less weight than field average
-    # Meeting-focus signals (2026-03-19)
+    # Meeting-focus signals (2026-03-19)  — priority: jockey sole ride > trainer sole runner
     'meeting_focus_trainer':  10,  # Trainer sole runner at this meeting today
     'meeting_focus_jockey':   10,  # Jockey only rides at this meeting today
-    'meeting_focus_combo':    10,  # Trainer+jockey combo only at this meeting today
+    'meeting_focus_combo':    10,  # unchanged: trainer+jockey both focused = strongest signal
     'new_trainer_debut':       5,  # Horse has no prior DB record with this trainer
     # Deep form signals (2026-03-20) — from Racing Post last-6-race history
     'form_exact_course_win':  20,  # Proven winner at THIS course
@@ -89,6 +89,19 @@ DEFAULT_WEIGHTS = {
     'form_close_2nd':         14,  # 2nd beaten < 4 lengths last time — unlucky loser
     'form_or_rising':         10,  # OR trajectory rising over last 3 runs
     'form_big_field_win':      8,  # Won in field of 10+ — proven in competitive race
+    # Young improver signals (2026-03-25) — LESSON: Isabella Islay (4yo, form='93', 6.5→2/1 SP)
+    # won Hereford 15:30 but scored only 33 (POOR) because she had 0 wins. Lightly-raced
+    # young horses with improving form represent potential market movers that static analysis misses.
+    'unexposed_bonus':        12,  # 2026-03-25: ≤5yo, ≤5 runs, 0 wins, 1+ place, odds 4-10
+    # AW evening racing penalty (2026-03-25) — LESSON: Wolverhampton 20:00/20:30 races all lost.
+    # Evening AW races (after 17:30) have higher variance: small fields, market over-reacts to
+    # morning form, last-minute gambles distort prices, track bias not visible until late cards.
+    # Scores 81-92 marked STRONG but all unplaced — evening AW races need extra discount.
+    'aw_evening_penalty':     12,  # 2026-03-25: AW venues after 17:30 — reduce confidence
+    # Unknown/low-tier trainer penalty (2026-03-25) — LESSON: Brian Toomey (Burdett Estate),
+    # D M Simcock (Mr Nugget), K Woollacott (Knock Off Soxs) all lost. No trainer in any tier
+    # means the score was built entirely from form/odds — weaker evidence for daily picks.
+    'unknown_trainer_penalty': 8,  # 2026-03-25: trainer not Tier1/2/3 — reduce confidence
 }
 
 # Cache for weights (reload every 5 minutes)
@@ -417,28 +430,6 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     if places > 0:
         reasons.append(f"{places} places (2nd/3rd): {place_points}pts")
     
-    # 3b. UNEXPOSED HORSE BONUS
-    # LESSON 2026-03-22: Causeway (2 runs, 1 win on soft turf +Irish Lincoln form franked)
-    # scored only 57 because total_wins=1 gave minimal wins pts and consistency=0.
-    # Lightly-raced horses with a high win rate are UNDERVALUED by win-count scoring.
-    # Applies to horses with <=5 career runs, 1+ win, and a good win-rate.
-    _unexposed_bonus = 0
-    if _prev_results and len(_prev_results) <= 5 and wins >= 1:
-        try:
-            _age_val = int(str(horse_data.get('age', '99')))
-        except (ValueError, TypeError):
-            _age_val = 99
-        _win_rate = wins / max(len(_prev_results), 1)
-        if _age_val <= 4:  # 3/4yo lightly raced
-            if _win_rate >= 0.4:   # 40%+ win rate in few runs = highly promising
-                _unexposed_bonus = 15
-                reasons.append(f"Unexposed {_age_val}yo ({len(_prev_results)} runs, {wins}W, {_win_rate:.0%} rate): +{_unexposed_bonus}pts")
-            elif _win_rate >= 0.2:  # at least 1 win from 5 runs
-                _unexposed_bonus = 8
-                reasons.append(f"Lightly raced {_age_val}yo with upside ({len(_prev_results)} runs): +{_unexposed_bonus}pts")
-    score += _unexposed_bonus
-    breakdown['unexposed_bonus'] = _unexposed_bonus
-
     # 4. COURSE BONUS
     course_bonus_pts = int(weights['course_bonus'])
     if course_winners_today > 0:
@@ -510,8 +501,8 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         
         # Double weight in extreme conditions (absolutely critical discriminator)
         # LESSON 2026-03-20: Kalista Love & Spit Spot had going_suitability=32pts (35% of total score).
-        # Capped at 20pts max — going should inform, not dominate.
-        going_suitability_pts = min(base_going_pts * 2 if is_extreme else base_going_pts, 20)
+        # Capped at 16pts max — going is #3 priority (below C/D at 22), so ceiling is 16.
+        going_suitability_pts = min(base_going_pts * 2 if is_extreme else base_going_pts, 16)
         
         if is_all_weather:
             # All-weather: ground irrelevant, give neutral bonus for all runners
@@ -937,6 +928,45 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['aw_low_class_penalty'] = 0
 
+    # 11c. AW EVENING RACING PENALTY (2026-03-25)
+    # LESSON: Wolverhampton 20:00/20:30 — Burdett Estate (82/92) and Mr Nugget (87) all lost.
+    # Evening AW races have inflated form signals: small fields, gambled-on horses, track bias
+    # invisible at booking time.  Apply discount to any AW race starting after 17:30.
+    _AW_EVENING_VENUES = {'wolverhampton', 'kempton', 'kempton park', 'chelmsford', 'chelmsford city',
+                          'lingfield', 'lingfield park', 'southwell', 'windsor'}
+    _race_time_str = str(horse_data.get('race_time', '')).strip()
+    _is_aw_venue = course.lower() in _AW_EVENING_VENUES
+    _is_evening = False
+    if _race_time_str:
+        try:
+            import re as _re
+            _hm = _re.search(r'(\d{1,2}):(\d{2})', _race_time_str)
+            if _hm:
+                _hour, _min = int(_hm.group(1)), int(_hm.group(2))
+                _total_mins = _hour * 60 + _min
+                _is_evening = _total_mins >= 17 * 60 + 30   # 17:30 or later
+        except Exception:
+            pass
+    _aw_evening_penalty = 0
+    if _is_aw_venue and _is_evening:
+        _aw_evening_penalty = int(weights.get('aw_evening_penalty', 12))
+        score -= _aw_evening_penalty
+        breakdown['aw_evening_penalty'] = -_aw_evening_penalty
+        reasons.append(f"⚠️ AW evening racing ({course} {_race_time_str[:5]}): -{_aw_evening_penalty}pts")
+    else:
+        breakdown['aw_evening_penalty'] = 0
+
+    # 11d. UNKNOWN TRAINER PENALTY (2026-03-25)
+    # LESSON: Brian Toomey, D M Simcock, K Woollacott — not in any trainer tier.
+    # Horses from unlisted trainers score via form/odds only; reliability is lower.
+    if trainer and trainer_tier == 0 and trainer_bonus == 0:
+        _utp = int(weights.get('unknown_trainer_penalty', 8))
+        score -= _utp
+        breakdown['unknown_trainer_penalty'] = -_utp
+        reasons.append(f"Unknown trainer tier ({trainer}): -{_utp}pts")
+    else:
+        breakdown['unknown_trainer_penalty'] = 0
+
     # 12. BOUNCE-BACK PATTERN (NEW - Lesson from Ascot 13:15)
     # Detect patterns like 2-6-1 or 2-5-1 showing recovery after poor run
     bounce_back_pts = int(weights.get('bounce_back_bonus', 12))
@@ -961,15 +991,32 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['bounce_back'] = 0
     
-    # 13. SHORT FORM IMPROVEMENT (NEW - Lesson from Ascot 13:15)
-    # In novice races, limited form might indicate improving horse
+    # 13. SHORT FORM IMPROVEMENT (Updated 2026-03-25)
+    # LESSON: Isabella Islay (4yo, form='93') improved 9th→3rd but scored 0 here
+    # because (a) the race wasn't flagged as novice, (b) old code required '2' in form.
+    # Now ALSO fires for young horses (≤5yo) showing clear position improvement in short form.
     short_form_pts = int(weights.get('short_form_improvement', 10))
-    if novice_penalty < 0 and form:  # Only in novice races
-        form_length = len(form.replace('-', ''))
-        if form_length <= 3 and '2' in form:  # Very short form with a place
+    if form:
+        _sfi_chars = form.replace('-', '')
+        _sfi_len   = len(_sfi_chars)
+        _last_run  = _sfi_chars[-1] if _sfi_len >= 1 else ''
+        _prev_run  = _sfi_chars[-2] if _sfi_len >= 2 else ''
+        _sfi_age   = None
+        try:
+            _sfi_age = int(horse_data.get('age', 0) or 0)
+        except (TypeError, ValueError):
+            pass
+        if novice_penalty < 0 and _sfi_len <= 3 and '2' in form:
+            # Original: novice race with a 2nd-place in short form
             score += short_form_pts
             breakdown['short_form_improvement'] = short_form_pts
             reasons.append(f"🌟 Limited form in novice (improving?): +{short_form_pts}pts")
+        elif (_sfi_age and _sfi_age <= 5 and _sfi_len <= 4 and
+              _last_run in ('1', '2', '3') and _prev_run and _prev_run > _last_run):
+            # NEW: Young horse showing clear improvement in last 2 runs (e.g. 9→3, 8→2, 5→1)
+            score += short_form_pts
+            breakdown['short_form_improvement'] = short_form_pts
+            reasons.append(f"🌟 Young horse improving ({_prev_run}→{_last_run}, last 2 runs): +{short_form_pts}pts")
         else:
             breakdown['short_form_improvement'] = 0
     else:
@@ -1180,6 +1227,25 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['age_bonus'] = 0
     
+    # UNEXPOSED IMPROVER BONUS (2026-03-25)
+    # LESSON: Isabella Islay (4yo, form='93', odds=6.5) won Hereford 15:30 at SP 2/1
+    # but scored POOR because she had 0 wins. Lightly-raced young horses at fair-value
+    # odds that have at least one placing are potential market movers.
+    _uex_pts  = int(weights.get('unexposed_bonus', 12))
+    _uex_runs = len(form.replace('-', '')) if form else 0
+    _uex_age  = None
+    try:
+        _uex_age = int(horse_data.get('age', 0) or 0)
+    except (TypeError, ValueError):
+        pass
+    if (_uex_age and _uex_age <= 5 and _uex_runs <= 5
+            and wins == 0 and places >= 1 and 4.0 <= odds <= 10.0):
+        score += _uex_pts
+        breakdown['unexposed_bonus'] = _uex_pts
+        reasons.append(f"Unexposed {_uex_age}yo improver ({_uex_runs} runs, {places} place(s)): +{_uex_pts}pts")
+    else:
+        breakdown['unexposed_bonus'] = 0
+
     # 13. DISTANCE SUITABILITY — actual distance matching using CD marker + form evidence
     distance_pts = int(weights.get('distance_suitability', 18))
     # Priority 1: CD marker proves this horse has won at this course/distance

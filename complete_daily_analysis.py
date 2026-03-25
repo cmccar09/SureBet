@@ -27,8 +27,9 @@ from comprehensive_pick_logic import analyze_horse_comprehensive
 db    = boto3.resource('dynamodb', region_name='eu-west-1')
 table = db.Table('SureBetBets')
 
-TARGET_PICKS   = 5      # How many UI picks to surface each day
-MIN_CONFIDENCE = 60     # Minimum score for a race-best to qualify as a UI pick
+TARGET_PICKS   = 3      # REDUCED 5→3 (2026-03-25): fewer but higher quality selections
+MIN_CONFIDENCE = 85     # RAISED 60→85 (2026-03-25): only STRONG/ELITE picks shown in UI
+                        # LESSON: 6 GOOD/STRONG picks (81-92) all lost vs winners @3/1-9/2
 
 
 def load_horse_history():
@@ -74,9 +75,12 @@ def load_races():
 
 
 def tier_from_score(score):
-    if score >= 90: return "ELITE",   "ELITE (Top-tier confidence)", "green"
-    if score >= 80: return "STRONG",  "STRONG (High confidence)",    "green"
-    if score >= 70: return "GOOD",    "GOOD (Solid pick)",           "light-green"
+    # UPDATED 2026-03-25: Aligning thresholds with deployed Lambda (STRONG was 80, now 85).
+    # LESSON: All losses (81-92) were in the old STRONG zone. Raising thresholds reduces
+    # overconfident labelling — only genuinely elite picks earn the STRONG badge.
+    if score >= 92: return "ELITE",   "ELITE (Top-tier confidence)", "green"
+    if score >= 85: return "STRONG",  "STRONG (High confidence)",    "green"   # was 80
+    if score >= 75: return "GOOD",    "GOOD (Solid pick)",           "light-green"  # was 70
     if score >= 60: return "FAIR",    "FAIR (Decent chance)",        "light-amber"
     if score >= 45: return "RISKY",   "RISKY (Lower confidence)",    "dark-amber"
     return              "POOR",   "POOR (Very unlikely)",        "red"
@@ -165,12 +169,12 @@ def analyze_and_save_all():
             # market favourite), confidence increases significantly.
             market_leader_bonus = 0
             if odds > 1.0 and odds == favourite_odds:
-                market_leader_bonus = 12   # Race favourite
-                score += market_leader_bonus
+                market_leader_bonus = 6    # Race favourite — REDUCED 12→6 (2026-03-25): was double-counting
+                score += market_leader_bonus                    # market info already reflected in form scores
                 reasons.append(f"Race market leader (lowest odds): +{market_leader_bonus}pts")
                 breakdown['market_leader'] = market_leader_bonus
             elif odds > 1.0 and odds <= favourite_odds * 1.25:
-                market_leader_bonus = 5    # Within 25% of favourite = second choice
+                market_leader_bonus = 3    # Within 25% of favourite — REDUCED 5→3 (2026-03-25)
                 score += market_leader_bonus
                 reasons.append(f"Market second choice: +{market_leader_bonus}pts")
                 breakdown['market_leader'] = market_leader_bonus
@@ -214,6 +218,7 @@ def analyze_and_save_all():
                 'race_coverage_pct':   Decimal('100'),
                 'race_total_count':    len(runners),
                 'created_at':          datetime.now().isoformat(),
+                'updated_at':          datetime.now().isoformat(),
                 # Horse history from DB
                 'history_wins':        db_stats.get('wins', 0),
                 'history_runs':        db_stats.get('runs', 0),
@@ -239,7 +244,60 @@ def analyze_and_save_all():
         })
 
     # ── SELECT TOP 5 CROSS-RACE BESTS ────────────────────────────────────────
-    eligible = [r for r in all_races_data if r['best']['score'] >= MIN_CONFIDENCE]
+    def _passes_quality_gates(r):
+        """Quality gate filters applied at pick-selection time.
+        S1: Non-market-backed picks need score >= 90 (unexposed young improvers >= 50).
+        S2: Must have at least one contextual anchor: market_leader, trainer, cd_bonus, OR unexposed_bonus.
+        S3: Age-propped picks (age_bonus >= 10, no market/trainer) need score >= 92 (unexposed >= 50).
+        2026-03-25: Added unexposed_bonus anchor to S2; lowered S1/S3 thresholds for unexposed profile.
+        LESSON: Isabella Islay (4yo, form='93', 6.5→2/1 SP) won Hereford 15:30 but was gate-rejected.
+        """
+        score      = r['best']['score']
+        bd         = r['best']['item'].get('score_breakdown', {})
+        ml         = float(bd.get('market_leader', 0))
+        tr         = float(bd.get('trainer_reputation', 0))
+        cd         = float(bd.get('cd_bonus', 0))
+        age        = float(bd.get('age_bonus', 0))
+        unexposed  = float(bd.get('unexposed_bonus', 0))  # 2026-03-25
+
+        # S2 — hard gate: at least one contextual anchor required
+        # UPDATED 2026-03-25: unexposed_bonus now valid anchor (young improvers like Isabella Islay)
+        if ml == 0 and tr == 0 and cd == 0 and unexposed == 0:
+            print(f"  [GATE-S2 REJECTED] {r['best']['horse']} score={score:.0f}: "
+                  f"no market_leader/trainer_rep/cd_bonus/unexposed signal")
+            return False
+
+        # S1 — non-market-backed picks need >= 90; unexposed young improvers >= 50
+        if ml == 0:
+            min_s1 = 50 if unexposed >= 10 else 90
+            if score < min_s1:
+                print(f"  [GATE-S1 REJECTED] {r['best']['horse']} score={score:.0f}: "
+                      f"not market-backed, needs >= {min_s1}")
+                return False
+
+        # S3 — age-padded with no market or trainer support needs >= 92; unexposed ≤5yo >= 50
+        if age >= 10 and ml == 0 and tr == 0:
+            min_s3 = 50 if unexposed >= 10 else 92
+            if score < min_s3:
+                print(f"  [GATE-S3 REJECTED] {r['best']['horse']} score={score:.0f}: "
+                      f"age_bonus={age:.0f} dominant, needs >= {min_s3}")
+                return False
+
+        # S4 — Score gap gate (2026-03-25)
+        # LESSON: Burdett Estate (92), Knock Off Soxs (88) etc. all lost. If the top horse
+        # isn't clearly ahead of its rivals, the race is too close to call confidently.
+        # Require the race-best to outscore 2nd-best by at least 8 points.
+        # Exception: ELITE picks (≥92) are already exceptional and bypass this filter.
+        score_gap = float(r['best']['item'].get('score_gap', 0))
+        if score < 92 and score_gap < 8:
+            print(f"  [GATE-S4 REJECTED] {r['best']['horse']} score={score:.0f}: "
+                  f"score_gap={score_gap:.1f} < 8 (too tight, race is a coin-flip)")
+            return False
+
+        return True
+
+    eligible = [r for r in all_races_data
+                if r['best']['score'] >= MIN_CONFIDENCE and _passes_quality_gates(r)]
     eligible.sort(key=lambda r: r['best']['score'], reverse=True)
     top_picks = eligible[:TARGET_PICKS]
 
@@ -298,7 +356,7 @@ if __name__ == "__main__":
     stats = analyze_and_save_all()
     if stats:
         if stats['ui_picks']:
-            print(f"✓ {stats['ui_picks']} picks ready — run 'python show_todays_ui_picks.py' to review")
+            print(f"OK {stats['ui_picks']} picks ready - run 'python show_todays_ui_picks.py' to review")
         else:
             print("⚠ No high-confidence picks today — check response_horses.json for race data")
 
