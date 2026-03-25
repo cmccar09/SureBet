@@ -84,6 +84,124 @@ function groupByMeeting(races) {
   return Object.values(meetings).sort((a,b) => a.date.localeCompare(b.date));
 }
 
+// ---- Pick best key reasons from selection_reasons ----
+// Returns top N reasons: non-generic first, sorted by pts value
+function bestKeyReasons(reasons, n = 2) {
+  if (!Array.isArray(reasons) || reasons.length === 0) return [];
+  const parsePts = r => { const m = r.match(/:\s*([+-]?\d+(?:\.\d+)?)\s*pts?/i); return m ? Math.abs(parseFloat(m[1])) : 0; };
+  const isGeneric = r => /sweet spot|near optimal odds|short odds|long shot|\d+[-–]\d+\s*odds/i.test(r);
+  const sorted = [...reasons].sort((a, b) => {
+    const ag = isGeneric(a) ? 1 : 0, bg = isGeneric(b) ? 1 : 0;
+    if (ag !== bg) return ag - bg;
+    return parsePts(b) - parsePts(a);
+  });
+  return sorted.slice(0, n).map(r => r.replace(/:\s*[+-]?\d+(?:\.\d+)?\s*pts?/i, '').trim());
+}
+
+// Derive readable reasons from score_breakdown when selection_reasons is empty
+const SB_LABELS = {
+  going_suitability:    'Proven suited to today\'s going',
+  cd_bonus:             'Course & distance winner',
+  course_performance:   'Strong course record',
+  total_wins:           'Multiple career wins',
+  market_leader:        'Market leader (lowest odds)',
+  jockey_quality:       'Top-quality jockey booking',
+  jockey_course_bonus:  'Jockey excels at this course',
+  distance_suitability: 'Proven at today\'s distance',
+  consistency:          'Highly consistent performer',
+  deep_form:            'Strong deep form',
+  recent_win:           'Recent win in form',
+  database_history:     'Strong historical record here',
+  bounce_back:          'Due a bounce-back run',
+  meeting_focus:        'Trainer targeting this meeting',
+  unexposed_bonus:      'Lightly-raced & unexposed',
+  age_bonus:            'Ideal peak racing age',
+  optimal_odds:         'Near-optimal betting odds',
+  sweet_spot:           'Odds in the model\'s sweet spot',
+};
+function reasonsFromBreakdown(sb, n = 2) {
+  if (!sb || typeof sb !== 'object') return [];
+  const generic = new Set(['sweet_spot','optimal_odds']);
+  const entries = Object.entries(sb)
+    .filter(([, v]) => parseFloat(v) > 0)
+    .sort((a, b) => {
+      const ag = generic.has(a[0]) ? 1 : 0, bg = generic.has(b[0]) ? 1 : 0;
+      if (ag !== bg) return ag - bg;
+      return parseFloat(b[1]) - parseFloat(a[1]);
+    });
+  return entries.slice(0, n).map(([k]) => SB_LABELS[k] || k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase()));
+}
+
+// ---- Race Intel summary generator ----
+function raceIntelSummary(pick, now) {
+  const sb        = pick.score_breakdown || {};
+  const allHorses = pick.all_horses || [];
+  const ourScore  = parseFloat(pick.score || pick.comprehensive_score || 0);
+  const ourHorse  = (pick.horse || '').toLowerCase();
+
+  // Last analysed time
+  const analysedAt = pick.updated_at || pick.created_at || null;
+  let analysedStr = null, freshness = null, freshnessOk = true;
+  if (analysedAt) {
+    const analysedDate = new Date(analysedAt);
+    const minsAgo      = Math.round(((now || new Date()) - analysedDate) / 60000);
+    analysedStr = minsAgo < 60
+      ? `${minsAgo} min ago`
+      : `${Math.floor(minsAgo / 60)}h ${minsAgo % 60}m ago`;
+
+    // Gap between last analysis and race start
+    const raceDate = new Date(pick.race_time);
+    if (!isNaN(raceDate)) {
+      const gapMins = Math.round((raceDate - analysedDate) / 60000);
+      // How far is the race from NOW (not from analysis time)
+      const minsToRace = Math.round((raceDate - (now || new Date())) / 60000);
+      const analysisAgeHours = minsAgo / 60;
+
+      if (minsToRace <= 0) {
+        freshness = 'Race started';
+        freshnessOk = false;
+      } else if (minsToRace <= 30 && analysisAgeHours >= 2) {
+        // Within 30 mins of race but analysis is >2h old — flag as stale
+        freshness = `⚠ Last check ${Math.floor(analysisAgeHours)}h ago — re-run soon`;
+        freshnessOk = false;
+      } else if (gapMins <= 0) {
+        freshness = 'Analysis after race start';
+        freshnessOk = false;
+      } else if (gapMins <= 30) {
+        freshness = `✓ Final check: ${gapMins}min before race`;
+        freshnessOk = true;
+      } else if (gapMins <= 120) {
+        freshness = `${gapMins}min before race`;
+        freshnessOk = true;
+      } else {
+        const h = Math.floor(gapMins / 60), m = gapMins % 60;
+        freshness = `${h}h ${m > 0 ? m + 'm' : ''} before race`.trim();
+        freshnessOk = gapMins <= 180;
+      }
+    }
+  }
+
+  // Main rival
+  const sorted  = [...allHorses].sort((a, b) => parseFloat(b.score||0) - parseFloat(a.score||0));
+  const rival   = sorted.find(h => (h.horse||'').toLowerCase() !== ourHorse);
+  const rivalGap = rival ? (ourScore - parseFloat(rival.score||0)).toFixed(0) : null;
+
+  // Key edge from score_breakdown (top non-generic positive factor)
+  const generic  = new Set(['sweet_spot', 'optimal_odds']);
+  const topFactor = Object.entries(sb)
+    .filter(([k, v]) => !generic.has(k) && parseFloat(v) > 0)
+    .sort((a, b) => parseFloat(b[1]) - parseFloat(a[1]))[0];
+  const keyEdge  = topFactor ? (SCORE_LABELS[topFactor[0]] || topFactor[0].replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase())) + ` (+${parseFloat(topFactor[1]).toFixed(0)}pts)` : null;
+
+  // Risk flag
+  const penaltyTotal = Object.entries(sb).filter(([,v]) => parseFloat(v) < 0).reduce((s,[,v]) => s + parseFloat(v), 0);
+  let riskStr = null;
+  if (rivalGap !== null && parseInt(rivalGap) <= 3) riskStr = `Tight race — ${rival.horse} only ${rivalGap}pt${rivalGap==='1'?'':'s'} behind`;
+  else if (penaltyTotal < -5) riskStr = `Penalty flags applied (${penaltyTotal.toFixed(0)}pts deducted)`;
+
+  return { analysedStr, freshness, freshnessOk, keyEdge, rival, rivalGap, riskStr };
+}
+
 // ---- Decimal → Fractional odds converter ----
 function toFractional(decimal) {
   if (!decimal) return '';
@@ -127,13 +245,18 @@ function App() {
       </header>
       <div style={{ display:'flex', justifyContent:'center', gap:'12px', marginBottom:'32px', flexWrap:'wrap' }}>
         {[
-          { key:'picks',  label:"Today's Picks",    emoji:'\ud83c\udfaf', sub:'Top 5 value bets'     },
-          { key:'yesterday', label:'Latest Results', emoji:'\ud83d\udcca', sub:'Today & yesterday'     },
-          { key:'majors', label:'Major Races',        emoji:'\ud83c\udfc6', sub:'Group 1 calendar'    },
+          { key:'picks',     label:"Today's Picks",    emoji:'\ud83c\udfaf', sub:'Top 5 value bets'     },
+          { key:'yesterday', label:'Latest Results',    emoji:'\ud83d\udcca', sub:'Today & yesterday'    },
+          { key:'laythe',    label:'Lay the Fav',       emoji:'\ud83d\udea8', sub:'Suspect favourites'   },
+          { key:'majors',    label:'Major Races',       emoji:'\ud83c\udfc6', sub:'Group 1 calendar'    },
         ].map(tab => (
           <button key={tab.key} onClick={() => setPage(tab.key)} style={{
-            background: page===tab.key ? 'linear-gradient(135deg,#059669 0%,#047857 100%)' : 'rgba(255,255,255,0.12)',
-            border:     page===tab.key ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.25)',
+            background: tab.key==='laythe'
+              ? (page===tab.key ? 'linear-gradient(135deg,#b91c1c 0%,#991b1b 100%)' : 'rgba(185,28,28,0.18)')
+              : (page===tab.key ? 'linear-gradient(135deg,#059669 0%,#047857 100%)' : 'rgba(255,255,255,0.12)'),
+            border: tab.key==='laythe'
+              ? (page===tab.key ? '2px solid #ef4444' : '2px solid rgba(239,68,68,0.4)')
+              : (page===tab.key ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.25)'),
             borderRadius:'10px', color:'white', cursor:'pointer',
             padding:'12px 24px', minWidth:'160px', textAlign:'center', transition:'all 0.2s',
           }}>
@@ -143,7 +266,10 @@ function App() {
         ))}
       </div>
       <main style={{ maxWidth:'960px', margin:'0 auto', padding:'0 12px' }}>
-        {page==='picks' ? <DailyPicksView /> : page==='yesterday' ? <YesterdayResultsView /> : <MajorRacesView />}
+        {page==='picks' ? <DailyPicksView />
+          : page==='yesterday' ? <YesterdayResultsView />
+          : page==='laythe' ? <LayTheFavView />
+          : <MajorRacesView />}
       </main>
     </div>
   );
@@ -195,7 +321,16 @@ const SCORE_LABELS = {
   favorite_correction:'Favourite Bonus',
   track_pattern_bonus:'Track Pattern',
   novice_penalty:    'Novice Race Penalty',
-  aw_low_class_penalty: 'AW Low Class Penalty',
+  aw_low_class_penalty:  'AW Low Class Penalty',
+  unexposed_bonus:         'Unexposed/Improving',
+  claiming_jockey:         'Claiming Jockey Allowance',
+  heavy_going_penalty:     'Heavy Going Penalty',
+  official_rating_bonus:   'Official Rating',
+  deep_form:               'Deep Form Analysis',
+  short_form_improvement:  'Recent Improvement',
+  meeting_focus:           'Meeting Focus',
+  jockey_course_bonus:     'Jockey Course Record',
+  cheltenham_festival:     'Cheltenham Festival',
 };
 
 function DailyPicksView() {
@@ -207,6 +342,13 @@ function DailyPicksView() {
   const [expandedField, setExpandedField] = useState(null);
   const [raceFields,    setRaceFields]    = useState({});
   const [isMobile,      setIsMobile]      = useState(typeof window !== 'undefined' && window.innerWidth < 480);
+  const [now,           setNow]           = useState(new Date());
+
+  // Tick every 60 s so "Analysed X ago" stays current without a page reload
+  useEffect(() => {
+    const ticker = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(ticker);
+  }, []);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 480);
@@ -392,18 +534,78 @@ function DailyPicksView() {
                   )}
                 </div>
                 {/* Why this wins — scoring reasons */}
-                {Array.isArray(pick.selection_reasons) && pick.selection_reasons.length > 0 && (
-                  <div style={{ marginTop:'12px', padding:'12px 16px', background:'#f8fafc', borderRadius:'8px', borderLeft:`3px solid ${tier.bg}` }}>
-                    <div style={{ fontSize:'10px', fontWeight:'800', color:tier.bg, textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:'8px' }}>Why this horse wins</div>
-                    <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
-                      {pick.selection_reasons.slice(0,8).map((r, i) => (
-                        <span key={i} style={{ background:'white', border:'1px solid #e5e7eb', borderRadius:'6px', padding:'3px 10px', fontSize:'12px', color:'#374151', lineHeight:'1.4' }}>
-                          {r}
-                        </span>
-                      ))}
+                {(() => {
+                  const hasReasons = Array.isArray(pick.selection_reasons) && pick.selection_reasons.length > 0;
+                  const topReasons = hasReasons
+                    ? bestKeyReasons(pick.selection_reasons, 2)
+                    : reasonsFromBreakdown(pick.score_breakdown, 2);
+                  const score = parseFloat(pick.score || pick.comprehensive_score || 0);
+                  if (!topReasons.length && !score) return null;
+                  const hasBd = pick.score_breakdown && typeof pick.score_breakdown === 'object' && Object.keys(pick.score_breakdown).length > 0;
+                  return (
+                    <div onClick={() => hasBd && setExpandedPick(expandedPick === idx ? null : idx)} style={{ marginTop:'10px', padding:'10px 14px', background: `${tier.bg}18`, borderRadius:'8px', borderLeft:`3px solid ${tier.bg}`, cursor: hasBd ? 'pointer' : 'default' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap', marginBottom: topReasons.length ? '6px' : '0' }}>
+                        <span style={{ background:tier.bg, color:'white', borderRadius:'5px', padding:'2px 9px', fontSize:'11px', fontWeight:'800', letterSpacing:'0.5px' }}>{tier.label}</span>
+                        <span style={{ fontSize:'12px', fontWeight:'700', color:'#1e3a5f' }}>Score: {score.toFixed(0)}/100</span>
+                        {hasBd && <span style={{ fontSize:'11px', color:'#1d4ed8', fontWeight:'700', marginLeft:'auto' }}>{expandedPick === idx ? '▲ Hide breakdown' : '▼ See breakdown'}</span>}
+                      </div>
+                      {topReasons.length > 0 && (
+                        <div style={{ fontSize:'13px', color:'#374151', lineHeight:'1.55' }}>
+                          {topReasons.map((r, i) => (
+                            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:'6px' }}>
+                              <span style={{ color:tier.bg, fontWeight:'800', marginTop:'1px' }}>›</span>
+                              <span>{r}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
+                {/* Race Intel Summary */}
+                {(() => {
+                  const { analysedStr, freshness, freshnessOk, keyEdge, rival, rivalGap, riskStr } = raceIntelSummary(pick, now);
+                  if (!analysedStr && !keyEdge) return null;
+                  return (
+                    <div style={{ marginTop:'10px', padding:'10px 14px', background:'#f8fafc', borderRadius:'8px', border:'1px solid #e2e8f0', fontSize:'12px' }}>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'6px', marginBottom:'8px' }}>
+                        <span style={{ fontWeight:'800', color:'#1e3a5f', fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.7px' }}>📡 Race Intel</span>
+                        <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', alignItems:'center' }}>
+                          {analysedStr && (
+                            <span style={{ background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:'5px', padding:'2px 8px', color:'#1d4ed8', fontWeight:'700', fontSize:'11px' }}>
+                              🕐 Analysed {analysedStr}
+                            </span>
+                          )}
+                          {freshness && (
+                            <span style={{ background: freshnessOk ? '#f0fdf4' : '#fef3c7', border:`1px solid ${freshnessOk ? '#86efac' : '#fcd34d'}`, borderRadius:'5px', padding:'2px 8px', color: freshnessOk ? '#166534' : '#92400e', fontWeight:'700', fontSize:'11px' }}>
+                              {freshness}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div style={{ display:'flex', flexDirection:'column', gap:'5px' }}>
+                        {keyEdge && (
+                          <div style={{ display:'flex', gap:'6px', alignItems:'flex-start' }}>
+                            <span style={{ color:'#059669', fontWeight:'800', fontSize:'13px', lineHeight:'1.2' }}>✓</span>
+                            <span style={{ color:'#065f46', fontWeight:'600' }}><strong>Key edge:</strong> {keyEdge}</span>
+                          </div>
+                        )}
+                        {rival && rivalGap !== null && (
+                          <div style={{ display:'flex', gap:'6px', alignItems:'flex-start' }}>
+                            <span style={{ color:'#6b7280', fontWeight:'800', fontSize:'13px', lineHeight:'1.2' }}>→</span>
+                            <span style={{ color:'#374151' }}><strong>Main rival:</strong> {rival.horse} ({parseFloat(rival.odds||0)>1 ? toFractional(parseFloat(rival.odds)) : '?'}) — {rivalGap}pt{rivalGap==='1'?'':'s'} behind</span>
+                          </div>
+                        )}
+                        {riskStr && (
+                          <div style={{ display:'flex', gap:'6px', alignItems:'flex-start' }}>
+                            <span style={{ color:'#d97706', fontWeight:'800', fontSize:'13px', lineHeight:'1.2' }}>⚠</span>
+                            <span style={{ color:'#92400e', fontWeight:'600' }}><strong>Risk:</strong> {riskStr}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
                 {/* Full race card — all runners ranked by score */}
                 {(() => {
                   // Use all_horses from pick data (DynamoDB), fall back to raceFields from API
@@ -580,6 +782,7 @@ function YesterdayResultsView() {
   const [error, setError]             = useState(null);
   const [isMobile, setIsMobile]       = useState(typeof window !== 'undefined' && window.innerWidth < 480);
   const [learningStatus, setLearning] = useState({ state: 'idle', message: '', changes: {} });
+  const [cumulRoi, setCumulRoi]         = useState(null);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 480);
@@ -592,11 +795,13 @@ function YesterdayResultsView() {
   const loadResults = async () => {
     setLoading(true); setError(null);
     try {
-      const [todayRes, yestRes] = await Promise.all([
+      const [todayRes, yestRes, cumulRes] = await Promise.all([
         fetch(API_BASE_URL + '/api/results/today'),
         fetch(API_BASE_URL + '/api/results/yesterday'),
+        fetch(API_BASE_URL + '/api/results/cumulative-roi'),
       ]);
-      const [todayData, yestData] = await Promise.all([todayRes.json(), yestRes.json()]);
+      const [todayData, yestData, cumulData] = await Promise.all([todayRes.json(), yestRes.json(), cumulRes.json()]);
+      if (cumulData.success) setCumulRoi(cumulData);
 
       const todayPicks = (todayData.success ? todayData.picks || [] : []).map(p => ({ ...p, _dayLabel: 'Today' }));
       const yestPicks  = (yestData.success  ? yestData.picks  || [] : []).map(p => ({ ...p, _dayLabel: 'Yesterday' }));
@@ -712,8 +917,9 @@ function YesterdayResultsView() {
           { label:'Placed', value: summary.places || 0,      color:'#818cf8', bg:'rgba(99,102,241,0.15)', border:'rgba(99,102,241,0.35)', icon:'🥈' },
           { label:'Lost',   value: summary.losses || 0,      color:'#f87171', bg:'rgba(239,68,68,0.13)',  border:'rgba(239,68,68,0.35)',  icon:'❌' },
         ];
-        const pnlPos   = profit >= 0;
-        const roiVal   = summary.roi || 0;
+        const pnlPos       = profit >= 0;
+        const cumulRoiVal  = cumulRoi?.success ? (cumulRoi.roi ?? 0) : null;
+        const cumulSettled = cumulRoi?.success ? (cumulRoi.settled || 0) : null;
         return (
           <div style={{ marginBottom:'24px' }}>
             {/* Top row: 4 count stats */}
@@ -737,11 +943,14 @@ function YesterdayResultsView() {
                 </div>
                 <div style={{ fontSize: isMobile ? '22px' : '32px' }}>{pnlPos ? '📈' : '📉'}</div>
               </div>
-              <div style={{ background: roiVal >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${roiVal >= 0 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding: isMobile ? '10px 12px' : '14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px' }}>
+              <div style={{ background: cumulRoiVal === null ? 'rgba(99,102,241,0.1)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${cumulRoiVal === null ? 'rgba(99,102,241,0.3)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding: isMobile ? '10px 12px' : '14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px' }}>
                 <div>
                   <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'3px' }}>{isMobile ? 'ROI' : 'Return on Investment'}</div>
-                  <div style={{ fontSize: isMobile ? '22px' : '30px', fontWeight:'900', color: roiVal >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>
-                    {roiVal >= 0 ? '+' : ''}{roiVal.toFixed(1)}%
+                  <div style={{ fontSize: isMobile ? '22px' : '30px', fontWeight:'900', color: cumulRoiVal === null ? '#818cf8' : cumulRoiVal >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>
+                    {cumulRoiVal === null ? '—' : `${cumulRoiVal >= 0 ? '+' : ''}${cumulRoiVal.toFixed(1)}%`}
+                  </div>
+                  <div style={{ fontSize:'9px', color:'rgba(255,255,255,0.4)', marginTop:'4px', fontWeight:'500' }}>
+                    {cumulRoiVal === null ? 'Loading…' : `Since 22 Mar · ${cumulSettled} settled`}
                   </div>
                 </div>
                 <div style={{ fontSize: isMobile ? '22px' : '32px' }}>💰</div>
@@ -802,11 +1011,11 @@ function YesterdayResultsView() {
             const winner = pick.result_winner_name || pick.winner_name;
             const pnl   = parseFloat(pick.profit || 0);
             const isPending = !rawOutcome || rawOutcome === 'PENDING';
-            // Key reason: for settled picks show result_analysis; for pending show pre-race reason
+            // Key reason: for settled picks show result_analysis; for pending show best pre-race reason
             const keyReason = !isPending && pick.result_analysis
               ? pick.result_analysis
               : (Array.isArray(pick.selection_reasons) && pick.selection_reasons.length > 0
-                  ? pick.selection_reasons[0].replace(/:\s*[+-]?\d+pts?/i,'').trim()
+                  ? bestKeyReasons(pick.selection_reasons, 1)[0] || ''
                   : (pick.result_analysis ? pick.result_analysis.substring(0,80) : ''));
             const winnerNote = !isPending && winner && winner !== pick.horse ? `Winner: ${winner}` : '';
 
@@ -1211,6 +1420,244 @@ function MajorRacesView() {
         <span>\u2b50 Must-watch highlight races</span>
         <span>Dates are indicative and may change</span>
       </div>
+    </div>
+  );
+}
+
+// ---- Lay the Fav View ----
+function LayTheFavView() {
+  const [data, setData]     = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]   = useState(null);
+  const [filter, setFilter] = useState('all'); // all | caution | strong
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`${API_BASE_URL}/api/favs-run`)
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false); })
+      .catch(e => { setError(e.message); setLoading(false); });
+  }, []);
+
+  const VERDICT_COLOURS = {
+    RED:    { fg:'#f87171', bg:'rgba(248,113,113,0.12)', border:'rgba(248,113,113,0.35)' },
+    YELLOW: { fg:'#fbbf24', bg:'rgba(251,191,36,0.10)',  border:'rgba(251,191,36,0.35)'  },
+    GREEN:  { fg:'#34d399', bg:'rgba(52,211,153,0.10)',  border:'rgba(52,211,153,0.3)'   },
+  };
+
+  const FLAG_LABELS = {
+    short_price:   { label:'Price',   colour:'#a78bfa' },
+    rivals_close:  { label:'Rivals',  colour:'#60a5fa' },
+    trip_new:      { label:'Trip',    colour:'#6ee7b7' },
+    going_unproven:{ label:'Going',   colour:'#34d399' },
+    draw_poor:     { label:'Draw',    colour:'#fbbf24' },
+    layoff:        { label:'Layoff',  colour:'#fca5a5' },
+    pace_doubt:    { label:'Pace',    colour:'#93c5fd' },
+    drift:         { label:'Drift',   colour:'#fcd34d' },
+    class_up:      { label:'Class',   colour:'#c084fc' },
+  };
+
+  const FLAG_WEIGHTS = { short_price:1, rivals_close:2, trip_new:2, going_unproven:2,
+    draw_poor:1, layoff:1, pace_doubt:1, drift:1, class_up:4 };
+
+  if (loading) return (
+    <div style={{ textAlign:'center', padding:'60px', color:'rgba(255,255,255,0.5)' }}>
+      <div style={{ fontSize:'32px', marginBottom:'12px' }}>🚨</div>
+      <div>Loading lay analysis…</div>
+    </div>
+  );
+
+  if (error || !data?.success) return (
+    <div style={{ textAlign:'center', padding:'60px', color:'#f87171' }}>
+      <div style={{ fontSize:'28px', marginBottom:'12px' }}>⚠️</div>
+      <div>{error || data?.error || 'Failed to load'}</div>
+    </div>
+  );
+
+  const { summary, races, generated } = data;
+  const genTime = generated ? new Date(generated).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
+
+  const filtered = races.filter(r =>
+    filter === 'strong'  ? r.lay_score >= 9 :
+    filter === 'caution' ? r.lay_score >= 4 :
+    true
+  );
+
+  return (
+    <div style={{ paddingBottom:'40px' }}>
+
+      {/* Header */}
+      <div style={{ background:'linear-gradient(135deg,rgba(185,28,28,0.25) 0%,rgba(127,29,29,0.18) 100%)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'14px', padding:'24px 28px', marginBottom:'24px' }}>
+        <div style={{ fontSize:'11px', letterSpacing:'2px', textTransform:'uppercase', color:'rgba(255,255,255,0.4)', marginBottom:'6px' }}>Favs-Run · Read-only parallel analysis</div>
+        <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'4px' }}>🚨 Lay the Favourite</div>
+        <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.55)', marginBottom:'18px' }}>Identifies short-price favourites with structural vulnerabilities. Does <strong style={{color:'rgba(255,255,255,0.8)'}}>not</strong> affect picks, weights or UI.</div>
+
+        {/* Score legend */}
+        <div style={{ display:'flex', gap:'10px', flexWrap:'wrap', marginBottom:'18px' }}>
+          {[{score:'0–3', label:'Leave Alone', c:'#34d399'}, {score:'4–8', label:'Caution / Look', c:'#fbbf24'}, {score:'9+', label:'Strong Lay', c:'#f87171'}].map(l => (
+            <div key={l.score} style={{ display:'flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.06)', borderRadius:'8px', padding:'5px 12px', fontSize:'12px', color:'rgba(255,255,255,0.7)' }}>
+              <span style={{ background:l.c, width:'8px', height:'8px', borderRadius:'50%', display:'inline-block' }} />
+              <b style={{ color:l.c }}>{l.score}</b>&nbsp;{l.label}
+            </div>
+          ))}
+        </div>
+
+        {/* Stats */}
+        <div style={{ display:'flex', gap:'16px', flexWrap:'wrap' }}>
+          {[{v:summary.total, lbl:'Analysed', c:'#94a3b8'}, {v:summary.caution, lbl:'Caution+', c:'#fbbf24'}, {v:summary.strong, lbl:'Strong Lay', c:'#f87171'}].map(s => (
+            <div key={s.lbl} style={{ background:'rgba(255,255,255,0.07)', borderRadius:'10px', padding:'10px 18px', textAlign:'center' }}>
+              <div style={{ fontSize:'24px', fontWeight:'800', color:s.c }}>{s.v}</div>
+              <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.5)', marginTop:'2px' }}>{s.lbl}</div>
+            </div>
+          ))}
+          {genTime && <div style={{ marginLeft:'auto', fontSize:'11px', color:'rgba(255,255,255,0.35)', alignSelf:'flex-end', paddingBottom:'4px' }}>Updated {genTime}</div>}
+        </div>
+      </div>
+
+      {/* Factor scoring key */}
+      <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'10px', padding:'16px 20px', marginBottom:'20px' }}>
+        <div style={{ fontSize:'11px', textTransform:'uppercase', letterSpacing:'1px', color:'rgba(255,255,255,0.35)', marginBottom:'10px' }}>Scoring Factors</div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:'5px 24px' }}>
+          {Object.entries(FLAG_WEIGHTS).map(([k, pts]) => {
+            const fl = FLAG_LABELS[k] || { label: k, colour: '#94a3b8' };
+            return (
+              <div key={k} style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:'12px' }}>
+                <span style={{ color:'#fbbf24', fontWeight:'700', minWidth:'20px' }}>+{pts}</span>
+                <span style={{ color:fl.colour, fontWeight:'600' }}>{fl.label}</span>
+                <span style={{ color:'rgba(255,255,255,0.35)' }}>—</span>
+                <span style={{ color:'rgba(255,255,255,0.5)', fontSize:'11px' }}>{
+                  ({ short_price:'5/4 or less', rivals_close:'2nd/3rd within 25% score', trip_new:'Unproven distance',
+                     going_unproven:'Unproven going', draw_poor:'Poor draw', layoff:'30-90 day break',
+                     pace_doubt:'Pace fit uncertain', drift:'Low score gap', class_up:'Moving up in class' })[k]
+                }</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Filter buttons */}
+      <div style={{ display:'flex', gap:'8px', marginBottom:'16px', flexWrap:'wrap' }}>
+        {[{k:'all',label:'All'},{ k:'caution',label:'Caution+ (4+)'},{ k:'strong',label:'Strong Lay (9+)'}].map(f => (
+          <button key={f.k} onClick={() => setFilter(f.k)} style={{
+            background: filter===f.k ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.07)',
+            border: filter===f.k ? '1px solid #f87171' : '1px solid rgba(255,255,255,0.15)',
+            borderRadius:'6px', color:'white', cursor:'pointer', padding:'6px 14px', fontSize:'12px', fontWeight: filter===f.k ? '700' : '400',
+          }}>{f.label}</button>
+        ))}
+        <span style={{ marginLeft:'auto', fontSize:'12px', color:'rgba(255,255,255,0.4)', alignSelf:'center' }}>{filtered.length} race{filtered.length!==1?'s':''}</span>
+      </div>
+
+      {/* Race cards */}
+      {filtered.length === 0 && (
+        <div style={{ textAlign:'center', padding:'40px', color:'rgba(255,255,255,0.4)', background:'rgba(255,255,255,0.04)', borderRadius:'10px' }}>
+          No favourites match this filter today.
+        </div>
+      )}
+
+      {filtered.map((r, i) => {
+        const vc = VERDICT_COLOURS[r.verdict_colour] || VERDICT_COLOURS.GREEN;
+        const barPct = Math.min(100, Math.round(r.lay_score / 15 * 100));
+        return (
+          <div key={i} style={{ background:'rgba(22,27,34,0.95)', border:`1px solid ${vc.border}`, borderLeft:`4px solid ${vc.fg}`, borderRadius:'10px', marginBottom:'14px', overflow:'hidden' }}>
+
+            {/* Card header */}
+            <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap', padding:'12px 18px', borderBottom:'1px solid rgba(255,255,255,0.07)', background:'rgba(255,255,255,0.02)' }}>
+              <span style={{ fontWeight:'800', color:'#58a6ff', fontSize:'15px', minWidth:'40px' }}>{r.race_time ? r.race_time.substring(11,16) : ''}</span>
+              <span style={{ fontWeight:'700', color:'white' }}>{r.course}</span>
+              <span style={{ flex:1, fontSize:'12px', color:'rgba(255,255,255,0.45)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.race_name}</span>
+              {r.our_pick && <span style={{ background:'rgba(88,166,255,0.18)', color:'#58a6ff', border:'1px solid rgba(88,166,255,0.4)', borderRadius:'4px', padding:'2px 8px', fontSize:'11px', fontWeight:'700' }}>⚡ OUR PICK</span>}
+              <span style={{ background:vc.bg, color:vc.fg, border:`1px solid ${vc.border}`, borderRadius:'5px', padding:'2px 10px', fontSize:'11px', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.5px', whiteSpace:'nowrap' }}>{r.verdict}</span>
+            </div>
+
+            {/* Card body */}
+            <div style={{ display:'flex', alignItems:'center', gap:'20px', padding:'14px 18px' }}>
+              <div style={{ flex:1 }}>
+                <div style={{ fontSize:'20px', fontWeight:'800', color:'white', marginBottom:'6px' }}>{r.favourite}</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:'4px 16px', fontSize:'12px', color:'rgba(255,255,255,0.5)', marginBottom:'4px' }}>
+                  <span>@ <b style={{color:'#e6edf3'}}>{r.fav_odds?.toFixed(2)}</b></span>
+                  <span>Sys Score <b style={{color:'#e6edf3'}}>{r.fav_sys_score?.toFixed(0)}</b></span>
+                  <span>Score Gap <b style={{color:'#e6edf3'}}>{r.score_gap?.toFixed(0)}</b></span>
+                  <span>Form <b style={{color:'#e6edf3'}}>{r.form || '—'}</b></span>
+                  <span>Runners <b style={{color:'#e6edf3'}}>{r.runners}</b></span>
+                </div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:'4px 16px', fontSize:'12px', color:'rgba(255,255,255,0.5)' }}>
+                  <span>Trainer <b style={{color:'rgba(255,255,255,0.75)'}}>{r.trainer || '—'}</b></span>
+                  <span>Jockey <b style={{color:'rgba(255,255,255,0.75)'}}>{r.jockey || '—'}</b></span>
+                </div>
+              </div>
+
+              {/* Score circle */}
+              <div style={{ textAlign:'center', minWidth:'72px' }}>
+                <div style={{ fontSize:'38px', fontWeight:'800', lineHeight:1, color:vc.fg }}>{r.lay_score}</div>
+                <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.4)', marginBottom:'6px' }}>/ 15</div>
+                <div style={{ width:'64px', height:'6px', background:'rgba(255,255,255,0.1)', borderRadius:'3px', overflow:'hidden', margin:'0 auto' }}>
+                  <div style={{ width:`${barPct}%`, height:'100%', background:vc.fg, borderRadius:'3px' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Flags */}
+            {r.flags && r.flags.length > 0 && (
+              <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', padding:'4px 18px 10px' }}>
+                {r.flags.map(f => {
+                  const fl = FLAG_LABELS[f] || { label: f, colour: '#94a3b8' };
+                  const pts = FLAG_WEIGHTS[f] || 0;
+                  return (
+                    <span key={f} style={{ background:'rgba(255,255,255,0.07)', border:`1px solid rgba(255,255,255,0.15)`, color:fl.colour, borderRadius:'4px', padding:'2px 8px', fontSize:'11px', fontWeight:'600' }}>
+                      {fl.label} +{pts}
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Details */}
+            {r.details && r.details.length > 0 && (
+              <ul style={{ margin:'0 18px 14px 30px', padding:0, listStyle:'disc' }}>
+                {r.details.map((d, di) => (
+                  <li key={di} style={{ fontSize:'12px', color:'rgba(255,255,255,0.5)', marginBottom:'3px' }}>{d}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
+
+      {/* Summary table */}
+      {races.length > 0 && (
+        <div style={{ marginTop:'24px' }}>
+          <div style={{ fontSize:'11px', textTransform:'uppercase', letterSpacing:'1px', color:'rgba(255,255,255,0.35)', marginBottom:'10px' }}>Summary Table</div>
+          <div style={{ overflowX:'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', background:'rgba(22,27,34,0.95)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'8px', overflow:'hidden' }}>
+              <thead>
+                <tr style={{ background:'rgba(255,255,255,0.06)' }}>
+                  {['Time','Course','Favourite','Odds','SysScore','Gap','Lay Score','Verdict'].map(h => (
+                    <th key={h} style={{ padding:'9px 12px', fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.7px', color:'rgba(255,255,255,0.4)', textAlign:'left', borderBottom:'1px solid rgba(255,255,255,0.1)', whiteSpace:'nowrap' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {races.map((r, i) => {
+                  const vc = VERDICT_COLOURS[r.verdict_colour] || VERDICT_COLOURS.GREEN;
+                  return (
+                    <tr key={i} style={{ borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
+                      <td style={{ padding:'9px 12px', fontSize:'13px', color:'#58a6ff', fontWeight:'700' }}>{r.race_time ? r.race_time.substring(11,16) : ''}</td>
+                      <td style={{ padding:'9px 12px', fontSize:'13px', color:'rgba(255,255,255,0.8)' }}>{r.course}</td>
+                      <td style={{ padding:'9px 12px', fontSize:'13px', color:'white', fontWeight:'600' }}>{r.favourite}</td>
+                      <td style={{ padding:'9px 12px', fontSize:'13px', color:'rgba(255,255,255,0.7)' }}>{r.fav_odds?.toFixed(2)}</td>
+                      <td style={{ padding:'9px 12px', fontSize:'13px', color:'rgba(255,255,255,0.7)' }}>{r.fav_sys_score?.toFixed(0)}</td>
+                      <td style={{ padding:'9px 12px', fontSize:'13px', color:'rgba(255,255,255,0.7)' }}>{r.score_gap?.toFixed(0)}</td>
+                      <td style={{ padding:'9px 12px', fontSize:'14px', fontWeight:'800', color:vc.fg }}>{r.lay_score}</td>
+                      <td style={{ padding:'9px 12px' }}><span style={{ background:vc.bg, color:vc.fg, border:`1px solid ${vc.border}`, borderRadius:'4px', padding:'2px 8px', fontSize:'11px', fontWeight:'700' }}>{r.verdict}</span></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

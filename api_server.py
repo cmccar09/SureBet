@@ -3,7 +3,7 @@ Simple API server to fetch betting picks from DynamoDB
 Runs locally to provide data to React frontend
 """
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import boto3
 from datetime import datetime
@@ -124,14 +124,28 @@ def get_today_picks():
         
         # Filter for HIGH confidence picks only
         # Require comprehensive_score >= 75 AND combined_confidence >= 55 (not POOR)
+        # Also apply pick quality gates (S1/S2/S3) to filter low-quality upcoming picks.
         high_confidence_items = []
         for item in items:
             comp_score = float(item.get('comprehensive_score') or item.get('analysis_score') or 0)
             comb_conf  = float(item.get('combined_confidence') or 0)
-            # Accept if comprehensive_score passes threshold;
-            # but reject if combined_confidence explicitly marks this as POOR (<55)
-            if comp_score >= 75 and (comb_conf == 0 or comb_conf >= 55):
-                high_confidence_items.append(item)
+            if not (comp_score >= 75 and (comb_conf == 0 or comb_conf >= 55)):
+                continue
+            bd  = item.get('score_breakdown') or {}
+            ml  = float(bd.get('market_leader', 0))
+            tr  = float(bd.get('trainer_reputation', 0))
+            cd  = float(bd.get('cd_bonus', 0))
+            age = float(bd.get('age_bonus', 0))
+            # S2: reject if zero contextual anchor
+            if ml == 0 and tr == 0 and cd == 0:
+                continue
+            # S1: non-market-backed needs score >= 90
+            if ml == 0 and comp_score < 90:
+                continue
+            # S3: age-padded without market/trainer support needs >= 92
+            if age >= 10 and ml == 0 and tr == 0 and comp_score < 92:
+                continue
+            high_confidence_items.append(item)
         items = high_confidence_items
         
         # Filter to only show races that haven't started yet
@@ -491,6 +505,97 @@ def get_yesterday_results():
                 'strike_rate': round((wins / len(picks) * 100) if picks else 0, 1),
             },
             'picks': picks,
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# Fixed anchor: the date tracking started (yesterday, March 23 2026)
+CUMULATIVE_ROI_START = '2026-03-22'
+
+@app.route('/api/results/cumulative-roi', methods=['GET'])
+def get_cumulative_roi():
+    """Cumulative ROI since CUMULATIVE_ROI_START — grows as new results are recorded each day."""
+    try:
+        from boto3.dynamodb.conditions import Attr
+
+        # Scan for all picks from the start date onwards (DynamoDB Scan with filter)
+        all_items = []
+        scan_kwargs = {'FilterExpression': Attr('bet_date').gte(CUMULATIVE_ROI_START)}
+        while True:
+            response = table.scan(**scan_kwargs)
+            all_items.extend(response.get('Items', []))
+            if 'LastEvaluatedKey' not in response:
+                break
+            scan_kwargs['ExclusiveStartKey'] = response['LastEvaluatedKey']
+
+        picks = [decimal_to_float(item) for item in all_items]
+
+        # Same filters as today/yesterday endpoints: show_in_ui=True, not learning
+        picks = [
+            p for p in picks
+            if p.get('course') and p.get('course') != 'Unknown'
+            and p.get('horse') and p.get('horse') != 'Unknown'
+            and p.get('show_in_ui') is True
+            and not p.get('is_learning_pick', False)
+        ]
+
+        # Deduplicate by race identity (course + race_time), keeping the most recently
+        # dated record so outcome updates always win over the original pick record.
+        seen_races = {}
+        for pick in picks:
+            race_key = (pick.get('course', ''), pick.get('race_time', ''))
+            existing = seen_races.get(race_key)
+            if not existing or pick.get('bet_date', '') > existing.get('bet_date', ''):
+                seen_races[race_key] = pick
+        picks = list(seen_races.values())
+
+        # Calculate cumulative ROI using normalised 1-unit stakes across all picks.
+        # This is standard level-stakes tipster ROI — unaffected by which individual
+        # picks had a real £ stake recorded, giving a fair representation of system quality.
+        UNIT = 1.0
+        total_stake = total_return = 0.0
+        wins = places = losses = pending = 0
+
+        for p in picks:
+            outcome = (p.get('outcome') or '').lower()
+            odds    = float(p.get('odds', 0))
+            if outcome == 'win':
+                wins += 1
+                total_stake += UNIT
+                bet_type = (p.get('bet_type') or 'WIN').upper()
+                if bet_type == 'WIN':
+                    total_return += UNIT * odds
+                else:
+                    ef = float(p.get('ew_fraction', 0.25))
+                    total_return += (UNIT/2) * odds + (UNIT/2) * (1 + (odds-1) * ef)
+            elif outcome == 'placed':
+                places += 1
+                total_stake += UNIT
+                ef = float(p.get('ew_fraction', 0.25))
+                total_return += (UNIT/2) * (1 + (odds-1) * ef)
+            elif outcome == 'loss':
+                losses += 1
+                total_stake += UNIT
+            else:
+                pending += 1
+
+        profit  = total_return - total_stake
+        roi     = round((profit / total_stake * 100) if total_stake > 0 else 0, 1)
+        settled = wins + places + losses
+
+        return jsonify({
+            'success':      True,
+            'start_date':   CUMULATIVE_ROI_START,
+            'roi':          roi,
+            'profit':       round(profit, 2),
+            'total_stake':  round(total_stake, 2),
+            'total_return': round(total_return, 2),
+            'wins':         wins,
+            'places':       places,
+            'losses':       losses,
+            'pending':      pending,
+            'settled':      settled,
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -1070,6 +1175,43 @@ def apply_learning():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
+
+@app.route('/api/favs-run', methods=['GET'])
+def get_favs_run():
+    """Return today's suspect-favourite lay analysis from favs_run.py logic (read-only)."""
+    try:
+        from datetime import date as _date, timedelta
+        import importlib.util, sys as _sys, os as _os
+
+        # Load favs_run without side effects
+        spec = importlib.util.spec_from_file_location(
+            'favs_run', _os.path.join(_os.path.dirname(__file__), 'favs_run.py'))
+        fr = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(fr)
+
+        days = int(request.args.get('days', 1))
+        start_str = request.args.get('date', _date.today().strftime('%Y-%m-%d'))
+        start_d = _date.fromisoformat(start_str)
+        dates = [(start_d + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(days)]
+
+        all_results = []
+        for d in dates:
+            all_results.extend(fr.analyse_date(d, table))
+
+        total   = len(all_results)
+        caution = sum(1 for r in all_results if r['lay_score'] >= 4)
+        strong  = sum(1 for r in all_results if r['lay_score'] >= 9)
+
+        return jsonify({
+            'success':    True,
+            'generated':  datetime.now().isoformat(),
+            'summary': {'total': total, 'caution': caution, 'strong': strong},
+            'races':      all_results,
+        })
+    except Exception as e:
+        import traceback
+        return jsonify({'success': False, 'error': str(e), 'trace': traceback.format_exc()}), 500
 
 
 @app.route('/api/cheltenham/picks/save', methods=['POST'])

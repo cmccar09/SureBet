@@ -63,8 +63,12 @@ def lambda_handler(event, context):
             return get_cheltenham_picks_lambda(headers, event)
         elif 'cheltenham/races' in path:
             return get_cheltenham_races_lambda(headers)
+        elif 'favs-run' in path:
+            return get_favs_run_lambda(headers, event)
         elif 'results/auto-record' in path:
             return auto_record_pending_results(headers)
+        elif 'results/cumulative-roi' in path:
+            return get_cumulative_roi(headers)
         elif 'results/yesterday' in path:
             return check_yesterday_results(headers)
         elif 'results/today' in path or path.endswith('/results'):
@@ -470,6 +474,90 @@ def get_health(headers):
         })
     }
 
+def get_cumulative_roi(headers):
+    """Cumulative level-stakes ROI since 2026-03-22, deduped by race identity."""
+    from boto3.dynamodb.conditions import Attr
+    CUMULATIVE_ROI_START = '2026-03-22'
+    try:
+        all_items = []
+        scan_kwargs = {'FilterExpression': Attr('bet_date').gte(CUMULATIVE_ROI_START)}
+        while True:
+            resp = table.scan(**scan_kwargs)
+            all_items.extend(resp.get('Items', []))
+            if 'LastEvaluatedKey' not in resp:
+                break
+            scan_kwargs['ExclusiveStartKey'] = resp['LastEvaluatedKey']
+
+        picks = [decimal_to_float(i) for i in all_items]
+        picks = [
+            p for p in picks
+            if p.get('course') and p.get('course') != 'Unknown'
+            and p.get('horse') and p.get('horse') != 'Unknown'
+            and p.get('show_in_ui') is True
+            and not p.get('is_learning_pick', False)
+        ]
+
+        # Deduplicate by race identity (course + race_time), keep most-recently dated record
+        # so outcome corrections always win over the original pick record.
+        seen = {}
+        for p in picks:
+            k = (p.get('course', ''), p.get('race_time', ''))
+            if k not in seen or p.get('bet_date', '') > seen[k].get('bet_date', ''):
+                seen[k] = p
+        picks = list(seen.values())
+
+        # Normalise outcome spellings
+        for p in picks:
+            oc = (p.get('outcome') or '').lower()
+            if oc in ('won',):    p['outcome'] = 'win'
+            elif oc in ('lost',): p['outcome'] = 'loss'
+
+        # Level-stakes ROI (1 unit per pick — standard tipster ROI)
+        UNIT = 1.0
+        total_stake = total_return = 0.0
+        wins = places = losses = pending = 0
+        for p in picks:
+            outcome = (p.get('outcome') or '').lower()
+            odds = float(p.get('odds', 0))
+            ef   = float(p.get('ew_fraction') or 0.25)
+            if outcome == 'win':
+                wins += 1; total_stake += UNIT; total_return += UNIT * odds
+            elif outcome == 'placed':
+                places += 1; total_stake += UNIT
+                total_return += (UNIT/2) * (1 + (odds-1) * ef)
+            elif outcome == 'loss':
+                losses += 1; total_stake += UNIT
+            else:
+                pending += 1
+
+        profit  = total_return - total_stake
+        roi     = round((profit / total_stake * 100) if total_stake > 0 else 0, 1)
+        settled = wins + places + losses
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success':      True,
+                'start_date':   CUMULATIVE_ROI_START,
+                'roi':          roi,
+                'profit':       round(profit, 2),
+                'total_stake':  round(total_stake, 2),
+                'total_return': round(total_return, 2),
+                'wins':         wins,
+                'places':       places,
+                'losses':       losses,
+                'pending':      pending,
+                'settled':      settled,
+            })
+        }
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': headers,
+            'body': json.dumps({'success': False, 'error': str(e)})
+        }
+
+
 def check_yesterday_results(headers):
     """Check results for yesterday's UI picks only (show_in_ui=True)"""
     from boto3.dynamodb.conditions import Key
@@ -526,12 +614,29 @@ def check_yesterday_results(headers):
     # EXCLUDE PENDING from stake/return calculations - only count resolved bets
     resolved_picks = [p for p in picks if str(p.get('outcome', '')).upper() not in ['PENDING', ''] and p.get('outcome') is not None]
     
-    total_stake = sum(float(p.get('stake', 0)) for p in resolved_picks)
-    total_return = sum(float(p.get('stake', 0)) * float(p.get('odds', 0)) for p in resolved_picks if str(p.get('outcome', '')).upper() in ['WIN', 'WON'])
-    
-    # Use profit field if available
-    total_profit = sum(float(p.get('profit', 0)) for p in picks if p.get('profit') is not None)
-    roi = (total_profit / total_stake * 100) if total_stake > 0 else 0
+    total_stake = sum(float(p.get('stake', 1.0)) for p in resolved_picks)
+
+    # Calculate total_return from first principles (don't trust stored profit field)
+    total_return = 0.0
+    for p in resolved_picks:
+        outcome = str(p.get('outcome', '')).upper()
+        if outcome in ['WIN', 'WON']:
+            stake = float(p.get('stake', 1.0))
+            odds = float(p.get('odds', 0))
+            bet_type = p.get('bet_type', 'WIN').upper()
+            if bet_type == 'WIN':
+                total_return += stake * odds
+            else:  # EW
+                ew_fraction = float(p.get('ew_fraction', 0.2) or 0.2)
+                total_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
+        elif outcome == 'PLACED':
+            stake = float(p.get('stake', 1.0))
+            odds = float(p.get('odds', 0))
+            ew_fraction = float(p.get('ew_fraction', 0.2) or 0.2)
+            total_return += (stake/2) * (1 + (odds-1) * ew_fraction)
+
+    profit = total_return - total_stake
+    roi = (profit / total_stake * 100) if total_stake > 0 else 0
     
     # Build race_fields: all runners for yesterday grouped by race (for full race card display)
     race_fields = {}
@@ -572,8 +677,25 @@ def check_yesterday_results(headers):
         
         # EXCLUDE PENDING from stake/return calculations - only count resolved bets
         sport_resolved = [p for p in sport_picks if str(p.get('outcome', '')).upper() not in ['PENDING', ''] and p.get('outcome') is not None]
-        sport_stake = sum(float(p.get('stake', 0)) for p in sport_resolved)
-        sport_profit = sum(float(p.get('profit', 0)) for p in sport_resolved if p.get('profit') is not None)
+        sport_stake = sum(float(p.get('stake', 1.0)) for p in sport_resolved)
+        sport_return = 0.0
+        for p in sport_resolved:
+            outcome = str(p.get('outcome', '')).upper()
+            if outcome in ['WIN', 'WON']:
+                s = float(p.get('stake', 1.0))
+                o = float(p.get('odds', 0))
+                bt = p.get('bet_type', 'WIN').upper()
+                if bt == 'WIN':
+                    sport_return += s * o
+                else:  # EW
+                    ewf = float(p.get('ew_fraction', 0.2) or 0.2)
+                    sport_return += (s/2) * o + (s/2) * (1 + (o-1) * ewf)
+            elif outcome == 'PLACED':
+                s = float(p.get('stake', 1.0))
+                o = float(p.get('odds', 0))
+                ewf = float(p.get('ew_fraction', 0.2) or 0.2)
+                sport_return += (s/2) * (1 + (o-1) * ewf)
+        sport_profit = sport_return - sport_stake
         sport_roi = (sport_profit / sport_stake * 100) if sport_stake > 0 else 0
         
         return {
@@ -583,7 +705,7 @@ def check_yesterday_results(headers):
             'losses': sport_losses,
             'pending': sport_pending,
             'total_stake': round(sport_stake, 2),
-            'total_return': round(sport_stake + sport_profit, 2),
+            'total_return': round(sport_return, 2),
             'profit': round(sport_profit, 2),
             'roi': round(sport_roi, 1),
             'strike_rate': round((sport_wins / (sport_wins + sport_losses) * 100) if (sport_wins + sport_losses) > 0 else 0, 1)
@@ -602,8 +724,8 @@ def check_yesterday_results(headers):
                 'losses': losses,
                 'pending': pending,
                 'total_stake': round(total_stake, 2),
-                'total_return': round(total_stake + total_profit, 2),
-                'profit': round(total_profit, 2),
+                'total_return': round(total_return, 2),
+                'profit': round(profit, 2),
                 'roi': round(roi, 1),
                 'strike_rate': round((wins / (wins + losses) * 100) if (wins + losses) > 0 else 0, 1)
             },
@@ -1280,4 +1402,222 @@ def auto_record_pending_results(headers):
             'errors':   errors,
         })
     }
+
+
+# ── Lay the Favourite analysis ─────────────────────────────────────────────
+
+def _dec(o):
+    if isinstance(o, Decimal):
+        return float(o)
+    if isinstance(o, dict):
+        return {k: _dec(v) for k, v in o.items()}
+    if isinstance(o, list):
+        return [_dec(v) for v in o]
+    return o
+
+
+def _odds_dec(odds):
+    if odds is None:
+        return None
+    try:
+        return float(odds)
+    except (TypeError, ValueError):
+        pass
+    try:
+        s = str(odds).strip()
+        if '/' in s:
+            n, d = s.split('/')
+            return float(n) / float(d) + 1.0
+    except Exception:
+        pass
+    return None
+
+
+_SCORE_WEIGHTS = {
+    'class_up': 4, 'trip_new': 2, 'going_unproven': 2, 'draw_poor': 1,
+    'layoff': 1, 'pace_doubt': 1, 'rivals_close': 2, 'drift': 1, 'short_price': 1,
+}
+
+
+def _score_fav(fav, all_horses_sorted):
+    sb = fav.get('score_breakdown') or {}
+    flags = {}
+    details = []
+    fav_score = float(fav.get('comprehensive_score') or fav.get('score', 0))
+    fav_odds = _odds_dec(fav.get('odds') or fav.get('decimal_odds'))
+
+    if fav_odds is not None and fav_odds <= 2.25:
+        flags['short_price'] = True
+        details.append('Short price (5/4 or less)')
+
+    rivals = [h for h in all_horses_sorted if h.get('horse') != fav.get('horse')]
+    if rivals:
+        r2 = float(rivals[0].get('score', 0)) if len(rivals) >= 1 else 0
+        r3 = float(rivals[1].get('score', 0)) if len(rivals) >= 2 else 0
+        if fav_score > 0 and (r2 / fav_score) >= 0.75:
+            flags['rivals_close'] = True
+            details.append(f'Rivals close: {rivals[0].get("horse","")} scored {r2:.0f} vs fav {fav_score:.0f}')
+        elif fav_score > 0 and len(rivals) >= 2 and (r3 / fav_score) >= 0.70:
+            flags['rivals_close'] = True
+            details.append(f'3rd fav competitive at {r3:.0f}')
+
+    going_pts = float(sb.get('going_suitability', 0))
+    heavy_pts = float(sb.get('heavy_going_penalty', 0))
+    if going_pts == 0 and heavy_pts == 0:
+        flags['going_unproven'] = True
+        details.append('Going suitability = 0')
+
+    dist_pts = float(sb.get('distance_suitability', 0))
+    cd_pts = float(sb.get('cd_bonus', 0))
+    if dist_pts == 0 and cd_pts == 0:
+        flags['trip_new'] = True
+        details.append('Distance suitability = 0 & no CD bonus')
+
+    or_pts = float(sb.get('official_rating_bonus', 0))
+    db_pts = float(sb.get('database_history', 0))
+    course_pts = float(sb.get('course_performance', 0))
+    if or_pts > 0 and cd_pts == 0 and course_pts == 0 and db_pts == 0:
+        flags['class_up'] = True
+        details.append('No prior wins at course/class — stepping up')
+
+    form_str = str(fav.get('form') or '')
+    reasons_text = ' '.join(str(r) for r in (fav.get('selection_reasons') or fav.get('reasons') or []))
+    if 'days off' in reasons_text.lower() or 'days since' in reasons_text.lower():
+        flags['layoff'] = True
+        details.append('Significant layoff flagged')
+    elif '--' in form_str or form_str.count('-') >= 2:
+        flags['layoff'] = True
+        details.append(f'Form suggests layoff: {form_str}')
+
+    draw = fav.get('draw')
+    total_runners = float(fav.get('race_total_count') or fav.get('total_runners') or 0)
+    if draw and total_runners > 0:
+        draw_n = float(draw)
+        if total_runners >= 10 and draw_n >= total_runners * 0.7:
+            flags['draw_poor'] = True
+            details.append(f'High draw ({draw_n:.0f}/{total_runners:.0f})')
+
+    recent_win_pts = float(sb.get('recent_win', 0))
+    if going_pts == 0 and recent_win_pts == 0:
+        flags['pace_doubt'] = True
+        details.append('No going suitability or recent win — pace uncertain')
+
+    score_gap = float(fav.get('score_gap') or 0)
+    if 0 < score_gap < 10:
+        flags['drift'] = True
+        details.append(f'Low score gap ({score_gap:.0f}) — field competitive')
+    elif score_gap == 0 and fav_score > 0:
+        flags['drift'] = True
+        details.append('Score gap = 0 — model does not separate favourite clearly')
+
+    total = sum(_SCORE_WEIGHTS[f] for f in flags)
+    return total, flags, details
+
+
+def _verdict(score):
+    if score >= 9:
+        return 'STRONG LAY'
+    elif score >= 4:
+        return 'CAUTION'
+    return 'LEAVE ALONE'
+
+
+def _analyse_date_lambda(target_date_str, tbl):
+    from boto3.dynamodb.conditions import Key as DKey
+    resp = tbl.query(KeyConditionExpression=DKey('bet_date').eq(target_date_str))
+    all_items = [_dec(it) for it in resp.get('Items', [])]
+    if not all_items:
+        return []
+
+    races = {}
+    for it in all_items:
+        rt = str(it.get('race_time', ''))[:16]
+        course = it.get('course', '') or it.get('race_course', '')
+        key = f'{rt}|{course}'
+        races.setdefault(key, []).append(it)
+
+    results = []
+    for race_key, runners in sorted(races.items()):
+        rt, course = race_key.split('|', 1)
+
+        def sort_odds(h):
+            o = _odds_dec(h.get('odds') or h.get('decimal_odds'))
+            return o if o else 99.0
+
+        runners_sorted = sorted(runners, key=sort_odds)
+        fav = runners_sorted[0]
+        fav_odds_dec = sort_odds(fav)
+
+        if fav_odds_dec > 2.25:
+            continue
+
+        all_horses_raw = fav.get('all_horses') or []
+        if all_horses_raw:
+            all_horses_sorted = sorted(all_horses_raw, key=lambda h: float(h.get('odds') or 99))
+        else:
+            all_horses_sorted = [
+                {'horse': h.get('horse', ''), 'score': h.get('comprehensive_score', 0), 'odds': sort_odds(h)}
+                for h in runners_sorted
+            ]
+
+        lay_score, flags, details = _score_fav(fav, all_horses_sorted)
+        verd = _verdict(lay_score)
+        race_name = fav.get('race_name') or f'{course} {rt[11:16]}'
+
+        results.append({
+            'date':          target_date_str,
+            'race_time':     rt,
+            'course':        course,
+            'race_name':     race_name,
+            'favourite':     fav.get('horse', '?'),
+            'fav_odds':      fav_odds_dec,
+            'fav_sys_score': float(fav.get('comprehensive_score') or fav.get('score', 0)),
+            'score_gap':     float(fav.get('score_gap') or 0),
+            'runners':       len(runners),
+            'lay_score':     lay_score,
+            'flags':         list(flags.keys()),
+            'details':       details,
+            'verdict':       verd,
+            'form':          fav.get('form', ''),
+            'trainer':       fav.get('trainer', ''),
+            'jockey':        fav.get('jockey', ''),
+            'our_pick':      fav.get('show_in_ui', False),
+        })
+    return results
+
+
+def get_favs_run_lambda(headers, event):
+    """GET /api/favs-run?days=N&date=YYYY-MM-DD"""
+    try:
+        qp = event.get('queryStringParameters') or {}
+        today = datetime.now().strftime('%Y-%m-%d')
+        target_date = qp.get('date', today)
+        days = int(qp.get('days', 1))
+
+        tbl = dynamodb.Table('SureBetBets')
+        all_results = []
+        for i in range(days):
+            d = (datetime.strptime(target_date, '%Y-%m-%d') + timedelta(days=i)).strftime('%Y-%m-%d')
+            all_results.extend(_analyse_date_lambda(d, tbl))
+
+        caution = [r for r in all_results if r['lay_score'] >= 4]
+        strong  = [r for r in all_results if r['lay_score'] >= 9]
+
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success':   True,
+                'generated': datetime.now().isoformat(),
+                'summary':   {'total': len(all_results), 'caution': len(caution), 'strong': len(strong)},
+                'races':     all_results,
+            }, default=str)
+        }
+    except Exception as e:
+        print(f'get_favs_run_lambda error: {e}')
+        return {
+            'statusCode': 500,
+            'headers': headers,
+            'body': json.dumps({'success': False, 'error': str(e)})
+        }
 
