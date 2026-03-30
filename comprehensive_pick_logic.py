@@ -31,6 +31,14 @@ except ImportError:
     def get_form_signals(*a, **kw): return {}
     def _dist_to_furlongs(*a, **kw): return None
 
+# Live 30-day trainer/jockey form stats from our own DynamoDB results
+try:
+    from trainer_form_stats import hot_form_bonus as _hot_form_bonus
+    TRAINER_FORM_AVAILABLE = True
+except ImportError:
+    TRAINER_FORM_AVAILABLE = False
+    def _hot_form_bonus(*a, **kw): return 0, {}, []
+
 # Import Cheltenham analyzer when at Cheltenham
 try:
     from cheltenham_analyzer import (
@@ -51,7 +59,7 @@ DEFAULT_WEIGHTS = {
     'optimal_odds':         10,  # REDUCED 15->10: combined odds weighting should not dominate
     'recent_win':           16,  # REDUCED 22->16 (2026-03-25): last-race win still #1 signal but was dominating too heavily
     'total_wins':            8,  # INCREASED  5->8:  each form win carries more weight
-    'consistency':           4,  # INCREASED  2->4:  places (2nd/3rd) matter more
+    'consistency':           6,  # INCREASED  4->6:  places appear in 33% of losses (2026-03-30)
     'course_bonus':         12,  # INCREASED 10->12: course familiarity
     'database_history':     15,  # unchanged
     'going_suitability':    16,  # INCREASED 14->16: going is critical in UK NH
@@ -102,6 +110,12 @@ DEFAULT_WEIGHTS = {
     # D M Simcock (Mr Nugget), K Woollacott (Knock Off Soxs) all lost. No trainer in any tier
     # means the score was built entirely from form/odds — weaker evidence for daily picks.
     'unknown_trainer_penalty': 8,  # 2026-03-25: trainer not Tier1/2/3 — reduce confidence
+    # Large-field handicap penalty (2026-03-29) — LESSON: Saturday analysis showed losers scored
+    # 94.2 avg (only 9.3pts below winners) in 16+ runner fields. Model has no visibility of
+    # pace/draw/traffic in big fields — their variance is fundamentally higher and our signals
+    # do not discriminate reliably. Apply a per-runner discount so big fields need a much
+    # clearer quality advantage before surviving the confidence gate.
+    'large_field_penalty':        10,  # 16-19 runners: -10pts; 20+ runners: -18pts
 }
 
 # Cache for weights (reload every 5 minutes)
@@ -299,7 +313,7 @@ def apply_cheltenham_scoring(horse_data, race_name=''):
     return bonus_points, cheltenham_reasons
 
 
-def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course_winners_today=0, field_weights=None, meeting_context=None):
+def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course_winners_today=0, field_weights=None, meeting_context=None, n_runners=0):
     """
     Comprehensive scoring system for horses
     Returns score and breakdown
@@ -360,17 +374,24 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     breakdown['sweet_spot'] = sweet_spot_pts
     
     # 2. OPTIMAL ODDS POSITION
+    # WIDENED 2026-03-30: Winners in optimal range (3/1-4/1) were being under-rewarded
+    # because tight bands excluded them. Widen to 1.5/3.0/4.5 to reward near-optimal market prices.
     odds_distance = abs(odds - avg_winner_odds)
-    if odds_distance < 1.0:
+    if odds_distance < 1.5:
         optimal_pts = int(weights['optimal_odds'])
         score += optimal_pts
         breakdown['optimal_odds'] = optimal_pts
         reasons.append(f"Near optimal odds ({avg_winner_odds}): {optimal_pts}pts")
-    elif odds_distance < 2.0:
+    elif odds_distance < 3.0:
         optimal_pts = int(weights['optimal_odds'] / 2)
         score += optimal_pts
         breakdown['optimal_odds'] = optimal_pts
         reasons.append(f"Good odds position: {optimal_pts}pts")
+    elif odds_distance < 4.5:
+        optimal_pts = max(1, int(weights['optimal_odds'] / 4))
+        score += optimal_pts
+        breakdown['optimal_odds'] = optimal_pts
+        reasons.append(f"Reasonable odds range: {optimal_pts}pts")
     else:
         breakdown['optimal_odds'] = 0
     
@@ -501,8 +522,9 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         
         # Double weight in extreme conditions (absolutely critical discriminator)
         # LESSON 2026-03-20: Kalista Love & Spit Spot had going_suitability=32pts (35% of total score).
-        # Capped at 16pts max — going is #3 priority (below C/D at 22), so ceiling is 16.
-        going_suitability_pts = min(base_going_pts * 2 if is_extreme else base_going_pts, 16)
+        # Capped at 10pts max (reduced from 16, 2026-03-30): loss analysis shows winners consistently
+        # had 0 or negative going scores yet still won — over-weighting going misleads selection.
+        going_suitability_pts = min(base_going_pts * 2 if is_extreme else base_going_pts, 10)
         
         if is_all_weather:
             # All-weather: ground irrelevant, give neutral bonus for all runners
@@ -674,9 +696,38 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
                 breakdown['cd_bonus'] = cd_pts
                 reasons.append(f"Course winner (from run history, C): +{cd_pts}pts")
             else:
+                    pass  # continue to SL form_runs fallback below
+            # Fallback: SL form_runs C/D detection — furlongs-based distance matching
+            # 2026-03-30: form_runs from form_enricher give per-run course + distance_f;
+            # use ±0.5f tolerance to reliably match C/D wins even when string distances differ.
+            if not cd_pts and horse_data.get('form_runs') and course:
+                _today_dist_f_cd = horse_data.get('race_distance_f')
+                _c3 = False; _cd3 = False
+                for _fr in horse_data['form_runs']:
+                    if _fr.get('position') == 1:
+                        _fr_course = str(_fr.get('course', '')).strip()
+                        _fr_dist_f = _fr.get('distance_f')
+                        _cm3 = _fr_course.lower() == course.lower()
+                        _dm3 = (abs(_fr_dist_f - _today_dist_f_cd) <= 0.5
+                                if _fr_dist_f is not None and _today_dist_f_cd else False)
+                        if _cm3 and _dm3:
+                            _cd3 = True; break
+                        elif _cm3:
+                            _c3 = True
+                if _cd3:
+                    cd_pts = base_cd + extra_cd
+                    score += cd_pts
+                    breakdown['cd_bonus'] = cd_pts
+                    reasons.append(f"Course & Distance winner (SL run history, C&D): +{cd_pts}pts")
+                elif _c3:
+                    cd_pts = base_cd // 2 + extra_cd
+                    score += cd_pts
+                    breakdown['cd_bonus'] = cd_pts
+                    reasons.append(f"Course winner (SL run history, C): +{cd_pts}pts")
+                else:
+                    breakdown['cd_bonus'] = 0
+            elif not cd_pts:
                 breakdown['cd_bonus'] = 0
-        else:
-            breakdown['cd_bonus'] = 0
 
     # 6. DATABASE HISTORY
     db = boto3.resource('dynamodb', region_name='eu-west-1')
@@ -1374,6 +1425,42 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         score = CLASS5_CAP
         breakdown['class5_cap'] = -cap_reduction
         reasons.append(f"Class 5/6 score capped at {CLASS5_CAP}pts (was {score + cap_reduction:.0f}): -{cap_reduction:.0f}pts")
+
+    # LARGE-FIELD PENALTY (2026-03-29)
+    # LESSON: Saturday analysis (21 settled picks) showed losers averaged 94.2pts —
+    # only 9.3pts below winners. In 16+ runner fields pace/draw/traffic dominate form
+    # signals and the model cannot discriminate reliably. Apply a structural discount.
+    if n_runners >= 20:
+        _lfp = int(weights.get('large_field_penalty', 10)) + 8  # -18 for 20+ runners
+        score -= _lfp
+        breakdown['large_field_penalty'] = -_lfp
+        reasons.append(f"Large field ({n_runners} runners) — high variance, draw/pace unknown: -{_lfp}pts")
+    elif n_runners >= 16:
+        _lfp = int(weights.get('large_field_penalty', 10))       # -10 for 16-19 runners
+        score -= _lfp
+        breakdown['large_field_penalty'] = -_lfp
+        reasons.append(f"Big field ({n_runners} runners) — above-average variance: -{_lfp}pts")
+    else:
+        breakdown['large_field_penalty'] = 0
+
+    # ── LIVE TRAINER / JOCKEY HOT FORM (2026-03-30) ─────────────────────────
+    # Use rolling 30-day DynamoDB results to detect trainers/jockeys on a hot streak
+    # (+8/+6 pts) or cold streak (-5/-3 pts).  Does NOT require a static tier list.
+    if TRAINER_FORM_AVAILABLE:
+        _hf_pts, _hf_bd, _hf_rsns = _hot_form_bonus(
+            str(horse_data.get('trainer', '') or ''),
+            str(horse_data.get('jockey', '')  or ''),
+        )
+        if _hf_pts != 0:
+            score += _hf_pts
+            breakdown.update(_hf_bd)
+            reasons.extend(_hf_rsns)
+        else:
+            breakdown['trainer_hot_form'] = 0
+            breakdown['jockey_hot_form']  = 0
+    else:
+        breakdown['trainer_hot_form'] = 0
+        breakdown['jockey_hot_form']  = 0
 
     return score, breakdown, reasons
 

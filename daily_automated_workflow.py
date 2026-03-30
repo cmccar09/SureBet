@@ -107,6 +107,12 @@ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         "Comprehensive analysis: Learning + UI picks (85+ threshold, 100% coverage)",
         "python complete_daily_analysis.py"
     )
+
+    # STEP 4a: Send WhatsApp notifications for today's picks
+    run_step(
+        "Send WhatsApp notifications for today's picks",
+        "python notify_picks.py"
+    )
     
     # Note: complete_daily_analysis.py now handles:
     # - 7-factor comprehensive scoring for ALL horses

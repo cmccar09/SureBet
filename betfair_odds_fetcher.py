@@ -260,30 +260,81 @@ def get_live_betfair_races():
             # Find odds for this runner
             runner_odds = next((r for r in runners_data if r['selectionId'] == runner_id), None)
 
-            if runner_odds and runner_odds.get('ex', {}).get('availableToBack'):
-                best_back = runner_odds['ex']['availableToBack'][0]['price']
-                runners.append({
-                    "name":            runner_name,
-                    "selectionId":     runner_id,
-                    "odds":            best_back,
-                    "jockey":          meta.get('JOCKEY_NAME', ''),
-                    "trainer":         meta.get('TRAINER_NAME', ''),
-                    "form":            meta.get('FORM', ''),
-                    "weight_lbs":      w_lbs,
-                    "weight_raw":      w_val,
-                    "age":             meta.get('AGE', ''),
-                    "official_rating": meta.get('OFFICIAL_RATING', ''),
-                    "draw":            meta.get('STALL_DRAW', runner_meta.get('metadata', {}).get('CLOTH_NUMBER', '')),
-                })
+            # Always include all runners — use best back price if available, else last traded, else 0
+            # This ensures all horses appear in the full race card even if their market hasn't opened yet
+            best_back = 0
+            if runner_odds:
+                avail = runner_odds.get('ex', {}).get('availableToBack', [])
+                if avail:
+                    best_back = avail[0]['price']
+                elif runner_odds.get('lastPriceTraded'):
+                    best_back = runner_odds['lastPriceTraded']
+
+            runners.append({
+                "name":            runner_name,
+                "selectionId":     runner_id,
+                "odds":            best_back,
+                "jockey":          meta.get('JOCKEY_NAME', ''),
+                "trainer":         meta.get('TRAINER_NAME', ''),
+                "form":            meta.get('FORM', ''),
+                "weight_lbs":      w_lbs,
+                "weight_raw":      w_val,
+                "age":             meta.get('AGE', ''),
+                "official_rating": meta.get('OFFICIAL_RATING', ''),
+                "draw":            meta.get('STALL_DRAW', runner_meta.get('metadata', {}).get('CLOTH_NUMBER', '')),
+            })
 
         if runners:
             races.append({
-                "market_id": market_id,
-                "race_time": market['marketStartTime'],
-                "course": market.get('event', {}).get('venue', 'Unknown'),
-                "runners": runners,
-                "start_time": market_start
+                "market_id":   market_id,
+                "race_time":   market['marketStartTime'],
+                "course":      market.get('event', {}).get('venue', 'Unknown'),
+                "market_name": market.get('marketName', ''),   # e.g. "6f Nov Stks", "1m Hcap"
+                "runners":     runners,
+                "start_time":  market_start,
             })
+
+    # ── PRICE STEAM / DRIFT DETECTION (2026-03-30) ──────────────────────────
+    # Compare current prices against the snapshot from the last fetch.
+    # A horse whose price drops ≥ 20% is being backed ('steaming').
+    # A horse whose price rises ≥ 25% is drifting (market losing confidence).
+    # These are stored in 'price_movement' on each runner so the scoring engine
+    # can reward backed horses and penalise drifters.
+    _PH_FILE = 'price_history.json'
+    try:
+        import os as _os
+        _prev_prices = {}
+        if _os.path.exists(_PH_FILE):
+            with open(_PH_FILE, 'r') as _f:
+                _prev_prices = json.load(_f)  # {runner_id_str: price}
+        _new_prices = {}
+        for race in races:
+            for runner in race.get('runners', []):
+                sid = str(runner.get('selectionId', ''))
+                cur = float(runner.get('odds', 0) or 0)
+                if not sid or cur <= 1.0:
+                    continue
+                prev = _prev_prices.get(sid, cur)
+                if prev > 1.0 and cur > 1.0:
+                    # Convert to probability space for clean percentage change
+                    # p_cur = 1/cur, p_prev = 1/prev
+                    # steam = (p_cur - p_prev) / p_prev = prev/cur - 1
+                    pct_move = (prev - cur) / prev   # positive = price shortened (backed)
+                    if pct_move >= 0.20:
+                        runner['price_movement'] = 'steaming'
+                        runner['price_move_pct'] = round(pct_move * 100)
+                    elif pct_move <= -0.25:
+                        runner['price_movement'] = 'drifting'
+                        runner['price_move_pct'] = round(pct_move * 100)
+                    else:
+                        runner['price_movement'] = 'stable'
+                        runner['price_move_pct'] = 0
+                _new_prices[sid] = cur
+        # Save updated prices for next run
+        with open(_PH_FILE, 'w') as _f:
+            json.dump(_new_prices, _f)
+    except Exception as _pe:
+        print(f"  [price_steam] Warning: {_pe}")
 
     print(f"Returning {len(races)} races with odds in betting window")
     return races

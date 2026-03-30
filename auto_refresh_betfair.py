@@ -24,8 +24,9 @@ LOG_FILE = BASE_DIR / "auto_refresh.log"
 # ── Pipeline steps ────────────────────────────────────────────────────────────
 # Each tuple: (script_filename, short_label, abort_on_failure)
 PIPELINE = [
-    ("betfair_odds_fetcher.py",   "Fetch Betfair odds (next 3 days)", True),
-    ("complete_daily_analysis.py", "Score all horses + build top-5 UI picks", False),
+    ("betfair_odds_fetcher.py",    "Fetch Betfair odds (next 3 days)",          True),
+    ("complete_daily_analysis.py", "Score all horses + build top-5 UI picks",   False),
+    ("notify_picks.py",            "Send WhatsApp notifications for UI picks",   False),
 ]
 
 
@@ -50,9 +51,9 @@ def run_py(script: str, label: str, dry_run: bool = False) -> bool:
 
     log(f"Running: {label} ...")
     result = subprocess.run(
-        [PYTHON, str(path)],
-        capture_output=True, text=True,
-        cwd=str(BASE_DIR), timeout=180
+        [PYTHON, "-X", "utf8", str(path)],
+        capture_output=True, text=True, encoding="utf-8",
+        cwd=str(BASE_DIR), timeout=600
     )
 
     # Surface notable output lines
