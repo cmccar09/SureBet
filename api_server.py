@@ -6,7 +6,7 @@ Runs locally to provide data to React frontend
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import boto3
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 
 app = Flask(__name__)
@@ -46,7 +46,7 @@ def get_system_run_times():
     
     # Fallback: estimate based on 8:00 AM daily schedule
     from datetime import timedelta
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     today_8am = now.replace(hour=8, minute=0, second=0, microsecond=0)
     
     if now < today_8am:
@@ -101,8 +101,25 @@ def get_picks():
 def get_today_picks():
     """Get today's RECOMMENDED picks only (excludes training data, analyses, and learning records)"""
     try:
-        today = datetime.now().strftime('%Y-%m-%d')
-        
+        today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+
+        # ── HEALTH CHECK GATE ────────────────────────────────────────────────
+        # Only serve picks when the analysis is confirmed fully complete.
+        # This prevents the UI from ever showing picks built on a partial field.
+        ready, reason = _is_analysis_ready()
+        analysis = _get_analysis_manifest()
+        if not ready:
+            return jsonify({
+                'success':          True,
+                'picks':            [],
+                'count':            0,
+                'date':             today,
+                'analysis_pending': True,
+                'pending_reason':   reason,
+                'analysis_status':  analysis,
+                'message':          f'Analysis not ready: {reason}',
+            })
+
         # Get ONLY actual betting picks (exclude training, analyses, and learning records)
         response = table.query(
             KeyConditionExpression='bet_date = :today',
@@ -149,7 +166,7 @@ def get_today_picks():
         items = high_confidence_items
         
         # Filter to only show races that haven't started yet
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         future_items = [item for item in items if item.get('race_time', '') >= now or item.get('race_time', '').startswith(today)]
         
         # Sort by comprehensive score (highest first)
@@ -165,7 +182,7 @@ def get_today_picks():
         # ONE PICK PER RACE: keep only the highest-scoring pick per race
         seen_races = {}
         for pick in future_items:
-            race_key = (pick.get('course', ''), pick.get('race_time', ''))
+            race_key = (pick.get('course', ''), str(pick.get('race_time', ''))[:16])
             existing = seen_races.get(race_key)
             if not existing or float(pick.get('comprehensive_score', 0)) > float(existing.get('comprehensive_score', 0)):
                 seen_races[race_key] = pick
@@ -202,6 +219,9 @@ def get_today_picks():
         
         # Get system run times
         run_times = get_system_run_times()
+
+        # Attach analysis pipeline status so the UI gets it in one call
+        analysis = _get_analysis_manifest()
         
         return jsonify({
             'success': True,
@@ -210,6 +230,7 @@ def get_today_picks():
             'date': today,
             'last_run': run_times['last_run'],
             'next_run': run_times['next_run'],
+            'analysis_status': analysis,
             'message': f"System runs daily at 8:00 AM. {len(future_items)} picks available for today."
         })
     except Exception as e:
@@ -218,20 +239,114 @@ def get_today_picks():
             'error': str(e)
         }), 500
 
+
+def _get_analysis_manifest():
+    """Read today's analysis pipeline manifest from DynamoDB."""
+    try:
+        resp = table.get_item(Key={'bet_id': 'SYSTEM_ANALYSIS_MANIFEST', 'bet_date': 'STATUS'})
+        item = resp.get('Item', {})
+        if not item:
+            return {'available': False, 'stages': [], 'signal_coverage': {}}
+        item = decimal_to_float(item)
+        stages = [
+            {'id': 'betfair',  'label': 'Betfair Odds',
+             'ok': item.get('stage_betfair') == 'ok',
+             'detail': f"{int(item.get('stage_betfair_races', 0))} races, {int(item.get('stage_betfair_horses', 0))} horses"},
+            {'id': 'history',  'label': 'Horse History',
+             'ok': item.get('stage_history') == 'ok',
+             'detail': f"{int(item.get('stage_history_horses', 0))} horses tracked in DB"},
+            {'id': 'going',    'label': 'Going Conditions',
+             'ok': item.get('stage_going') == 'ok',
+             'detail': 'Live track conditions loaded'},
+            {'id': 'form',     'label': 'Deep Form (RP)',
+             'ok': item.get('stage_form_enricher') == 'ok',
+             'detail': f"{int(item.get('stage_form_pct', 0))}% of horses enriched from Racing Post"},
+            {'id': 'scoring',  'label': 'AI Scoring',
+             'ok': item.get('stage_scoring') == 'ok',
+             'detail': f"{int(item.get('horses_scored', 0))} horses scored"},
+            {'id': 'picks',    'label': 'Picks Published',
+             'ok': int(item.get('picks_generated', 0)) > 0,
+             'detail': f"{int(item.get('picks_generated', 0))} picks selected"},
+        ]
+        signal_coverage = {
+            'Market Leader':      int(item.get('sig_market_leader', 0)),
+            'Deep Form':          int(item.get('sig_deep_form', 0)),
+            'Trainer Quality':    int(item.get('sig_trainer', 0)),
+            'Going Data':         int(item.get('sig_going', 0)),
+            'Consistency':        int(item.get('sig_consistency', 0)),
+            'Course+Distance':    int(item.get('sig_cd_bonus', 0)),
+            'Jockey Quality':     int(item.get('sig_jockey', 0)),
+            'Distance Proven':    int(item.get('sig_distance', 0)),
+        }
+        return {
+            'available':               True,
+            'run_time':                item.get('run_time', ''),
+            'today':                   item.get('today', ''),
+            'analysis_complete':       bool(item.get('analysis_complete', False)),
+            'analysis_fully_complete': bool(item.get('analysis_fully_complete', False)),
+            'min_field_coverage_pct':  int(item.get('min_field_coverage_pct', 0)),
+            'coverage_issues':         item.get('coverage_issues', []),
+            'races_analyzed':          int(item.get('races_analyzed', 0)),
+            'runners_analyzed':        int(item.get('runners_analyzed', 0)),
+            'picks_generated':         int(item.get('picks_generated', 0)),
+            'stages':                  stages,
+            'signal_coverage':         signal_coverage,
+        }
+    except Exception as e:
+        return {'available': False, 'error': str(e), 'stages': [], 'signal_coverage': {}}
+
+
+def _is_analysis_ready():
+    """
+    Full health check before serving picks to the UI.
+    Returns (ready: bool, reason: str).
+
+    Conditions (ALL must pass):
+      1. Manifest exists in DynamoDB
+      2. Manifest date matches today (UTC)
+      3. analysis_fully_complete == True in manifest
+           — this means every UI pick has all_horses matching the Betfair runner count
+      4. stage_betfair and stage_scoring are both 'ok'
+    """
+    today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+    m = _get_analysis_manifest()
+    if not m.get('available'):
+        return False, 'Analysis has not run today yet — picks will appear after 08:00'
+    if m.get('today', '') != today:
+        return False, (f"Analysis data is from {m.get('today','?')} — re-run pending for {today}")
+    stages_by_id = {s['id']: s for s in m.get('stages', [])}
+    if not stages_by_id.get('betfair', {}).get('ok'):
+        return False, 'Betfair odds fetch incomplete — race data unavailable'
+    if not stages_by_id.get('scoring', {}).get('ok'):
+        return False, 'Horse scoring incomplete — analysis still running'
+    if not m.get('analysis_fully_complete'):
+        issues = m.get('coverage_issues', [])
+        detail = ('; '.join(issues[:3]) + ('…' if len(issues) > 3 else '')) if issues else 'unknown'
+        return False, f'Field coverage incomplete — some races may be missing runners ({detail})'
+    return True, 'ok'
+
+
+@app.route('/api/analysis/status', methods=['GET'])
+def get_analysis_status():
+    """Return today's analysis pipeline completion status."""
+    result = _get_analysis_manifest()
+    return jsonify({'success': True, **result})
+
+
 @app.route('/api/results/today', methods=['GET'])
 def get_today_results():
     """Get today's RECOMMENDED PICKS with results summary (excludes training, analyses, and learning records)"""
     try:
         from datetime import datetime, timedelta
-        today = datetime.now().strftime('%Y-%m-%d')
-        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime('%Y-%m-%d')
         
         # Query BOTH today and yesterday (since picks may have yesterday's bet_date but today's race times)
         all_picks = []
         for date in [today, yesterday]:
             response = table.query(
                 KeyConditionExpression='bet_date = :date',
-                FilterExpression='(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) AND attribute_not_exists(analysis_type) AND attribute_not_exists(learning_type) AND attribute_exists(course) AND attribute_exists(horse)',
+                FilterExpression='(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) AND attribute_not_exists(learning_type) AND attribute_exists(course) AND attribute_exists(horse)',
                 ExpressionAttributeValues={
                     ':date': date,
                     ':not_learning': False
@@ -252,29 +367,54 @@ def get_today_results():
                  if item.get('course') and item.get('course') != 'Unknown' 
                  and item.get('horse') and item.get('horse') != 'Unknown'
                  and item.get('show_in_ui') == True]
+
+        # Exclude retrospective picks: created more than 30 min after the race started.
+        # race_time has an explicit UTC offset (+00:00 or +01:00); created_at is UK
+        # local time (no suffix). Compare both in UTC so BST offsets don't confuse things.
+        def _is_retrospective(pick):
+            import calendar as _cal
+            from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+            def _uk_off(d):
+                def _last_sun(y, m):
+                    last = _cal.monthrange(y, m)[1]
+                    return next(day for day in range(last, last - 7, -1)
+                                if _dt(y, m, day).weekday() == 6)
+                bst_start = _dt(d.year, 3, _last_sun(d.year, 3), 1, tzinfo=_tz.utc)
+                bst_end   = _dt(d.year, 10, _last_sun(d.year, 10), 1, tzinfo=_tz.utc)
+                return 1 if bst_start <= _dt(d.year, d.month, d.day, tzinfo=_tz.utc) < bst_end else 0
+            created_s = str(pick.get('created_at', '') or '')
+            race_rt_s = str(pick.get('race_time', '') or '')
+            if len(created_s) < 16 or len(race_rt_s) < 16 or created_s[:10] != race_rt_s[:10]:
+                return False
+            try:
+                race_utc    = _dt.fromisoformat(race_rt_s).astimezone(_tz.utc)
+                uk_off      = _uk_off(race_utc.date())
+                created_utc = _dt.fromisoformat(created_s[:16]) - _td(hours=uk_off)
+                return (created_utc - race_utc).total_seconds() > 30 * 60
+            except Exception:
+                return False
+
+        picks = [p for p in picks if not _is_retrospective(p)]
         
         # Don't filter by time - show ALL today's picks (past and future)
         # This is the RESULTS page, not the upcoming picks page
         
-        # ONE PICK PER RACE: keep only the highest-scoring pick per race
+        # ONE PICK PER RACE: keep only the highest-scoring pick per race.
+        # Normalise race_time to YYYY-MM-DDTHH:MM (strip tz offset) so +00:00
+        # and +01:00 records for the same local UK race time are treated as one.
+        def _norm_rt(rt):
+            return str(rt or '')[:16]
+
         seen_races = {}
         for pick in picks:
-            race_key = (pick.get('course', ''), pick.get('race_time', ''))
+            race_key = (pick.get('course', ''), _norm_rt(pick.get('race_time', '')))
             existing = seen_races.get(race_key)
             if not existing or float(pick.get('comprehensive_score', 0)) > float(existing.get('comprehensive_score', 0)):
                 seen_races[race_key] = pick
         picks = list(seen_races.values())
 
-        # Sort by comprehensive score (highest first) and limit to top 5 per day
-        for item in picks:
-            comp_score = item.get('comprehensive_score') or item.get('analysis_score') or 0
-            item['_sort_score'] = float(comp_score)
-        picks.sort(key=lambda x: x.get('_sort_score', 0), reverse=True)
-        picks = picks[:5]  # Top 5 picks per day only
-        
-        # Remove temporary sort field
-        for item in picks:
-            item.pop('_sort_score', None)
+        # Sort by race_time — show ALL show_in_ui picks (top-5 cap is on the picks page, not results)
+        picks.sort(key=lambda x: x.get('race_time', ''))
         
         # Calculate summary stats from outcomes
         wins = sum(1 for p in picks if p.get('outcome') == 'win')
@@ -289,7 +429,7 @@ def get_today_results():
         for p in picks:
             outcome = p.get('outcome', '').lower() if p.get('outcome') else None
             stake = float(p.get('stake', 0))
-            odds = float(p.get('odds', 0))
+            odds = float(p.get('sp_odds') or p.get('odds', 0))
             
             if outcome == 'win':
                 bet_type = p.get('bet_type', 'WIN').upper()
@@ -299,13 +439,40 @@ def get_today_results():
                     ew_fraction = float(p.get('ew_fraction', 0.2))
                     total_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
             elif outcome == 'placed':
-                ew_fraction = float(p.get('ew_fraction', 0.2))
-                total_return += (stake/2) * (1 + (odds-1) * ew_fraction)
+                bet_type = p.get('bet_type', 'WIN').upper()
+                if bet_type == 'EW':
+                    ew_fraction = float(p.get('ew_fraction', 0.2))
+                    total_return += (stake/2) * (1 + (odds-1) * ew_fraction)
+                # WIN-only placed bet = 0 return (loss)
         
         profit = total_return - total_stake
         roi = (profit / total_stake * 100) if total_stake > 0 else 0
         strike_rate = (wins / len(picks) * 100) if picks else 0
-        
+
+        # Annotate each pick with its individual profit field for frontend display
+        for p in picks:
+            outcome = (p.get('outcome') or '').lower()
+            stake = float(p.get('stake', 0))
+            odds = float(p.get('sp_odds') or p.get('odds', 0))
+            bet_type = (p.get('bet_type') or 'WIN').upper()
+            ew_fraction = float(p.get('ew_fraction', 0.2))
+            if outcome == 'win':
+                if bet_type == 'WIN':
+                    p_return = stake * odds
+                else:
+                    p_return = (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
+                p['profit'] = round(p_return - stake, 2)
+            elif outcome == 'placed':
+                if bet_type == 'EW':
+                    p_return = (stake/2) * (1 + (odds-1) * ew_fraction)
+                    p['profit'] = round(p_return - stake, 2)
+                else:
+                    p['profit'] = round(-stake, 2)  # WIN-only bet, came placed = loss
+            elif outcome in ('loss', 'lost'):
+                p['profit'] = round(-stake, 2)
+            else:
+                p['profit'] = None  # pending
+
         # Sort picks by race time
         picks.sort(key=lambda x: x.get('race_time', ''))
         
@@ -368,8 +535,8 @@ def get_yesterday_results():
     """Get yesterday's RECOMMENDED PICKS with full results - win/loss analysis"""
     try:
         from datetime import timedelta
-        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
-        day_before = (datetime.now() - timedelta(days=2)).strftime('%Y-%m-%d')
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime('%Y-%m-%d')
+        day_before = (datetime.now(timezone.utc) - timedelta(days=2)).strftime('%Y-%m-%d')
 
         # Query picks from yesterday (also check day_before in case of timezone edge cases)
         all_picks = []
@@ -378,7 +545,7 @@ def get_yesterday_results():
                 KeyConditionExpression='bet_date = :date',
                 FilterExpression=(
                     '(attribute_not_exists(is_learning_pick) OR is_learning_pick = :not_learning) '
-                    'AND attribute_not_exists(analysis_type) AND attribute_not_exists(learning_type) '
+                    'AND attribute_not_exists(learning_type) '
                     'AND attribute_exists(course) AND attribute_exists(horse)'
                 ),
                 ExpressionAttributeValues={
@@ -399,22 +566,22 @@ def get_yesterday_results():
                  and p.get('horse') and p.get('horse') != 'Unknown'
                  and p.get('show_in_ui') == True]
 
-        # Apply same high-confidence filter as the daily picks tab
-        # (excludes picks with low combined_confidence even if show_in_ui=True)
-        # Upper bound of 100 excludes scores from off-schedule analysis runs
-        # which can exceed the model's intended 0-100 range
+        # Apply minimum confidence filter: score >= 85 (no upper bound — high scores are valid)
+        # FIXED 2026-04-06: removed the <=100 upper bound which was silently hiding picks
+        # with scores > 100 (e.g. 118pts on 2026-04-05) from the results page, distorting
+        # the historical performance view.
         filtered = []
         for p in picks:
             comp_score = float(p.get('comprehensive_score') or p.get('analysis_score') or 0)
             comb_conf  = float(p.get('combined_confidence') or 0)
-            if 85 <= comp_score <= 100 and (comb_conf == 0 or comb_conf >= 55):
+            if comp_score >= 85 and (comb_conf == 0 or comb_conf >= 55):
                 filtered.append(p)
         picks = filtered
 
         # ONE PICK PER RACE: keep only the highest-scoring pick per race
         seen_races = {}
         for pick in picks:
-            race_key = (pick.get('course', ''), pick.get('race_time', ''))
+            race_key = (pick.get('course', ''), str(pick.get('race_time', ''))[:16])
             existing = seen_races.get(race_key)
             if not existing or float(pick.get('comprehensive_score', 0)) > float(existing.get('comprehensive_score', 0)):
                 seen_races[race_key] = pick
@@ -454,7 +621,7 @@ def get_yesterday_results():
                 else:
                     reasons.append(f'Moderate AI confidence ({score:.0f}) — higher-risk selection')
                 if finish and int(finish) <= 3:
-                    reasons.append('Close run — ran well but couldn't quite get there')
+                    reasons.append("Close run — ran well but couldn't quite get there")
                 elif finish and int(finish) >= 6:
                     reasons.append('Well beaten — race conditions or draw likely worked against selection')
                 pick['result_analysis'] = f'{pos_label}. {won_by}. {" · ".join(reasons)}'
@@ -474,7 +641,7 @@ def get_yesterday_results():
         for p in picks:
             oc    = (p.get('outcome') or '').lower()
             stake = float(p.get('stake', 0))
-            odds  = float(p.get('odds', 0))
+            odds  = float(p.get('sp_odds') or p.get('odds', 0))
             if oc == 'win':
                 bet_type = (p.get('bet_type') or 'WIN').upper()
                 if bet_type == 'WIN':
@@ -483,11 +650,31 @@ def get_yesterday_results():
                     ef = float(p.get('ew_fraction', 0.2))
                     total_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ef)
             elif oc == 'placed':
-                ef = float(p.get('ew_fraction', 0.2))
-                total_return += (stake/2) * (1 + (odds-1) * ef)
+                bet_type = (p.get('bet_type') or 'WIN').upper()
+                if bet_type == 'EW':
+                    ef = float(p.get('ew_fraction', 0.2))
+                    total_return += (stake/2) * (1 + (odds-1) * ef)
+                # WIN-only placed bet = 0 return (loss)
 
         profit = total_return - total_stake
         roi    = (profit / total_stake * 100) if total_stake > 0 else 0
+
+        # Annotate each pick with its individual profit field for frontend display
+        for p in picks:
+            oc    = (p.get('outcome') or '').lower()
+            stake = float(p.get('stake', 0))
+            odds  = float(p.get('sp_odds') or p.get('odds', 0))
+            bt    = (p.get('bet_type') or 'WIN').upper()
+            ef    = float(p.get('ew_fraction', 0.2))
+            if oc == 'win':
+                p_return = (stake * odds) if bt == 'WIN' else ((stake/2)*odds + (stake/2)*(1+(odds-1)*ef))
+                p['profit'] = round(p_return - stake, 2)
+            elif oc == 'placed':
+                p['profit'] = round((stake/2)*(1+(odds-1)*ef) - stake, 2) if bt == 'EW' else round(-stake, 2)
+            elif oc in ('loss', 'lost'):
+                p['profit'] = round(-stake, 2)
+            else:
+                p['profit'] = None
 
         return jsonify({
             'success':   True,
@@ -544,7 +731,7 @@ def get_cumulative_roi():
         # dated record so outcome updates always win over the original pick record.
         seen_races = {}
         for pick in picks:
-            race_key = (pick.get('course', ''), pick.get('race_time', ''))
+            race_key = (pick.get('course', ''), str(pick.get('race_time', ''))[:16])
             existing = seen_races.get(race_key)
             if not existing or pick.get('bet_date', '') > existing.get('bet_date', ''):
                 seen_races[race_key] = pick
@@ -559,7 +746,7 @@ def get_cumulative_roi():
 
         for p in picks:
             outcome = (p.get('outcome') or '').lower()
-            odds    = float(p.get('odds', 0))
+            odds    = float(p.get('sp_odds') or p.get('odds', 0))
             if outcome == 'win':
                 wins += 1
                 total_stake += UNIT
@@ -1085,7 +1272,7 @@ def apply_learning():
         return '', 204
     try:
         data = flask_req.get_json(silent=True) or {}
-        target_date = data.get('date') or (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        target_date = data.get('date') or (datetime.now(timezone.utc) - timedelta(days=1)).strftime('%Y-%m-%d')
 
         # Fetch all settled UI picks for the date
         all_items = []
