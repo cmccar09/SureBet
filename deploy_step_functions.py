@@ -114,6 +114,15 @@ LAMBDAS = [
         'env'    : {},
     },
     {
+        'name'   : 'surebet-fav-results',
+        'handler': 'sf_fav_results.lambda_handler',
+        'src'    : 'sf_fav_results.py',
+        'timeout': 60,
+        'memory' : 256,
+        'bundle' : [],
+        'env'    : {},
+    },
+    {
         'name'   : 'surebet-loss-report',
         'handler': 'sf_loss_report.lambda_handler',
         'src'    : 'sf_loss_report.py',

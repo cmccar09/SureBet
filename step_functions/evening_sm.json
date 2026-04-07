@@ -42,9 +42,47 @@
       "Catch": [
         {
           "ErrorEquals": ["States.ALL"],
-          "Next": "FetchResults",
+          "Next": "UpdateFavResults",
           "ResultPath": "$.slResultsError",
-          "Comment": "If SL scrape fails, still run Betfair results as fallback"
+          "Comment": "If SL scrape fails, still run fav-results step"
+        }
+      ],
+      "Next": "UpdateFavResults"
+    },
+
+    "UpdateFavResults": {
+      "Comment": "Write fav_outcome (win/loss) to each race favourite's DynamoDB row so the Lay-the-Fav cards show results.",
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "PLACEHOLDER_surebet-fav-results",
+        "Payload.$": "$"
+      },
+      "ResultSelector": {
+        "races_processed.$": "$.Payload.races_processed",
+        "favs_updated.$":    "$.Payload.favs_updated",
+        "success.$":         "$.Payload.success"
+      },
+      "ResultPath": "$.favResultsResult",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 30,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "FetchResults",
+          "ResultPath": "$.favResultsError",
+          "Comment": "Non-fatal — always continue to Betfair results even if fav-results fails"
         }
       ],
       "Next": "FetchResults"

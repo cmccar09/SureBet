@@ -3520,7 +3520,9 @@ def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
 
             else:
 
-                fav_outcome = fav.get('outcome') or None
+                # Check fav_outcome written by sf_fav_results Lambda, then fall back to own outcome field
+
+                fav_outcome = fav.get('fav_outcome') or fav.get('outcome') or None
 
 
 
@@ -3602,9 +3604,11 @@ def get_favs_run_lambda(headers, event):
 
 
 
-        caution = [r for r in all_results if r['lay_score'] >= 4]
+        caution   = [r for r in all_results if r['lay_score'] >= 4]
 
-        strong  = [r for r in all_results if r['lay_score'] >= 9]
+        strong    = [r for r in all_results if r['lay_score'] >= 9]
+
+        red_flag  = [r for r in all_results if r['lay_score'] >= 13]
 
 
 
@@ -3620,7 +3624,7 @@ def get_favs_run_lambda(headers, event):
 
                 'generated': datetime.now().isoformat(),
 
-                'summary':   {'total': len(all_results), 'caution': len(caution), 'strong': len(strong)},
+                'summary':   {'total': len(all_results), 'caution': len(caution), 'strong': len(strong), 'red_flag': len(red_flag)},
 
                 'races':     all_results,
 
