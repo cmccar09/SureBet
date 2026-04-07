@@ -1,8 +1,0 @@
-{
-  "rawPath": "/api/results/today",
-  "requestContext": {
-    "http": {
-      "method": "GET"
-    }
-  }
-}

@@ -23,6 +23,12 @@ def decimal_to_float(obj):
         return [decimal_to_float(item) for item in obj]
     return obj
 
+def _settlement_odds(p):
+    """Return the best available odds for P&L calculations.
+    Prefers sp_odds (set at settlement using Betfair SP/lastPriceTraded)
+    over the pre-race exchange price stored at pick time."""
+    return float(p.get('sp_odds') or p.get('odds', 0))
+
 def lambda_handler(event, context):
     """Handle API Gateway requests"""
     
@@ -187,17 +193,17 @@ def get_today_picks(headers):
         future_picks = horse_items
     else:
         # Filter out races that have already started
-        now = datetime.utcnow()
+        from datetime import timezone as _tz
+        now_utc = datetime.now(_tz.utc)
         future_picks = []
         
         for item in horse_items:
             race_time_str = item.get('race_time', '')
             if race_time_str:
                 try:
-                    # Parse race time (ISO format)
+                    # Parse race time (ISO format with offset) and compare in UTC
                     race_time = datetime.fromisoformat(race_time_str.replace('Z', '+00:00'))
-                    # Only include if race is in the future
-                    if race_time.replace(tzinfo=None) > now:
+                    if race_time.astimezone(_tz.utc) > now_utc:
                         future_picks.append(item)
                 except Exception as e:
                     print(f"Error parsing race time {race_time_str}: {e}")
@@ -210,7 +216,7 @@ def get_today_picks(headers):
     # ONE PICK PER RACE: keep only the highest-scoring pick per race
     seen_races = {}
     for pick in future_picks:
-        race_key = (pick.get('course', ''), pick.get('race_time', ''))
+        race_key = (pick.get('course', ''), str(pick.get('race_time', ''))[:16])
         existing = seen_races.get(race_key)
         if not existing or float(pick.get('comprehensive_score', 0)) > float(existing.get('comprehensive_score', 0)):
             seen_races[race_key] = pick
@@ -520,7 +526,7 @@ def get_cumulative_roi(headers):
         wins = places = losses = pending = 0
         for p in picks:
             outcome = (p.get('outcome') or '').lower()
-            odds = float(p.get('odds', 0))
+            odds = _settlement_odds(p)
             ef   = float(p.get('ew_fraction') or 0.25)
             if outcome == 'win':
                 wins += 1; total_stake += UNIT; total_return += UNIT * odds
@@ -591,7 +597,49 @@ def check_yesterday_results(headers):
         # Keep None or other values as-is (for pending/voided)
     
     print(f"Yesterday ({yesterday}) - Total picks: {len(all_picks)}, UI picks: {len(picks)}")
-    
+
+    # Exclude retrospective picks (created >30 min after race started, accounting for BST)
+    def _is_retro_yest(pick):
+        import calendar as _cal
+        from datetime import timezone as _tz, timedelta as _td
+        def _uk_off(d):
+            def _last_sun(y, m):
+                last = _cal.monthrange(y, m)[1]
+                return next(day for day in range(last, last - 7, -1)
+                            if datetime(y, m, day).weekday() == 6)
+            bst_start = datetime(d.year, 3, _last_sun(d.year, 3), 1, tzinfo=_tz.utc)
+            bst_end   = datetime(d.year, 10, _last_sun(d.year, 10), 1, tzinfo=_tz.utc)
+            return 1 if bst_start <= datetime(d.year, d.month, d.day, tzinfo=_tz.utc) < bst_end else 0
+        created_s = str(pick.get('created_at', '') or '')
+        race_rt_s = str(pick.get('race_time', '') or '')
+        if len(created_s) < 16 or len(race_rt_s) < 16 or created_s[:10] != race_rt_s[:10]:
+            return False
+        try:
+            race_utc    = datetime.fromisoformat(race_rt_s).astimezone(_tz.utc)
+            uk_off      = _uk_off(race_utc.date())
+            created_utc = datetime.fromisoformat(created_s[:16]) - _td(hours=uk_off)
+            return (created_utc - race_utc).total_seconds() > 30 * 60
+        except Exception:
+            return False
+
+    picks = [p for p in picks if not _is_retro_yest(p)]
+
+    # ONE PICK PER RACE: keep highest-scoring pick, normalise race_time to strip tz offset
+    def _norm_rt_y(rt):
+        return str(rt or '')[:16]
+
+    seen_races = {}
+    for pick in picks:
+        race_key = (pick.get('course', ''), _norm_rt_y(pick.get('race_time', '')))
+        existing = seen_races.get(race_key)
+        score = float(pick.get('comprehensive_score') or pick.get('analysis_score') or 0)
+        existing_score = float(existing.get('comprehensive_score') or existing.get('analysis_score') or 0) if existing else 0
+        if not existing or score > existing_score:
+            seen_races[race_key] = pick
+    picks = list(seen_races.values())
+    picks.sort(key=lambda x: x.get('race_time', ''))
+    print(f"After retro-filter + dedup: {len(picks)} picks")
+
     if not picks:
         return {
             'statusCode': 200,
@@ -624,7 +672,7 @@ def check_yesterday_results(headers):
         outcome = str(p.get('outcome', '')).upper()
         if outcome in ['WIN', 'WON']:
             stake = float(p.get('stake', 1.0))
-            odds = float(p.get('odds', 0))
+            odds = _settlement_odds(p)
             bet_type = p.get('bet_type', 'WIN').upper()
             if bet_type == 'WIN':
                 total_return += stake * odds
@@ -633,7 +681,7 @@ def check_yesterday_results(headers):
                 total_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
         elif outcome == 'PLACED':
             stake = float(p.get('stake', 1.0))
-            odds = float(p.get('odds', 0))
+            odds = _settlement_odds(p)
             ew_fraction = float(p.get('ew_fraction', 0.2) or 0.2)
             total_return += (stake/2) * (1 + (odds-1) * ew_fraction)
 
@@ -685,7 +733,7 @@ def check_yesterday_results(headers):
             outcome = str(p.get('outcome', '')).upper()
             if outcome in ['WIN', 'WON']:
                 s = float(p.get('stake', 1.0))
-                o = float(p.get('odds', 0))
+                o = _settlement_odds(p)
                 bt = p.get('bet_type', 'WIN').upper()
                 if bt == 'WIN':
                     sport_return += s * o
@@ -694,7 +742,7 @@ def check_yesterday_results(headers):
                     sport_return += (s/2) * o + (s/2) * (1 + (o-1) * ewf)
             elif outcome == 'PLACED':
                 s = float(p.get('stake', 1.0))
-                o = float(p.get('odds', 0))
+                o = _settlement_odds(p)
                 ewf = float(p.get('ew_fraction', 0.2) or 0.2)
                 sport_return += (s/2) * (1 + (o-1) * ewf)
         sport_profit = sport_return - sport_stake
@@ -770,11 +818,44 @@ def check_today_results(headers):
     # Filter: race must be TODAY (excludes yesterday's races stored with today's bet_date)
     picks = [item for item in picks if str(item.get('race_time', '')).startswith(today)]
 
+    # Exclude retrospective picks: created more than 30 min after the race started.
+    # race_time has an explicit UTC offset (+00:00 or +01:00); created_at is UK
+    # local time (no suffix). Compare both in UTC so BST offsets don't confuse things.
+    def _is_retrospective(pick):
+        import calendar as _cal
+        from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+        def _uk_off(d):
+            def _last_sun(y, m):
+                last = _cal.monthrange(y, m)[1]
+                return next(day for day in range(last, last - 7, -1)
+                            if _dt(y, m, day).weekday() == 6)
+            bst_start = _dt(d.year, 3, _last_sun(d.year, 3), 1, tzinfo=_tz.utc)
+            bst_end   = _dt(d.year, 10, _last_sun(d.year, 10), 1, tzinfo=_tz.utc)
+            return 1 if bst_start <= _dt(d.year, d.month, d.day, tzinfo=_tz.utc) < bst_end else 0
+        created_s = str(pick.get('created_at', '') or '')
+        race_rt_s = str(pick.get('race_time', '') or '')
+        if len(created_s) < 16 or len(race_rt_s) < 16 or created_s[:10] != race_rt_s[:10]:
+            return False
+        try:
+            race_utc    = _dt.fromisoformat(race_rt_s).astimezone(_tz.utc)
+            uk_off      = _uk_off(race_utc.date())
+            created_utc = _dt.fromisoformat(created_s[:16]) - _td(hours=uk_off)
+            return (created_utc - race_utc).total_seconds() > 30 * 60
+        except Exception:
+            return False
+
+    picks = [p for p in picks if not _is_retrospective(p)]
+
     # ONE PICK PER RACE: keep only the highest-scoring pick per (course, race_time)
-    # Eliminates multiple runners saved by learning workflow for skipped/close-call races
+    # Normalise race_time to YYYY-MM-DDTHH:MM (strip timezone offset) so that
+    # records stored as +00:00 and +01:00 for the same local UK race are deduped.
+    def _norm_rt(rt):
+        s = str(rt or '')
+        return s[:16]  # e.g. "2026-03-31T14:15" from any offset variant
+
     seen_races = {}
     for pick in picks:
-        race_key = (pick.get('course', ''), pick.get('race_time', ''))
+        race_key = (pick.get('course', ''), _norm_rt(pick.get('race_time', '')))
         existing = seen_races.get(race_key)
         score = float(pick.get('comprehensive_score') or pick.get('analysis_score') or 0)
         existing_score = float(existing.get('comprehensive_score') or existing.get('analysis_score') or 0) if existing else 0
@@ -851,7 +932,7 @@ def check_today_results(headers):
         outcome = str(p.get('outcome', '')).upper()
         if outcome in ['WIN', 'WON']:
             stake = float(p.get('stake', 2.0))
-            odds = float(p.get('odds', 0))
+            odds = _settlement_odds(p)
             bet_type = p.get('bet_type', 'WIN').upper()
             if bet_type == 'WIN':
                 total_return += stake * odds
@@ -860,7 +941,7 @@ def check_today_results(headers):
                 total_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
         elif outcome == 'PLACED':
             stake = float(p.get('stake', 2.0))
-            odds = float(p.get('odds', 0))
+            odds = _settlement_odds(p)
             ew_fraction = float(p.get('ew_fraction', 0.2))
             total_return += (stake/2) * (1 + (odds-1) * ew_fraction)
     
@@ -891,7 +972,7 @@ def check_today_results(headers):
             outcome = str(p.get('outcome', '')).upper()
             if outcome in ['WIN', 'WON']:
                 stake = float(p.get('stake', 2.0))
-                odds = float(p.get('odds', 0))
+                odds = _settlement_odds(p)
                 bet_type = p.get('bet_type', 'WIN').upper()
                 if bet_type == 'WIN':
                     sport_return += stake * odds
@@ -900,7 +981,7 @@ def check_today_results(headers):
                     sport_return += (stake/2) * odds + (stake/2) * (1 + (odds-1) * ew_fraction)
             elif outcome == 'PLACED':
                 stake = float(p.get('stake', 2.0))
-                odds = float(p.get('odds', 0))
+                odds = _settlement_odds(p)
                 ew_fraction = float(p.get('ew_fraction', 0.2))
                 sport_return += (stake/2) * (1 + (odds-1) * ew_fraction)
         
@@ -1306,10 +1387,10 @@ def auto_record_pending_results(headers):
 
     for market_id, picks in by_market.items():
         try:
-            # ── listMarketBook: statuses + sort priority (= finish position) ──
+            # ── listMarketBook: statuses + SP ─────────────────────────────
             book_resp = bf_post('listMarketBook', {
                 'marketIds': [market_id],
-                'priceProjection': {'priceData': []},
+                'priceProjection': {'priceData': ['SP_TRADED']},
                 'orderProjection': 'EXECUTABLE',
                 'matchProjection': 'NO_ROLLUP',
             })
@@ -1342,6 +1423,13 @@ def auto_record_pending_results(headers):
             # Build lookup dicts from book
             sort_by_sel   = {str(r.get('selectionId')): r.get('sortPriority', 99) for r in runners_book}
             status_by_sel = {str(r.get('selectionId')): r.get('status', '')      for r in runners_book}
+            # SP lookup: prefer sp.actualSP, fall back to lastPriceTraded
+            sp_by_sel = {}
+            for r in runners_book:
+                sp_data = r.get('sp', {})
+                sp_val  = (sp_data.get('actualSP') if sp_data else None) or r.get('lastPriceTraded')
+                if sp_val:
+                    sp_by_sel[str(r.get('selectionId'))] = float(sp_val)
 
             # Winner = runner with sortPriority==1 (or status==WINNER)
             winner_sel_id = None
@@ -1357,6 +1445,7 @@ def auto_record_pending_results(headers):
                 pick_sel   = str(pick.get('selection_id', '')).strip()
                 sel_status = status_by_sel.get(pick_sel, '')
                 finish     = int(sort_by_sel.get(pick_sel, 99))
+                sp_odds    = sp_by_sel.get(pick_sel)  # None if not traded
 
                 if sel_status == 'WINNER' or finish == 1:
                     outcome = 'win'
@@ -1368,16 +1457,34 @@ def auto_record_pending_results(headers):
                     print(f"  {pick.get('horse')}: sel_id={pick_sel} not found in book (may have been a non-runner)")
                     continue
 
+                # Calculate P&L using SP when available, else stored pick odds
+                stake = float(pick.get('stake', 6.0))
+                settlement_odds = sp_odds if sp_odds else float(pick.get('odds', 0))
+                if outcome == 'win':
+                    profit = round(stake * (settlement_odds - 1), 2)
+                elif outcome == 'placed':
+                    ef = float(pick.get('ew_fraction', 0.25) or 0.25)
+                    profit = round((stake / 2) * (1 + (settlement_odds - 1) * ef) - stake, 2)
+                else:
+                    profit = round(-stake, 2)
+
                 dynamo_table = boto3.resource('dynamodb', region_name='eu-west-1').Table('SureBetBets')
+                update_expr = 'SET outcome = :o, finish_position = :f, winner_horse = :w, result_recorded_at = :t, profit = :p'
+                expr_vals = {
+                    ':o': outcome,
+                    ':f': finish,
+                    ':w': winner_name,
+                    ':t': now_utc.isoformat() + 'Z',
+                    ':p': Decimal(str(profit)),
+                }
+                if sp_odds:
+                    update_expr += ', sp_odds = :sp'
+                    expr_vals[':sp'] = Decimal(str(round(sp_odds, 2)))
+
                 dynamo_table.update_item(
                     Key={'bet_id': pick['bet_id'], 'bet_date': pick['bet_date']},
-                    UpdateExpression='SET outcome = :o, finish_position = :f, winner_horse = :w, result_recorded_at = :t',
-                    ExpressionAttributeValues={
-                        ':o': outcome,
-                        ':f': finish,
-                        ':w': winner_name,
-                        ':t': now_utc.isoformat() + 'Z',
-                    }
+                    UpdateExpression=update_expr,
+                    ExpressionAttributeValues=expr_vals
                 )
                 updated += 1
                 results_summary.append({
@@ -1386,8 +1493,11 @@ def auto_record_pending_results(headers):
                     'outcome': outcome,
                     'finish':  finish,
                     'winner':  winner_name,
+                    'sp_odds': sp_odds,
+                    'profit':  profit,
                 })
-                print(f"  Recorded: {pick.get('horse')} @ {pick.get('course')} → {outcome} pos={finish} winner={winner_name}")
+                sp_note = f" SP={sp_odds}" if sp_odds else " (no SP)"
+                print(f"  Recorded: {pick.get('horse')} @ {pick.get('course')} → {outcome} pos={finish} profit={profit:+.2f}{sp_note}")
 
         except Exception as e:
             errors.append(f'{market_id}: {str(e)}')
@@ -1438,6 +1548,7 @@ def _odds_dec(odds):
 _SCORE_WEIGHTS = {
     'class_up': 4, 'trip_new': 2, 'going_unproven': 2, 'draw_poor': 1,
     'layoff': 1, 'pace_doubt': 1, 'rivals_close': 2, 'drift': 1, 'short_price': 1,
+    'trainer_track': 1, 'trainer_cold': 1, 'trainer_multiple': 1,
 }
 
 
@@ -1503,6 +1614,45 @@ def _score_fav(fav, all_horses_sorted):
     if going_pts == 0 and recent_win_pts == 0:
         flags['pace_doubt'] = True
         details.append('No going suitability or recent win — pace uncertain')
+
+    # --- Trainer at track win rate (+1) ---
+    fav_trainer = str(fav.get('trainer') or '').strip()
+    trainer_rep_pts = float(sb.get('trainer_reputation', 0))
+    if fav_trainer and trainer_rep_pts == 0:
+        flags['trainer_track'] = True
+        details.append(f'Trainer ({fav_trainer}) — no tier status at this track')
+
+    # --- Trainer cold last 14 days (+1) ---
+    meeting_pts = float(sb.get('meeting_focus', 0))
+    form_str = str(fav.get('form') or '')
+    recent_form = form_str[-4:] if len(form_str) >= 4 else form_str
+    recent_wins_in_form = sum(1 for c in recent_form if c == '1')
+    if fav_trainer and meeting_pts == 0 and recent_wins_in_form == 0:
+        flags['trainer_cold'] = True
+        details.append(f'Trainer ({fav_trainer}) — no meeting focus & no win in recent form')
+
+    # --- Trainer with multiple runners (+1) ---
+    if fav_trainer and all_horses_sorted:
+        multi_count = sum(
+            1 for h in all_horses_sorted
+            if (str(h.get('trainer') or '').strip().lower() == fav_trainer.lower()
+                and (h.get('horse') or '') != (fav.get('horse') or ''))
+        )
+        if multi_count >= 1:
+            flags['trainer_multiple'] = True
+            details.append(f'Trainer ({fav_trainer}) has {multi_count + 1} runners in race')
+
+    # --- Drift (+1) ---
+    score_gap = float(fav.get('score_gap') or 0)
+    if 0 < score_gap < 10:
+        flags['drift'] = True
+        details.append(f'Low score gap ({score_gap:.0f}) — field competitive, possible drift')
+    elif score_gap == 0 and fav_score > 0:
+        flags['drift'] = True
+        details.append('Score gap = 0 — model does not separate the favourite clearly')
+
+    total = sum(_SCORE_WEIGHTS[f] for f in flags if f in _SCORE_WEIGHTS)
+    return total, flags, details
 
 
 # ── Learning / Apply route ────────────────────────────────────────────────────
@@ -1712,27 +1862,99 @@ def apply_learning_lambda(headers, event):
         return {'statusCode': 500, 'headers': headers,
                 'body': json.dumps({'success': False, 'error': str(e)})}
 
-    score_gap = float(fav.get('score_gap') or 0)
-    if 0 < score_gap < 10:
-        flags['drift'] = True
-        details.append(f'Low score gap ({score_gap:.0f}) — field competitive')
-    elif score_gap == 0 and fav_score > 0:
-        flags['drift'] = True
-        details.append('Score gap = 0 — model does not separate favourite clearly')
-
-    total = sum(_SCORE_WEIGHTS[f] for f in flags)
-    return total, flags, details
-
-
 def _verdict(score):
-    if score >= 9:
+    if score >= 13:
+        return 'STRONG LAY CANDIDATE'
+    elif score >= 10:
         return 'STRONG LAY'
     elif score >= 4:
         return 'CAUTION'
     return 'LEAVE ALONE'
 
 
-def _analyse_date_lambda(target_date_str, tbl):
+def _verdict_colour(score):
+    if score >= 13:
+        return 'RED'
+    elif score >= 10:
+        return 'AMBER'
+    elif score >= 4:
+        return 'YELLOW'
+    return 'GREEN'
+
+
+def _utc_to_local_hhmm(utc_hhmm, date_str):
+    """Convert UTC HH:MM to UK local time (BST = UTC+1, late Mar – late Oct)."""
+    try:
+        from datetime import date as _d
+        d = _d.fromisoformat(date_str[:10])
+        bst_start = _d(d.year, 3, 31)
+        while bst_start.weekday() != 6:
+            bst_start = _d(bst_start.year, bst_start.month, bst_start.day - 1)
+        bst_end = _d(d.year, 10, 31)
+        while bst_end.weekday() != 6:
+            bst_end = _d(bst_end.year, bst_end.month, bst_end.day - 1)
+        if not (bst_start <= d < bst_end):
+            return utc_hhmm
+        h, mn = map(int, utc_hhmm.split(':'))
+        total = h * 60 + mn + 60
+        return f'{(total // 60) % 24:02d}:{total % 60:02d}'
+    except Exception:
+        return utc_hhmm
+
+
+def _fetch_sl_winner_map():
+    """
+    Fetch SL fast-results and return {(course_lower, local_hhmm): winner_name}.
+    Returns empty dict on any error.
+    """
+    import re as _re
+    try:
+        import urllib.request as _ur
+        req = _ur.Request(
+            'https://www.sportinglife.com/racing/fast-results/all',
+            headers={
+                'User-Agent': (
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                    'AppleWebKit/537.36 (KHTML, like Gecko) '
+                    'Chrome/122.0.0.0 Safari/537.36'
+                ),
+                'Accept': 'text/html,application/xhtml+xml',
+                'Accept-Language': 'en-GB,en;q=0.5',
+                'Referer': 'https://www.sportinglife.com/',
+            },
+        )
+        with _ur.urlopen(req, timeout=15) as resp:
+            html = resp.read().decode('utf-8', errors='replace')
+    except Exception as e:
+        print(f'[favs_run] SL fetch error: {e}')
+        return {}
+    m = _re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, _re.DOTALL)
+    if not m:
+        return {}
+    try:
+        data = json.loads(m.group(1))
+    except Exception:
+        return {}
+    fast = data.get('props', {}).get('pageProps', {}).get('fastResults', [])
+    winner_map = {}
+    for fr in fast:
+        top_horses = fr.get('top_horses')
+        if not top_horses:
+            continue
+        course = fr.get('courseName', '')
+        off_time = fr.get('time', '')
+        if not course or not off_time:
+            continue
+        sorted_h = sorted(top_horses, key=lambda h: h.get('position', 99))
+        winner = sorted_h[0].get('horse_name', '') if sorted_h else ''
+        winner = _re.sub(r'\s*\([A-Z]{2,3}\)\s*$', '', winner).strip()
+        if winner:
+            winner_map[(course.lower().replace('-', ' ').strip(), off_time)] = winner
+    print(f'[favs_run] SL winner_map: {len(winner_map)} races')
+    return winner_map
+
+
+def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
     from boto3.dynamodb.conditions import Key as DKey
     resp = tbl.query(KeyConditionExpression=DKey('bet_date').eq(target_date_str))
     all_items = [_dec(it) for it in resp.get('Items', [])]
@@ -1741,7 +1963,7 @@ def _analyse_date_lambda(target_date_str, tbl):
 
     races = {}
     for it in all_items:
-        rt = str(it.get('race_time', ''))[:16]
+        rt = str(it.get('race_time', ''))[:19]  # keep HH:MM:SS for UTC display
         course = it.get('course', '') or it.get('race_course', '')
         key = f'{rt}|{course}'
         races.setdefault(key, []).append(it)
@@ -1773,13 +1995,51 @@ def _analyse_date_lambda(target_date_str, tbl):
         lay_score, flags, details = _score_fav(fav, all_horses_sorted)
         verd = _verdict(lay_score)
         race_name = fav.get('race_name') or f'{course} {rt[11:16]}'
+        fav_name = fav.get('horse', '') or ''
+
+        # Determine outcome: SL winner_map first, then DynamoDB runner scan, then fav's own field
+        fav_outcome = None
+        if winner_map:
+            import re as _re2
+            date_part = rt[:10] if len(rt) >= 10 else target_date_str
+            utc_hhmm  = rt[11:16] if len(rt) >= 16 else ''
+            local_hhmm = _utc_to_local_hhmm(utc_hhmm, date_part)
+            course_key = course.lower().replace('-', ' ').strip()
+            try:
+                lh, lm = map(int, local_hhmm.split(':'))
+                local_mins = lh * 60 + lm
+                for (c_key, t_key), w_name in winner_map.items():
+                    if c_key != course_key:
+                        continue
+                    wh, wm = map(int, t_key.split(':'))
+                    if abs((wh * 60 + wm) - local_mins) <= 15:
+                        fav_outcome = (
+                            'win' if w_name.strip().lower() == fav_name.strip().lower()
+                            else 'loss'
+                        )
+                        break
+            except Exception:
+                pass
+        if fav_outcome is None:
+            winner_name = None
+            for h in runners:
+                if (h.get('outcome') or '').lower() == 'win':
+                    winner_name = h.get('horse', '')
+                    break
+            if winner_name:
+                fav_outcome = (
+                    'win' if winner_name.strip().lower() == fav_name.strip().lower()
+                    else 'loss'
+                )
+            else:
+                fav_outcome = fav.get('outcome') or None
 
         results.append({
             'date':          target_date_str,
             'race_time':     rt,
             'course':        course,
             'race_name':     race_name,
-            'favourite':     fav.get('horse', '?'),
+            'favourite':     fav_name or '?',
             'fav_odds':      fav_odds_dec,
             'fav_sys_score': float(fav.get('comprehensive_score') or fav.get('score', 0)),
             'score_gap':     float(fav.get('score_gap') or 0),
@@ -1788,10 +2048,12 @@ def _analyse_date_lambda(target_date_str, tbl):
             'flags':         list(flags.keys()),
             'details':       details,
             'verdict':       verd,
+            'verdict_colour': _verdict_colour(lay_score),
             'form':          fav.get('form', ''),
             'trainer':       fav.get('trainer', ''),
             'jockey':        fav.get('jockey', ''),
             'our_pick':      fav.get('show_in_ui', False),
+            'outcome':       fav_outcome,
         })
     return results
 
@@ -1805,13 +2067,18 @@ def get_favs_run_lambda(headers, event):
         days = int(qp.get('days', 1))
 
         tbl = dynamodb.Table('SureBetBets')
+
+        # Fetch SL fast-results once to annotate finished races with win/loss
+        winner_map = _fetch_sl_winner_map()
+
         all_results = []
         for i in range(days):
             d = (datetime.strptime(target_date, '%Y-%m-%d') + timedelta(days=i)).strftime('%Y-%m-%d')
-            all_results.extend(_analyse_date_lambda(d, tbl))
+            all_results.extend(_analyse_date_lambda(d, tbl, winner_map))
 
-        caution = [r for r in all_results if r['lay_score'] >= 4]
-        strong  = [r for r in all_results if r['lay_score'] >= 9]
+        caution   = [r for r in all_results if r['lay_score'] >= 4]
+        strong    = [r for r in all_results if r['lay_score'] >= 10]
+        red_flag  = [r for r in all_results if r['lay_score'] >= 13]
 
         return {
             'statusCode': 200,
@@ -1819,7 +2086,7 @@ def get_favs_run_lambda(headers, event):
             'body': json.dumps({
                 'success':   True,
                 'generated': datetime.now().isoformat(),
-                'summary':   {'total': len(all_results), 'caution': len(caution), 'strong': len(strong)},
+                'summary':   {'total': len(all_results), 'caution': len(caution), 'strong': len(strong), 'red_flag': len(red_flag)},
                 'races':     all_results,
             }, default=str)
         }

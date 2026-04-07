@@ -1382,9 +1382,12 @@ def get_favs_run():
         start_d = _date.fromisoformat(start_str)
         dates = [(start_d + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(days)]
 
+        # Fetch SL fast-results once to annotate finished races with win/loss
+        winner_map = fr._fetch_sl_winner_map()
+
         all_results = []
         for d in dates:
-            all_results.extend(fr.analyse_date(d, table))
+            all_results.extend(fr.analyse_date(d, table, winner_map))
 
         total   = len(all_results)
         caution = sum(1 for r in all_results if r['lay_score'] >= 4)

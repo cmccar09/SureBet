@@ -11,6 +11,23 @@ from datetime import datetime
 from decimal import Decimal
 from comprehensive_pick_logic import analyze_horse_comprehensive, get_comprehensive_pick, should_skip_race
 
+# ── Fix 3: normalise bet_id timestamp so all runs produce the same key ──────────
+def _normalise_dt_for_bet_id(dt_str: str) -> str:
+    """
+    Convert any ISO-8601 datetime string to the canonical bet_id prefix:
+      2026-03-30T141800+0000
+    This ensures Run 1, Run 2, and any retry produce the same DynamoDB key
+    and overwrite rather than creating orphan duplicates.
+    Accepts: '2026-03-30T14:18:00+00:00'  or  '2026-03-30T141800+0000'
+    """
+    try:
+        clean = dt_str.strip().replace('Z', '+00:00')
+        dt = datetime.fromisoformat(clean)
+        return dt.strftime('%Y-%m-%dT%H%M%S') + '+0000'
+    except Exception:
+        # Fallback: strip colons from time/tz portions manually
+        return dt_str.replace(':', '').replace('+0000', '+0000')
+
 def validate_pick_for_ui(pick_data):
     """
     Validate that a pick meets comprehensive analysis standards
@@ -74,7 +91,9 @@ def add_pick_to_ui(pick_data, race_data):
     trainer = horse_data.get('trainer', '') if isinstance(horse_data, dict) else pick_data.get('trainer', '')
     selection_id = horse_data.get('selectionId', '') if isinstance(horse_data, dict) else pick_data.get('selectionId', '')
     
-    bet_id = f"{race_time}_{race_data['course']}_{horse_name}".replace(' ', '_')
+    # Fix 3: normalise timestamp in bet_id so all runs produce the same DynamoDB key
+    normalised_rt = _normalise_dt_for_bet_id(race_time)
+    bet_id = f"{normalised_rt}_{race_data['course']}_{horse_name}".replace(' ', '_')
     
     # Get reasoning
     reasons = pick_data.get('reasons', [])
@@ -113,8 +132,8 @@ def add_pick_to_ui(pick_data, race_data):
         'stake': Decimal('6.0'),
         'bet_type': 'WIN',
         'outcome': 'pending',
-        'show_in_ui': (score >= 85),  # Threshold: 85+ matches the daily picks tab filter
-        'recommended_bet': (score >= 85),
+        'show_in_ui': (score >= 90),  # Threshold: 90+ (85-89 is historically -21.8% ROI losing band)
+        'recommended_bet': (score >= 90),
         
         # Comprehensive analysis data
         'comprehensive_score': Decimal(str(score)),
@@ -146,13 +165,49 @@ def add_pick_to_ui(pick_data, race_data):
         'timestamp': datetime.now().isoformat()
     }
     
+    # ── Fix 2: check existing record before writing ────────────────────────────
+    # If the existing record already has show_in_ui=True we PRESERVE that flag
+    # regardless of the new score, so a re-run can never silently demote a pick.
+    # Fix 5: detect large score drops for audit/investigation.
+    preserve_shown = False
+    large_score_drop_meta = None
+    try:
+        existing = table.get_item(Key={'bet_date': today, 'bet_id': bet_id}).get('Item')
+        if existing:
+            old_score = float(existing.get('comprehensive_score', 0) or 0)
+            delta = score - old_score
+            if existing.get('show_in_ui') is True:
+                preserve_shown = True
+                print(f'[PRESERVE] {horse_name} already show_in_ui=True (score was {old_score:.0f}, new {score:.0f}) — keeping shown')
+            # Fix 5: flag drops >= 10pts for investigation
+            if delta <= -10:
+                large_score_drop_meta = {
+                    'horse': horse_name,
+                    'course': race_data['course'],
+                    'race_time': race_time,
+                    'old_score': int(old_score),
+                    'new_score': int(score),
+                    'delta': int(delta),
+                }
+                print(f'[SCORE DROP] {horse_name} {race_data["course"]} {race_time}: {old_score:.0f} -> {score:.0f} ({delta:+.0f}pts) — investigate signal change')
+    except Exception as e:
+        print(f'[PRESERVE] WARNING: Could not check existing record: {e}')
+
+    # Apply preservation: if the existing pick was shown, keep it shown
+    if preserve_shown:
+        item['show_in_ui'] = True
+        item['recommended_bet'] = True
+
     table.put_item(Item=item)
     
     print(f"+ APPROVED: {horse_name} @ {odds}")
     print(f"   Score: {score}/100 - {confidence}")
     print(f"   Reasoning: {reasoning[:80]}...")
-    
-    return True
+
+    # Return (True, meta) so the caller (workflow) can collect large-drop diagnostics
+    if large_score_drop_meta:
+        return True, {'large_score_drop': large_score_drop_meta}
+    return True, {}
 
 def analyze_race_comprehensive(race_data):
     """

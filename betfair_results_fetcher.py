@@ -77,7 +77,7 @@ def get_market_results(market_ids, session_token):
     data = {
         'marketIds': market_ids,
         'priceProjection': {
-            'priceData': ['EX_BEST_OFFERS']
+            'priceData': ['EX_BEST_OFFERS', 'SP_TRADED']
         }
     }
     
@@ -189,30 +189,49 @@ def update_results_from_betfair(date_str=None):
                         elif runner.get('status') == 'LOSER':
                             outcome = 'loss'
                             finishing_position = idx
+                        # Extract SP: prefer sp.actualSP, fall back to lastPriceTraded
+                        sp_data = runner.get('sp', {})
+                        sp_actual = sp_data.get('actualSP') if sp_data else None
+                        sp_odds = sp_actual or runner.get('lastPriceTraded')
                         break
                 
                 if outcome:
+                    stake = float(pick.get('stake', 6.0))
+                    # Use SP for P&L if we have it, fall back to stored pick odds
+                    settlement_odds = float(sp_odds) if sp_odds else float(pick.get('odds', 0))
+                    if outcome == 'win':
+                        profit = round(stake * (settlement_odds - 1), 2)
+                    elif outcome == 'placed':
+                        ef = float(pick.get('ew_fraction', 0.25))
+                        profit = round((stake / 2) * (1 + (settlement_odds - 1) * ef) - stake, 2)
+                    else:
+                        profit = round(-stake, 2)
+
                     # Update the database
                     try:
+                        update_expr = 'SET outcome = :outcome, finishing_position = :pos, result_source = :source, result_updated = :updated, profit = :profit'
+                        expr_vals = {
+                            ':outcome': outcome,
+                            ':pos': Decimal(finishing_position) if finishing_position else None,
+                            ':source': 'betfair',
+                            ':updated': datetime.now().isoformat(),
+                            ':profit': Decimal(str(profit)),
+                        }
+                        if sp_odds:
+                            update_expr += ', sp_odds = :sp'
+                            expr_vals[':sp'] = Decimal(str(round(float(sp_odds), 2)))
+
                         table.update_item(
-                            Key={
-                                'bet_date': date_str,
-                                'bet_id': pick['bet_id']
-                            },
-                            UpdateExpression='SET outcome = :outcome, finishing_position = :pos, result_source = :source, result_updated = :updated',
-                            ExpressionAttributeValues={
-                                ':outcome': outcome,
-                                ':pos': Decimal(finishing_position) if finishing_position else None,
-                                ':source': 'betfair',
-                                ':updated': datetime.now().isoformat()
-                            }
+                            Key={'bet_date': date_str, 'bet_id': pick['bet_id']},
+                            UpdateExpression=update_expr,
+                            ExpressionAttributeValues=expr_vals
                         )
                         
                         horse = pick.get('horse', 'Unknown')
                         course = pick.get('course', 'Unknown')
                         result_icon = "✅" if outcome == 'win' else "🔶" if outcome == 'placed' else "❌"
-                        
-                        print(f"{result_icon} {horse:25} @ {course:15} | Pos: {finishing_position} | {outcome.upper()}")
+                        sp_display = f" SP={settlement_odds}" if sp_odds else " (no SP, used pick odds)"
+                        print(f"{result_icon} {horse:25} @ {course:15} | Pos: {finishing_position} | {outcome.upper()} | profit={profit:+.2f}{sp_display}")
                         updated_count += 1
                     
                     except Exception as e:

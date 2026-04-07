@@ -26,6 +26,32 @@ from datetime import date, datetime
 from decimal import Decimal
 from boto3.dynamodb.conditions import Key, Attr
 
+# ── UK DST helper ─────────────────────────────────────────────────────────────
+def _to_uk_local_hhmm(utc_hhmm: str, race_date_str: str) -> str:
+    """Convert a UTC HH:MM time string to UK local time (BST = UTC+1 in summer).
+
+    SL results pages display local (BST) times, but race_time in DynamoDB is
+    stored as UTC.  This converter lets us compare them correctly.
+    """
+    try:
+        h, mn = map(int, utc_hhmm.split(':'))
+        d = datetime.strptime(race_date_str[:10], '%Y-%m-%d').date()
+        year = d.year
+        # BST starts last Sunday in March
+        bst_start = date(year, 3, 31)
+        while bst_start.weekday() != 6:   # 6 = Sunday
+            bst_start = date(bst_start.year, bst_start.month, bst_start.day - 1)
+        # BST ends last Sunday in October
+        bst_end = date(year, 10, 31)
+        while bst_end.weekday() != 6:
+            bst_end = date(bst_end.year, bst_end.month, bst_end.day - 1)
+        if bst_start <= d < bst_end:
+            total_mins = h * 60 + mn + 60   # add 1 hour for BST
+            return f'{(total_mins // 60) % 24:02d}:{total_mins % 60:02d}'
+        return utc_hhmm
+    except Exception:
+        return utc_hhmm
+
 try:
     from sl_racecard_fetcher import get_cached_racecard as _get_racecard
     _RACECARD_AVAILABLE = True
@@ -380,7 +406,9 @@ def update_results(date_str):
             continue
         race_date, race_hhmm = tm_m.group(1), tm_m.group(2)
         course = pick.get('course', '').strip()
-        w, _, _ = _find_in_results(course, race_hhmm)
+        # Convert UTC race time → UK local (BST/GMT) before matching SL local times
+        local_hhmm = _to_uk_local_hhmm(race_hhmm, race_date)
+        w, _, _ = _find_in_results(course, local_hhmm)
         if not w:
             unresolved_courses_dates.add(race_date)
 
@@ -422,11 +450,13 @@ def update_results(date_str):
             print(f"  [SKIP] {horse} – can't parse time from {race_time_raw}")
             continue
         race_date, race_hhmm = tm_m.group(1), tm_m.group(2)
+        # Convert UTC race time → UK local (BST/GMT) before matching SL local times
+        local_hhmm = _to_uk_local_hhmm(race_hhmm, race_date)
 
-        winner, actual_off, all_runners = find_result(course, race_hhmm)
+        winner, actual_off, all_runners = find_result(course, local_hhmm)
 
         if not winner:
-            print(f"  [SKIP] {horse} @ {course} {race_hhmm} – no result found")
+            print(f"  [SKIP] {horse} @ {course} {race_hhmm} (local:{local_hhmm}) – no result found")
             continue
 
         # Find our horse's finishing position (1-based)

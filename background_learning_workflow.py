@@ -81,20 +81,33 @@ def store_all_races_for_learning():
 
 
 def analyze_winners_and_learn():
-    """Compare stored horses with actual winners - learn WHY they won"""
+    """Compare stored horses with actual winners via BettingPicksAPI Lambda"""
     print("\n" + "="*80)
-    print("ANALYZING WINNERS - Learning Patterns")
+    print("ANALYZING WINNERS - Learning Patterns (via Lambda)")
     print("="*80)
-    
-    result = subprocess.run(
-        ['python', 'complete_race_learning.py', 'learn'],
-        capture_output=True,
-        text=True,
-        timeout=300
-    )
-    
-    print(result.stdout)
-    return result.returncode == 0
+
+    import json
+    lam = boto3.client('lambda', region_name='eu-west-1')
+    today = datetime.now().strftime('%Y-%m-%d')
+    try:
+        resp = lam.invoke(
+            FunctionName='BettingPicksAPI',
+            Payload=json.dumps({
+                'rawPath': '/api/learning/apply',
+                'requestContext': {'http': {'method': 'POST'}},
+                'headers': {'content-type': 'application/json'},
+                'body': json.dumps({'date': today}),
+            })
+        )
+        body = json.loads(resp['Payload'].read())
+        result_body = json.loads(body.get('body', '{}'))
+        status = body.get('statusCode', 0)
+        print(f"  Lambda status: {status}")
+        print(f"  Result: {result_body}")
+        return status == 200
+    except Exception as e:
+        print(f"  ⚠ Lambda call failed: {e}")
+        return False
 
 
 def fetch_latest_results():

@@ -1,1 +1,0 @@
-{"statusCode": 202, "body": "{\"success\": true, \"message\": \"Workflow trigger received\", \"timestamp\": \"2026-01-29T12:44:03.765224\", \"info\": \"The workflow is scheduled to run hourly. New picks will appear within 60-90 minutes.\"}"}

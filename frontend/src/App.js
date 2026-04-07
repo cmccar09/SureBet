@@ -132,6 +132,54 @@ function reasonsFromBreakdown(sb, n = 2) {
   return entries.slice(0, n).map(([k]) => SB_LABELS[k] || k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase()));
 }
 
+// ---- Optimal Betting Window ----
+// Parse UTC race_time string and display in BST (Europe/Dublin)
+function fmtUtcTime(rt) {
+  if (!rt) return '';
+  const s = rt.length <= 16 ? rt + ':00Z' : (rt.endsWith('Z') || rt.includes('+') ? rt : rt + 'Z');
+  const d = new Date(s);
+  return isNaN(d) ? rt.substring(11,16) : d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false,timeZone:'Europe/Dublin'});
+}
+
+function bettingWindow(pick, now) {
+  const odds  = parseFloat(pick.odds || 0);
+  const sb    = pick.score_breakdown || {};
+  const isML  = parseFloat(sb.market_leader || 0) > 0;
+
+  // Time to race in minutes
+  let mins = null;
+  if (pick.race_time) {
+    try {
+      const rawRt = pick.race_time || '';
+    const rt = new Date(!rawRt.endsWith('Z') && !rawRt.includes('+') ? rawRt + 'Z' : rawRt);
+      if (!isNaN(rt)) mins = Math.round((rt - now) / 60000);
+    } catch {}
+  }
+
+  // Already past or within 15 mins — urgent
+  if (mins !== null && mins <= 15 && mins >= -10) {
+    return { label:'⏰ Bet Now', desc:'Race imminent', color:'#dc2626', bg:'#fef2f2', border:'#fca5a5' };
+  }
+  // Within 90 mins + short price — get in before it goes
+  if (mins !== null && mins <= 90 && odds > 0 && odds <= 3.0) {
+    return { label:'⏰ Bet Now', desc:'Short price + race soon', color:'#dc2626', bg:'#fef2f2', border:'#fca5a5' };
+  }
+  // Odds-on — price will only shorten
+  if (odds > 0 && odds <= 1.8) {
+    return { label:'⚡ Bet Early', desc:'Odds-on — lock in before it shortens', color:'#d97706', bg:'#fffbeb', border:'#fcd34d' };
+  }
+  // Up to 2/1 and market leader — sharp money will move it
+  if (odds > 0 && odds <= 3.0 && isML) {
+    return { label:'⚡ Bet Early', desc:'Market leader — sharp money expected', color:'#d97706', bg:'#fffbeb', border:'#fcd34d' };
+  }
+  // Sweet spot 2/1–5/1 — 1-2 hrs before is fine
+  if (odds > 0 && odds <= 6.0) {
+    return { label:'🕐 1-2hrs Before', desc:'Price stable until near off', color:'#059669', bg:'#f0fdf4', border:'#a7f3d0' };
+  }
+  // Bigger price — odds unlikely to move much
+  return { label:'📅 Anytime Today', desc:'Long price — odds stable', color:'#6b7280', bg:'#f9fafb', border:'#e5e7eb' };
+}
+
 // ---- Race Intel summary generator ----
 function raceIntelSummary(pick, now) {
   const sb        = pick.score_breakdown || {};
@@ -150,7 +198,8 @@ function raceIntelSummary(pick, now) {
       : `${Math.floor(minsAgo / 60)}h ${minsAgo % 60}m ago`;
 
     // Gap between last analysis and race start
-    const raceDate = new Date(pick.race_time);
+    // Parse race_time as UTC (bare ISO strings have no tz — treat as UTC)
+    const raceDate = pick.race_time ? (() => { const _rt = pick.race_time; return new Date(!_rt.endsWith('Z') && !_rt.includes('+') ? _rt + 'Z' : _rt); })() : null;
     if (!isNaN(raceDate)) {
       const gapMins = Math.round((raceDate - analysedDate) / 60000);
       // How far is the race from NOW (not from analysis time)
@@ -237,10 +286,16 @@ function toFractional(decimal) {
 // ---- App ----
 function App() {
   const [page, setPage] = useState('picks');
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 600);
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 600);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   return (
     <div className="App">
       <header className="App-header">
-        <h1>SureBet AI</h1>
+        <h1>BetBudAI.com</h1>
         <p style={{ fontSize: '14px', opacity: 0.8, margin: '4px 0 0' }}>AI-powered racing analysis \u00b7 UK &amp; Ireland</p>
       </header>
       <div style={{ display:'flex', justifyContent:'center', gap:'12px', marginBottom:'32px', flexWrap:'wrap' }}>
@@ -258,7 +313,10 @@ function App() {
               ? (page===tab.key ? '2px solid #ef4444' : '2px solid rgba(239,68,68,0.4)')
               : (page===tab.key ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.25)'),
             borderRadius:'10px', color:'white', cursor:'pointer',
-            padding:'12px 24px', minWidth:'160px', textAlign:'center', transition:'all 0.2s',
+            padding: isMobile ? '10px 12px' : '12px 24px',
+            minWidth: isMobile ? 0 : '160px',
+            flex: isMobile ? '0 0 calc(50% - 6px)' : undefined,
+            textAlign:'center', transition:'all 0.2s',
           }}>
             <div style={{ fontSize:'16px', fontWeight:'700' }}>{tab.emoji} {tab.label}</div>
             <div style={{ fontSize:'11px', opacity:0.75, marginTop:'2px' }}>{tab.sub}</div>
@@ -271,6 +329,62 @@ function App() {
           : page==='laythe' ? <LayTheFavView />
           : <MajorRacesView />}
       </main>
+    </div>
+  );
+}
+
+// ---- Analysis Pipeline Checklist ----
+function AnalysisPipeline({ stages, signalCoverage, runTime, isMobile }) {
+  if (!stages || stages.length === 0) return null;
+  const allOk     = stages.every(s => s.ok);
+  const failCount = stages.filter(s => !s.ok).length;
+  const headerColor = allOk ? '#34d399' : '#fbbf24';
+  const headerBg    = allOk ? 'rgba(5,150,105,0.12)' : 'rgba(245,158,11,0.12)';
+  const borderColor = allOk ? 'rgba(52,211,153,0.35)' : 'rgba(251,191,36,0.4)';
+  const runTimeStr  = runTime
+    ? new Date(runTime).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+    : null;
+  return (
+    <div style={{ background: headerBg, border: `1px solid ${borderColor}`, borderRadius: '10px', padding: '12px 16px', marginBottom: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '6px', marginBottom: '10px' }}>
+        <span style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '1px', color: headerColor, fontWeight: '800' }}>
+          {allOk ? '✓ Analysis complete — all signals active' : `⚠ ${failCount} analysis stage${failCount > 1 ? 's' : ''} incomplete`}
+        </span>
+        {runTimeStr && <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)' }}>Last run {runTimeStr}</span>}
+      </div>
+      {/* Stage pills */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: signalCoverage && Object.keys(signalCoverage).length > 0 ? '10px' : '0' }}>
+        {stages.map(s => (
+          <span key={s.id} title={s.detail} style={{
+            background: s.ok ? 'rgba(5,150,105,0.2)' : 'rgba(234,179,8,0.15)',
+            border: `1px solid ${s.ok ? 'rgba(52,211,153,0.4)' : 'rgba(251,191,36,0.5)'}`,
+            borderRadius: '6px', padding: '3px 10px', fontSize: '11px', fontWeight: '700',
+            color: s.ok ? '#34d399' : '#fbbf24', cursor: 'help', whiteSpace: 'nowrap',
+          }}>
+            {s.ok ? '✓' : '⚠'} {s.label}
+          </span>
+        ))}
+      </div>
+      {/* Signal coverage bars */}
+      {signalCoverage && Object.keys(signalCoverage).length > 0 && (
+        <div>
+          <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '6px' }}>
+            Signal coverage (% of horses today where each factor fired)
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap: '5px' }}>
+            {Object.entries(signalCoverage).map(([label, pct]) => (
+              <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: 'rgba(255,255,255,0.55)' }}>
+                  <span>{label}</span><span style={{ color: pct > 30 ? '#34d399' : pct > 0 ? '#fbbf24' : '#ef4444', fontWeight: '700' }}>{pct}%</span>
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.1)', borderRadius: '2px', height: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${Math.min(pct, 100)}%`, height: '100%', background: pct > 30 ? '#059669' : pct > 0 ? '#d97706' : '#ef4444', borderRadius: '2px' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -334,15 +448,18 @@ const SCORE_LABELS = {
 };
 
 function DailyPicksView() {
-  const [picks, setPicks]             = useState([]);
-  const [loading, setLoading]         = useState(true);
-  const [error, setError]             = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [picks, setPicks]                 = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState(null);
+  const [lastUpdated, setLastUpdated]     = useState(null);
   const [expandedPick,  setExpandedPick]  = useState(null);
   const [expandedField, setExpandedField] = useState(null);
   const [raceFields,    setRaceFields]    = useState({});
   const [isMobile,      setIsMobile]      = useState(typeof window !== 'undefined' && window.innerWidth < 480);
   const [now,           setNow]           = useState(new Date());
+  const [analysisStatus, setAnalysisStatus] = useState(null);
+  const [analysisPending, setAnalysisPending] = useState(false);
+  const [pendingReason,   setPendingReason]   = useState('');
 
   // Tick every 60 s so "Analysed X ago" stays current without a page reload
   useEffect(() => {
@@ -361,20 +478,28 @@ function DailyPicksView() {
     // US format: MM/DD/YYYY HH:MM:SS
     const m = rt.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
     if (m) {
-      const d = new Date(`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}T${m[4].padStart(2,'0')}:${m[5]}:00`);
+      // US-format times are stored as UTC — append Z so JS treats as UTC, then display in Dublin
+      const d = new Date(`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}T${m[4].padStart(2,'0')}:${m[5]}:00Z`);
+      const tz = { timeZone: 'Europe/Dublin' };
       return {
-        date: d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }),
-        time: d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }),
+        date: d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', ...tz }),
+        time: d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hour12: false, ...tz }),
       };
     }
-    // ISO format
-    try {
-      const d = new Date(rt.replace('Z',''));
-      return {
-        date: d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric' }),
-        time: d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }),
-      };
-    } catch { return { date: rt.substring(0,10), time: rt.substring(11,16) }; }
+    // ISO format — bare strings have no tz, treat as UTC; display in Dublin (BST = UTC+1)
+    const isoM = rt.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
+    if (isoM) {
+      const [, datePart] = isoM;
+      try {
+        const d = new Date(rt.endsWith('Z') || rt.includes('+') ? rt : rt + 'Z');
+        const tz = { timeZone: 'Europe/Dublin' };
+        return {
+          date: d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', ...tz }),
+          time: d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hour12: false, ...tz }),
+        };
+      } catch { return { date: datePart, time: rt.substring(11, 16) }; }
+    }
+    return { date: rt.substring(0,10), time: rt.substring(11,16) };
   };
 
   useEffect(() => {
@@ -395,11 +520,15 @@ function DailyPicksView() {
       if (data.success) {
         const sorted = (data.picks || [])
           .filter(p => p.show_in_ui !== false)
-          .sort((a,b) => parseFloat(b.score||0) - parseFloat(a.score||0))
+          .sort((a,b) => (a.race_time||'').localeCompare(b.race_time||''))
           .slice(0, 5);
         setPicks(sorted);
         setRaceFields(data.race_fields || {});
         setLastUpdated(new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }));
+        if (data.analysis_status) setAnalysisStatus(data.analysis_status);
+        // Health-check gate: API returns empty picks with analysis_pending=true when not ready
+        setAnalysisPending(!!data.analysis_pending);
+        setPendingReason(data.pending_reason || '');
       } else {
         setError(data.error || 'Failed to load picks');
       }
@@ -415,8 +544,8 @@ function DailyPicksView() {
   const tierInfo = score => {
     const s = parseFloat(score || 0);
     if (s >= 95) return { bg: '#d97706', label: 'ELITE'  };
-    if (s >= 85) return { bg: '#059669', label: 'STRONG' };
-    if (s >= 75) return { bg: '#3b82f6', label: 'GOOD'   };
+    if (s >= 90) return { bg: '#059669', label: 'STRONG' };
+    if (s >= 80) return { bg: '#3b82f6', label: 'GOOD'   };
     return             { bg: '#0891b2', label: 'VALUE'  };
   };
 
@@ -447,28 +576,71 @@ function DailyPicksView() {
         </button>
       </div>
 
+      {analysisStatus && analysisStatus.available && (
+        <AnalysisPipeline
+          stages={analysisStatus.stages}
+          signalCoverage={analysisStatus.signal_coverage}
+          runTime={analysisStatus.run_time}
+          isMobile={isMobile}
+        />
+      )}
+
       {picks.length === 0 ? (
+        analysisPending ? (
+          /* ── Analysis still running ─────────────────────────────────────── */
+          <div style={{ background:'rgba(251,191,36,0.12)', border:'1px solid rgba(251,191,36,0.45)', borderRadius:'12px', padding:'32px 24px', textAlign:'center', color:'rgba(255,255,255,0.9)' }}>
+            <div style={{ fontSize:'28px', marginBottom:'8px' }}>⏳</div>
+            <div style={{ fontSize:'17px', fontWeight:'800', color:'#fbbf24', marginBottom:'8px' }}>Analysis in Progress</div>
+            <div style={{ fontSize:'13px', opacity:0.85, marginBottom:'12px' }}>
+              Picks are hidden until the full analysis is confirmed complete across all races and runners.
+            </div>
+            {pendingReason && (
+              <div style={{ fontSize:'12px', background:'rgba(0,0,0,0.25)', borderRadius:'8px', padding:'8px 14px', display:'inline-block', color:'#fde68a' }}>
+                {pendingReason}
+              </div>
+            )}
+            <div style={{ fontSize:'11px', opacity:0.6, marginTop:'12px' }}>
+              Analysis runs at 08:00, 14:00, 16:00 and 18:00 · Refresh to check status
+            </div>
+          </div>
+        ) : (
         <div style={{ background:'rgba(255,255,255,0.08)', borderRadius:'12px', padding:'48px 24px', textAlign:'center', color:'rgba(255,255,255,0.7)' }}>
           <div style={{ fontSize:'18px', fontWeight:'700', color:'white', marginBottom:'8px' }}>No picks yet today</div>
           <div style={{ fontSize:'14px' }}>The model scores every horse in today's races and selects the 3 highest-confidence winners — one per race.<br/>Odds are fetched at 12:00, 14:00, 16:00 and 18:00 daily.<br/>Check the <strong>Top Naps</strong> tab for best picks across the next 5 days.</div>
         </div>
+        )
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
-          {[...picks]
-            .sort((a,b) => (parseInt(a.pick_rank||99) - parseInt(b.pick_rank||99)))
-            .slice(0,3)
-            .map((pick, idx) => {
+          {(() => {
+            const sorted = [...picks].sort((a, b) => {
+              const norm = s => { const m = (s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/); return m ? `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}T${m[4].padStart(2,'0')}:${m[5]}` : (s||''); };
+              return norm(a.race_time).localeCompare(norm(b.race_time));
+            });
+            const morningPicks  = sorted.filter(p => p.pick_type !== 'intraday').slice(0, 3);
+            const intradayPicks = sorted.filter(p => p.pick_type === 'intraday').slice(0, 2);
+            const allPicks = [...morningPicks, ...intradayPicks];
+            return allPicks.map((pick, idx) => {
             const tier = tierInfo(pick.score);
             const rank = parseInt(pick.pick_rank || (idx+1));
+            const isIntraday = pick.pick_type === 'intraday';
             const rankLabels = {1:'#1 Best Bet', 2:'#2 Best Bet', 3:'#3 Best Bet'};
             const rankColors = {1:'#d97706', 2:'#6b7280', 3:'#92400e'};
+            const intradayColor = '#7c3aed';
             return (
-              <div key={idx} style={{ background:'white', borderRadius:'12px', padding:'20px 22px', borderLeft:`5px solid ${rankColors[rank]||tier.bg}`, boxShadow:'0 2px 12px rgba(0,0,0,0.1)' }}>
+              <div key={idx} style={{ background:'white', borderRadius:'12px', padding:'20px 22px', borderLeft:`5px solid ${isIntraday ? intradayColor : (rankColors[rank]||tier.bg)}`, boxShadow:'0 2px 12px rgba(0,0,0,0.1)' }}>
+                {isIntraday && (
+                  <div style={{ marginBottom:'10px', display:'flex', alignItems:'center', gap:'8px' }}>
+                    <span style={{ background:intradayColor, color:'white', borderRadius:'6px', padding:'4px 12px', fontSize:'11px', fontWeight:'800', textTransform:'uppercase', letterSpacing:'0.5px' }}>
+                      ⚡ Intraday Pick
+                    </span>
+                    <span style={{ fontSize:'11px', color:'#6b7280' }}>Added during the day</span>
+                  </div>
+                )}
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'8px' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                    <div style={{ background:rankColors[rank]||tier.bg, color:'white', borderRadius:'8px', padding:'6px 10px', textAlign:'center', minWidth:'44px', flexShrink:0 }}>
-                      <div style={{ fontSize:'18px', fontWeight:'900' }}>#{rank}</div>
-                      <div style={{ fontSize:'9px', fontWeight:'700', opacity:0.85, textTransform:'uppercase', lineHeight:'1' }}>Pick</div>
+                    <div style={{ background: isIntraday ? intradayColor : (rankColors[rank]||tier.bg), color:'white', borderRadius:'8px', padding:'6px 10px', textAlign:'center', minWidth:'44px', flexShrink:0 }}>
+                      <div style={{ fontSize:'18px', fontWeight:'900' }}>{isIntraday ? '⚡' : `#${rank}`}</div>
+                      <div style={{ fontSize:'9px', fontWeight:'700', opacity:0.85, textTransform:'uppercase', lineHeight:'1' }}>{isIntraday ? 'Live' : 'Pick'}</div>
                     </div>
                     <div>
                       <div style={{ fontSize:'20px', fontWeight:'800', color:'#111' }}>{pick.horse || pick.horse_name || 'Unknown'}</div>
@@ -518,6 +690,16 @@ function DailyPicksView() {
                   </div>
                 </div>
                 {/* Trainer / Jockey / Form row */}
+                {/* Optimal bet timing badge */}
+                {(() => {
+                  const bw = bettingWindow(pick, now);
+                  return (
+                    <div style={{ marginTop:'10px', display:'inline-flex', alignItems:'center', gap:'6px', background:bw.bg, border:`1px solid ${bw.border}`, borderRadius:'7px', padding:'5px 12px' }}>
+                      <span style={{ fontSize:'13px', fontWeight:'800', color:bw.color }}>{bw.label}</span>
+                      <span style={{ fontSize:'11px', color:'#6b7280' }}>— {bw.desc}</span>
+                    </div>
+                  );
+                })()}
                 <div style={{ fontSize:'13px', color:'#374151', marginTop:'12px', display:'flex', gap:'18px', flexWrap:'wrap', alignItems:'center' }}>
                   {pick.trainer  && <span><strong>Trainer:</strong> {pick.trainer}</span>}
                   {pick.jockey   && <span><strong>Jockey:</strong> {pick.jockey}</span>}
@@ -743,7 +925,7 @@ function DailyPicksView() {
                           const pos   = pts >= 0;
                           return (
                             <div key={k} style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                              <div style={{ width:'140px', fontSize:'11px', color:'#374151', fontWeight:'600', flexShrink:0, textAlign:'right' }}>{label}</div>
+                              <div style={{ width: isMobile ? '90px' : '140px', fontSize:'11px', color:'#374151', fontWeight:'600', flexShrink:0, textAlign:'right' }}>{label}</div>
                               <div style={{ flex:1, height:'16px', background:'#dde5f7', borderRadius:'4px', overflow:'hidden' }}>
                                 <div style={{ width: pct+'%', height:'100%', background: pos ? '#1d6f4e' : '#dc2626', borderRadius:'4px' }} />
                               </div>
@@ -763,7 +945,8 @@ function DailyPicksView() {
                 })()}
               </div>
             );
-          })}
+            });
+          })()}
         </div>
       )}
 
@@ -783,6 +966,7 @@ function YesterdayResultsView() {
   const [isMobile, setIsMobile]       = useState(typeof window !== 'undefined' && window.innerWidth < 480);
   const [learningStatus, setLearning] = useState({ state: 'idle', message: '', changes: {} });
   const [cumulRoi, setCumulRoi]         = useState(null);
+  const [layData,  setLayData]          = useState(null);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < 480);
@@ -805,7 +989,18 @@ function YesterdayResultsView() {
 
       const todayPicks = (todayData.success ? todayData.picks || [] : []).map(p => ({ ...p, _dayLabel: 'Today' }));
       const yestPicks  = (yestData.success  ? yestData.picks  || [] : []).map(p => ({ ...p, _dayLabel: 'Yesterday' }));
-      const allPicks   = [...todayPicks, ...yestPicks];
+      // Deduplicate: same course + race_time[:16] => keep highest-scored version
+      // Use course+time (not horse name) to handle name variants like apostrophes
+      const deduped = {};
+      [...todayPicks, ...yestPicks].forEach(p => {
+        const rt = (p.race_time || '').substring(0, 16);
+        const key = (p.course || p.race_course || '') + '|' + rt;
+        const sc  = parseFloat(p.comprehensive_score || p.analysis_score || 0);
+        if (!deduped[key] || sc > parseFloat(deduped[key].comprehensive_score || deduped[key].analysis_score || 0)) {
+          deduped[key] = p;
+        }
+      });
+      const allPicks = Object.values(deduped);
 
       const allRaceFields = { ...(yestData.race_fields || {}), ...(todayData.race_fields || {}) }; // eslint-disable-line no-unused-vars
 
@@ -824,33 +1019,55 @@ function YesterdayResultsView() {
       combinedSummary.roi = combinedSummary.total_stake > 0
         ? (combinedSummary.profit / combinedSummary.total_stake * 100) : 0;
 
+      // Recompute summary from deduplicated picks (more accurate than API summaries)
+      const settled = allPicks.filter(p => {
+        const oc = (p.result_emoji || p.outcome || '').toUpperCase();
+        return oc === 'WIN' || oc === 'LOSS' || oc === 'PLACED' || oc === 'WON' || oc === 'LOST';
+      });
+      const recomputed = {
+        total_picks: allPicks.length,
+        wins:    settled.filter(p => ['WIN','WON'].includes((p.result_emoji||p.outcome||'').toUpperCase())).length,
+        places:  settled.filter(p => (p.result_emoji||p.outcome||'').toUpperCase() === 'PLACED').length,
+        losses:  settled.filter(p => ['LOSS','LOST'].includes((p.result_emoji||p.outcome||'').toUpperCase())).length,
+        pending: allPicks.length - settled.length,
+        profit:  combinedSummary.profit,
+        total_stake: combinedSummary.total_stake,
+        roi: combinedSummary.roi,
+      };
       if (allPicks.length === 0 && !todayData.success && !yestData.success) {
         setError('Failed to load results');
       } else {
-        setResults({ picks: allPicks, summary: combinedSummary });
+        setResults({ picks: allPicks, summary: recomputed });
       }
     } catch (err) {
       setError('Network error: ' + err.message);
     } finally {
       setLoading(false);
     }
+    // Lay analysis — non-critical, silent fail
+    try {
+      const layRes  = await fetch(API_BASE_URL + '/api/favs-run');
+      const layJson = await layRes.json();
+      if (layJson.success) setLayData(layJson);
+    } catch (_) {}
   };
 
   const formatRaceTime = rt => {
     if (!rt) return { date: '', time: '' };
     const m = rt.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
     if (m) {
-      const d = new Date(`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}T${m[4].padStart(2,'0')}:${m[5]}:00`);
+      const d = new Date(`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}T${m[4].padStart(2,'0')}:${m[5]}:00Z`);
       return {
-        date: d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }),
-        time: d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }),
+        date: d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', timeZone:'Europe/Dublin' }),
+        time: d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hour12:false, timeZone:'Europe/Dublin' }),
       };
     }
     try {
-      const d = new Date(rt.replace('Z',''));
+      const d = new Date(rt.endsWith('Z') || rt.includes('+') ? rt : rt + 'Z');
+      const tz = { timeZone: 'Europe/Dublin' };
       return {
-        date: d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' }),
-        time: d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }),
+        date: d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', ...tz }),
+        time: d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hour12: false, ...tz }),
       };
     } catch { return { date: rt.substring(0,10), time: rt.substring(11,16) }; }
   };
@@ -865,8 +1082,8 @@ function YesterdayResultsView() {
   const scoreLabel = s => {
     const n = parseFloat(s || 0);
     if (n >= 95) return { bg:'#d97706', label:'ELITE'  };
-    if (n >= 85) return { bg:'#059669', label:'STRONG' };
-    if (n >= 75) return { bg:'#3b82f6', label:'GOOD'   };
+    if (n >= 90) return { bg:'#059669', label:'STRONG' };
+    if (n >= 80) return { bg:'#3b82f6', label:'GOOD'   };
     return             { bg:'#8b5cf6', label:'VALUE'  };
   };
 
@@ -952,10 +1169,109 @@ function YesterdayResultsView() {
                   <div style={{ fontSize:'9px', color:'rgba(255,255,255,0.4)', marginTop:'4px', fontWeight:'500' }}>
                     {cumulRoiVal === null ? 'Loading…' : `Since 22 Mar · ${cumulSettled} settled`}
                   </div>
+                  <div style={{ fontSize:'9px', color:'rgba(255,255,255,0.3)', marginTop:'2px', fontStyle:'italic' }}>Profit per £1 staked. 10%+ is good.</div>
                 </div>
                 <div style={{ fontSize: isMobile ? '22px' : '32px' }}>💰</div>
               </div>
             </div>
+          </div>
+        );
+      })()}
+
+      {/* ── PERFORMANCE DASHBOARD ────────────────────────────────────── */}
+      {false && cumulRoi?.success && (() => {
+        const cr         = cumulRoi;
+        const roi        = cr.roi ?? 0;
+        const roiPos     = roi >= 0;
+        const byDay      = cr.by_day || [];
+        const maxAbsProfit = byDay.length > 0 ? Math.max(...byDay.map(d => Math.abs(d.profit)), 0.1) : 1;
+        const avgWinSc   = cr.avg_win_score;
+        const avgLossSc  = cr.avg_loss_score;
+        const scoregap   = (avgWinSc && avgLossSc) ? (avgWinSc - avgLossSc).toFixed(1) : null;
+        const winSR      = cr.settled > 0 ? Math.round(cr.wins / cr.settled * 100) : 0;
+        const wpSR       = cr.settled > 0 ? Math.round((cr.wins + cr.places) / cr.settled * 100) : 0;
+        let runningStake = 0; let runningRet = 0;
+        const byDayWithRoi = byDay.map(d => {
+          runningStake += d.settled;
+          runningRet   += (d.settled + d.profit);
+          const rRoi = runningStake > 0 ? ((runningRet - runningStake) / runningStake * 100) : 0;
+          return { ...d, runningRoi: Math.round(rRoi * 10) / 10 };
+        });
+        return (
+          <div style={{ marginBottom:'20px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'12px', padding:'16px 18px' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px', flexWrap:'wrap', gap:'8px' }}>
+              <div style={{ fontSize:'11px', textTransform:'uppercase', letterSpacing:'1px', color:'rgba(255,255,255,0.4)', fontWeight:'700' }}>📊 Performance Dashboard</div>
+              <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.3)' }}>Since {cr.start_date} · {cr.settled} settled</div>
+            </div>
+
+            {/* 4 stat tiles */}
+            <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap:'8px', marginBottom:'14px' }}>
+              <div style={{ background: roiPos ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.1)', border:`1.5px solid ${roiPos ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.3)'}`, borderRadius:'10px', padding:'12px 14px' }}>
+                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)', textTransform:'uppercase', letterSpacing:'0.8px', fontWeight:'600', marginBottom:'4px' }}>ROI</div>
+                <div style={{ fontSize:'26px', fontWeight:'900', color: roiPos ? '#34d399' : '#f87171', lineHeight:1 }}>{roiPos ? '+' : ''}{roi.toFixed(1)}%</div>
+                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.35)', marginTop:'5px', lineHeight:1.5 }}>£{cr.total_return?.toFixed(2)} returned<br/>on £{cr.total_stake?.toFixed(0)} staked</div>
+              </div>
+              <div style={{ background: cr.profit >= 0 ? 'rgba(16,185,129,0.10)' : 'rgba(239,68,68,0.08)', border:`1.5px solid ${cr.profit >= 0 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.25)'}`, borderRadius:'10px', padding:'12px 14px' }}>
+                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)', textTransform:'uppercase', letterSpacing:'0.8px', fontWeight:'600', marginBottom:'4px' }}>Profit</div>
+                <div style={{ fontSize:'26px', fontWeight:'900', color: cr.profit >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>{cr.profit >= 0 ? '+' : ''}{cr.profit?.toFixed(2)}u</div>
+                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.35)', marginTop:'5px', lineHeight:1.5 }}>{cr.wins}W · {cr.places}P · {cr.losses}L<br/>{cr.pending > 0 ? `${cr.pending} pending` : 'all settled'}</div>
+              </div>
+              <div style={{ background:'rgba(96,165,250,0.08)', border:'1.5px solid rgba(96,165,250,0.25)', borderRadius:'10px', padding:'12px 14px' }}>
+                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)', textTransform:'uppercase', letterSpacing:'0.8px', fontWeight:'600', marginBottom:'4px' }}>Win Rate</div>
+                <div style={{ fontSize:'26px', fontWeight:'900', color: winSR >= 25 ? '#34d399' : '#fbbf24', lineHeight:1 }}>{winSR}%</div>
+                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.35)', marginTop:'5px', lineHeight:1.5 }}>Win+Place: {wpSR}%<br/>{cr.wins} wins from {cr.settled}</div>
+              </div>
+              <div style={{ background:'rgba(139,92,246,0.08)', border:'1.5px solid rgba(139,92,246,0.25)', borderRadius:'10px', padding:'12px 14px' }}>
+                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)', textTransform:'uppercase', letterSpacing:'0.8px', fontWeight:'600', marginBottom:'4px' }}>Model Signal</div>
+                <div style={{ fontSize:'26px', fontWeight:'900', color: scoregap >= 15 ? '#34d399' : scoregap >= 8 ? '#fbbf24' : '#f87171', lineHeight:1 }}>{scoregap ? `+${scoregap}` : '—'}</div>
+                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.35)', marginTop:'5px', lineHeight:1.5 }}>Winner avg: {avgWinSc ?? '—'}<br/>Loser avg: {avgLossSc ?? '—'}</div>
+              </div>
+            </div>
+
+            {/* ROI formula explainer */}
+            <div style={{ background:'rgba(59,130,246,0.07)', border:'1px solid rgba(59,130,246,0.18)', borderRadius:'8px', padding:'9px 13px', marginBottom:'14px', fontSize:'11px', color:'rgba(255,255,255,0.45)', lineHeight:1.6 }}>
+              <span style={{ color:'rgba(255,255,255,0.7)', fontWeight:'700' }}>How ROI is calculated: </span>
+              Level-stakes method — 1 unit wagered per pick (industry-standard tipster measure).
+              Wins return stake × decimal odds. Place returns ½ stake at ¼ odds. Loss forfeits stake.
+              <span style={{ color:'rgba(255,255,255,0.55)', display:'block', marginTop:'2px' }}>
+                ROI = (total returned − total staked) ÷ total staked × 100
+              </span>
+            </div>
+
+            {/* Day-by-day bar chart */}
+            {byDay.length > 0 && (
+              <div>
+                <div style={{ fontSize:'10px', textTransform:'uppercase', letterSpacing:'0.8px', color:'rgba(255,255,255,0.3)', fontWeight:'700', marginBottom:'8px' }}>Daily breakdown</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:'5px' }}>
+                  {[...byDayWithRoi].reverse().map((d, i) => {
+                    const pos  = d.profit >= 0;
+                    const barW = Math.round(Math.abs(d.profit) / maxAbsProfit * 100);
+                    const dt   = new Date(d.date + 'T12:00:00');
+                    const dow  = dt.toLocaleDateString('en-GB', { weekday:'short' });
+                    const dom  = dt.toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+                    const isSat = dt.getDay() === 6;
+                    const isSun = dt.getDay() === 0;
+                    return (
+                      <div key={i} style={{ display:'grid', gridTemplateColumns: isMobile ? '62px 1fr 46px' : '88px 1fr 56px', gap:'8px', alignItems:'center' }}>
+                        <div style={{ fontSize:'11px', color: isSat ? '#f97316' : isSun ? '#38bdf8' : 'rgba(255,255,255,0.55)', fontWeight: (isSat||isSun) ? '700' : '400', lineHeight:1.3 }}>
+                          <span style={{ fontWeight:'700' }}>{dow}</span> {dom}
+                          <div style={{ fontSize:'9px', color:'rgba(255,255,255,0.3)', marginTop:'1px' }}>{d.wins}W {d.places}P {d.losses}L</div>
+                        </div>
+                        <div style={{ position:'relative', height:'20px', background:'rgba(255,255,255,0.05)', borderRadius:'4px', overflow:'hidden' }}>
+                          <div style={{ position:'absolute', top:0, bottom:0, left:0, width:`${barW}%`, background: pos ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.45)', borderRadius:'4px' }}/>
+                          <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', paddingLeft:'7px', fontSize:'10px', color:'rgba(255,255,255,0.7)', fontWeight:'600' }}>
+                            {pos ? '+' : ''}{d.profit.toFixed(2)}u
+                          </div>
+                        </div>
+                        <div style={{ fontSize:'10px', color: d.runningRoi >= 0 ? '#34d399' : '#f87171', fontWeight:'700', textAlign:'right' }}>
+                          {d.runningRoi >= 0 ? '+' : ''}{d.runningRoi}%
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         );
       })()}
@@ -971,6 +1287,185 @@ function YesterdayResultsView() {
             {(summary.pending || 0) > 0 && (
               <div style={{ fontSize: isMobile ? '11px' : '13px', color:'rgba(255,255,255,0.55)', fontWeight:'500', marginTop: isMobile ? '3px' : '0', display: isMobile ? 'block' : 'inline' }}>
                 {isMobile ? '' : <span style={{marginLeft:'12px'}} />}({summary.pending} still pending)
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* Saturday / Sunday pattern panel — removed 2026-03-30 */}
+      {false && picks.length > 0 && (() => {
+        // Group settled picks by day-of-week, tracking scores + market-leader alignment
+        const DOW_STATS = {};
+        picks.forEach(p => {
+          const rt = p.race_time;
+          if (!rt) return;
+          let d;
+          try {
+            const m = rt.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+            d = m ? new Date(`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`) : new Date(rt);
+          } catch { return; }
+          const dow = d.toLocaleDateString('en-GB', { weekday:'long' });
+          if (!DOW_STATS[dow]) DOW_STATS[dow] = {
+            wins:0, places:0, losses:0, pending:0, picks:0,
+            winScores:[], lossScores:[], mlCount:0, oddsAbove5:0
+          };
+          DOW_STATS[dow].picks++;
+          const oc  = (p.result_emoji || p.outcome || '').toUpperCase();
+          const sc  = parseFloat(p.comprehensive_score || p.analysis_score || 0);
+          const sb  = p.score_breakdown || {};
+          const ml  = parseFloat(sb.market_leader || 0) > 0;
+          const odd = parseFloat(p.odds || 0);
+          if (ml) DOW_STATS[dow].mlCount++;
+          if (odd >= 5) DOW_STATS[dow].oddsAbove5++;
+          if (oc === 'WIN' || oc === 'WON')        { DOW_STATS[dow].wins++;   if(sc) DOW_STATS[dow].winScores.push(sc); }
+          else if (oc === 'PLACED')                { DOW_STATS[dow].places++; if(sc) DOW_STATS[dow].lossScores.push(sc); }
+          else if (oc === 'LOSS' || oc === 'LOST') { DOW_STATS[dow].losses++; if(sc) DOW_STATS[dow].lossScores.push(sc); }
+          else                                       DOW_STATS[dow].pending++;
+        });
+        const hasSat = DOW_STATS['Saturday'];
+        const hasSun = DOW_STATS['Sunday'];
+        if (!hasSat && !hasSun) return null;
+
+        const avg = arr => arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length*10)/10 : null;
+
+        const dayCard = (dow, st, emoji, col) => {
+          const settled = st.wins + st.losses + st.places;
+          const sr        = settled > 0 ? Math.round(st.wins / settled * 100) : null;
+          const avgWin    = avg(st.winScores);
+          const avgLoss   = avg(st.lossScores);
+          const gap       = (avgWin && avgLoss) ? Math.round((avgWin - avgLoss)*10)/10 : null;
+          const mlPct     = st.picks > 0 ? Math.round(st.mlCount / st.picks * 100) : null;
+          const longPct   = settled > 0 ? Math.round(st.oddsAbove5 / settled * 100) : null;
+          return (
+            <div key={dow} style={{ flex:1, minWidth: isMobile ? '100%' : 0, background:'rgba(255,255,255,0.04)', border:`1px solid ${col}33`, borderRadius:'10px', padding:'14px 16px', borderLeft:`4px solid ${col}` }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px' }}>
+                <div style={{ fontSize:'13px', fontWeight:'800', color:col }}>{emoji} {dow}</div>
+                {sr !== null && (
+                  <span style={{ background: sr >= 30 ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.15)', color: sr >= 30 ? '#34d399' : '#f87171', borderRadius:'5px', padding:'2px 8px', fontWeight:'800', fontSize:'13px' }}>
+                    {sr}% win rate
+                  </span>
+                )}
+              </div>
+              {/* W / P / L row */}
+              <div style={{ display:'flex', gap:'8px', fontSize:'13px', marginBottom:'10px' }}>
+                <span style={{ color:'#34d399', fontWeight:'700' }}>{st.wins}W</span>
+                <span style={{ color:'#818cf8', fontWeight:'700' }}>{st.places}P</span>
+                <span style={{ color:'#f87171', fontWeight:'700' }}>{st.losses}L</span>
+                {st.pending > 0 && <span style={{ color:'rgba(255,255,255,0.35)', fontSize:'12px' }}>{st.pending} pending</span>}
+              </div>
+              {/* Stats grid */}
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'6px 12px', fontSize:'11px' }}>
+                {avgWin!=null && (
+                  <div style={{ color:'rgba(255,255,255,0.5)' }}>
+                    Avg winner score
+                    <div style={{ color:'#34d399', fontWeight:'800', fontSize:'13px' }}>{avgWin}</div>
+                  </div>
+                )}
+                {avgLoss!=null && (
+                  <div style={{ color:'rgba(255,255,255,0.5)' }}>
+                    Avg loser score
+                    <div style={{ color:'#f87171', fontWeight:'800', fontSize:'13px' }}>{avgLoss}</div>
+                  </div>
+                )}
+                {gap!=null && (
+                  <div style={{ color:'rgba(255,255,255,0.5)' }}>
+                    Model discrimination
+                    <div style={{ color: gap >= 15 ? '#34d399' : gap >= 8 ? '#fbbf24' : '#f87171', fontWeight:'800', fontSize:'13px' }}>
+                      {gap > 0 ? '+' : ''}{gap} pts gap
+                    </div>
+                  </div>
+                )}
+                {mlPct!=null && (
+                  <div style={{ color:'rgba(255,255,255,0.5)' }}>
+                    Market leader picks
+                    <div style={{ color: mlPct >= 35 ? '#34d399' : '#fbbf24', fontWeight:'800', fontSize:'13px' }}>{mlPct}%</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        };
+
+        const satSt = hasSat || { wins:0, places:0, losses:0, pending:0, picks:0, winScores:[], lossScores:[], mlCount:0, oddsAbove5:0 };
+        const sunSt = hasSun || { wins:0, places:0, losses:0, pending:0, picks:0, winScores:[], lossScores:[], mlCount:0, oddsAbove5:0 };
+        const satSettled = satSt.wins + satSt.losses + satSt.places;
+        const sunSettled = sunSt.wins + sunSt.losses + sunSt.places;
+        const showExplainer = hasSat && hasSun && satSettled > 0 && sunSettled > 0 &&
+          (sunSt.wins / Math.max(sunSettled,1)) > (satSt.wins / Math.max(satSettled,1));
+
+        const satGap   = (avg(satSt.winScores) && avg(satSt.lossScores)) ? (avg(satSt.winScores) - avg(satSt.lossScores)).toFixed(1) : null;
+        const sunGap   = (avg(sunSt.winScores) && avg(sunSt.lossScores)) ? (avg(sunSt.winScores) - avg(sunSt.lossScores)).toFixed(1) : null;
+        const satML    = satSt.picks > 0 ? Math.round(satSt.mlCount / satSt.picks * 100) : null;
+        const sunML    = sunSt.picks > 0 ? Math.round(sunSt.mlCount / sunSt.picks * 100) : null;
+
+        return (
+          <div style={{ marginBottom:'20px', background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.09)', borderRadius:'10px', padding:'14px 18px' }}>
+            <div style={{ fontSize:'11px', textTransform:'uppercase', letterSpacing:'1px', color:'rgba(255,255,255,0.4)', marginBottom:'12px', fontWeight:'700' }}>
+              📅 Weekend Day Breakdown
+            </div>
+            <div style={{ display:'flex', gap:'10px', flexWrap:'wrap', marginBottom: showExplainer ? '14px' : 0 }}>
+              {hasSat && dayCard('Saturday', satSt, '🏆', '#f97316')}
+              {hasSun && dayCard('Sunday',   sunSt, '☀️', '#38bdf8')}
+            </div>
+
+            {showExplainer && (
+              <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+
+                {/* Headline insight: score discrimination */}
+                {satGap && sunGap && (
+                  <div style={{ background:'rgba(59,130,246,0.1)', border:'1px solid rgba(59,130,246,0.3)', borderRadius:'8px', padding:'10px 14px' }}>
+                    <div style={{ fontSize:'11px', fontWeight:'800', color:'#60a5fa', marginBottom:'8px' }}>🔬 Why the Model Performs Better on Sundays — Data Evidence</div>
+                    <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'8px', marginBottom:'8px' }}>
+                      <div style={{ background:'rgba(249,115,22,0.1)', borderRadius:'6px', padding:'8px 10px', borderLeft:'3px solid #f97316' }}>
+                        <div style={{ fontSize:'11px', color:'#fb923c', fontWeight:'700', marginBottom:'4px' }}>Saturday — narrow gap</div>
+                        <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.6)', lineHeight:1.5 }}>
+                          Avg winner score: <b style={{color:'#34d399'}}>{avg(satSt.winScores)}</b><br/>
+                          Avg loser score:  <b style={{color:'#f87171'}}>{avg(satSt.lossScores)}</b><br/>
+                          <span style={{ color:'#fbbf24', fontWeight:'800' }}>Separation: only {satGap} pts</span><br/>
+                          <span style={{ color:'rgba(255,255,255,0.45)', fontSize:'11px' }}>Model can barely tell winners from losers</span>
+                        </div>
+                      </div>
+                      <div style={{ background:'rgba(56,189,248,0.1)', borderRadius:'6px', padding:'8px 10px', borderLeft:'3px solid #38bdf8' }}>
+                        <div style={{ fontSize:'11px', color:'#38bdf8', fontWeight:'700', marginBottom:'4px' }}>Sunday — clear gap</div>
+                        <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.6)', lineHeight:1.5 }}>
+                          Avg winner score: <b style={{color:'#34d399'}}>{avg(sunSt.winScores)}</b><br/>
+                          Avg loser score:  <b style={{color:'#f87171'}}>{avg(sunSt.lossScores)}</b><br/>
+                          <span style={{ color:'#34d399', fontWeight:'800' }}>Separation: {sunGap} pts</span><br/>
+                          <span style={{ color:'rgba(255,255,255,0.45)', fontSize:'11px' }}>Winning picks clearly stand out</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.5)', lineHeight:1.55 }}>
+                      When the winner is only a few points ahead of the losers in our scoring model, it means the race conditions are too noisy for the model to edge out a reliable selection. Sunday cards produce a cleaner signal.
+                    </div>
+                  </div>
+                )}
+
+                {/* 4 structural reasons */}
+                <div style={{ background:'rgba(249,115,22,0.07)', border:'1px solid rgba(249,115,22,0.22)', borderRadius:'8px', padding:'10px 14px' }}>
+                  <div style={{ fontSize:'11px', fontWeight:'800', color:'#fb923c', marginBottom:'8px' }}>⚡ Why Saturdays are structurally harder</div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:'7px', fontSize:'12px', color:'rgba(255,255,255,0.55)', lineHeight:1.55 }}>
+                    <div style={{ display:'flex', gap:'8px', alignItems:'flex-start' }}>
+                      <span style={{ fontSize:'13px', flexShrink:0 }}>🎯</span>
+                      <div><b style={{color:'rgba(255,255,255,0.8)'}}>Hyper-efficient markets.</b> Saturday showpiece meetings (Lincoln, Curragh, Kempton features) attract 5–10× more Betfair liquidity than Sunday cards. Prices get hammered close to true probability, leaving no exploitable edge for a form-based model.</div>
+                    </div>
+                    <div style={{ display:'flex', gap:'8px', alignItems:'flex-start' }}>
+                      <span style={{ fontSize:'13px', flexShrink:0 }}>📋</span>
+                      <div><b style={{color:'rgba(255,255,255,0.8)'}}>Season-openers &amp; raiders missing from database.</b> Big Saturday cards regularly feature horses returning from winter breaks (no recent UK form) and Irish cross-channel raiders. Our model scores them near-zero for database history — then they go and win.</div>
+                    </div>
+                    <div style={{ display:'flex', gap:'8px', alignItems:'flex-start' }}>
+                      <span style={{ fontSize:'13px', flexShrink:0 }}>🎲</span>
+                      <div><b style={{color:'rgba(255,255,255,0.8)'}}>Bigger, more chaotic fields.</b> Heritage handicaps (Lincoln 21 runners, Spring Cup 16+ runners) are deliberately designed to be competitive. Draw bias, pace scenarios and traffic in running override form signals — the model has no visibility of these factors.</div>
+                    </div>
+                    <div style={{ display:'flex', gap:'8px', alignItems:'flex-start' }}>
+                      <span style={{ fontSize:'13px', flexShrink:0 }}>☀️</span>
+                      <div><b style={{color:'rgba(255,255,255,0.8)'}}>Sunday = smaller fields, complete form records.</b> Provincial meetings (Naas, Carlisle, Stratford) run 6–10 runner fields where every horse has a full UK/Irish form profile, tighter odds and less chaos. The model's signals — consistency, going suitability, meeting focus — discriminate cleanly and {satML!=null && sunML!=null ? `our Sunday picks align with market opinion ${sunML}% of the time vs ${satML}% on Saturdays` : 'our picks align with the market far more often'}.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
               </div>
             )}
           </div>
@@ -997,7 +1492,21 @@ function YesterdayResultsView() {
             <span style={{textAlign:'right'}}>P&amp;L</span>
           </div>
           )}
-          {picks.map((pick, idx) => {
+          {(() => {
+            const layMap = {};
+            (layData?.races || []).forEach(r => {
+              if (!r.outcome) return;
+              const rt = r.race_time || '';
+              const hhmm = rt.length >= 16 ? rt.substring(11, 16) : '';
+              const course = (r.course || '').toLowerCase();
+              if (hhmm && course) layMap[`${course}|${hhmm}`] = r.outcome;
+            });
+          return [...picks].sort((a, b) => {
+            const ta = a.race_time || ''; const tb = b.race_time || '';
+            // ISO strings sort lexicographically; US format needs normalising
+            const norm = s => { const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/); return m ? `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}T${m[4].padStart(2,'0')}:${m[5]}` : s; };
+            return norm(tb).localeCompare(norm(ta));
+          }).map((pick, idx) => {
             // Derive display emoji: prefer stored result_emoji, fall back to outcome field
             const rawOutcome = pick.result_emoji
               || (pick.outcome === 'win'    || pick.outcome === 'WON'   ? 'WIN'
@@ -1011,6 +1520,7 @@ function YesterdayResultsView() {
             const winner = pick.result_winner_name || pick.winner_name;
             const pnl   = parseFloat(pick.profit || 0);
             const isPending = !rawOutcome || rawOutcome === 'PENDING';
+            const displayOdds = !isPending && pick.sp_odds ? parseFloat(pick.sp_odds) : parseFloat(pick.odds || 0);
             // Key reason: for settled picks show result_analysis; for pending show best pre-race reason
             const keyReason = !isPending && pick.result_analysis
               ? pick.result_analysis
@@ -1018,6 +1528,14 @@ function YesterdayResultsView() {
                   ? bestKeyReasons(pick.selection_reasons, 1)[0] || ''
                   : (pick.result_analysis ? pick.result_analysis.substring(0,80) : ''));
             const winnerNote = !isPending && winner && winner !== pick.horse ? `Winner: ${winner}` : '';
+            // Fav outcome from lay analysis
+            const layOutcome = (() => {
+              const hhmm = ft.time;
+              const course = (pick.course || pick.race_course || '').toLowerCase();
+              if (!hhmm || !course) return null;
+              return layMap[`${course}|${hhmm}`] || null;
+            })();
+            const layFavWon = layOutcome ? ['win','won'].includes(layOutcome.toLowerCase()) : null;
 
             if (isMobile) return (
               /* ── Mobile card layout ── */
@@ -1040,14 +1558,21 @@ function YesterdayResultsView() {
                     <div style={{ fontWeight:'900', fontSize:'15px', color: pnl > 0 ? '#34d399' : pnl < 0 ? '#f87171' : 'rgba(255,255,255,0.4)' }}>
                       {isPending ? '—' : pnl >= 0 ? `+£${pnl.toFixed(2)}` : `-£${Math.abs(pnl).toFixed(2)}`}
                     </div>
-                    <div style={{ fontSize:'11px', color:'#93c5fd', fontWeight:'700' }}>{pick.odds ? toFractional(pick.odds) : ''}</div>
+                    <div style={{ fontSize:'11px', color:'#93c5fd', fontWeight:'700' }}>{displayOdds > 1 ? toFractional(displayOdds) : ''}</div>
                   </div>
                 </div>
-                {/* Row 2: key reason + winner note */}
+                {/* Row 2: key reason + winner note — no truncation on mobile */}
                 {(keyReason || winnerNote) && (
                   <div style={{ marginTop:'5px', fontSize:'11px', lineHeight:1.4 }}>
-                    {keyReason && <span style={{ color:'rgba(255,255,255,0.5)' }}>{keyReason.length > 90 ? keyReason.substring(0,90)+'…' : keyReason}</span>}
+                    {keyReason && <span style={{ color:'rgba(255,255,255,0.5)' }}>{keyReason}</span>}
                     {winnerNote && <div style={{ color:'#f87171', marginTop:'2px' }}>{winnerNote}</div>}
+                  </div>
+                )}
+                {layFavWon !== null && (
+                  <div style={{ marginTop:'4px' }}>
+                    <span style={{ background: layFavWon ? 'rgba(248,113,113,0.18)' : 'rgba(52,211,153,0.18)', color: layFavWon ? '#f87171' : '#34d399', border:`1px solid ${layFavWon ? 'rgba(248,113,113,0.5)' : 'rgba(52,211,153,0.5)'}`, borderRadius:'4px', padding:'2px 8px', fontSize:'10px', fontWeight:'800' }}>
+                      {layFavWon ? '✗ FAV WON' : '✓ FAV LOST'}
+                    </span>
                   </div>
                 )}
               </div>
@@ -1088,15 +1613,22 @@ function YesterdayResultsView() {
                   {score > 0 && <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.4)', marginTop:'2px', textAlign:'center' }}>{tier.label}</div>}
                 </div>
 
-                {/* Key reason + winner note */}
+                {/* Key reason + winner note + fav outcome */}
                 <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.6)', paddingRight:'8px', lineHeight:1.4 }}>
                   {keyReason && <span>{keyReason}</span>}
                   {winnerNote && <div style={{ fontSize:'11px', color:'#f87171', marginTop:'2px' }}>{winnerNote}</div>}
+                  {layFavWon !== null && (
+                    <div style={{ marginTop:'3px' }}>
+                      <span style={{ background: layFavWon ? 'rgba(248,113,113,0.18)' : 'rgba(52,211,153,0.18)', color: layFavWon ? '#f87171' : '#34d399', border:`1px solid ${layFavWon ? 'rgba(248,113,113,0.5)' : 'rgba(52,211,153,0.5)'}`, borderRadius:'4px', padding:'2px 7px', fontSize:'10px', fontWeight:'800' }}>
+                        {layFavWon ? '✗ FAV WON' : '✓ FAV LOST'}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Odds */}
                 <div style={{ textAlign:'center', fontWeight:'700', color:'#93c5fd', fontSize:'13px' }}>
-                  {pick.odds ? toFractional(pick.odds) : '—'}
+                  {displayOdds > 1 ? toFractional(displayOdds) : '—'}
                 </div>
 
                 {/* P&L */}
@@ -1105,7 +1637,8 @@ function YesterdayResultsView() {
                 </div>
               </div>
             );
-          })}
+          });
+          })()}
         </div>
 
       )}
@@ -1153,13 +1686,94 @@ function YesterdayResultsView() {
               </div>
             </div>
 
+            {/* Systemic pattern summary */}
+            {(() => {
+              const patterns = [];
+              const jockeyZero    = nonWins.filter(p => parseFloat((p.score_breakdown||{}).jockey_quality||0) === 0).length;
+              const dbZero        = nonWins.filter(p => parseFloat((p.score_breakdown||{}).database_history||0) === 0).length;
+              const unknownTrn    = nonWins.filter(p => parseFloat((p.score_breakdown||{}).unknown_trainer_penalty||0) < 0).length;
+              const bottomWinners = nonWins.filter(p => {
+                const fld = [...(p.all_horses||[])].sort((a,b)=>parseFloat(b.score||0)-parseFloat(a.score||0));
+                if (fld.length < 3) return false;
+                const wn = (p.result_winner_name||'').toLowerCase();
+                const wi = fld.findIndex(h=>(h.horse||'').toLowerCase()===wn);
+                return wi !== -1 && wi >= Math.ceil(fld.length / 2);
+              }).length;
+              const bigField = nonWins.filter(p => {
+                const m = (p.result_analysis||'').match(/of (\d+)/);
+                return m && parseInt(m[1]) >= 16;
+              }).length;
+              if (jockeyZero === nonWins.length)
+                patterns.push({ icon:'🏇', col:'#93c5fd', title:'Jockey scoring inactive', detail:`${jockeyZero}/${nonWins.length} picks scored 0 for jockey quality — strong jockey bookings, course specialists and first-time big-stable rides are not factored in at all` });
+              if (dbZero === nonWins.length)
+                patterns.push({ icon:'📂', col:'#fbbf24', title:'No historical database data', detail:`${dbZero}/${nonWins.length} picks had zero DB history score — the model has no recorded win-rate data for any of these horses at this course/distance combination` });
+              if (unknownTrn > 0)
+                patterns.push({ icon:'❓', col:'#f97316', title:`Unknown trainer penalty insufficient`, detail:`${unknownTrn}/${nonWins.length} picks received -8pts unknown trainer penalty yet were still selected — if the trainer has no verified track record, selection confidence should be reduced further` });
+              if (bottomWinners > 0)
+                patterns.push({ icon:'📉', col:'#f87171', title:`Winner ranked bottom half of field`, detail:`${bottomWinners} race${bottomWinners>1?'s':''} won by a horse ranked in the bottom half of our model — winner likely had limited form data or first run at this trip/going; low model score ≠ no chance` });
+              if (bigField > 0)
+                patterns.push({ icon:'🎲', col:'#a78bfa', title:`Large-field handicap risk`, detail:`${bigField} race${bigField>1?'s':''} run in fields of 16+ runners — big handicaps carry inherent chaos; pace, draw and luck have outsized influence the model cannot capture` });
+              if (patterns.length === 0) return null;
+              return (
+                <div style={{ background:'rgba(30,58,95,0.35)', border:'1px solid rgba(59,130,246,0.3)', borderRadius:'10px', padding:'16px 20px', marginBottom:'20px' }}>
+                  <div style={{ fontSize:'11px', textTransform:'uppercase', letterSpacing:'1px', color:'#93c5fd', marginBottom:'12px', fontWeight:'800' }}>🔬 Systemic Patterns Found in These Losses</div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                    {patterns.map((pt, pi) => (
+                      <div key={pi} style={{ display:'flex', gap:'10px', alignItems:'flex-start' }}>
+                        <span style={{ fontSize:'15px', flexShrink:0, lineHeight:'1.3' }}>{pt.icon}</span>
+                        <div>
+                          <div style={{ fontWeight:'700', color:pt.col, fontSize:'13px', marginBottom:'2px' }}>{pt.title}</div>
+                          <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.55)', lineHeight:1.5 }}>{pt.detail}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
             {nonWins.map((pick, idx) => {
               const sb       = pick.score_breakdown || {};
               const odds     = parseFloat(pick.odds || 0);
               const score    = parseFloat(pick.comprehensive_score || pick.analysis_score || 0);
               const winner   = pick.result_winner_name || pick.winner_name || '?';
               const ft       = formatRaceTime(pick.race_time);
-              const wa       = pick.winner_analysis || {};
+              const wa       = (() => {
+                const stored = pick.winner_analysis || {};
+                if (stored.winner_found) return stored;
+                // Compute from all_horses when backend hasn't populated winner_analysis
+                const field = [...(pick.all_horses || [])]
+                  .map(h => ({ ...h, score: parseFloat(h.score || 0), odds: parseFloat(h.odds || 0) }))
+                  .sort((a, b) => b.score - a.score);
+                const winnerName = (pick.result_winner_name || pick.winner_name || '').toLowerCase();
+                if (!winnerName || field.length === 0) return stored;
+                const winnerIdx = field.findIndex(h => (h.horse || '').toLowerCase() === winnerName);
+                if (winnerIdx === -1) return stored;
+                const winnerH  = field[winnerIdx];
+                const ourScore = parseFloat(pick.comprehensive_score || pick.analysis_score || 0);
+                const gap      = ourScore - winnerH.score;
+                const sb2      = pick.score_breakdown || {};
+                const why      = [];
+                if (winnerIdx === 0) {
+                  why.push(`${winnerH.horse} also ranked #1 in our model — race was a genuine toss-up on paper`);
+                } else {
+                  why.push(`${winnerH.horse} ranked #${winnerIdx + 1} of ${field.length} in our model (score ${winnerH.score.toFixed(0)}) — model over-favoured our pick by ${gap.toFixed(0)}pts`);
+                }
+                if (winnerH.score < 35) why.push(`Winner score only ${winnerH.score.toFixed(0)}/100 — likely limited UK/IE recorded form in our database; unproven horses can still win`);
+                if (parseFloat(sb2.unknown_trainer_penalty || 0) < 0) why.push(`Unknown trainer penalty (-${Math.abs(parseFloat(sb2.unknown_trainer_penalty)).toFixed(0)}pts) applied to our pick but score still high enough to select — trainer track record absent`);
+                if (parseFloat(sb2.going_suitability || 0) >= 16) why.push(`Going Suitability scored +${parseFloat(sb2.going_suitability).toFixed(0)}pts — may be over-weighted vs actual ground impact on the day`);
+                if (winnerH.odds > 8) why.push(`Winner was ${toFractional(winnerH.odds)} — market also underestimated them; race pace or trainer booking likely key`);
+                return {
+                  winner_found: true,
+                  winner_name: winnerH.horse,
+                  winner_score: winnerH.score.toFixed(0),
+                  winner_rank: winnerIdx + 1,
+                  winner_rank_of: field.length,
+                  winner_odds_fractional: winnerH.odds > 1 ? toFractional(winnerH.odds) : '?',
+                  score_gap: gap,
+                  why_missed: why,
+                };
+              })();
               const isPlaced = (pick.result_emoji || pick.outcome || '').toUpperCase().includes('PLACED');
 
               const topBreakdown = Object.entries(sb)
@@ -1171,7 +1785,7 @@ function YesterdayResultsView() {
                 <div key={idx} style={{ background:'#1a1a2e', border:`1px solid ${isPlaced ? 'rgba(59,130,246,0.4)' : 'rgba(239,68,68,0.4)'}`, borderRadius:'12px', padding: isMobile ? '14px' : '20px 24px', marginBottom:'18px', borderLeft:`4px solid ${isPlaced ? '#3b82f6' : '#ef4444'}` }}>
 
                   {/* Header row */}
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'8px', marginBottom:'16px' }}>
+                  <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'8px', marginBottom:'16px' }}>
                     <div style={{ flex:1, minWidth:0 }}>
                       <div style={{ fontSize: isMobile ? '15px' : '18px', fontWeight:'800', color:'white' }}>
                         {isPlaced ? '🥈' : '✗'} {pick.horse}
@@ -1183,9 +1797,18 @@ function YesterdayResultsView() {
                         &nbsp;·&nbsp;Odds: <strong style={{color:'#93c5fd'}}>{(odds-1).toFixed(0)}/1</strong>
                       </div>
                     </div>
-                    <div style={{ background: isPlaced ? 'rgba(59,130,246,0.2)' : 'rgba(239,68,68,0.2)', border:`1px solid ${isPlaced ? 'rgba(59,130,246,0.45)' : 'rgba(239,68,68,0.45)'}`, color: isPlaced ? '#93c5fd' : '#fca5a5', borderRadius:'7px', padding:'6px 12px', fontSize:'11px', fontWeight:'700', lineHeight:1.5, textAlign:'right', flexShrink:0 }}>
-                      {pick.result_analysis || (winner !== '?' ? `Winner: ${winner}` : 'Result recorded')}
-                    </div>
+                    {/* result_analysis: full-width block on mobile, inline badge on desktop */}
+                    {(pick.result_analysis || winner !== '?') && (
+                      isMobile ? (
+                        <div style={{ width:'100%', background: isPlaced ? 'rgba(59,130,246,0.15)' : 'rgba(239,68,68,0.15)', border:`1px solid ${isPlaced ? 'rgba(59,130,246,0.4)' : 'rgba(239,68,68,0.4)'}`, borderRadius:'8px', padding:'10px 12px', fontSize:'12px', color: isPlaced ? '#93c5fd' : '#fca5a5', lineHeight:1.6, fontWeight:'500' }}>
+                          {pick.result_analysis || `Winner: ${winner}`}
+                        </div>
+                      ) : (
+                        <div style={{ background: isPlaced ? 'rgba(59,130,246,0.2)' : 'rgba(239,68,68,0.2)', border:`1px solid ${isPlaced ? 'rgba(59,130,246,0.45)' : 'rgba(239,68,68,0.45)'}`, color: isPlaced ? '#93c5fd' : '#fca5a5', borderRadius:'7px', padding:'6px 12px', fontSize:'11px', fontWeight:'700', lineHeight:1.5, textAlign:'right', flexShrink:0 }}>
+                          {pick.result_analysis || (winner !== '?' ? `Winner: ${winner}` : 'Result recorded')}
+                        </div>
+                      )
+                    )}
                   </div>
 
                   {/* Winner comparison bar */}
@@ -1291,13 +1914,143 @@ function YesterdayResultsView() {
         );
       })()}
 
-      <div style={{ marginTop:'28px', padding:'14px 18px', background:'rgba(255,255,255,0.06)', borderRadius:'10px', color:'rgba(255,255,255,0.45)', fontSize:'12px', textAlign:'center', lineHeight:'1.6' }}>
-        Results are recorded after each race. Pending picks update as results come in. \u00b7 Always bet responsibly.
+      {/* ── Strong Lay Possibilities ─────────────────────────────── */}
+      {layData && (() => {
+        const LAY_WEIGHTS = {
+          class_up:4, trip_new:2, going_unproven:2, draw_poor:1, layoff:1, pace_doubt:1,
+          rivals_close:2, drift:1, short_price:1, trainer_track:1, trainer_cold:1, trainer_multiple:1,
+        };
+        const LAY_LABELS = {
+          class_up:         { label:'Class',        desc:'Moving up in Class',             colour:'#c084fc' },
+          trip_new:         { label:'Trip',          desc:'New Distance (Up or Down)',      colour:'#6ee7b7' },
+          going_unproven:   { label:'Going',         desc:'Unproven on current going',      colour:'#34d399' },
+          draw_poor:        { label:'Draw',          desc:'Poor draw on this track',        colour:'#fbbf24' },
+          layoff:           { label:'Layoff',        desc:'>30\u201390 days off',                colour:'#fca5a5' },
+          pace_doubt:       { label:'Pace',          desc:'Pace may not suit',              colour:'#93c5fd' },
+          rivals_close:     { label:'Rivals',        desc:'Creditable 2nd/3rd threats',     colour:'#60a5fa' },
+          drift:            { label:'Drift',         desc:'Open vs current price',          colour:'#fcd34d' },
+          short_price:      { label:'Price',         desc:'5/4 or less / odds-on',          colour:'#a78bfa' },
+          trainer_track:    { label:'Trainer@Track', desc:'Trainer win rate at this track', colour:'#a5b4fc' },
+          trainer_cold:     { label:'TrainerCold',   desc:'Last 14 days win rate (Cold)',   colour:'#818cf8' },
+          trainer_multiple: { label:'MultiRunner',   desc:'Multiple runners same race',     colour:'#e879f9' },
+        };
+        const FACTOR_ORDER = ['class_up','trip_new','going_unproven','draw_poor','layoff','pace_doubt',
+                               'rivals_close','drift','short_price','trainer_track','trainer_cold','trainer_multiple'];
+        const VC = {
+          RED:    { fg:'#f87171', bg:'rgba(248,113,113,0.12)', border:'rgba(248,113,113,0.35)' },
+          AMBER:  { fg:'#f97316', bg:'rgba(249,115,22,0.12)',  border:'rgba(249,115,22,0.35)'  },
+          YELLOW: { fg:'#fbbf24', bg:'rgba(251,191,36,0.10)',  border:'rgba(251,191,36,0.35)'  },
+          GREEN:  { fg:'#34d399', bg:'rgba(52,211,153,0.10)',  border:'rgba(52,211,153,0.3)'   },
+        };
+        const caution  = (layData.races || []).filter(r => r.lay_score >= 4)
+                                               .sort((a,b) => b.lay_score - a.lay_score);
+        const genTime  = layData.generated
+          ? new Date(layData.generated).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})
+          : '';
+        return (
+          <div style={{ marginTop:'36px' }}>
+            {/* Section header */}
+            <div style={{ background:'linear-gradient(135deg,rgba(185,28,28,0.22) 0%,rgba(127,29,29,0.15) 100%)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'12px', padding:'20px 24px', marginBottom:'18px' }}>
+              <div style={{ fontSize:'10px', letterSpacing:'2px', textTransform:'uppercase', color:'rgba(255,255,255,0.4)', marginBottom:'4px' }}>Lay Analysis \u00b7 Read-only parallel view</div>
+              <div style={{ fontSize:'18px', fontWeight:'800', color:'white', marginBottom:'4px' }}>\ud83d\udea8 Strong Possibilities to Lay Suspect Favourites (5/4 or less)</div>
+              <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.5)', marginBottom:'14px' }}>Is this Favourite overpriced relative to its true win probability?</div>
+              <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', alignItems:'center' }}>
+                {[{r:'0\u20133',l:'Leave Alone',c:'#34d399'},{r:'4\u20139',l:'Caution / Look',c:'#fbbf24'},{r:'10\u201312',l:'Strong Lay',c:'#f97316'},{r:'13+',l:'Strong Lay Candidate',c:'#f87171'}].map(x=>(
+                  <div key={x.r} style={{display:'flex',alignItems:'center',gap:'5px',background:'rgba(255,255,255,0.06)',borderRadius:'6px',padding:'4px 10px',fontSize:'11px',color:'rgba(255,255,255,0.65)'}}>
+                    <span style={{background:x.c,width:'7px',height:'7px',borderRadius:'50%',display:'inline-block'}}/>
+                    <b style={{color:x.c}}>{x.r}</b>&nbsp;{x.l}
+                  </div>
+                ))}
+                <span style={{marginLeft:'auto',fontSize:'11px',color:'rgba(255,255,255,0.35)'}}>
+                  {caution.length} caution+ of {(layData.races||[]).length} analysed
+                  {genTime && <span> \u00b7 {genTime}</span>}
+                </span>
+              </div>
+            </div>
+
+            {/* Scoring factors key */}
+            <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'10px', padding:'14px 18px', marginBottom:'14px' }}>
+              <div style={{ fontSize:'10px', textTransform:'uppercase', letterSpacing:'1px', color:'rgba(255,255,255,0.35)', marginBottom:'9px' }}>Factor \u00b7 Condition \u00b7 Score</div>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(215px,1fr))', gap:'5px 20px' }}>
+                {FACTOR_ORDER.map(k => {
+                  const fl = LAY_LABELS[k];
+                  return (
+                    <div key={k} style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:'11px' }}>
+                      <span style={{ color:'#fbbf24', fontWeight:'700', minWidth:'22px' }}>+{LAY_WEIGHTS[k]}</span>
+                      <span style={{ color:fl.colour, fontWeight:'600', minWidth:'88px' }}>{fl.label}</span>
+                      <span style={{ color:'rgba(255,255,255,0.38)', fontSize:'10px' }}>{fl.desc}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Interpretation */}
+            <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'8px', padding:'10px 16px', marginBottom:'16px', display:'flex', gap:'20px', flexWrap:'wrap', fontSize:'11px', color:'rgba(255,255,255,0.5)' }}>
+              <span><b style={{color:'#34d399'}}>0\u20133</b> = Leave horse alone (Green)</span>
+              <span><b style={{color:'#fbbf24'}}>4\u20139</b> = Caution \u2013 take a look if vulnerable (Yellow)</span>
+              <span><b style={{color:'#f97316'}}>10\u201312</b> = Strong Lay (Amber)</span>
+              <span><b style={{color:'#f87171'}}>13+</b> = Strong Lay Candidate (Red)</span>
+            </div>
+
+            {/* Lay candidate cards */}
+            {caution.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'32px', color:'rgba(255,255,255,0.4)', background:'rgba(255,255,255,0.04)', borderRadius:'10px', fontSize:'13px' }}>
+                No favourites meet the caution threshold (4+) today.
+              </div>
+            ) : caution.map((r, i) => {
+              const vc = VC[r.verdict_colour] || VC.GREEN;
+              const activeFlags = r.flags || [];
+              return (
+                <div key={i} style={{ background:'rgba(22,27,34,0.95)', border:`1px solid ${vc.border}`, borderLeft:`4px solid ${vc.fg}`, borderRadius:'10px', marginBottom:'12px', overflow:'hidden' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap', padding:'10px 16px', borderBottom:'1px solid rgba(255,255,255,0.07)', background:'rgba(255,255,255,0.02)' }}>
+                    <span style={{ fontWeight:'800', color:'#58a6ff', fontSize:'14px' }}>{fmtUtcTime(r.race_time)}</span>
+                    <span style={{ fontWeight:'700', color:'white' }}>{r.course}</span>
+                    <span style={{ flex:1, fontSize:'11px', color:'rgba(255,255,255,0.45)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.race_name}</span>
+                    {r.our_pick && <span style={{ background:'rgba(88,166,255,0.18)', color:'#58a6ff', border:'1px solid rgba(88,166,255,0.4)', borderRadius:'4px', padding:'2px 6px', fontSize:'10px', fontWeight:'700' }}>\u26a1 OUR PICK</span>}
+                    <span style={{ background:vc.bg, color:vc.fg, border:`1px solid ${vc.border}`, borderRadius:'5px', padding:'2px 9px', fontSize:'10px', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.5px' }}>{r.verdict}</span>
+                  </div>
+                  <div style={{ display:'flex', gap:'16px', padding:'12px 16px', alignItems:'center', flexWrap:'wrap' }}>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:'17px', fontWeight:'800', color:'white', marginBottom:'5px' }}>{r.favourite}</div>
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:'3px 14px', fontSize:'11px', color:'rgba(255,255,255,0.5)', marginBottom:'6px' }}>
+                        <span>@ <b style={{color:'#e6edf3'}}>{r.fav_odds?.toFixed(2)}</b></span>
+                        <span>Score <b style={{color:'#e6edf3'}}>{r.fav_sys_score?.toFixed(0)}</b></span>
+                        <span>Gap <b style={{color:'#e6edf3'}}>{r.score_gap?.toFixed(0)}</b></span>
+                        {r.form && <span>Form <b style={{color:'#e6edf3'}}>{r.form}</b></span>}
+                        <span>Runners <b style={{color:'#e6edf3'}}>{r.runners}</b></span>
+                        {r.trainer && <span>Trainer <b style={{color:'rgba(255,255,255,0.7)'}}>{r.trainer}</b></span>}
+                      </div>
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:'4px' }}>
+                        {activeFlags.map(flag => {
+                          const fl = LAY_LABELS[flag] || { label:flag, colour:'#94a3b8' };
+                          return (
+                            <span key={flag} style={{ background:'rgba(255,255,255,0.08)', border:`1px solid ${fl.colour}55`, color:fl.colour, borderRadius:'4px', padding:'2px 7px', fontSize:'10px', fontWeight:'600' }}>
+                              {fl.label} +{LAY_WEIGHTS[flag] || 1}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    <div style={{ textAlign:'center', minWidth:'64px' }}>
+                      <div style={{ fontSize:'36px', fontWeight:'800', lineHeight:1, color:vc.fg }}>{r.lay_score}</div>
+                      <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.4)', marginBottom:'4px' }}>/ 18</div>
+                      <div style={{ background:vc.bg, color:vc.fg, border:`1px solid ${vc.border}`, borderRadius:'5px', padding:'2px 7px', fontSize:'10px', fontWeight:'700', textTransform:'uppercase' }}>{r.verdict}</div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
+
+      <div style={{ marginTop:'16px', padding:'14px 18px', background:'rgba(255,255,255,0.06)', borderRadius:'10px', color:'rgba(255,255,255,0.45)', fontSize:'12px', textAlign:'center', lineHeight:'1.6' }}>
+        Results are recorded after each race. Pending picks update as results come in. · Always bet responsibly.
       </div>
     </div>
   );
 }
-
 // ---- Major Races ----
 function MajorRacesView() {
   const [filter,   setFilter]   = useState('all');
@@ -1441,24 +2194,29 @@ function LayTheFavView() {
 
   const VERDICT_COLOURS = {
     RED:    { fg:'#f87171', bg:'rgba(248,113,113,0.12)', border:'rgba(248,113,113,0.35)' },
+    AMBER:  { fg:'#f97316', bg:'rgba(249,115,22,0.12)',  border:'rgba(249,115,22,0.35)'  },
     YELLOW: { fg:'#fbbf24', bg:'rgba(251,191,36,0.10)',  border:'rgba(251,191,36,0.35)'  },
     GREEN:  { fg:'#34d399', bg:'rgba(52,211,153,0.10)',  border:'rgba(52,211,153,0.3)'   },
   };
 
   const FLAG_LABELS = {
-    short_price:   { label:'Price',   colour:'#a78bfa' },
-    rivals_close:  { label:'Rivals',  colour:'#60a5fa' },
-    trip_new:      { label:'Trip',    colour:'#6ee7b7' },
-    going_unproven:{ label:'Going',   colour:'#34d399' },
-    draw_poor:     { label:'Draw',    colour:'#fbbf24' },
-    layoff:        { label:'Layoff',  colour:'#fca5a5' },
-    pace_doubt:    { label:'Pace',    colour:'#93c5fd' },
-    drift:         { label:'Drift',   colour:'#fcd34d' },
-    class_up:      { label:'Class',   colour:'#c084fc' },
+    short_price:      { label:'Price',         colour:'#a78bfa' },
+    rivals_close:     { label:'Rivals',        colour:'#60a5fa' },
+    trip_new:         { label:'Trip',          colour:'#6ee7b7' },
+    going_unproven:   { label:'Going',         colour:'#34d399' },
+    draw_poor:        { label:'Draw',          colour:'#fbbf24' },
+    layoff:           { label:'Layoff',        colour:'#fca5a5' },
+    pace_doubt:       { label:'Pace',          colour:'#93c5fd' },
+    drift:            { label:'Drift',         colour:'#fcd34d' },
+    class_up:         { label:'Class',         colour:'#c084fc' },
+    trainer_track:    { label:'Trainer@Track', colour:'#a5b4fc' },
+    trainer_cold:     { label:'TrainerCold',   colour:'#818cf8' },
+    trainer_multiple: { label:'MultiRunner',   colour:'#e879f9' },
   };
 
   const FLAG_WEIGHTS = { short_price:1, rivals_close:2, trip_new:2, going_unproven:2,
-    draw_poor:1, layoff:1, pace_doubt:1, drift:1, class_up:4 };
+    draw_poor:1, layoff:1, pace_doubt:1, drift:1, class_up:4,
+    trainer_track:1, trainer_cold:1, trainer_multiple:1 };
 
   if (loading) return (
     <div style={{ textAlign:'center', padding:'60px', color:'rgba(255,255,255,0.5)' }}>
@@ -1478,7 +2236,8 @@ function LayTheFavView() {
   const genTime = generated ? new Date(generated).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) : '';
 
   const filtered = races.filter(r =>
-    filter === 'strong'  ? r.lay_score >= 9 :
+    filter === 'red'     ? r.lay_score >= 13 :
+    filter === 'strong'  ? r.lay_score >= 10 :
     filter === 'caution' ? r.lay_score >= 4 :
     true
   );
@@ -1494,7 +2253,7 @@ function LayTheFavView() {
 
         {/* Score legend */}
         <div style={{ display:'flex', gap:'10px', flexWrap:'wrap', marginBottom:'18px' }}>
-          {[{score:'0–3', label:'Leave Alone', c:'#34d399'}, {score:'4–8', label:'Caution / Look', c:'#fbbf24'}, {score:'9+', label:'Strong Lay', c:'#f87171'}].map(l => (
+          {[{score:'0–3', label:'Leave Alone', c:'#34d399'}, {score:'4–9', label:'Caution / Look', c:'#fbbf24'}, {score:'10–12', label:'Strong Lay', c:'#f97316'}, {score:'13+', label:'Strong Lay Candidate', c:'#f87171'}].map(l => (
             <div key={l.score} style={{ display:'flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.06)', borderRadius:'8px', padding:'5px 12px', fontSize:'12px', color:'rgba(255,255,255,0.7)' }}>
               <span style={{ background:l.c, width:'8px', height:'8px', borderRadius:'50%', display:'inline-block' }} />
               <b style={{ color:l.c }}>{l.score}</b>&nbsp;{l.label}
@@ -1504,7 +2263,7 @@ function LayTheFavView() {
 
         {/* Stats */}
         <div style={{ display:'flex', gap:'16px', flexWrap:'wrap' }}>
-          {[{v:summary.total, lbl:'Analysed', c:'#94a3b8'}, {v:summary.caution, lbl:'Caution+', c:'#fbbf24'}, {v:summary.strong, lbl:'Strong Lay', c:'#f87171'}].map(s => (
+          {[{v:summary.total, lbl:'Analysed', c:'#94a3b8'}, {v:summary.caution, lbl:'Caution+', c:'#fbbf24'}, {v:summary.strong, lbl:'Strong Lay (10+)', c:'#f97316'}, {v:summary.red_flag, lbl:'Red Flag (13+)', c:'#f87171'}].map(s => (
             <div key={s.lbl} style={{ background:'rgba(255,255,255,0.07)', borderRadius:'10px', padding:'10px 18px', textAlign:'center' }}>
               <div style={{ fontSize:'24px', fontWeight:'800', color:s.c }}>{s.v}</div>
               <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.5)', marginTop:'2px' }}>{s.lbl}</div>
@@ -1526,9 +2285,10 @@ function LayTheFavView() {
                 <span style={{ color:fl.colour, fontWeight:'600' }}>{fl.label}</span>
                 <span style={{ color:'rgba(255,255,255,0.35)' }}>—</span>
                 <span style={{ color:'rgba(255,255,255,0.5)', fontSize:'11px' }}>{
-                  ({ short_price:'5/4 or less', rivals_close:'2nd/3rd within 25% score', trip_new:'Unproven distance',
+                  ({ short_price:'5/4 or less / odds-on', rivals_close:'2nd/3rd within 25% score', trip_new:'Unproven distance',
                      going_unproven:'Unproven going', draw_poor:'Poor draw', layoff:'30-90 day break',
-                     pace_doubt:'Pace fit uncertain', drift:'Low score gap', class_up:'Moving up in class' })[k]
+                     pace_doubt:'Pace may not suit', drift:'Open vs current price', class_up:'Moving up in class',
+                     trainer_track:'No tier status at this track', trainer_cold:'No meeting focus & no recent win', trainer_multiple:'Trainer has multiple runners' })[k]
                 }</span>
               </div>
             );
@@ -1538,7 +2298,7 @@ function LayTheFavView() {
 
       {/* Filter buttons */}
       <div style={{ display:'flex', gap:'8px', marginBottom:'16px', flexWrap:'wrap' }}>
-        {[{k:'all',label:'All'},{ k:'caution',label:'Caution+ (4+)'},{ k:'strong',label:'Strong Lay (9+)'}].map(f => (
+        {[{k:'all',label:'All'},{ k:'caution',label:'Caution+ (4+)'},{ k:'strong',label:'Strong Lay (10+)'},{ k:'red',label:'Red Flag (13+)'}].map(f => (
           <button key={f.k} onClick={() => setFilter(f.k)} style={{
             background: filter===f.k ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.07)',
             border: filter===f.k ? '1px solid #f87171' : '1px solid rgba(255,255,255,0.15)',
@@ -1557,16 +2317,31 @@ function LayTheFavView() {
 
       {filtered.map((r, i) => {
         const vc = VERDICT_COLOURS[r.verdict_colour] || VERDICT_COLOURS.GREEN;
-        const barPct = Math.min(100, Math.round(r.lay_score / 15 * 100));
+        const barPct = Math.min(100, Math.round(r.lay_score / 18 * 100));
         return (
           <div key={i} style={{ background:'rgba(22,27,34,0.95)', border:`1px solid ${vc.border}`, borderLeft:`4px solid ${vc.fg}`, borderRadius:'10px', marginBottom:'14px', overflow:'hidden' }}>
 
             {/* Card header */}
             <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap', padding:'12px 18px', borderBottom:'1px solid rgba(255,255,255,0.07)', background:'rgba(255,255,255,0.02)' }}>
-              <span style={{ fontWeight:'800', color:'#58a6ff', fontSize:'15px', minWidth:'40px' }}>{r.race_time ? r.race_time.substring(11,16) : ''}</span>
+              <span style={{ fontWeight:'800', color:'#58a6ff', fontSize:'15px', minWidth:'40px' }}>{fmtUtcTime(r.race_time)}</span>
               <span style={{ fontWeight:'700', color:'white' }}>{r.course}</span>
               <span style={{ flex:1, fontSize:'12px', color:'rgba(255,255,255,0.45)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.race_name}</span>
               {r.our_pick && <span style={{ background:'rgba(88,166,255,0.18)', color:'#58a6ff', border:'1px solid rgba(88,166,255,0.4)', borderRadius:'4px', padding:'2px 8px', fontSize:'11px', fontWeight:'700' }}>⚡ OUR PICK</span>}
+              {r.outcome && (() => {
+                const oc = r.outcome.toLowerCase();
+                const favWon = ['win','won'].includes(oc);
+                return (
+                  <span style={{
+                    background: favWon ? 'rgba(248,113,113,0.18)' : 'rgba(52,211,153,0.18)',
+                    color:       favWon ? '#f87171' : '#34d399',
+                    border:      `1px solid ${favWon ? 'rgba(248,113,113,0.5)' : 'rgba(52,211,153,0.5)'}`,
+                    borderRadius:'4px', padding:'2px 10px', fontSize:'11px', fontWeight:'800',
+                    whiteSpace:'nowrap', letterSpacing:'0.3px',
+                  }}>
+                    {favWon ? '✗ FAV WON' : '✓ FAV LOST'}
+                  </span>
+                );
+              })()}
               <span style={{ background:vc.bg, color:vc.fg, border:`1px solid ${vc.border}`, borderRadius:'5px', padding:'2px 10px', fontSize:'11px', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.5px', whiteSpace:'nowrap' }}>{r.verdict}</span>
             </div>
 
@@ -1590,7 +2365,7 @@ function LayTheFavView() {
               {/* Score circle */}
               <div style={{ textAlign:'center', minWidth:'72px' }}>
                 <div style={{ fontSize:'38px', fontWeight:'800', lineHeight:1, color:vc.fg }}>{r.lay_score}</div>
-                <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.4)', marginBottom:'6px' }}>/ 15</div>
+                <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.4)', marginBottom:'6px' }}>/ 18</div>
                 <div style={{ width:'64px', height:'6px', background:'rgba(255,255,255,0.1)', borderRadius:'3px', overflow:'hidden', margin:'0 auto' }}>
                   <div style={{ width:`${barPct}%`, height:'100%', background:vc.fg, borderRadius:'3px' }} />
                 </div>
@@ -1632,7 +2407,7 @@ function LayTheFavView() {
             <table style={{ width:'100%', borderCollapse:'collapse', background:'rgba(22,27,34,0.95)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'8px', overflow:'hidden' }}>
               <thead>
                 <tr style={{ background:'rgba(255,255,255,0.06)' }}>
-                  {['Time','Course','Favourite','Odds','SysScore','Gap','Lay Score','Verdict'].map(h => (
+                  {['Time','Course','Favourite','Odds','SysScore','Gap','Lay Score','Verdict','Result'].map(h => (
                     <th key={h} style={{ padding:'9px 12px', fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.7px', color:'rgba(255,255,255,0.4)', textAlign:'left', borderBottom:'1px solid rgba(255,255,255,0.1)', whiteSpace:'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -1642,7 +2417,7 @@ function LayTheFavView() {
                   const vc = VERDICT_COLOURS[r.verdict_colour] || VERDICT_COLOURS.GREEN;
                   return (
                     <tr key={i} style={{ borderBottom:'1px solid rgba(255,255,255,0.06)' }}>
-                      <td style={{ padding:'9px 12px', fontSize:'13px', color:'#58a6ff', fontWeight:'700' }}>{r.race_time ? r.race_time.substring(11,16) : ''}</td>
+                      <td style={{ padding:'9px 12px', fontSize:'13px', color:'#58a6ff', fontWeight:'700' }}>{fmtUtcTime(r.race_time)}</td>
                       <td style={{ padding:'9px 12px', fontSize:'13px', color:'rgba(255,255,255,0.8)' }}>{r.course}</td>
                       <td style={{ padding:'9px 12px', fontSize:'13px', color:'white', fontWeight:'600' }}>{r.favourite}</td>
                       <td style={{ padding:'9px 12px', fontSize:'13px', color:'rgba(255,255,255,0.7)' }}>{r.fav_odds?.toFixed(2)}</td>
@@ -1650,6 +2425,7 @@ function LayTheFavView() {
                       <td style={{ padding:'9px 12px', fontSize:'13px', color:'rgba(255,255,255,0.7)' }}>{r.score_gap?.toFixed(0)}</td>
                       <td style={{ padding:'9px 12px', fontSize:'14px', fontWeight:'800', color:vc.fg }}>{r.lay_score}</td>
                       <td style={{ padding:'9px 12px' }}><span style={{ background:vc.bg, color:vc.fg, border:`1px solid ${vc.border}`, borderRadius:'4px', padding:'2px 8px', fontSize:'11px', fontWeight:'700' }}>{r.verdict}</span></td>
+                      <td style={{ padding:'9px 12px' }}>{r.outcome ? (() => { const favWon = ['win','won'].includes(r.outcome.toLowerCase()); return <span style={{ color: favWon ? '#f87171' : '#34d399', fontWeight:'700', fontSize:'12px' }}>{favWon ? '✗ Won' : '✓ Lost'}</span>; })() : <span style={{ color:'rgba(255,255,255,0.25)', fontSize:'12px' }}>—</span>}</td>
                     </tr>
                   );
                 })}

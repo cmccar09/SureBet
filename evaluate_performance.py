@@ -250,8 +250,20 @@ def update_prompt_file(adjustments: List[str], prompt_path: str = "./prompt.txt"
     for i, adj in enumerate(adjustments, 1):
         adjustment_section += f"{i}. {adj}\n\n"
     
-    # Append to prompt
-    updated_prompt = prompt + adjustment_section
+    # REPLACE existing section instead of appending (prevents infinite duplication)
+    section_header = "Performance-Based Adjustments"
+    if section_header in prompt:
+        # Find the start of the section (the === line before it)
+        idx = prompt.find(section_header)
+        # Walk back to find the preceding === separator line
+        sep_idx = prompt.rfind("\n\n", 0, idx)
+        if sep_idx > 0:
+            updated_prompt = prompt[:sep_idx] + adjustment_section
+        else:
+            updated_prompt = prompt[:idx] + adjustment_section
+    else:
+        # No existing section — append
+        updated_prompt = prompt + adjustment_section
     
     if dry_run:
         print("\n" + "="*60)

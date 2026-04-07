@@ -75,11 +75,9 @@ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
         f"python betfair_results_fetcher_v2.py --date {yesterday}"
     )
     
-    # STEP 1a: Store all races for learning (before results come in)
-    run_step(
-        "Store all today's races for learning",
-        "python complete_race_learning.py store"
-    )
+    # STEP 1a: Store all races for learning — now handled by SureBet-Morning Lambda
+    # (complete_race_learning.py store — archived, replaced by AWS pipeline)
+    print("\n[Step 1a] Race storage for learning handled by SureBet-Morning step function.")
     
     # STEP 2: Auto-adjust weights based on results
     success = run_step(
@@ -90,10 +88,10 @@ Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
     if success:
         print("\n🎯 Weights have been automatically optimized based on yesterday's results")
     
-    # STEP 2a: Compare all races with winners and learn patterns
+    # STEP 2a: Learning — now handled by SureBet-Evening/Learning Lambda
     run_step(
         "Check winners and learn from ALL races",
-        "python complete_race_learning.py learn"
+        "python -c \"import boto3,json; lam=boto3.client('lambda',region_name='eu-west-1'); r=lam.invoke(FunctionName='BettingPicksAPI',Payload=json.dumps({'rawPath':'/api/learning/apply','requestContext':{'http':{'method':'POST'}},'headers':{'content-type':'application/json'},'body':json.dumps({'date':__import__('datetime').datetime.now().strftime('%Y-%m-%d')})})); print(json.loads(r['Payload'].read()).get('statusCode'))\""
     )
     
     # STEP 3: Fetch today's races

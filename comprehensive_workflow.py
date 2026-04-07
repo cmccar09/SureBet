@@ -28,6 +28,79 @@ from decimal import Decimal
 from comprehensive_pick_logic import analyze_horse_comprehensive, get_comprehensive_pick, should_skip_race
 from enforce_comprehensive_analysis import validate_pick_for_ui, add_pick_to_ui
 
+# ── Workflow run lock helpers (Fix 1 & Fix 4) ────────────────────────────────
+def _get_lock_table():
+    db = boto3.resource('dynamodb', region_name='eu-west-1')
+    return db.Table('SureBetBets')
+
+def _acquire_workflow_lock(today: str) -> bool:
+    """
+    Attempt to write a WORKFLOW_RUN_LOCK record for today.
+    Returns True  → lock acquired (safe to run).
+    Returns False → lock already exists (another run completed today — abort).
+    Uses DynamoDB conditional put so the check-and-write is atomic.
+    """
+    table = _get_lock_table()
+    try:
+        table.put_item(
+            Item={
+                'bet_date': today,
+                'bet_id': 'WORKFLOW_RUN_LOCK',
+                'locked_at': datetime.utcnow().isoformat(),
+                'status': 'running',
+            },
+            ConditionExpression='attribute_not_exists(bet_id)',
+        )
+        print(f'[LOCK] Workflow lock acquired for {today}')
+        return True
+    except table.meta.client.exceptions.ConditionalCheckFailedException:
+        print(f'[LOCK] Workflow lock already exists for {today} — aborting duplicate run')
+        return False
+    except Exception as e:
+        # If we can't write the lock (e.g. network) continue anyway but warn loudly
+        print(f'[LOCK] WARNING: Could not write workflow lock: {e} — proceeding without lock')
+        return True
+
+def _release_workflow_lock(today: str, picks_written: int, large_drops: list):
+    """
+    Update the lock record to status='completed' and stamp the finish time.
+    """
+    table = _get_lock_table()
+    try:
+        table.update_item(
+            Key={'bet_date': today, 'bet_id': 'WORKFLOW_RUN_LOCK'},
+            UpdateExpression='SET #s = :s, finished_at = :f, picks_written = :p, large_score_drops = :d',
+            ExpressionAttributeNames={'#s': 'status'},
+            ExpressionAttributeValues={
+                ':s': 'completed',
+                ':f': datetime.utcnow().isoformat(),
+                ':p': picks_written,
+                ':d': large_drops,
+            },
+        )
+        print(f'[LOCK] Workflow lock released — {picks_written} picks written')
+    except Exception as e:
+        print(f'[LOCK] WARNING: Could not release workflow lock: {e}')
+
+def _log_workflow_run(today: str, event: str, picks_written: int = 0, large_drops: list = None):
+    """
+    Append a WORKFLOW_RUN_LOG record (Fix 4).
+    Each entry is uniquely keyed by ISO timestamp so we never overwrite history.
+    """
+    table = _get_lock_table()
+    ts = datetime.utcnow().isoformat()
+    try:
+        table.put_item(Item={
+            'bet_date': today,
+            'bet_id': f'WORKFLOW_RUN_LOG_{ts}',
+            'event': event,
+            'timestamp': ts,
+            'picks_written': picks_written,
+            'large_score_drops': large_drops or [],
+        })
+    except Exception as e:
+        print(f'[LOG] WARNING: Could not write run log: {e}')
+
 # Optional: enrich runners with detailed last-6-race history from Racing Post
 try:
     from form_enricher import enrich_runners
@@ -250,7 +323,20 @@ def run_comprehensive_workflow():
     print(f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     print(f"Analysis: 7-factor comprehensive (minimum 60/100)")
     print("="*80 + "\n")
-    
+
+    today = datetime.now().strftime('%Y-%m-%d')
+
+    # Fix 1: abort if this workflow has already run today
+    if not _acquire_workflow_lock(today):
+        print("Duplicate run blocked — picks from the first run are preserved.")
+        return
+
+    # Fix 4: log run start
+    _log_workflow_run(today, event='started')
+
+    picks_written = 0
+    large_drops: list = []   # populated by add_pick_to_ui via returned metadata
+
     # Load intraday learnings from earlier races
     intraday_learnings = load_intraday_learnings()
     
@@ -291,9 +377,15 @@ def run_comprehensive_workflow():
                 'market_id': race.get('market_id')  # For results fetching
             }
             
-            success = add_pick_to_ui(pick, race_data)
-            if success:
+            result = add_pick_to_ui(pick, race_data)
+            # add_pick_to_ui now returns (True, meta_dict) or False
+            if result:
                 approved_picks.append(pick)
+                picks_written += 1
+                if isinstance(result, tuple):
+                    meta = result[1]
+                    if meta.get('large_score_drop'):
+                        large_drops.append(meta['large_score_drop'])
         else:
             # Check if this was skipped due to multiple 85+ horses
             race_id = f"{race.get('venue')}_{race.get('start_time')}"
@@ -311,7 +403,12 @@ def run_comprehensive_workflow():
     print(f"Picks rejected: {rejected_count}")
     if skipped_too_close > 0:
         print(f"Races skipped (too close to call): {skipped_too_close}")
-    
+
+    if large_drops:
+        print(f"\n[WARNING] Large score drops detected (Fix 5 diagnostic):")
+        for d in large_drops:
+            print(f"  {d['horse']} @ {d['course']} {d['race_time']}: {d['old_score']} -> {d['new_score']} ({d['delta']:+d}pts)")
+
     if approved_picks:
         print(f"\nAPPROVED PICKS (added to UI):")
         for pick in approved_picks:
@@ -319,7 +416,11 @@ def run_comprehensive_workflow():
             horse_odds = pick['horse'].get('odds', 0) if isinstance(pick['horse'], dict) else 0
             score = pick.get('score', pick.get('comprehensive_score', 0))
             print(f"  + {horse_name} @ {horse_odds} - {score}/100")
-    
+
+    # Fix 1 & 4: release lock and log completion
+    _release_workflow_lock(today, picks_written, large_drops)
+    _log_workflow_run(today, event='completed', picks_written=picks_written, large_drops=large_drops)
+
     print("\n" + "="*80)
     print("+ All UI picks passed comprehensive analysis")
     print("+ No odds-only picks allowed")

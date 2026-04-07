@@ -113,9 +113,20 @@ def send_pick_notifications(picks):
         rt     = str(p.get('race_time', '') or '')
         # Format time as HH:MM
         try:
-            from datetime import datetime as dt
+            from datetime import datetime as dt, timezone, timedelta
             race_dt = dt.fromisoformat(rt.replace('Z', '+00:00'))
-            time_str = race_dt.strftime('%H:%M')
+            # Convert UTC → UK local time (BST = UTC+1 in summer, GMT in winter)
+            d = race_dt.date()
+            year = d.year
+            from datetime import date as _date
+            bst_start = _date(year, 3, 31)
+            while bst_start.weekday() != 6:
+                bst_start = _date(bst_start.year, bst_start.month, bst_start.day - 1)
+            bst_end = _date(year, 10, 31)
+            while bst_end.weekday() != 6:
+                bst_end = _date(bst_end.year, bst_end.month, bst_end.day - 1)
+            uk_offset = timedelta(hours=1) if bst_start <= d < bst_end else timedelta(0)
+            time_str = (race_dt + uk_offset).strftime('%H:%M')
         except Exception:
             time_str = rt[11:16] if len(rt) >= 16 else rt
 

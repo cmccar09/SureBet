@@ -22,7 +22,7 @@ import boto3
 from boto3.dynamodb.conditions import Attr
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
-from comprehensive_pick_logic import analyze_horse_comprehensive
+from comprehensive_pick_logic import analyze_horse_comprehensive, should_skip_race
 from notify_picks import send_pick_notifications
 
 # ── Form enricher (deep per-run history from Racing Post/Sporting Life) ──────
@@ -40,9 +40,12 @@ table = db.Table('SureBetBets')
 
 TARGET_PICKS   = 3      # 2026-04-05: 3 morning picks + 2 intraday slots reserved for afternoon additions.
                         # Intraday picks are added via /api/picks/intraday with pick_type='intraday'.
-MIN_CONFIDENCE = 78     # 2026-03-27: restored from over-corrected 85 back to 78.
-                        # Raising to 85 + halving market_leader_bonus (12→6) created a deadlock:
-                        # no horses reached 85 on Mar 26-27 (best was 83). 78 is the new floor.
+MIN_CONFIDENCE        = 78    # Global floor (fallback only — race-type thresholds below take precedence)
+MIN_CONFIDENCE_HCAP   = 85   # 2026-04-06: Handicaps need higher conviction — handicapper designs
+                              # these races to be competitive and hard to predict. A score of 78-84
+                              # in a handicap provides insufficient model edge vs field variance.
+MIN_CONFIDENCE_NORACE = 75   # Conditions / novice / maiden races: smaller fields, less weight chaos,
+                              # form signals more reliable → lower threshold is appropriate.
 
 
 def load_horse_history():
@@ -141,6 +144,20 @@ def tier_from_score(score):
     return              "POOR",   "POOR (Very unlikely)",        "red"
 
 
+def _win_prob_pct(score: float) -> int:
+    """Calibrated score-to-win-probability mapping.
+    Based on 14-day data: ~28-35% SR on show_in_ui picks overall.
+    Higher scores skew toward better-quality selections."""
+    if score >= 100: return 50
+    if score >= 95:  return 44
+    if score >= 90:  return 38
+    if score >= 85:  return 32
+    if score >= 80:  return 27
+    if score >= 75:  return 22
+    if score >= 70:  return 18
+    return 14
+
+
 def analyze_and_save_all():
     """
     Two-pass algorithm:
@@ -205,7 +222,16 @@ def analyze_and_save_all():
         venue      = race.get('course') or race.get('venue') or 'Unknown'
         race_time  = race.get('start_time', '')
         market_id  = race.get('marketId', '')
+        market_name = race.get('market_name', '')
         runners    = race.get('runners', [])
+
+        # Skip Class 3-6 handicap races — handicappers design these to be unpredictable.
+        # 2026-04-07: should_skip_race existed in comprehensive_pick_logic but was never
+        # called here. Hooking it up now: Class 3-6 hcaps are structurally un-edgeable.
+        _skip, _skip_reason = should_skip_race(race)
+        if _skip:
+            print(f"[SKIP — {_skip_reason}]  [{venue}  {race_time[:16]}]")
+            continue
 
         # Skip races that have already started or are within 15 minutes
         try:
@@ -335,6 +361,7 @@ def analyze_and_save_all():
                 'decimal_odds':        Decimal(str(odds)) if odds else Decimal('0'),
                 'combined_confidence': Decimal(str(score)),
                 'comprehensive_score': Decimal(str(score)),
+                'win_probability':      _win_prob_pct(score),
                 'confidence_level':    confidence_level,
                 'confidence_grade':    confidence_grade,
                 'confidence_color':    confidence_color,
@@ -347,6 +374,7 @@ def analyze_and_save_all():
                 'selection_reasons':   reasons,
                 'sport':               'horses',
                 'market_id':           market_id,
+                'market_name':         market_name,
                 'selection_id':        runner.get('selectionId', 0),
                 'race_coverage_pct':   Decimal('100'),
                 'race_total_count':    len(runners),
@@ -614,10 +642,57 @@ def analyze_and_save_all():
                   f"(sub-6/4 picks are negative EV at our observed win rates)")
             return False
 
+        # S10 — Irish NHF bumper short-priced favourite gate (2026-04-06)
+        # LESSON: Boundfornowhere (Cork 16:45, score=104 ELITE, 7/4 fav) — lost to 80/1 shot.
+        # Pattern: Irish NH Flat bumpers are inherently unpredictable. Form is shallow (≤3 runs each),
+        # point-to-point form is unquantifiable, and heavy/soft ground randomises the result.
+        # When our pick is the SHORT-PRICED FAVOURITE in an Irish bumper, the market_leader bonus
+        # (+16pts) inflates the score without adding genuine predictive edge. The 68/1 range of
+        # outcomes (2nd-placed Kill Vanhowe at 13/2, winner at 80/1) shows the market itself
+        # has no reliable information — being the favourite is NOT an edge.
+        # Gate: Irish venue + bumper/NHF race type + market leader at ≤4.0 odds → require score ≥ 110,
+        # OR require 3+ recent bumper wins in form. Most horses won't pass — and that's the point.
+        _race_mkt = str(r.get('market_name', r.get('race_name', ''))).upper()
+        _is_nhf_bumper = 'NHF' in _race_mkt or 'BUMPER' in _race_mkt or 'N.H. FLAT' in _race_mkt
+        _IRISH_BUMPER_VENUES = {
+            'curragh', 'dundalk', 'navan', 'naas', 'leopardstown', 'cork',
+            'galway', 'tipperary', 'punchestown', 'killarney', 'gowran',
+            'bellewstown', 'roscommon', 'tramore', 'ballinrobe', 'sligo',
+            'fairyhouse', 'listowel', 'down royal', 'downroyal',
+        }
+        _is_irish_bumper_venue = r.get('course', '').lower().strip() in _IRISH_BUMPER_VENUES
+        if _is_nhf_bumper and _is_irish_bumper_venue and ml > 0 and _best_odds <= 4.0:
+            # Count recent bumper wins from form — form like 'P-1' or '11' suggests bumper ability
+            _bumper_form = str(r['best']['item'].get('form', '') or '')
+            _bumper_recent_wins = _bumper_form.replace('-', '').replace('/', '').count('1')
+            if _bumper_recent_wins < 2 and score < 110:
+                print(f"  [GATE-S10 REJECTED] {r['best']['horse']} score={score:.0f}: "
+                      f"Irish NHF bumper short-priced favourite ({_best_odds}). "
+                      f"Market leader bonus inflates score but bumper form is shallow — "
+                      f"need score>=110 OR >=2 bumper wins. Lesson: Boundfornowhere 2026-04-06 (104→lost 80/1)")
+                return False
+
         return True
 
+    def _race_min_confidence(r):
+        """Return the minimum score required for this race type to qualify as a UI pick.
+        Handicaps are harder to predict (field deliberately levelled by weights) so require
+        a higher model conviction. Conditions/novice/maiden races have simpler fields.
+        2026-04-06: replaces the single MIN_CONFIDENCE=78 with race-type-specific thresholds.
+        """
+        market_name = r.get('market_name', '').lower()
+        is_handicap = (
+            'hcap' in market_name or
+            'handicap' in market_name or
+            market_name.endswith(' h') or
+            ' h ' in market_name
+        )
+        if is_handicap:
+            return MIN_CONFIDENCE_HCAP    # 85
+        return MIN_CONFIDENCE_NORACE      # 75
+
     eligible = [r for r in all_races_data
-                if r['best']['score'] >= MIN_CONFIDENCE and _passes_quality_gates(r)]
+                if r['best']['score'] >= _race_min_confidence(r) and _passes_quality_gates(r)]
     eligible.sort(key=lambda r: r['best']['score'], reverse=True)
 
     # ── DIVERSE PICK SELECTION (2026-03-30) ────────────────────────────────────
@@ -695,8 +770,11 @@ def analyze_and_save_all():
             item['pick_type']           = 'morning' if is_ui else 'learning'
             item['race_analyzed_count'] = race_total
             if is_ui:
-                item['stake']    = Decimal('50')
-                item['bet_type'] = 'Each Way'
+                # Elite staking: Pick 1 = 5pts, Pick 2 = 3pts, Pick 3 = 2pts (10-pt bankroll)
+                _stake_pts = {1: 5, 2: 3, 3: 2}.get(rank, 2)
+                item['stake']      = Decimal(str(_stake_pts))
+                item['stake_pts']  = _stake_pts
+                item['bet_type']   = 'Each Way'
             item['sl_declared_count']   = _sl_decl
             item['missing_runners']     = _race_missing
             item['all_horses']          = _all_horses_list  # full field for UI display

@@ -35,6 +35,7 @@ Suspect Favourite Scoring (higher = more layable):
 
 import sys
 import os
+import re
 import json
 import argparse
 from datetime import date, timedelta, datetime
@@ -90,27 +91,33 @@ def parse_form(form_str):
 # ── Suspect Favourite Scoring ───────────────────────────────────────────────
 
 SCORE_LABELS = {
-    'class_up':      ('Class',    '+4  Moving up in class'),
-    'trip_new':      ('Trip',     '+2  Unproven at this distance'),
-    'going_unproven':('Going',    '+2  Unproven on current going'),
-    'draw_poor':     ('Draw',     '+1  Poor draw position'),
-    'layoff':        ('Layoff',   '+1  30-90 days off (stale form)'),
-    'pace_doubt':    ('Pace',     '+1  Going suitability zero — pace fit uncertain'),
-    'rivals_close':  ('Rivals',   '+2  2nd/3rd fav within 25% of favourite score'),
-    'drift':         ('Drift',    '+1  Market drift / low score gap'),
-    'short_price':   ('Price',    '+1  Odds-on or 5/4 or less'),
+    'class_up':         ('Class',         '+4  Moving up in class'),
+    'trip_new':         ('Trip',          '+2  Unproven at this distance'),
+    'going_unproven':   ('Going',         '+2  Unproven on current going'),
+    'draw_poor':        ('Draw',          '+1  Poor draw position'),
+    'layoff':           ('Layoff',        '+1  30-90 days off (stale form)'),
+    'pace_doubt':       ('Pace',          '+1  Pace may not suit'),
+    'rivals_close':     ('Rivals',        '+2  2nd/3rd fav within 25% of favourite score'),
+    'drift':            ('Drift',         '+1  Market drift — open vs current price'),
+    'short_price':      ('Price',         '+1  5/4 or less / odds-on'),
+    'trainer_track':    ('Trainer@Track', '+1  Trainer win rate at this track'),
+    'trainer_cold':     ('TrainerCold',   '+1  Trainer cold last 14 days'),
+    'trainer_multiple': ('MultiRunner',   '+1  Trainer with multiple runners in race'),
 }
 
 SCORE_WEIGHTS = {
-    'class_up':       4,
-    'trip_new':       2,
-    'going_unproven': 2,
-    'draw_poor':      1,
-    'layoff':         1,
-    'pace_doubt':     1,
-    'rivals_close':   2,
-    'drift':          1,
-    'short_price':    1,
+    'class_up':          4,
+    'trip_new':          2,
+    'going_unproven':    2,
+    'draw_poor':         1,
+    'layoff':            1,
+    'pace_doubt':        1,
+    'rivals_close':      2,
+    'drift':             1,
+    'short_price':       1,
+    'trainer_track':     1,
+    'trainer_cold':      1,
+    'trainer_multiple':  1,
 }
 
 
@@ -199,7 +206,33 @@ def score_favourite(fav, all_horses_sorted, race_going=''):
     recent_win_pts = float(sb.get('recent_win', 0))
     if going_pts == 0 and recent_win_pts == 0:
         flags['pace_doubt'] = True
-        details.append('No going suitability or recent win signal — pace fit uncertain')
+        details.append('No going suitability or recent win signal — pace may not suit')
+
+    # --- Trainer at track win rate (+1) ---
+    fav_trainer = str(fav.get('trainer') or '').strip()
+    trainer_rep_pts = float(sb.get('trainer_reputation', 0))
+    if fav_trainer and trainer_rep_pts == 0:
+        flags['trainer_track'] = True
+        details.append(f'Trainer ({fav_trainer}) — no quality tier status at this track (win rate unverified)')
+
+    # --- Trainer cold last 14 days (+1) ---
+    meeting_pts = float(sb.get('meeting_focus', 0))
+    recent_form = form_str[-4:] if len(form_str) >= 4 else form_str
+    recent_wins_in_form = sum(1 for c in recent_form if c == '1')
+    if fav_trainer and meeting_pts == 0 and recent_wins_in_form == 0:
+        flags['trainer_cold'] = True
+        details.append(f'Trainer ({fav_trainer}) — no meeting focus & no win in recent form (cold indicator)')
+
+    # --- Trainer with multiple runners (+1) ---
+    if fav_trainer and all_horses_sorted:
+        multi_count = sum(
+            1 for h in all_horses_sorted
+            if (str(h.get('trainer') or '').strip().lower() == fav_trainer.lower()
+                and (h.get('horse') or '') != (fav.get('horse') or ''))
+        )
+        if multi_count >= 1:
+            flags['trainer_multiple'] = True
+            details.append(f'Trainer ({fav_trainer}) has {multi_count + 1} runners in race — possible divided loyalties')
 
     # --- Drift (+1) ---
     # Proxy: score_gap < 10 means rivals are close on our model = market may be drifting
@@ -218,8 +251,10 @@ def score_favourite(fav, all_horses_sorted, race_going=''):
 # ── Verdict helpers ──────────────────────────────────────────────────────────
 
 def verdict(score):
-    if score >= 9:
-        return 'STRONG LAY', 'RED'
+    if score >= 13:
+        return 'STRONG LAY CANDIDATE', 'RED'
+    elif score >= 10:
+        return 'STRONG LAY', 'AMBER'
     elif score >= 4:
         return 'CAUTION / TAKE A LOOK', 'YELLOW'
     else:
@@ -228,6 +263,7 @@ def verdict(score):
 
 ANSI = {
     'RED':    '\033[91m',
+    'AMBER':  '\033[38;5;208m',
     'YELLOW': '\033[93m',
     'GREEN':  '\033[92m',
     'BOLD':   '\033[1m',
@@ -241,7 +277,86 @@ def colour(text, colour_key):
 
 # ── Main Analysis ──────────────────────────────────────────────────────────
 
-def analyse_date(target_date_str, db_table):
+def _utc_to_local_hhmm(utc_hhmm: str, date_str: str) -> str:
+    """Convert UTC HH:MM string to UK local time (BST = UTC+1, late Mar – late Oct)."""
+    try:
+        d = date.fromisoformat(date_str[:10])
+        bst_start = date(d.year, 3, 31)
+        while bst_start.weekday() != 6:
+            bst_start = date(bst_start.year, bst_start.month, bst_start.day - 1)
+        bst_end = date(d.year, 10, 31)
+        while bst_end.weekday() != 6:
+            bst_end = date(bst_end.year, bst_end.month, bst_end.day - 1)
+        if not (bst_start <= d < bst_end):
+            return utc_hhmm
+        h, mn = map(int, utc_hhmm.split(':'))
+        total = h * 60 + mn + 60
+        return f'{(total // 60) % 24:02d}:{total % 60:02d}'
+    except Exception:
+        return utc_hhmm
+
+
+def _fetch_sl_winner_map():
+    """
+    Fetch https://www.sportinglife.com/racing/fast-results/all and return a lookup:
+        { (course_lower, local_hhmm): winner_name }
+    Used to determine if the favourite won or lost after the race.
+    Returns an empty dict on any network/parse error.
+    """
+    try:
+        import urllib.request as _ur
+        req = _ur.Request(
+            'https://www.sportinglife.com/racing/fast-results/all',
+            headers={
+                'User-Agent': (
+                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                    'AppleWebKit/537.36 (KHTML, like Gecko) '
+                    'Chrome/122.0.0.0 Safari/537.36'
+                ),
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Language': 'en-GB,en;q=0.5',
+                'Referer': 'https://www.sportinglife.com/',
+            },
+        )
+        with _ur.urlopen(req, timeout=15) as resp:
+            html = resp.read().decode('utf-8', errors='replace')
+    except Exception as e:
+        print(f'[favs_run] _fetch_sl_winner_map fetch error: {e}')
+        return {}
+
+    m = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, re.DOTALL)
+    if not m:
+        print('[favs_run] __NEXT_DATA__ not found in SL fast-results page')
+        return {}
+
+    try:
+        data = json.loads(m.group(1))
+    except Exception as e:
+        print(f'[favs_run] SL fast-results JSON parse error: {e}')
+        return {}
+
+    fast = data.get('props', {}).get('pageProps', {}).get('fastResults', [])
+    winner_map = {}
+    for fr in fast:
+        top_horses = fr.get('top_horses')
+        if not top_horses:
+            continue
+        course = fr.get('courseName', '')
+        off_time = fr.get('time', '')   # local HH:MM
+        if not course or not off_time:
+            continue
+        sorted_h = sorted(top_horses, key=lambda h: h.get('position', 99))
+        winner = sorted_h[0].get('horse_name', '') if sorted_h else ''
+        winner = re.sub(r'\s*\([A-Z]{2,3}\)\s*$', '', winner).strip()
+        if winner:
+            key = (course.lower().replace('-', ' ').strip(), off_time)
+            winner_map[key] = winner
+
+    print(f'[favs_run] SL winner_map: {len(winner_map)} races with results')
+    return winner_map
+
+
+def analyse_date(target_date_str, db_table, winner_map=None):
     """Return list of race analysis dicts for one date."""
     resp = db_table.query(
         KeyConditionExpression=Key('bet_date').eq(target_date_str)
@@ -297,12 +412,56 @@ def analyse_date(target_date_str, db_table):
         race_name = fav.get('race_name') or f'{course} {rt[11:16]}'
         fav_sys_score = float(fav.get('comprehensive_score') or fav.get('score', 0))
 
+        # Determine if favourite won/lost.
+        # Priority 1: SL fast-results winner map (most reliable — any finished race)
+        # Priority 2: scan DynamoDB runners for a pick with outcome='win'
+        # Priority 3: the favourite's own outcome field (only if it was a pick)
+        fav_name = fav.get('horse', '') or ''
+        fav_outcome = None
+
+        if winner_map:
+            # Convert UTC race_time to UK local for SL time matching
+            date_part = rt[:10] if len(rt) >= 10 else target_date_str
+            utc_hhmm  = rt[11:16] if len(rt) >= 16 else ''
+            local_hhmm = _utc_to_local_hhmm(utc_hhmm, date_part)
+            course_key = course.lower().replace('-', ' ').strip()
+            try:
+                lh, lm = map(int, local_hhmm.split(':'))
+                local_mins = lh * 60 + lm
+                for (c_key, t_key), w_name in winner_map.items():
+                    if c_key != course_key:
+                        continue
+                    wh, wm = map(int, t_key.split(':'))
+                    if abs((wh * 60 + wm) - local_mins) <= 15:
+                        fav_outcome = (
+                            'win' if w_name.strip().lower() == fav_name.strip().lower()
+                            else 'loss'
+                        )
+                        break
+            except Exception:
+                pass
+
+        if fav_outcome is None:
+            # Fallback: scan all runners in this race for a settled outcome='win'
+            winner_name = None
+            for h in runners:
+                if (h.get('outcome') or '').lower() == 'win':
+                    winner_name = h.get('horse', '')
+                    break
+            if winner_name:
+                fav_outcome = (
+                    'win' if winner_name.strip().lower() == fav_name.strip().lower()
+                    else 'loss'
+                )
+            else:
+                fav_outcome = fav.get('outcome') or None
+
         results.append({
             'date':       target_date_str,
             'race_time':  rt,
             'course':     course,
             'race_name':  race_name,
-            'favourite':  fav.get('horse', '?'),
+            'favourite':  fav_name or '?',
             'fav_odds':   fav_odds_dec,
             'fav_sys_score': fav_sys_score,
             'score_gap':  float(fav.get('score_gap') or 0),
@@ -316,6 +475,7 @@ def analyse_date(target_date_str, db_table):
             'trainer':    fav.get('trainer', ''),
             'jockey':     fav.get('jockey', ''),
             'our_pick':   fav.get('show_in_ui', False),
+            'outcome':    fav_outcome,
         })
 
     results.sort(key=lambda r: r['lay_score'], reverse=True)
@@ -327,15 +487,17 @@ def analyse_date(target_date_str, db_table):
 def print_results(all_results, threshold=0):
     total_races = len(all_results)
     lay_candidates = [r for r in all_results if r['lay_score'] >= 4]
-    strong_lays = [r for r in all_results if r['lay_score'] >= 9]
+    amber_lays    = [r for r in all_results if r['lay_score'] >= 10]
+    strong_lays   = [r for r in all_results if r['lay_score'] >= 13]
 
     print()
     print(colour('=' * 72, 'BOLD'))
     print(colour('  FAVS-RUN  —  Suspect Favourite Lay Analysis', 'BOLD'))
     print(colour('=' * 72, 'BOLD'))
-    print(f'  Short-price favourites analysed: {total_races}')
-    print(f'  Lay candidates (score 4+):       {len(lay_candidates)}')
-    print(f'  Strong lay candidates (9+):      {len(strong_lays)}')
+    print(f'  Short-price favourites analysed:    {total_races}')
+    print(f'  Caution candidates (score 4+):      {len(lay_candidates)}')
+    print(f'  Strong lay candidates (10–12):      {len(amber_lays) - len(strong_lays)}')
+    print(f'  Red flag candidates (13+):          {len(strong_lays)}')
     print()
 
     filtered = [r for r in all_results if r['lay_score'] >= threshold]
@@ -440,10 +602,12 @@ def build_html(all_results, generated_at=None):
 
     total    = len(all_results)
     caution  = sum(1 for r in all_results if r['lay_score'] >= 4)
-    strong   = sum(1 for r in all_results if r['lay_score'] >= 9)
+    strong   = sum(1 for r in all_results if r['lay_score'] >= 10)
+    red_flag = sum(1 for r in all_results if r['lay_score'] >= 13)
 
     COLOUR_MAP = {
         'RED':    ('#f85149', '#2d1b1b'),
+        'AMBER':  ('#f97316', '#2a1508'),
         'YELLOW': ('#d29922', '#2a1f0a'),
         'GREEN':  ('#3fb950', '#0d2318'),
     }
@@ -460,10 +624,12 @@ def build_html(all_results, generated_at=None):
         items = ''.join(f'<li>{d}</li>' for d in details)
         return f'<ul class="detail-list">{items}</ul>' if items else ''
 
-    def score_bar(score, max_score=15):
+    def score_bar(score, max_score=18):
         pct = min(100, int(score / max_score * 100))
-        if score >= 9:
+        if score >= 13:
             bar_colour = '#f85149'
+        elif score >= 10:
+            bar_colour = '#f97316'
         elif score >= 4:
             bar_colour = '#d29922'
         else:
@@ -506,7 +672,7 @@ def build_html(all_results, generated_at=None):
       </div>
       <div class="card-score-block">
         <div class="lay-score" style="color:{fg}">{r['lay_score']}</div>
-        <div class="lay-score-denom">/ 15</div>
+        <div class="lay-score-denom">/ 18</div>
         {score_bar(r['lay_score'])}
       </div>
     </div>
@@ -597,6 +763,7 @@ def build_html(all_results, generated_at=None):
     border-radius: 10px; margin-bottom: 16px; overflow: hidden;
   }}
   .race-card.vc-red    {{ border-left: 4px solid #f85149; }}
+  .race-card.vc-amber  {{ border-left: 4px solid #f97316; }}
   .race-card.vc-yellow {{ border-left: 4px solid #d29922; }}
   .race-card.vc-green  {{ border-left: 4px solid #3fb950; }}
 
@@ -643,8 +810,11 @@ def build_html(all_results, generated_at=None):
   .chip-draw_poor    {{ background: #2a1f0a; color: #fbbf24; border-color: #92400e; }}
   .chip-layoff       {{ background: #271a1a; color: #fca5a5; border-color: #7f1d1d; }}
   .chip-pace_doubt   {{ background: #1a1f27; color: #93c5fd; border-color: #1e3a5f; }}
-  .chip-drift        {{ background: #271f0a; color: #fcd34d; border-color: #78350f; }}
-  .chip-class_up     {{ background: #2d1b3d; color: #c084fc; border-color: #6b21a8; }}
+  .chip-drift           {{ background: #271f0a; color: #fcd34d; border-color: #78350f; }}
+  .chip-class_up        {{ background: #2d1b3d; color: #c084fc; border-color: #6b21a8; }}
+  .chip-trainer_track   {{ background: #1a2040; color: #a5b4fc; border-color: #4338ca; }}
+  .chip-trainer_cold    {{ background: #1a1a30; color: #818cf8; border-color: #3730a3; }}
+  .chip-trainer_multiple {{ background: #200a2a; color: #e879f9; border-color: #7e22ce; }}
 
   .detail-list {{ padding: 0 20px 14px 36px; }}
   .detail-list li {{ font-size: 12px; color: var(--muted); margin-bottom: 3px; }}
@@ -672,28 +842,33 @@ def build_html(all_results, generated_at=None):
     <div class="meta-pill"><span class="dot" style="background:#58a6ff"></span>Generated <b>{generated_at}</b></div>
     <div class="meta-pill"><span class="dot" style="background:#8b949e"></span>Analysed <b>{total}</b> short-price favourites</div>
     <div class="meta-pill"><span class="dot" style="background:#d29922"></span>Caution+ <b>{caution}</b></div>
-    <div class="meta-pill"><span class="dot" style="background:#f85149"></span>Strong Lay <b>{strong}</b></div>
+    <div class="meta-pill"><span class="dot" style="background:#f97316"></span>Strong Lay <b>{strong}</b></div>
+    <div class="meta-pill"><span class="dot" style="background:#f85149"></span>Red Flag <b>{red_flag}</b></div>
   </div>
 </div>
 
 <div class="legend">
   <div class="legend-item"><div class="legend-dot" style="background:#3fb950"></div>0–3 = Leave alone</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#d29922"></div>4–8 = Caution / take a look</div>
-  <div class="legend-item"><div class="legend-dot" style="background:#f85149"></div>9+ = Strong lay candidate</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#d29922"></div>4–9 = Caution / take a look</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f97316"></div>10–12 = Strong lay</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f85149"></div>13+ = Strong lay candidate</div>
 </div>
 
 <div class="scoring-panel">
   <h3>Scoring Factors</h3>
   <div class="scoring-grid">
     <div class="scoring-row"><span class="scoring-pts">+4</span><span class="scoring-label">Class</span><span class="scoring-desc">Moving up in class</span></div>
-    <div class="scoring-row"><span class="scoring-pts">+2</span><span class="scoring-label">Trip</span><span class="scoring-desc">New / unproven distance</span></div>
+    <div class="scoring-row"><span class="scoring-pts">+2</span><span class="scoring-label">Trip</span><span class="scoring-desc">New distance (up or down)</span></div>
     <div class="scoring-row"><span class="scoring-pts">+2</span><span class="scoring-label">Going</span><span class="scoring-desc">Unproven on current going</span></div>
-    <div class="scoring-row"><span class="scoring-pts">+1</span><span class="scoring-label">Draw</span><span class="scoring-desc">Poor draw on track record</span></div>
-    <div class="scoring-row"><span class="scoring-pts">+1</span><span class="scoring-label">Layoff</span><span class="scoring-desc">30–90 days off (stale form)</span></div>
-    <div class="scoring-row"><span class="scoring-pts">+1</span><span class="scoring-label">Pace</span><span class="scoring-desc">Pace suitability uncertain</span></div>
-    <div class="scoring-row"><span class="scoring-pts">+2</span><span class="scoring-label">Rivals</span><span class="scoring-desc">2nd/3rd fav within 25% of score</span></div>
-    <div class="scoring-row"><span class="scoring-pts">+1</span><span class="scoring-label">Drift</span><span class="scoring-desc">Market drift / low score gap</span></div>
+    <div class="scoring-row"><span class="scoring-pts">+1</span><span class="scoring-label">Draw</span><span class="scoring-desc">Poor draw on this track</span></div>
+    <div class="scoring-row"><span class="scoring-pts">+1</span><span class="scoring-label">Layoff</span><span class="scoring-desc">30–90 days off</span></div>
+    <div class="scoring-row"><span class="scoring-pts">+1</span><span class="scoring-label">Pace</span><span class="scoring-desc">Pace may not suit</span></div>
+    <div class="scoring-row"><span class="scoring-pts">+2</span><span class="scoring-label">Rivals</span><span class="scoring-desc">Creditable threats (2nd/3rd favs)</span></div>
+    <div class="scoring-row"><span class="scoring-pts">+1</span><span class="scoring-label">Drift</span><span class="scoring-desc">Market drift — open vs current</span></div>
     <div class="scoring-row"><span class="scoring-pts">+1</span><span class="scoring-label">Price</span><span class="scoring-desc">5/4 or less / odds-on</span></div>
+    <div class="scoring-row"><span class="scoring-pts">+1</span><span class="scoring-label">Trainer@Track</span><span class="scoring-desc">Trainer win rate at that track</span></div>
+    <div class="scoring-row"><span class="scoring-pts">+1</span><span class="scoring-label">TrainerCold</span><span class="scoring-desc">Trainer cold last 14 days</span></div>
+    <div class="scoring-row"><span class="scoring-pts">+1</span><span class="scoring-label">MultiRunner</span><span class="scoring-desc">Trainer with multiple runners</span></div>
   </div>
 </div>
 

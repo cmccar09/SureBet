@@ -1,24 +1,153 @@
 ╔═══════════════════════════════════════════════════════════════════════════════╗
-║                    🔒 EVERY DAY SETUP - LOCKED IN GIT 🔒                     ║
-║                        Git Commit: 744afc9 (main)                             ║
+║              DAILY ORCHESTRATION — APRIL 2026 (CURRENT VERSION)              ║
 ╚═══════════════════════════════════════════════════════════════════════════════╝
 
-┌───────────────────────────────────────────────────────────────────────────────┐
-│ MORNING ROUTINE (10:00 AM - 5 Minutes)                                       │
-└───────────────────────────────────────────────────────────────────────────────┘
+ORCHESTRATION SCRIPT
+  daily_automated_workflow.py  ← master runner (calls all others in sequence)
+  Run it as:  python daily_automated_workflow.py
 
-  1. Open PowerShell in: C:\Users\charl\OneDrive\futuregenAI\Betting
-  
-  2. Run these 2 commands:
-     
-     python betfair_odds_fetcher.py
-     python complete_daily_analysis.py
-     
-  3. View results:
-     
-     python show_todays_ui_picks.py
-     
-  ✅ DONE! Rest is automatic.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+STEP-BY-STEP PIPELINE (what daily_automated_workflow.py runs)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1  — YESTERDAY'S RESULTS (run automatically each morning)
+  Script : sl_results_fetcher.py
+  Purpose: Matches pending DynamoDB picks against SL fast-results page.
+           Updates outcome = win/placed/loss + profit + SP odds.
+  DST    : Race times converted UTC→BST before matching SL local times.
+
+STEP 2  — TODAY'S RACECARD (MUST run first — everything else depends on it)
+  Script : sl_racecard_fetcher.py
+  Purpose: Fetches all declared runners from Sporting Life racecard.
+           Writes racecard_cache.json (keyed by date → course → race → runners).
+           This is the SOURCE OF TRUTH for declared field sizes (used by S8 gate).
+  Command: python sl_racecard_fetcher.py
+
+STEP 3  — CONVERT RACECARD TO WORKFLOW FORMAT
+  Script : sl_to_workflow_adapter.py
+  Purpose: Converts racecard_cache.json → response_horses.json
+           (the format complete_daily_analysis.py expects).
+           Also merges Betfair decimal odds where available.
+  Command: python sl_to_workflow_adapter.py
+  Writes : response_horses.json
+
+STEP 4  — LIVE BETFAIR ODDS REFRESH (optional but recommended)
+  Script : betfair_odds_fetcher.py
+  Purpose: Fetches live Betfair odds and injects them into response_horses.json.
+           Without this, odds come from SL racecard (may be SP estimates).
+  Command: python betfair_odds_fetcher.py
+
+STEP 5  — FORM ENRICHMENT (deep history from Racing Post)
+  Script : form_enricher.py  (imported by complete_daily_analysis.py)
+  Purpose: Fetches last-6-race history for each runner.
+           Unlocks deep_form signals: course_win, distance_win, going_win etc.
+           Results cached in form_cache.json (do not delete — takes ~20 min to fill).
+
+STEP 6  — MAIN ANALYSIS + PICK SELECTION  ← THE CORE
+  Script : complete_daily_analysis.py
+  Purpose: Scores every horse with 7-factor model, runs quality gates S1-S8,
+           selects top-5 picks, saves ALL horses to DynamoDB SureBetBets.
+  Command: python complete_daily_analysis.py
+  Depends: response_horses.json  (from STEP 3)
+           racecard_cache.json   (from STEP 2 — for S8 completeness gate)
+           comprehensive_pick_logic.py  (scoring engine)
+
+STEP 7  — NOTIFY PICKS
+  Script : notify_picks.py
+  Purpose: Sends WhatsApp notifications for today's top picks.
+           Times shown in UK local time (BST/GMT), not UTC.
+  Command: python notify_picks.py
+
+STEP 8  — DEPLOY API (only if scoring logic changed)
+  Script : _deploy_bpapi.py
+  Purpose: Zips _bpapi_patched.py → lambda_function.py and deploys to AWS Lambda.
+           Lambda serves DynamoDB picks to the frontend (read-only).
+  Command: python _deploy_bpapi.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CORE SCORING ENGINE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  comprehensive_pick_logic.py   — 7-factor scoring, trainer tiers, DEFAULT_WEIGHTS
+                                   analyze_horse_comprehensive() is called per runner
+  complete_daily_analysis.py    — orchestrates scoring, applies quality gates S1-S8
+  sl_to_workflow_adapter.py     — builds response_horses.json from racecard
+  form_enricher.py              — deep form signals (Racing Post/SL scraping)
+  weather_going_inference.py    — going/weather signals (invoked by scoring engine)
+  trainer_form_stats.py         — trainer hot streak data
+  betfair_odds_fetcher.py       — live odds (optional but gives market_leader signals)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+QUALITY GATES (in complete_daily_analysis.py  _passes_quality_gates)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  S1  Non-market-backed picks: score >= 85 (with tr/cd anchor) or >= 88 (no anchor)
+  S2  At least one contextual anchor required (market, trainer, cd_bonus, unexposed, deep_form)
+  S3  Age-padded picks (age_bonus >= 10) without market/trainer need score >= 92
+  S4  Score gap >= 8 vs 2nd-best horse in race (close races = coin flips)
+  S5  Saturday: gap >= 15 required; 16+ runner Saturdays need market backing
+  S6  Large field (16+) without market backing: gap >= 12
+  S7  Novice/debut-heavy races (60%+ runners with ≤1 career run): skip
+  S8  Incomplete field: SL declared N runners but we only scored M < N
+        - Missing 2+:  ALWAYS BLOCK (we haven't seen the full field)
+        - Missing 1, no market leader:  BLOCK
+        - Missing 1, market leader:  WARNING only (allow through)
+
+  LESSON (S8 — 2026-04-01): Kingcormac (Wincanton 15:20, Class 5) was our top scorer
+  but a 6th runner (Starlucky) was absent from Betfair — the winner we never analysed.
+  S8 would have blocked this pick automatically.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INFRASTRUCTURE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  DynamoDB  :  SureBetBets  (eu-west-1)
+                bet_date (partition key), bet_id (sort key)
+  Lambda    :  BettingPicksAPI  — serves picks to frontend (read-only from DynamoDB)
+                Deployed via: python _deploy_bpapi.py  (source: _bpapi_patched.py)
+  Frontend  :  https://main.d2hmpykfsdweob.amplifyapp.com  (React, AWS Amplify)
+                Deploy via: cd frontend && npm run build && python _deploy_frontend.py
+  API URL   :  https://mnybvagd5m.execute-api.eu-west-1.amazonaws.com
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+MORNING COMMANDS (run in order)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  .\.venv\Scripts\Activate.ps1
+  python sl_racecard_fetcher.py          # fetch today's declared runners
+  python sl_to_workflow_adapter.py       # convert to response_horses.json
+  python betfair_odds_fetcher.py         # inject live Betfair odds (optional)
+  python complete_daily_analysis.py      # score all horses, select 5 picks, save to DB
+  python notify_picks.py                 # WhatsApp notifications
+
+  To check today's picks:
+  .\.venv\Scripts\python.exe -X utf8 _audit_today.py
+
+  To record results (run after 7pm):
+  python sl_results_fetcher.py
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+KEY FILES (do not archive)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  complete_daily_analysis.py      main pick selection engine
+  comprehensive_pick_logic.py     7-factor scoring engine (DEFAULT_WEIGHTS, trainer tiers)
+  sl_to_workflow_adapter.py       racecard → response_horses.json converter
+  sl_racecard_fetcher.py          SL racecard scraper
+  sl_results_fetcher.py           SL results matcher (records win/loss in DynamoDB)
+  betfair_odds_fetcher.py         live Betfair odds fetcher
+  form_enricher.py                deep form history enrichment
+  notify_picks.py                 WhatsApp pick notifications
+  _bpapi_patched.py               Lambda API server source (deployed by _deploy_bpapi.py)
+  _deploy_bpapi.py                Lambda deployment script
+  _deploy_frontend.py             Frontend deployment script
+  weather_going_inference.py      Going/weather signals
+  trainer_form_stats.py           Trainer recent form stats
+  daily_automated_workflow.py     Master orchestration runner
+  racecard_cache.json             SL racecard cache (updated each morning)
+  form_cache.json                 Deep form cache (keep — ~20 min to rebuild)
+  response_horses.json            Today's races in workflow format (rebuilt each day)
+
 
 
 ┌───────────────────────────────────────────────────────────────────────────────┐

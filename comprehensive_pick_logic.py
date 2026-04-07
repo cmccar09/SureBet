@@ -14,7 +14,7 @@ Integrates ALL learnings:
 import json
 import boto3
 from decimal import Decimal
-from datetime import datetime
+from datetime import datetime, timezone
 from weather_going_inference import check_all_tracks_going
 
 try:
@@ -71,7 +71,7 @@ DEFAULT_WEIGHTS = {
     'jockey_quality':       12,  # restored: elite jockey tier 1
     'jockey_tier2':          6,  # restored: good/champion jockeys
     'weight_penalty':       10,  # unchanged
-    'age_bonus':            10,  # unchanged
+    'age_bonus':             7,  # REDUCED 10→7 (2026-04-01): 4yo flat bonus was inflating non-market-backed picks. Age matters less in handicaps than form/market signal.
     'distance_suitability': 18,  # INCREASED 12->18: proven distance/course match is very important
     'novice_race_penalty':  15,  # unchanged
     'bounce_back_bonus':     8,  # REDUCED 12->8
@@ -116,6 +116,20 @@ DEFAULT_WEIGHTS = {
     # do not discriminate reliably. Apply a per-runner discount so big fields need a much
     # clearer quality advantage before surviving the confidence gate.
     'large_field_penalty':        10,  # 16-19 runners: -10pts; 20+ runners: -18pts
+    # Class drop bonus (2026-04-01) — LESSON: Broomfields Cave won at Wincanton as a drop-in-grade
+    # winner. The model missed it because we had no explicit signal for horses coming down from
+    # a higher class. A horse that ran in Class 2/3 recently and drops to Class 4/5 today has
+    # a proven quality ceiling above the current field.
+    'class_drop_bonus':           12,  # Horse ran Class 2/3 in last 3 runs, today is Class 4/5+
+    # Same-trainer rival penalty (2026-04-01) — LESSON: I'm Spartacus vs Clonmacash, same trainer
+    # A McGuinness. When a trainer enters 2+ horses in the same race, stable attention is split and
+    # the trainer may prefer one runner over another — reducing confidence in either pick.
+    'same_trainer_rival_penalty': 10,  # -10pts per horse when trainer has 2+ in same race
+    # Irish competitive venue penalty (2026-04-01) — LESSON: Dmaniac (Curragh handicap sc=107) and
+    # I'm Spartacus (Dundalk handicap sc=84) both lost. Irish handicaps at these tracks are
+    # notoriously competitive with large fields, tight weights, and unpredictable pace scenarios.
+    # Our form signals are just as good there, but the BETTING MARKET is much harder to read.
+    'irish_handicap_penalty':    10,  # Handicap race at Irish track (Curragh/Dundalk/Navan/Naas/Leopardstown)
 }
 
 # Cache for weights (reload every 5 minutes)
@@ -320,7 +334,7 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     """
     name = horse_data.get('name')
     odds = horse_data.get('odds', 0)
-    form = horse_data.get('form', '')
+    form = horse_data.get('form') or ''
     trainer = horse_data.get('trainer', '')
     
     # Load dynamic weights (auto-adjusted by learning system)
@@ -337,11 +351,24 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     reasons = []
     
     # 1. SWEET SPOT CHECK (Graduated - give points based on odds)
+    # LESSON 2026-04-03: Historical data shows 3.0–4.9 decimal (2/1–4/1) is a LOSING RANGE
+    # (-£11.95 P&L). The PROVEN winning range is 5.0–8.0 decimal (4/1–7/1, +£25.20 P&L).
+    # Giving full sweet_spot points to 3.0–4.9 was actively rewarding known-losing odds bands.
+    # Fix: 3.0–4.9 now scores 0pts (neutral), 5.0–8.0 gets full pts, 8.0–9.0 partial.
     sweet_spot_pts = 0
-    if 3.0 <= odds <= 9.0:
-        # Full points in sweet spot
+    if 5.0 <= odds <= 8.0:
+        # PROVEN BEST range: 4/1–7/1, +£25.20 P&L (Feb 2026 data) — full sweet spot
         sweet_spot_pts = int(weights['sweet_spot'])
-        reasons.append(f"Sweet spot (3-9 odds): {sweet_spot_pts}pts")
+        reasons.append(f"Sweet spot 5-8 (PROVEN best range): {sweet_spot_pts}pts")
+    elif 8.0 < odds <= 9.0:
+        # Broad sweet spot tail — slight reduction
+        sweet_spot_pts = int(weights['sweet_spot'] * 0.75)
+        reasons.append(f"Good odds range (8-9): {sweet_spot_pts}pts")
+    elif 3.0 <= odds < 5.0:
+        # KNOWN LOSING RANGE (2/1–4/1): -£11.95 P&L historical data — neutral, no bonus
+        # No points added but no penalty either; other signals may still justify a pick.
+        sweet_spot_pts = 0
+        reasons.append(f"⚠️ Caution: 3-5 odds range (historically losing band, 2/1-4/1): 0pts")
     elif 2.0 <= odds < 3.0:
         # Partial points for short odds
         sweet_spot_pts = int(weights['sweet_spot'] * 0.6)
@@ -511,6 +538,7 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     # A horse that can't handle soft simply has little chance; proven soft-ground performers
     # get a significant edge over rivals who prefer quicker ground.
     base_going_pts = int(weights.get('going_suitability', 14))
+    _going_uncertain = False   # default: assume official going unless overridden below
     
     if course in going_data:
         going_info = going_data[course]
@@ -519,8 +547,21 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         is_soft_ground = 'Heavy' in going_description or 'Soft' in going_description
         is_extreme = abs(going_adjustment) >= 5  # Heavy/Soft or very firm
         is_all_weather = going_info.get('surface', '') == 'all-weather' or 'Standard' in going_description
+
+        # GOING CONFIDENCE GATE (2026-04-06): When going is inferred from weather rather than
+        # officially declared by the track, it is uncertain — halve all going-based bonuses and
+        # penalties to reflect that the actual conditions may differ from the estimate.
+        # source='official' → confirmed declaration → full weight
+        # source='weather_api' → inferred, not official → halve (uncertain / awaiting inspection)
+        # source='unavailable' → no data → halve (worst case — treat as uncertain)
+        _going_source = going_info.get('source', 'official')
+        _going_uncertain = _going_source in ('weather_api', 'unavailable')
+        if _going_uncertain:
+            # Halve base_going_pts so ALL downstream paths (bonus & every penalty) are reduced by 50%.
+            # This single change propagates to going_suitability_pts, aw_penalty, and extreme penalties.
+            base_going_pts = base_going_pts // 2
+            reasons.append(f"⚠️ Going estimated (not official declaration) — going signals halved")
         
-        # Double weight in extreme conditions (absolutely critical discriminator)
         # LESSON 2026-03-20: Kalista Love & Spit Spot had going_suitability=32pts (35% of total score).
         # Capped at 10pts max (reduced from 16, 2026-03-30): loss analysis shows winners consistently
         # had 0 or negative going scores yet still won — over-weighting going misleads selection.
@@ -619,6 +660,8 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     _is_heavy_going = str(_going_info_heavy.get('going', '')).startswith('Heavy')
     if _is_heavy_going:
         heavy_penalty = int(weights.get('heavy_going_penalty', 12))
+        if _going_uncertain:
+            heavy_penalty = heavy_penalty // 2   # inferred heavy going — uncertainty halves the surcharge
         score -= heavy_penalty
         breakdown['heavy_going_penalty'] = -heavy_penalty
         reasons.append(f"Heavy going (unpredictable, field evens out): -{heavy_penalty}pts")
@@ -808,11 +851,24 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     # Tiered trainer lists — ELITE (top strike-rate champions) vs GOOD vs DECENT
     # Tier 1: Truly elite — highest win rates at championship level
     elite_trainers_t1 = [
+        # NH champions (Ireland & UK)
         'W P Mullins', 'W. P. Mullins', 'Willie Mullins', 'W Mullins',
         'Gordon Elliott', 'G Elliott', 'G. Elliott',
         'Henry De Bromhead', 'H De Bromhead', 'H. De Bromhead',
         'Nicky Henderson', 'N Henderson',
         'Paul Nicholls', 'P Nicholls',
+        # Elite FLAT trainers (2026-04-01: all were marked 'unknown' causing -8pts wrong penalty)
+        'W J Haggas', 'William Haggas', 'W. J. Haggas', 'W Haggas',
+        'John & Thady Gosden', 'J & T Gosden', 'J Gosden', 'John Gosden', 'Thady Gosden', 'T Gosden',
+        'Charlie Appleby', 'C Appleby',
+        'Aidan O Brien', "Aidan O'Brien", 'A OBrien', "A O'Brien", 'A P OBrien', "A P O'Brien",
+        'Roger Varian', 'R Varian',
+        'Ralph Beckett', 'R Beckett',
+        'Roger Charlton', 'R Charlton',
+        # Top Irish flat trainers
+        'Joseph OBrien', "Joseph O'Brien", 'J OBrien', "J O'Brien",
+        'Dermot Weld', 'D Weld', 'D K Weld',
+        'Ger Lyons', 'G M Lyons', 'G Lyons',
     ]
     # Tier 2: Good — solid strike rates, regular winners
     elite_trainers_t2 = [
@@ -829,13 +885,38 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         'Olly Murphy', 'O Murphy',
         'Gavin Cromwell', 'G Cromwell', 'Gavin Patrick Cromwell',
         'Warren Greatrex', 'W Greatrex',
+        # Promoted 2026-04-01: Neil Mulholland — proven NH specialist (Wincanton, south-west tracks).
+        # Broomfields Cave won Golan Loop race at 3/1; Mulholland was unmatched due to middle-initial
+        # variants ("N P Mulholland") not matching "N Mulholland" substring check.
+        'Neil Mulholland', 'N Mulholland', 'N P Mulholland', 'Neil P Mulholland', 'N. P. Mulholland',
+        'N. Mulholland',
+        # Good FLAT trainers (2026-04-01: missing, causing -8pts wrong penalty)
+        'A M Balding', 'Andrew Balding', 'A. M. Balding',
+        'H Palmer', 'Hugo Palmer', 'H. Palmer',
+        'Clive Cox', 'C Cox', 'C. Cox',
+        'Mark Johnston', 'M Johnston', 'C Johnston', 'Charlie Johnston',
+        'Kevin Ryan', 'K Ryan', 'K. Ryan',
+        'Eve Johnson Houghton', 'E Johnson Houghton', 'E J Houghton',
+        'Richard Hannon', 'R Hannon', 'R. Hannon',
+        'William Muir', 'W Muir', 'William Muir & Chris Grassick',
+        'Tom Dascombe', 'T Dascombe',
+        # ADDED 2026-04-04: K R Burke (Karl Burke) — well-known UK flat trainer, trained Group 1
+        # winners (Laurens, The Gurkha). Strength of Spirit WON at 4/1 but scored only 73 because
+        # Burke was penalised -8pts as 'unknown'. He is clearly a solid Tier 2 trainer.
+        'K R Burke', 'Karl Burke', 'K. R. Burke',
+        # Good Irish flat trainers
+        'Donnacha OBrien', "Donnacha O'Brien",
+        'Michael Halford', 'M Halford',
+        'John Oxx', 'J Oxx',
+        'Luke Comer', 'L Comer',
+        'Kieran Cotter', 'K Cotter',
+        'Daniel Murphy', 'D Murphy',
     ]
     # Tier 3: Decent — know their horses, worth modest bonus
     elite_trainers_t3 = [
         'David Pipe', 'D Pipe',
         'Lucy Wadham', 'L Wadham',
         'Neil King', 'N King',
-        'Neil Mulholland', 'N Mulholland',
         'Charlie Longsdon', 'C Longsdon',
         'Colin Tizzard', 'C Tizzard',
         'Tim Easterby', 'T Easterby',
@@ -972,7 +1053,9 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         else:
             # Reduced penalty on turf — going suitability still differentiates, but
             # Class 5 fields are weak and high scores are unreliable (Ffos Las 14:30 lesson)
-            turf_class5_penalty = int(weights.get('aw_low_class_penalty', 35)) // 2
+            # RAISED 2026-04-01: Kingcormac (Class 5 turf) lost — turf Class 5 penalty was too lenient.
+            # Now 70% of aw_low_class_penalty instead of 50%, making it 35pts (was 25pts).
+            turf_class5_penalty = int(weights.get('aw_low_class_penalty', 50) * 7 // 10)
             score -= turf_class5_penalty
             breakdown['aw_low_class_penalty'] = -turf_class5_penalty
             reasons.append(f"Turf Class 5/6 (weaker field, results less predictable): -{turf_class5_penalty}pts")
@@ -990,12 +1073,33 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     _is_evening = False
     if _race_time_str:
         try:
-            import re as _re
-            _hm = _re.search(r'(\d{1,2}):(\d{2})', _race_time_str)
-            if _hm:
-                _hour, _min = int(_hm.group(1)), int(_hm.group(2))
-                _total_mins = _hour * 60 + _min
-                _is_evening = _total_mins >= 17 * 60 + 30   # 17:30 or later
+            from datetime import datetime as _dt_ev, timezone as _tz_ev, timedelta as _td_ev
+            import calendar as _cal_ev, re as _re
+            # Parse race_time as UTC-aware (race_time is always stored as UTC +00:00)
+            # Convert to UK local time (GMT=UTC, BST=UTC+1) before applying the 17:30 threshold.
+            # Bug fix: checking raw UTC hour vs 17:30 missed races at 16:30–17:30 UTC in BST.
+            def _uk_evening_mins(rt_str):
+                try:
+                    d = _dt_ev.fromisoformat(rt_str.replace('Z', '+00:00'))
+                    if d.tzinfo is None:
+                        d = d.replace(tzinfo=_tz_ev.utc)
+                    d_utc = d.astimezone(_tz_ev.utc)
+                    # Compute BST start/end for this year (last Sunday of March/October at 01:00 UTC)
+                    def _last_sun(y, m):
+                        last = _cal_ev.monthrange(y, m)[1]
+                        return next(day for day in range(last, last-7, -1)
+                                    if _dt_ev(y, m, day).weekday() == 6)
+                    bst_on  = _dt_ev(d_utc.year, 3,  _last_sun(d_utc.year, 3),  1, tzinfo=_tz_ev.utc)
+                    bst_off = _dt_ev(d_utc.year, 10, _last_sun(d_utc.year, 10), 1, tzinfo=_tz_ev.utc)
+                    uk_off  = 1 if bst_on <= d_utc < bst_off else 0
+                    local   = d_utc + _td_ev(hours=uk_off)
+                    return local.hour * 60 + local.minute
+                except Exception:
+                    # Fallback: raw HH:MM regex (legacy format)
+                    m2 = _re.search(r'(\d{1,2}):(\d{2})', rt_str)
+                    return int(m2.group(1)) * 60 + int(m2.group(2)) if m2 else 0
+            _total_mins = _uk_evening_mins(_race_time_str)
+            _is_evening = _total_mins >= 17 * 60 + 30   # 17:30 UK local time
         except Exception:
             pass
     _aw_evening_penalty = 0
@@ -1017,6 +1121,32 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         reasons.append(f"Unknown trainer tier ({trainer}): -{_utp}pts")
     else:
         breakdown['unknown_trainer_penalty'] = 0
+
+    # 11e. IRISH HANDICAP VENUE PENALTY (2026-04-01)
+    # LESSON: Dmaniac (Curragh, sc=107, no market leader) and I'm Spartacus (Dundalk, sc=84)
+    # both lost. Irish flat/NH handicaps at these venues are notoriously competitive with
+    # very tight weights and large fields. Our form model works but top-score picks at Irish
+    # handicap tracks without market backing are less reliable.
+    _IRISH_HANDICAP_VENUES = {
+        'curragh', 'dundalk', 'navan', 'naas', 'leopardstown', 'cork',
+        'galway', 'tipperary', 'punchestown', 'killarney', 'gowran',
+        'bellewstown', 'roscommon', 'tramore', 'ballinrobe', 'sligo',
+        'fairyhouse', 'listowel', 'down royal', 'downroyal',
+    }
+    _race_name_for_hcap = str(horse_data.get('race_name', horse_data.get('market_name', ''))).lower()
+    _is_handicap = (
+        'handicap' in _race_name_for_hcap or ' hcap' in _race_name_for_hcap or
+        _race_name_for_hcap.endswith('hcap') or ' h ' in _race_name_for_hcap
+    )
+    _is_irish_venue = course.lower().strip() in _IRISH_HANDICAP_VENUES
+    _irish_hcap_penalty = 0
+    if _is_irish_venue and _is_handicap:
+        _irish_hcap_penalty = int(weights.get('irish_handicap_penalty', 10))
+        score -= _irish_hcap_penalty
+        breakdown['irish_handicap_penalty'] = -_irish_hcap_penalty
+        reasons.append(f"⚠️ Irish handicap ({course}) — competitive field, reduced confidence: -{_irish_hcap_penalty}pts")
+    else:
+        breakdown['irish_handicap_penalty'] = 0
 
     # 12. BOUNCE-BACK PATTERN (NEW - Lesson from Ascot 13:15)
     # Detect patterns like 2-6-1 or 2-5-1 showing recovery after poor run
@@ -1348,13 +1478,17 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
             reasons.append(f"Proven distance winner (from run history): +{pts}pts")
 
         # Going match — replaces/augments the inference-based going_suitability
-        if fs.get('going_win_match'):
+        # Skip AW/Standard going: every AW race has identical going so "won on AW" is not
+        # selective evidence. Also skip if going_suitability already awarded points (deduplicate).
+        _going_is_aw = today_going_str.lower() in ('standard', 'aw', 'all weather', 'fast', 'slow')
+        _going_already_scored = breakdown.get('going_suitability', 0) > 0
+        if fs.get('going_win_match') and not _going_is_aw and not _going_already_scored:
             gw = fs['going_win_count']
             pts = int(weights.get('form_going_win', 16)) * min(gw, 2)  # up to 2× for multiple wins
             pts = min(pts, int(weights.get('form_going_win', 16)) * 2)  # cap at 2×
             form_detail_pts += pts
             reasons.append(f"Won {gw}× on {today_going_str} ground (proven going suitability): +{pts}pts")
-        elif fs.get('going_place_match'):
+        elif fs.get('going_place_match') and not _going_is_aw and not _going_already_scored:
             pts = int(weights.get('form_going_place', 6))
             form_detail_pts += pts
             reasons.append(f"Placed on {today_going_str} ground (consistent going form): +{pts}pts")
@@ -1374,8 +1508,9 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
             form_detail_pts += pts
             reasons.append(f"Beaten by < 4 lengths last run (close unlucky 2nd): +{pts}pts")
 
-        # OR trajectory
-        if fs.get('or_trajectory_up'):
+        # OR trajectory — only meaningful if the horse has raced recently (not a long layoff return)
+        days_off = fs.get('days_since_last_run')
+        if fs.get('or_trajectory_up') and (days_off is None or days_off <= 90):
             pts = int(weights.get('form_or_rising', 10))
             form_detail_pts += pts
             reasons.append(f"Rising OR trajectory (improving horse): +{pts}pts")
@@ -1385,6 +1520,12 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
             pts = int(weights.get('form_big_field_win', 8))
             form_detail_pts += pts
             reasons.append(f"Won in competitive field (10+ runners): +{pts}pts")
+
+        # Class drop bonus — ran in higher class recently, drops down today
+        if fs.get('class_drop'):
+            pts = int(weights.get('class_drop_bonus', 12))
+            form_detail_pts += pts
+            reasons.append(f"Drop in grade (was class 1-3, today class 4+): +{pts}pts")
 
         if form_detail_pts > 0:
             score += form_detail_pts
@@ -1442,6 +1583,143 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         reasons.append(f"Big field ({n_runners} runners) — above-average variance: -{_lfp}pts")
     else:
         breakdown['large_field_penalty'] = 0
+
+    # 15. DRAW BIAS — UK/Irish track-specific stall advantage/disadvantage
+    # Source: well-documented published draw statistics for UK/Irish flat tracks.
+    # Only applies to flat races where stall draw is meaningful.
+    # NH racing (hurdles/chases/bumpers) has no meaningful draw bias.
+    # Requires stall draw to be populated AND field size >= 6 runners.
+    _draw_bias_pts = 0
+    _draw_str = str(horse_data.get('draw', '') or '').strip()
+    _market_for_draw = str(horse_data.get('race_name', horse_data.get('market_name', ''))).lower()
+    _is_nh_draw = any(x in _market_for_draw for x in ['hurdle', 'chase', 'nhf', 'bumper', 'national hunt'])
+    try:
+        _draw_num = int(_draw_str)
+    except (ValueError, TypeError):
+        _draw_num = 0
+
+    if _draw_num > 0 and n_runners >= 6 and not _is_nh_draw:
+        # Relative draw position: 0.0 = stall 1 (widest inside), 1.0 = highest stall (widest outside)
+        _draw_rel = (_draw_num - 1) / max(n_runners - 1, 1)
+        _draw_low  = _draw_rel <= 0.30   # bottom 30% of stalls
+        _draw_high = _draw_rel > 0.70    # top 30% of stalls
+        _course_l  = course.lower().strip()
+
+        # Determine race distance from market_name (e.g. "7f Hcap", "1m2f Chase")
+        import re as _re_draw
+        _dist_match = _re_draw.search(r'(\d+)f', _market_for_draw)
+        _dist_f = int(_dist_match.group(1)) if _dist_match else 16
+        _is_sprint_draw = _dist_f <= 7   # sprints most affected by draw
+
+        # ── EXTREME low-draw bias (very tight tracks) ─────────────────────
+        # Chester: hairpin bends, stall 1 worth multiple lengths. Zero disadvantage
+        #          is acceptable up to stall 8; anything 9+ rapidly worse.
+        # Pontefract: tight left-hand oval with uphill finish. Low draw critical.
+        if _course_l in {'chester', 'pontefract'}:
+            if _draw_low:
+                _draw_bias_pts = 10
+                reasons.append(f"Low draw advantage at {course} (stall {_draw_num}/{n_runners}): +{_draw_bias_pts}pts")
+            elif _draw_high:
+                _draw_bias_pts = -8
+                reasons.append(f"High draw disadvantage at {course} (stall {_draw_num}/{n_runners}): {_draw_bias_pts}pts")
+
+        # ── Standard LOW-draw bias ────────────────────────────────────────
+        # AW round tracks: inside rail saves ground. Sprint distances especially.
+        # Carlisle, York, Hamilton: low-draw advantage on sprint tracks.
+        elif _course_l in {'wolverhampton', 'lingfield', 'lingfield park', 'kempton', 'kempton park',
+                           'chelmsford', 'chelmsford city', 'southwell', 'york', 'carlisle',
+                           'hamilton', 'thirsk', 'leicester', 'chepstow', 'naas', 'dundalk'}:
+            if _draw_low and _is_sprint_draw:
+                _draw_bias_pts = 6
+                reasons.append(f"Low draw advantage at {course} sprint (stall {_draw_num}/{n_runners}): +{_draw_bias_pts}pts")
+            elif _draw_high and n_runners >= 8 and _is_sprint_draw:
+                _draw_bias_pts = -4
+                reasons.append(f"High draw disadvantage at {course} sprint (stall {_draw_num}/{n_runners}): {_draw_bias_pts}pts")
+
+        # ── HIGH-draw bias ────────────────────────────────────────────────
+        # Ascot straight (5-6f): stands-side rail (high stalls) overwhelmingly favoured
+        #   in fields of 12+. Rowley Mile Newmarket: stands side (high draw) in 6f+ races.
+        # Beverley: high draw advantage on stiff uphill finish.
+        elif _course_l in {'ascot', 'newmarket', 'beverley', 'curragh'}:
+            if _draw_high:
+                # More important in larger fields
+                _hd_bonus = 8 if n_runners >= 12 else 5
+                _draw_bias_pts = _hd_bonus
+                reasons.append(f"High draw advantage at {course} (stall {_draw_num}/{n_runners}, stands side): +{_draw_bias_pts}pts")
+            elif _draw_low and n_runners >= 12 and _is_sprint_draw:
+                _draw_bias_pts = -5
+                reasons.append(f"Low draw disadvantage at {course} (stall {_draw_num}/{n_runners}): {_draw_bias_pts}pts")
+
+    if _draw_bias_pts != 0:
+        score += _draw_bias_pts
+        breakdown['draw_bias'] = _draw_bias_pts
+    else:
+        breakdown['draw_bias'] = 0
+
+    # 16. TRACK HANDEDNESS PREFERENCE
+    # Some horses consistently run better on left-handed tracks vs right-handed.
+    # Detected from form_runs course history if available.
+    # UK left-handed: Ascot, Cheltenham, Goodwood, Epsom, Lingfield, Kempton,
+    #   Sandown, Windsor, Chepstow, Exeter, Hereford, Newbury, Nottingham
+    # UK right-handed: Newmarket, York, Doncaster, Chester, Haydock, Pontefract,
+    #   Carlisle, Hamilton, Beverley, Catterick, Newcastle, Ripon, Leeds
+    _LEFT_HANDED  = {'ascot', 'cheltenham', 'goodwood', 'epsom', 'lingfield', 'lingfield park',
+                     'kempton', 'kempton park', 'sandown', 'sandown park', 'windsor', 'chepstow',
+                     'exeter', 'hereford', 'newbury', 'nottingham', 'leicester', 'brighton',
+                     'plumpton', 'huntingdon', 'fakenham', 'market rasen', 'towcester',
+                     'leopardstown', 'punchestown', 'cork', 'tipperary', 'killarney',
+                     'gowran', 'gowran park', 'tramore', 'bellewstown', 'sligo'}
+    _RIGHT_HANDED = {'newmarket', 'york', 'doncaster', 'chester', 'haydock', 'haydock park',
+                     'pontefract', 'carlisle', 'hamilton', 'beverley', 'catterick', 'newcastle',
+                     'ripon', 'thirsk', 'musselburgh', 'ayr', 'wolverhampton', 'southwell',
+                     'chelmsford', 'chelmsford city', 'wincanton', 'taunton',
+                     'curragh', 'dundalk', 'naas', 'navan', 'fairyhouse', 'galway',
+                     'roscommon', 'listowel', 'ballinrobe', 'down royal', 'downroyal'}
+    _today_handed = ('L' if course.lower().strip() in _LEFT_HANDED else
+                     'R' if course.lower().strip() in _RIGHT_HANDED else None)
+    _form_runs_h = horse_data.get('form_runs', [])
+    if _today_handed and _form_runs_h and len(_form_runs_h) >= 3:
+        _wins_same_hand, _wins_opp_hand, _runs_same, _runs_opp = 0, 0, 0, 0
+        for _fr in _form_runs_h:
+            _fr_course = str(_fr.get('course', '')).lower().strip()
+            _fr_fin    = str(_fr.get('finish_position', '') or '').strip()
+            _fr_won    = _fr_fin == '1'
+            if _fr_course in _LEFT_HANDED:
+                _fr_hand = 'L'
+            elif _fr_course in _RIGHT_HANDED:
+                _fr_hand = 'R'
+            else:
+                continue
+            if _fr_hand == _today_handed:
+                _runs_same += 1
+                if _fr_won: _wins_same += 1
+            else:
+                _runs_opp += 1
+                if _fr_won: _wins_opp += 1
+        # Only reward if horse has meaningful history on both types
+        if _runs_same >= 2 and _runs_opp >= 2:
+            _sr_same = _wins_same / _runs_same
+            _sr_opp  = _wins_opp  / _runs_opp
+            if _sr_same >= 0.35 and _sr_same > (_sr_opp + 0.15):
+                _hand_pts = 8
+                score += _hand_pts
+                breakdown['track_handedness'] = _hand_pts
+                _hand_label = 'left' if _today_handed == 'L' else 'right'
+                reasons.append(f"Proven on {_hand_label}-handed tracks ({_wins_same}/{_runs_same} wins "
+                               f"vs {_wins_opp}/{_runs_opp} other direction): +{_hand_pts}pts")
+            elif _sr_opp >= 0.35 and _sr_opp > (_sr_same + 0.15):
+                _hand_pen = -6
+                score += _hand_pen
+                breakdown['track_handedness'] = _hand_pen
+                _hand_label = 'left' if _today_handed == 'L' else 'right'
+                reasons.append(f"⚠️ Poor record on {_hand_label}-handed tracks ({_wins_same}/{_runs_same} wins "
+                               f"vs {_wins_opp}/{_runs_opp} better direction): {_hand_pen}pts")
+            else:
+                breakdown['track_handedness'] = 0
+        else:
+            breakdown['track_handedness'] = 0
+    else:
+        breakdown['track_handedness'] = 0
 
     # ── LIVE TRAINER / JOCKEY HOT FORM (2026-03-30) ─────────────────────────
     # Use rolling 30-day DynamoDB results to detect trainers/jockeys on a hot streak
@@ -1570,13 +1848,14 @@ def get_comprehensive_pick(race_data, course_stats=None, meeting_context=None):
     # Sort by score
     analyzed_horses.sort(key=lambda x: x['score'], reverse=True)
     
-    # CHECK: If 2+ horses score 85+, apply tiered logic:
+    # CHECK: If 2+ horses score 90+, apply tiered logic:
     # - Exactly 2 qualifying: back the TOP scorer (evidence: 14:55 Kelso 28-Feb-26 - top scorer won 14/1)
     # - 3+ qualifying: skip (too unpredictable - 14:30 Doncaster 28-Feb-26 lowest scorer won 5/1)
-    recommended_horses = [h for h in analyzed_horses if h['score'] >= 85]
+    # LESSON 2026-04-03: Raised from 85→90 to match new show_in_ui threshold (85-89 is a losing band).
+    recommended_horses = [h for h in analyzed_horses if h['score'] >= 90]
     if len(recommended_horses) >= 3:
         # 3+ qualifiers - too close to call, skip
-        print(f"  ⚠️  RACE SKIPPED: {len(recommended_horses)} horses scored 85+ (too close to call)")
+        print(f"  ⚠️  RACE SKIPPED: {len(recommended_horses)} horses scored 90+ (too close to call)")
         for h in recommended_horses:
             horse_name = h['horse'].get('name', 'Unknown')
             print(f"     - {horse_name}: {h['score']}/100")
@@ -1630,26 +1909,33 @@ def format_pick_for_database(pick_data, race_data):
         confidence_level = "LOW"
     
     # Show only recommended picks on UI
-    # LEARNING 2026-02-26: 90-100 = +33% ROI, 80-84 = +8% ROI, 85-89 = -21.8% ROI (BUT tiny sample)
-    # 2026-02-28: AW Class 5/6 penalty applied - pushed below 75 threshold automatically
+    # LEARNING 2026-02-26: 90-100 = +33% ROI, 80-84 = +8% ROI, 85-89 = -21.8% ROI
+    # LESSON 2026-04-03: Raised threshold from 85→90 because 85-89 is a LOSING band.
+    # 2026-02-28: AW Class 5/6 penalty applied - pushed below threshold automatically
     # LESSON 2026-03-20: Kalista Love (9/1, 2/11 field scored) & Spit Spot (60/1) both lost.
     #   Added: extreme odds gate + field coverage gate.
-    aw_penalised   = float(best_pick.get('breakdown', {}).get('aw_low_class_penalty', 0)) < 0
-    extreme_odds   = float(horse.get('odds', 0)) > 30.0   # 30/1+: never recommend regardless of score
-    low_coverage   = pick_data.get('coverage', 100) < 40   # <40% field scored = blind spot too large
-    show_on_ui     = (score >= 85) and not aw_penalised and not extreme_odds and not low_coverage
+    # LESSON 2026-04-03: 3.0-4.9 decimal odds (2/1-4/1) is a historically LOSING range.
+    #   Block show_in_ui for picks in that range unless score is 95+ (truly exceptional case).
+    aw_penalised      = float(best_pick.get('breakdown', {}).get('aw_low_class_penalty', 0)) < 0
+    extreme_odds      = float(horse.get('odds', 0)) > 30.0   # 30/1+: never recommend regardless of score
+    low_coverage      = pick_data.get('coverage', 100) < 40   # <40% field scored = blind spot too large
+    _pick_odds        = float(horse.get('odds', 0))
+    losing_odds_band  = 3.0 <= _pick_odds < 5.0               # historically -£11.95 P&L range
+    show_on_ui        = (score >= 90) and not aw_penalised and not extreme_odds and not low_coverage and not (losing_odds_band and score < 95)
     recommended_bet = show_on_ui
     # Add gates to pick metadata so UI can show why something was filtered
-    if extreme_odds:  pick_data['reasons'].append('FILTERED: Odds >30/1 (market confidence too low)')
-    if low_coverage:  pick_data['reasons'].append(f"FILTERED: Only {pick_data.get('coverage',0):.0f}% of field scored (<40% threshold)")
-    if aw_penalised:  pick_data['reasons'].append('FILTERED: AW Class 5/6 penalty applied')
+    if extreme_odds:   pick_data['reasons'].append('FILTERED: Odds >30/1 (market confidence too low)')
+    if low_coverage:   pick_data['reasons'].append(f"FILTERED: Only {pick_data.get('coverage',0):.0f}% of field scored (<40% threshold)")
+    if aw_penalised:   pick_data['reasons'].append('FILTERED: AW Class 5/6 penalty applied')
+    if losing_odds_band and score < 95:
+        pick_data['reasons'].append(f'FILTERED: Odds {_pick_odds:.1f} (3-5 range is historically -£11.95 P&L losing band; need 95+ score to show)')
     
     # Create bet_id
     bet_id = f"{race_time}_" + course + "_" + horse.get('name', '').replace(' ', '_')
     
     return {
         'bet_id': bet_id,
-        'bet_date': datetime.now().strftime('%Y-%m-%d'),
+        'bet_date': datetime.now(timezone.utc).strftime('%Y-%m-%d'),
         'course': course,
         'horse': horse.get('name'),
         'odds': Decimal(str(horse.get('odds', 0))),
@@ -1674,8 +1960,8 @@ def format_pick_for_database(pick_data, race_data):
         'analysis_breakdown': {k: int(v) for k, v in pick_data['breakdown'].items()},
         
         'tags': ['comprehensive_analysis', 'sweet_spot', confidence_level.lower()],
-        'created_at': datetime.now().isoformat(),
-        'updated_at': datetime.now().isoformat(),
+        'created_at': datetime.now(timezone.utc).isoformat(),
+        'updated_at': datetime.now(timezone.utc).isoformat(),
         'source': 'comprehensive_learnings'
     }
 

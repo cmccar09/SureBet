@@ -11,9 +11,23 @@ import json
 import os
 import subprocess
 import sys
-from datetime import date, datetime
+from datetime import date, datetime, timezone, timedelta
 
 TODAY = date.today().strftime('%Y-%m-%d')
+
+
+def get_uk_tz_offset(d: date) -> str:
+    """Return '+01:00' (BST) if date falls in British Summer Time, else '+00:00' (GMT)."""
+    year = d.year
+    # BST starts: last Sunday in March
+    bst_start = date(year, 3, 31)
+    while bst_start.weekday() != 6:  # 6 = Sunday
+        bst_start = date(year, bst_start.month, bst_start.day - 1)
+    # BST ends: last Sunday in October
+    bst_end = date(year, 10, 31)
+    while bst_end.weekday() != 6:
+        bst_end = date(year, bst_end.month, bst_end.day - 1)
+    return '+01:00' if bst_start <= d < bst_end else '+00:00'
 
 
 def frac_to_decimal(odds_str):
@@ -49,12 +63,17 @@ def convert_racecard_to_workflow_format(racecard_today: dict) -> list:
     """
     Convert racecard_cache dict for one date into a list of race dicts
     in the response_horses.json format.
+
+    NOTE: Sporting Life returns race times in UTC.  We store them as UTC
+    (+00:00) so that display code (frontend Europe/Dublin timezone) and
+    filtering logic (cutoff comparisons against UTC now) both work
+    correctly regardless of daylight-saving time.
     """
     races = []
     for course, course_races in racecard_today.items():
         for race in course_races:
-            time_str = race.get('time', '')  # e.g. "13:45"
-            # Build full ISO start_time
+            time_str = race.get('time', '')  # e.g. "13:45" — this is UTC from SL
+            # Store as UTC so the frontend can convert to IST (Europe/Dublin = UTC+1 in summer)
             if time_str and len(time_str) == 5:
                 start_time = f"{TODAY}T{time_str}:00+00:00"
             else:
@@ -143,15 +162,21 @@ def main():
 
     races = convert_racecard_to_workflow_format(racecard_today)
 
+    # Only include races starting >15 minutes from now (matches betfair_odds_fetcher.py logic)
+    now_utc = datetime.now(timezone.utc)
+    cutoff = now_utc + timedelta(minutes=15)
+    upcoming = [r for r in races if datetime.fromisoformat(r['start_time']) > cutoff]
+    skipped = len(races) - len(upcoming)
+    if skipped:
+        print(f"  Skipping {skipped} races that have already started or are within 15 minutes")
+
     # Write to response_horses.json (workflow format)
-    output = {'races': races, 'source': 'sl_racecard', 'date': TODAY}
+    output = {'races': upcoming, 'source': 'sl_racecard', 'date': TODAY}
     out_path = os.path.join(os.path.dirname(__file__), 'response_horses.json')
     with open(out_path, 'w', encoding='utf-8') as f:
         json.dump(output, f, indent=2)
 
-    now = datetime.now()
-    upcoming = [r for r in races if datetime.fromisoformat(r['start_time'].replace('+00:00', '')).replace(tzinfo=None) > now]
-    print(f"  Written {len(races)} races ({len(upcoming)} upcoming) → response_horses.json")
+    print(f"  Written {len(upcoming)} upcoming races → response_horses.json")
     print()
 
     # Run comprehensive_workflow.py

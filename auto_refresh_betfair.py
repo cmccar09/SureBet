@@ -25,7 +25,13 @@ LOG_FILE = BASE_DIR / "auto_refresh.log"
 # Each tuple: (script_filename, short_label, abort_on_failure)
 PIPELINE = [
     ("betfair_odds_fetcher.py",    "Fetch Betfair odds (next 3 days)",          True),
+    ("sl_results_fetcher.py",      "Record today's race results from SL feed",  False),
     ("complete_daily_analysis.py", "Score all horses + build top-5 UI picks",   False),
+    # Validate that every UI pick has a complete all_horses list before
+    # notifications go out.  Exits non-zero (and logs clearly) if any pick
+    # is missing runner data so the issue is caught in the pipeline, not
+    # discovered visually by the user.
+    ("validate_picks.py",          "Validate pick data completeness",           False),
     ("notify_picks.py",            "Send WhatsApp notifications for UI picks",   False),
 ]
 
