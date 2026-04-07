@@ -1721,6 +1721,65 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['track_handedness'] = 0
 
+    # 17. PACE PROFILE — DISTANCE SPECIALISATION
+    # Source: Modern Pace Handicapping — horses have metabolic specialisations for
+    # distance ranges. Sprinters (≤7f) lack stamina for middle distances; stayers
+    # (12f+) lack the pace for sprints. Out-of-range selections carry structural risk.
+    # We proxy "running style" from career distance history: if a horse's proven winning
+    # distance average diverges significantly from today's trip, apply a pace discount.
+    # Data required: form_runs (position + distance_f per run).
+    _pr_runs = horse_data.get('form_runs', [])
+    _win_dists = []
+    _all_dists  = []
+    for _pr in _pr_runs:
+        _d = _pr.get('distance_f')
+        if _d:
+            _all_dists.append(float(_d))
+            if _pr.get('position') == 1:
+                _win_dists.append(float(_d))
+
+    # Re-parse today's distance (furlongs) from market_name — same source as section 15
+    import re as _re_pace
+    _pace_dist_match = _re_pace.search(
+        r'(\d+(?:\.\d+)?)f',
+        str(horse_data.get('race_name', horse_data.get('market_name', ''))).lower()
+    )
+    _today_dist_pace = float(_pace_dist_match.group(1)) if _pace_dist_match else None
+
+    _pace_pts = 0
+    if _today_dist_pace and _win_dists and len(_all_dists) >= 3:
+        _avg_win_dist = sum(_win_dists) / len(_win_dists)
+        _dist_gap = _today_dist_pace - _avg_win_dist
+
+        # STAMINA CONCERN: stepping up 4+ furlongs beyond proven winning distance.
+        # Example: sprinter that wins at 5-6f asks to stay 10f — metabolically wrong.
+        if _dist_gap >= 4.0:
+            _pace_pts = -6
+            reasons.append(
+                f"Stamina concern: avg win dist {_avg_win_dist:.1f}f, today {_today_dist_pace:.0f}f "
+                f"(+{_dist_gap:.0f}f step-up beyond proven zone): {_pace_pts}pts"
+            )
+        # PACE CONCERN: dropping 4+ furlongs below proven winning distance.
+        # Example: stayer that wins at 12-16f racing over 8f — pace demands are alien.
+        elif _dist_gap <= -4.0:
+            _pace_pts = -4
+            reasons.append(
+                f"Pace concern: avg win dist {_avg_win_dist:.1f}f, today {_today_dist_pace:.0f}f "
+                f"({abs(_dist_gap):.0f}f below specialisation): {_pace_pts}pts"
+            )
+        # PROVEN ZONE: within 1f of average winning distance — horse knows this trip.
+        # Small bonus for proven stamina at exactly today's distance range.
+        elif abs(_dist_gap) <= 1.0:
+            _pace_pts = 4
+            reasons.append(
+                f"In proven distance zone ({_today_dist_pace:.0f}f vs avg win {_avg_win_dist:.1f}f): "
+                f"+{_pace_pts}pts"
+            )
+
+    if _pace_pts != 0:
+        score += _pace_pts
+    breakdown['pace_profile'] = _pace_pts
+
     # ── LIVE TRAINER / JOCKEY HOT FORM (2026-03-30) ─────────────────────────
     # Use rolling 30-day DynamoDB results to detect trainers/jockeys on a hot streak
     # (+8/+6 pts) or cold streak (-5/-3 pts).  Does NOT require a static tier list.

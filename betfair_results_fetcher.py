@@ -220,6 +220,18 @@ def update_results_from_betfair(date_str=None):
                         if sp_odds:
                             update_expr += ', sp_odds = :sp'
                             expr_vals[':sp'] = Decimal(str(round(float(sp_odds), 2)))
+                            # CLV (Closing Line Value) — compare our morning price to SP.
+                            # Positive CLV = we got better odds than the market settled at.
+                            # This is the gold standard long-term edge indicator:
+                            # consistent +CLV means we are genuinely finding value, not luck.
+                            # Source: Sharp Sports Betting, Betfair Exchange pricing research.
+                            _opening = float(pick.get('opening_price') or pick.get('odds') or 0)
+                            _sp_f    = float(sp_odds)
+                            if _opening > 0 and _sp_f > 0:
+                                _clv_delta = round(_opening - _sp_f, 3)
+                                update_expr += ', clv_delta = :clv, clv_positive = :clvp'
+                                expr_vals[':clv']  = Decimal(str(_clv_delta))
+                                expr_vals[':clvp'] = _clv_delta > 0
 
                         table.update_item(
                             Key={'bet_date': date_str, 'bet_id': pick['bet_id']},
@@ -231,7 +243,13 @@ def update_results_from_betfair(date_str=None):
                         course = pick.get('course', 'Unknown')
                         result_icon = "✅" if outcome == 'win' else "🔶" if outcome == 'placed' else "❌"
                         sp_display = f" SP={settlement_odds}" if sp_odds else " (no SP, used pick odds)"
-                        print(f"{result_icon} {horse:25} @ {course:15} | Pos: {finishing_position} | {outcome.upper()} | profit={profit:+.2f}{sp_display}")
+                        _clv_display = ''
+                        if sp_odds:
+                            _op = float(pick.get('opening_price') or pick.get('odds') or 0)
+                            if _op > 0:
+                                _clv = round(_op - float(sp_odds), 3)
+                                _clv_display = f"  CLV={_clv:+.2f}({'✓' if _clv > 0 else '✗'})"
+                        print(f"{result_icon} {horse:25} @ {course:15} | Pos: {finishing_position} | {outcome.upper()} | profit={profit:+.2f}{sp_display}{_clv_display}")
                         updated_count += 1
                     
                     except Exception as e:

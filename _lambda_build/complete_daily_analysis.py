@@ -154,6 +154,25 @@ def _win_prob_pct(score: float) -> int:
     return 14
 
 
+def _expected_value(win_prob_pct: int, decimal_odds: float) -> float:
+    """EV = p × d - 1. Positive EV = value bet. Source: value betting theory."""
+    p = win_prob_pct / 100.0
+    return round(p * decimal_odds - 1.0, 4)
+
+
+def _kelly_fraction(win_prob_pct: int, decimal_odds: float, fraction: float = 0.5) -> float:
+    """Half-Kelly optimal stake fraction. Returns 0.0 for negative EV. Capped at 0.12."""
+    p = win_prob_pct / 100.0
+    q = 1.0 - p
+    b = decimal_odds - 1.0
+    if b <= 0:
+        return 0.0
+    k = (b * p - q) / b
+    if k <= 0:
+        return 0.0
+    return round(min(fraction * k, 0.12), 4)
+
+
 def analyze_and_save_all():
     """
     Two-pass algorithm:
@@ -358,6 +377,9 @@ def analyze_and_save_all():
                 'combined_confidence': Decimal(str(score)),
                 'comprehensive_score': Decimal(str(score)),
                 'win_probability':      _win_prob_pct(score),
+                'expected_value':       Decimal(str(_expected_value(_win_prob_pct(score), odds or 0))),
+                'kelly_fraction':       Decimal(str(_kelly_fraction(_win_prob_pct(score), odds or 0))),
+                'opening_price':        Decimal(str(odds)) if odds else Decimal('0'),
                 'confidence_level':    confidence_level,
                 'confidence_grade':    confidence_grade,
                 'confidence_color':    confidence_color,
@@ -638,6 +660,21 @@ def analyze_and_save_all():
                   f"(sub-6/4 picks are negative EV at our observed win rates)")
             return False
 
+        # S11 — Expected Value gate (2026-04-07)
+        # EV = p×d - 1. If EV < -0.15, giving away > 15% per unit staked.
+        # ELITE (score>=95) bypasses: probability calibration likely understates true chance.
+        # Source: value betting theory, Kelly (1956), Sharp Sports Betting.
+        _wp = _win_prob_pct(score)
+        _ev = _expected_value(_wp, _best_odds)
+        if _ev < -0.15 and score < 95:
+            print(f"  [GATE-S11 REJECTED] {r['best']['horse']} score={score:.0f}: "
+                  f"EV={_ev:+.3f} (win_prob={_wp}%, odds={_best_odds:.2f}) — "
+                  f"negative expected value > 15% loss per unit staked")
+            return False
+        if _ev < 0:
+            print(f"  [GATE-S11 WARNING] {r['best']['horse']} score={score:.0f}: "
+                  f"EV={_ev:+.3f} (marginally negative) — allowing through (calibration margin)")
+
         return True
 
     eligible = [r for r in all_races_data
@@ -719,11 +756,15 @@ def analyze_and_save_all():
             item['pick_type']           = 'morning' if is_ui else 'learning'
             item['race_analyzed_count'] = race_total
             if is_ui:
-                # Elite staking: Pick 1 = 5pts, Pick 2 = 3pts, Pick 3 = 2pts (10-pt bankroll)
-                _stake_pts = {1: 5, 2: 3, 3: 2}.get(rank, 2)
-                item['stake']      = Decimal(str(_stake_pts))
-                item['stake_pts']  = _stake_pts
-                item['bet_type']   = 'Each Way'
+                # Kelly Criterion stake sizing (half-Kelly, 100-unit bankroll):
+                # Stake = kelly_fraction × 100 units, bounded to 2–8 units.
+                _kf = float(item.get('kelly_fraction', 0))
+                _kelly_units = max(2, min(8, round(_kf * 100)))
+                _rank_floor = {1: 4, 2: 3, 3: 2}.get(rank, 2)
+                _stake_pts = max(_kelly_units, _rank_floor)
+                item['stake']       = Decimal(str(_stake_pts))
+                item['stake_pts']   = _stake_pts
+                item['bet_type']    = 'Each Way'
             item['sl_declared_count']   = _sl_decl
             item['missing_runners']     = _race_missing
             item['all_horses']          = _all_horses_list  # full field for UI display
