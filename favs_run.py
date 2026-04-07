@@ -420,23 +420,42 @@ def analyse_date(target_date_str, db_table, winner_map=None):
         fav_outcome = None
 
         if winner_map:
-            # Convert UTC race_time to UK local for SL time matching
+            # Convert UTC race_time to UK local for SL time matching.
+            # race_time may contain a Betfair UTC Z-suffix or tz offset — extract UTC time
+            # before converting to local so BST conversion is applied only once.
+            rt_raw = str(fav.get('race_time', '') or rt)
             date_part = rt[:10] if len(rt) >= 10 else target_date_str
-            utc_hhmm  = rt[11:16] if len(rt) >= 16 else ''
+            try:
+                tz_m = re.search(r'([+-])(\d{2}):(\d{2})\s*$', rt_raw)
+                if tz_m:
+                    # Has explicit offset (+01:00 BST or +00:00 UTC) — convert to UTC
+                    sign = 1 if tz_m.group(1) == '+' else -1
+                    offset_mins = sign * (int(tz_m.group(2)) * 60 + int(tz_m.group(3)))
+                    raw_hm = rt_raw[11:16]
+                    h2, m2 = map(int, raw_hm.split(':'))
+                    utc_total = h2 * 60 + m2 - offset_mins
+                    utc_hhmm = f'{(utc_total // 60) % 24:02d}:{utc_total % 60:02d}'
+                else:
+                    # No offset — Betfair UTC Z format or bare datetime, treat as UTC
+                    utc_hhmm = rt[11:16] if len(rt) >= 16 else ''
+            except Exception:
+                utc_hhmm = rt[11:16] if len(rt) >= 16 else ''
             local_hhmm = _utc_to_local_hhmm(utc_hhmm, date_part)
+            # Normalise course: SL may return "Kempton Park" while DB stores "Kempton"
+            # Use substring matching in both directions to handle these variants.
             course_key = course.lower().replace('-', ' ').strip()
+            fav_name_norm = re.sub(r"['\-]+", ' ', fav_name).strip().lower()
             try:
                 lh, lm = map(int, local_hhmm.split(':'))
                 local_mins = lh * 60 + lm
                 for (c_key, t_key), w_name in winner_map.items():
-                    if c_key != course_key:
+                    # Fuzzy course match: exact OR one name contains the other
+                    if c_key != course_key and c_key not in course_key and course_key not in c_key:
                         continue
                     wh, wm = map(int, t_key.split(':'))
                     if abs((wh * 60 + wm) - local_mins) <= 15:
-                        fav_outcome = (
-                            'win' if w_name.strip().lower() == fav_name.strip().lower()
-                            else 'loss'
-                        )
+                        w_norm = re.sub(r"['\-]+", ' ', w_name).strip().lower()
+                        fav_outcome = 'win' if w_norm == fav_name_norm else 'loss'
                         break
             except Exception:
                 pass
@@ -449,10 +468,9 @@ def analyse_date(target_date_str, db_table, winner_map=None):
                     winner_name = h.get('horse', '')
                     break
             if winner_name:
-                fav_outcome = (
-                    'win' if winner_name.strip().lower() == fav_name.strip().lower()
-                    else 'loss'
-                )
+                w_norm2 = re.sub(r"['\-]+", ' ', winner_name).strip().lower()
+                fn_norm2 = re.sub(r"['\-]+", ' ', fav_name).strip().lower()
+                fav_outcome = 'win' if w_norm2 == fn_norm2 else 'loss'
             else:
                 fav_outcome = fav.get('outcome') or None
 
