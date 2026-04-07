@@ -460,6 +460,7 @@ function DailyPicksView() {
   const [analysisStatus, setAnalysisStatus] = useState(null);
   const [analysisPending, setAnalysisPending] = useState(false);
   const [pendingReason,   setPendingReason]   = useState('');
+  const [cumulRoi,        setCumulRoi]         = useState(null);
 
   // Tick every 60 s so "Analysed X ago" stays current without a page reload
   useEffect(() => {
@@ -515,8 +516,13 @@ function DailyPicksView() {
   const loadPicks = async () => {
     setLoading(true); setError(null);
     try {
-      const res  = await fetch(API_BASE_URL + '/api/picks/today');
+      const [res, roiRes] = await Promise.all([
+        fetch(API_BASE_URL + '/api/picks/today'),
+        fetch(API_BASE_URL + '/api/results/cumulative-roi'),
+      ]);
       const data = await res.json();
+      const roiData = await roiRes.json().catch(() => null);
+      if (roiData?.success) setCumulRoi(roiData);
       if (data.success) {
         const sorted = (data.picks || [])
           .filter(p => p.show_in_ui !== false)
@@ -575,6 +581,31 @@ function DailyPicksView() {
           Refresh
         </button>
       </div>
+
+      {(() => {
+        const rv  = cumulRoi?.success ? (cumulRoi.roi ?? 0) : null;
+        const rs  = cumulRoi?.success ? (cumulRoi.settled || 0) : null;
+        const pos = rv === null || rv >= 0;
+        return (
+          <div style={{ background: rv === null ? 'rgba(99,102,241,0.12)' : rv >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border: `1.5px solid ${rv === null ? 'rgba(99,102,241,0.35)' : rv >= 0 ? 'rgba(16,185,129,0.45)' : 'rgba(239,68,68,0.4)'}`, borderRadius: '14px', padding: isMobile ? '14px 16px' : '18px 24px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '14px' : '20px' }}>
+              <div style={{ fontSize: isMobile ? '28px' : '38px' }}>💰</div>
+              <div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: '700', marginBottom: '4px' }}>Return on Investment</div>
+                <div style={{ fontSize: isMobile ? '30px' : '40px', fontWeight: '900', color: rv === null ? '#818cf8' : rv >= 0 ? '#34d399' : '#f87171', lineHeight: 1 }}>
+                  {rv === null ? 'Loading…' : `${rv >= 0 ? '+' : ''}${rv.toFixed(1)}%`}
+                </div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', marginTop: '4px' }}>
+                  {rv === null ? 'Fetching performance data…' : `Since 22 Mar · ${rs} settled`}
+                </div>
+              </div>
+            </div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', fontStyle: 'italic', maxWidth: '160px', lineHeight: '1.5' }}>Profit per £1 staked.<br/>10%+ is good.</div>
+            </div>
+          </div>
+        );
+      })()}
 
       {analysisStatus && analysisStatus.available && (
         <AnalysisPipeline
