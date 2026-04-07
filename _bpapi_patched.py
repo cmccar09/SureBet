@@ -1059,6 +1059,7 @@ def get_cumulative_roi(headers):
             kwargs = {
                 'KeyConditionExpression': Key('bet_date').eq(d),
                 'FilterExpression': Attr('show_in_ui').eq(True),
+                'ProjectionExpression': 'bet_date, bet_id, horse, course, race_time, show_in_ui, is_learning_pick, outcome, sp_odds, odds, ew_fraction, bet_type, comprehensive_score',
             }
 
             while True:

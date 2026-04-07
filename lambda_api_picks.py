@@ -484,17 +484,22 @@ def get_health(headers):
 
 def get_cumulative_roi(headers):
     """Cumulative level-stakes ROI since 2026-03-22, deduped by race identity."""
-    from boto3.dynamodb.conditions import Attr
+    from boto3.dynamodb.conditions import Key, Attr
+    from datetime import timedelta, date as _date
     CUMULATIVE_ROI_START = '2026-03-22'
     try:
+        # Query day-by-day using the bet_date partition key (avoids expensive full-table scan)
         all_items = []
-        scan_kwargs = {'FilterExpression': Attr('bet_date').gte(CUMULATIVE_ROI_START)}
-        while True:
-            resp = table.scan(**scan_kwargs)
+        start_d = _date.fromisoformat(CUMULATIVE_ROI_START)
+        today_d = _date.today()
+        cur = start_d
+        while cur <= today_d:
+            resp = table.query(
+                KeyConditionExpression=Key('bet_date').eq(str(cur)),
+                ProjectionExpression='bet_date, bet_id, horse, course, race_time, show_in_ui, is_learning_pick, outcome, sp_odds, odds, ew_fraction, bet_type',
+            )
             all_items.extend(resp.get('Items', []))
-            if 'LastEvaluatedKey' not in resp:
-                break
-            scan_kwargs['ExclusiveStartKey'] = resp['LastEvaluatedKey']
+            cur += timedelta(days=1)
 
         picks = [decimal_to_float(i) for i in all_items]
         picks = [

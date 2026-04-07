@@ -704,17 +704,21 @@ CUMULATIVE_ROI_START = '2026-03-22'
 def get_cumulative_roi():
     """Cumulative ROI since CUMULATIVE_ROI_START — grows as new results are recorded each day."""
     try:
-        from boto3.dynamodb.conditions import Attr
+        from boto3.dynamodb.conditions import Key
+        from datetime import timedelta, date as _date
 
-        # Scan for all picks from the start date onwards (DynamoDB Scan with filter)
+        # Query day-by-day using the bet_date partition key (avoids expensive full-table scan)
         all_items = []
-        scan_kwargs = {'FilterExpression': Attr('bet_date').gte(CUMULATIVE_ROI_START)}
-        while True:
-            response = table.scan(**scan_kwargs)
+        start_d = _date.fromisoformat(CUMULATIVE_ROI_START)
+        today_d = _date.today()
+        cur = start_d
+        while cur <= today_d:
+            response = table.query(
+                KeyConditionExpression=Key('bet_date').eq(str(cur)),
+                ProjectionExpression='bet_date, bet_id, horse, course, race_time, show_in_ui, is_learning_pick, outcome, sp_odds, odds, ew_fraction, bet_type',
+            )
             all_items.extend(response.get('Items', []))
-            if 'LastEvaluatedKey' not in response:
-                break
-            scan_kwargs['ExclusiveStartKey'] = response['LastEvaluatedKey']
+            cur += timedelta(days=1)
 
         picks = [decimal_to_float(item) for item in all_items]
 
