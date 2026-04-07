@@ -1947,131 +1947,126 @@ function YesterdayResultsView() {
 
       {/* ── Strong Lay Possibilities ─────────────────────────────── */}
       {layData && (() => {
-        const LAY_WEIGHTS = {
-          class_up:4, trip_new:2, going_unproven:2, draw_poor:1, layoff:1, pace_doubt:1,
-          rivals_close:2, drift:1, short_price:1, trainer_track:1, trainer_cold:1, trainer_multiple:1,
-        };
-        const LAY_LABELS = {
-          class_up:         { label:'Class',        desc:'Moving up in Class',             colour:'#c084fc' },
-          trip_new:         { label:'Trip',          desc:'New Distance (Up or Down)',      colour:'#6ee7b7' },
-          going_unproven:   { label:'Going',         desc:'Unproven on current going',      colour:'#34d399' },
-          draw_poor:        { label:'Draw',          desc:'Poor draw on this track',        colour:'#fbbf24' },
-          layoff:           { label:'Layoff',        desc:'>30\u201390 days off',                colour:'#fca5a5' },
-          pace_doubt:       { label:'Pace',          desc:'Pace may not suit',              colour:'#93c5fd' },
-          rivals_close:     { label:'Rivals',        desc:'Creditable 2nd/3rd threats',     colour:'#60a5fa' },
-          drift:            { label:'Drift',         desc:'Open vs current price',          colour:'#fcd34d' },
-          short_price:      { label:'Price',         desc:'5/4 or less / odds-on',          colour:'#a78bfa' },
-          trainer_track:    { label:'Trainer@Track', desc:'Trainer win rate at this track', colour:'#a5b4fc' },
-          trainer_cold:     { label:'TrainerCold',   desc:'Last 14 days win rate (Cold)',   colour:'#818cf8' },
-          trainer_multiple: { label:'MultiRunner',   desc:'Multiple runners same race',     colour:'#e879f9' },
-        };
-        const FACTOR_ORDER = ['class_up','trip_new','going_unproven','draw_poor','layoff','pace_doubt',
-                               'rivals_close','drift','short_price','trainer_track','trainer_cold','trainer_multiple'];
         const VC = {
           RED:    { fg:'#f87171', bg:'rgba(248,113,113,0.12)', border:'rgba(248,113,113,0.35)' },
           AMBER:  { fg:'#f97316', bg:'rgba(249,115,22,0.12)',  border:'rgba(249,115,22,0.35)'  },
           YELLOW: { fg:'#fbbf24', bg:'rgba(251,191,36,0.10)',  border:'rgba(251,191,36,0.35)'  },
           GREEN:  { fg:'#34d399', bg:'rgba(52,211,153,0.10)',  border:'rgba(52,211,153,0.3)'   },
         };
-        const caution  = (layData.races || []).filter(r => r.lay_score >= 4)
-                                               .sort((a,b) => b.lay_score - a.lay_score);
-        const genTime  = layData.generated
+        const FLAG_LABELS = {
+          class_up:'Class', trip_new:'Trip', going_unproven:'Going', draw_poor:'Draw',
+          layoff:'Layoff', pace_doubt:'Pace', rivals_close:'Rivals', drift:'Drift',
+          short_price:'Price', trainer_track:'Trainer@Track', trainer_cold:'TrainerCold', trainer_multiple:'MultiRunner',
+        };
+        const FLAG_COLOURS = {
+          class_up:'#c084fc', trip_new:'#6ee7b7', going_unproven:'#34d399', draw_poor:'#fbbf24',
+          layoff:'#fca5a5', pace_doubt:'#93c5fd', rivals_close:'#60a5fa', drift:'#fcd34d',
+          short_price:'#a78bfa', trainer_track:'#a5b4fc', trainer_cold:'#818cf8', trainer_multiple:'#e879f9',
+        };
+        const caution = (layData.races || [])
+          .filter(r => r.lay_score >= 4)
+          .sort((a,b) => b.lay_score - a.lay_score);
+        const genTime = layData.generated
           ? new Date(layData.generated).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})
           : '';
+        const settled  = caution.filter(r => r.outcome);
+        const favLost  = settled.filter(r => !['win','won'].includes((r.outcome||'').toLowerCase())).length;
+        const favWon   = settled.filter(r =>  ['win','won'].includes((r.outcome||'').toLowerCase())).length;
         return (
           <div style={{ marginTop:'36px' }}>
             {/* Section header */}
-            <div style={{ background:'linear-gradient(135deg,rgba(185,28,28,0.22) 0%,rgba(127,29,29,0.15) 100%)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'12px', padding:'20px 24px', marginBottom:'18px' }}>
-              <div style={{ fontSize:'10px', letterSpacing:'2px', textTransform:'uppercase', color:'rgba(255,255,255,0.4)', marginBottom:'4px' }}>Lay Analysis \u00b7 Read-only parallel view</div>
-              <div style={{ fontSize:'18px', fontWeight:'800', color:'white', marginBottom:'4px' }}>\ud83d\udea8 Strong Possibilities to Lay Suspect Favourites (5/4 or less)</div>
-              <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.5)', marginBottom:'14px' }}>Is this Favourite overpriced relative to its true win probability?</div>
-              <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', alignItems:'center' }}>
-                {[{r:'0\u20133',l:'Leave Alone',c:'#34d399'},{r:'4\u20139',l:'Caution / Look',c:'#fbbf24'},{r:'10\u201312',l:'Strong Lay',c:'#f97316'},{r:'13+',l:'Strong Lay Candidate',c:'#f87171'}].map(x=>(
-                  <div key={x.r} style={{display:'flex',alignItems:'center',gap:'5px',background:'rgba(255,255,255,0.06)',borderRadius:'6px',padding:'4px 10px',fontSize:'11px',color:'rgba(255,255,255,0.65)'}}>
-                    <span style={{background:x.c,width:'7px',height:'7px',borderRadius:'50%',display:'inline-block'}}/>
+            <div style={{ background:'linear-gradient(135deg,rgba(185,28,28,0.22) 0%,rgba(127,29,29,0.15) 100%)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'12px', padding:'18px 22px', marginBottom:'14px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'12px' }}>
+              <div>
+                <div style={{ fontSize:'10px', letterSpacing:'2px', textTransform:'uppercase', color:'rgba(255,255,255,0.4)', marginBottom:'4px' }}>Lay Analysis · Vulnerable Favourites</div>
+                <div style={{ fontSize:'17px', fontWeight:'800', color:'white', marginBottom:'2px' }}>🚨 Suspect Favourites Today</div>
+                <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)' }}>
+                  {caution.length} flagged of {(layData.races||[]).length} analysed
+                  {genTime && <span> · {genTime}</span>}
+                  {settled.length > 0 && <span style={{marginLeft:'10px'}}>· <b style={{color:'#34d399'}}>{favLost} lay wins</b> / <b style={{color:'#f87171'}}>{favWon} fav won</b> ({settled.length} settled)</span>}
+                </div>
+              </div>
+              <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
+                {[{r:'4–9',l:'Caution',c:'#fbbf24'},{r:'10–12',l:'Strong Lay',c:'#f97316'},{r:'13+',l:'Red Flag',c:'#f87171'}].map(x=>(
+                  <div key={x.r} style={{display:'flex',alignItems:'center',gap:'4px',background:'rgba(255,255,255,0.06)',borderRadius:'6px',padding:'4px 9px',fontSize:'10px',color:'rgba(255,255,255,0.65)'}}>
+                    <span style={{background:x.c,width:'6px',height:'6px',borderRadius:'50%',display:'inline-block'}}/>
                     <b style={{color:x.c}}>{x.r}</b>&nbsp;{x.l}
                   </div>
                 ))}
-                <span style={{marginLeft:'auto',fontSize:'11px',color:'rgba(255,255,255,0.35)'}}>
-                  {caution.length} caution+ of {(layData.races||[]).length} analysed
-                  {genTime && <span> \u00b7 {genTime}</span>}
-                </span>
               </div>
             </div>
 
-            {/* Scoring factors key */}
-            <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'10px', padding:'14px 18px', marginBottom:'14px' }}>
-              <div style={{ fontSize:'10px', textTransform:'uppercase', letterSpacing:'1px', color:'rgba(255,255,255,0.35)', marginBottom:'9px' }}>Factor \u00b7 Condition \u00b7 Score</div>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(215px,1fr))', gap:'5px 20px' }}>
-                {FACTOR_ORDER.map(k => {
-                  const fl = LAY_LABELS[k];
+            {/* Summary list */}
+            {caution.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'28px', color:'rgba(255,255,255,0.4)', background:'rgba(255,255,255,0.04)', borderRadius:'10px', fontSize:'13px' }}>
+                No vulnerable favourites today (threshold: 4+).
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+                {caution.map((r, i) => {
+                  const vc      = VC[r.verdict_colour] || VC.GREEN;
+                  const oc      = (r.outcome || '').toLowerCase();
+                  const hasResult = !!r.outcome;
+                  const favWon  = hasResult && ['win','won'].includes(oc);
                   return (
-                    <div key={k} style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:'11px' }}>
-                      <span style={{ color:'#fbbf24', fontWeight:'700', minWidth:'22px' }}>+{LAY_WEIGHTS[k]}</span>
-                      <span style={{ color:fl.colour, fontWeight:'600', minWidth:'88px' }}>{fl.label}</span>
-                      <span style={{ color:'rgba(255,255,255,0.38)', fontSize:'10px' }}>{fl.desc}</span>
+                    <div key={i} style={{ background:'rgba(22,27,34,0.95)', border:`1px solid ${vc.border}`, borderLeft:`4px solid ${vc.fg}`, borderRadius:'9px', padding:'10px 14px', display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' }}>
+                      {/* Time + Course */}
+                      <div style={{ minWidth:'88px' }}>
+                        <div style={{ fontSize:'13px', fontWeight:'800', color:'#58a6ff' }}>{fmtUtcTime(r.race_time)}</div>
+                        <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.5)', marginTop:'1px' }}>{r.course}</div>
+                      </div>
+
+                      {/* Horse name + odds */}
+                      <div style={{ flex:1, minWidth:'120px' }}>
+                        <div style={{ fontSize:'14px', fontWeight:'800', color:'white' }}>{r.favourite}</div>
+                        <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)', marginTop:'2px' }}>
+                          @ <b style={{color:'#e6edf3'}}>{r.fav_odds?.toFixed(2)}</b>
+                          {r.runners && <span style={{marginLeft:'8px'}}>{r.runners} runners</span>}
+                          {r.our_pick && <span style={{ marginLeft:'8px', color:'#58a6ff', fontWeight:'700' }}>⚡ Our pick</span>}
+                        </div>
+                      </div>
+
+                      {/* Flags pill row */}
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:'3px', flex:'1 1 160px' }}>
+                        {(r.flags||[]).map(f => (
+                          <span key={f} style={{ background:'rgba(255,255,255,0.07)', color: FLAG_COLOURS[f] || '#94a3b8', border:`1px solid ${FLAG_COLOURS[f] || '#94a3b8'}44`, borderRadius:'4px', padding:'1px 6px', fontSize:'10px', fontWeight:'600' }}>
+                            {FLAG_LABELS[f] || f}
+                          </span>
+                        ))}
+                      </div>
+
+                      {/* Score */}
+                      <div style={{ textAlign:'center', minWidth:'44px' }}>
+                        <div style={{ fontSize:'22px', fontWeight:'900', lineHeight:1, color:vc.fg }}>{r.lay_score}</div>
+                        <div style={{ fontSize:'9px', color:'rgba(255,255,255,0.35)' }}>/ 18</div>
+                      </div>
+
+                      {/* Verdict badge */}
+                      <div style={{ minWidth:'80px', textAlign:'center' }}>
+                        <span style={{ background:vc.bg, color:vc.fg, border:`1px solid ${vc.border}`, borderRadius:'5px', padding:'3px 8px', fontSize:'10px', fontWeight:'700', textTransform:'uppercase', whiteSpace:'nowrap' }}>
+                          {r.verdict}
+                        </span>
+                      </div>
+
+                      {/* Result */}
+                      <div style={{ minWidth:'90px', textAlign:'center' }}>
+                        {hasResult ? (
+                          <span style={{
+                            background: favWon ? 'rgba(248,113,113,0.18)' : 'rgba(52,211,153,0.18)',
+                            color:       favWon ? '#f87171' : '#34d399',
+                            border:     `1px solid ${favWon ? 'rgba(248,113,113,0.5)' : 'rgba(52,211,153,0.5)'}`,
+                            borderRadius:'5px', padding:'3px 10px', fontSize:'11px', fontWeight:'800', whiteSpace:'nowrap',
+                          }}>
+                            {favWon ? '✗ FAV WON' : '✓ FAV LOST'}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize:'10px', color:'rgba(255,255,255,0.3)', fontStyle:'italic' }}>Pending</span>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
               </div>
-            </div>
-
-            {/* Interpretation */}
-            <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'8px', padding:'10px 16px', marginBottom:'16px', display:'flex', gap:'20px', flexWrap:'wrap', fontSize:'11px', color:'rgba(255,255,255,0.5)' }}>
-              <span><b style={{color:'#34d399'}}>0\u20133</b> = Leave horse alone (Green)</span>
-              <span><b style={{color:'#fbbf24'}}>4\u20139</b> = Caution \u2013 take a look if vulnerable (Yellow)</span>
-              <span><b style={{color:'#f97316'}}>10\u201312</b> = Strong Lay (Amber)</span>
-              <span><b style={{color:'#f87171'}}>13+</b> = Strong Lay Candidate (Red)</span>
-            </div>
-
-            {/* Lay candidate cards */}
-            {caution.length === 0 ? (
-              <div style={{ textAlign:'center', padding:'32px', color:'rgba(255,255,255,0.4)', background:'rgba(255,255,255,0.04)', borderRadius:'10px', fontSize:'13px' }}>
-                No favourites meet the caution threshold (4+) today.
-              </div>
-            ) : caution.map((r, i) => {
-              const vc = VC[r.verdict_colour] || VC.GREEN;
-              const activeFlags = r.flags || [];
-              return (
-                <div key={i} style={{ background:'rgba(22,27,34,0.95)', border:`1px solid ${vc.border}`, borderLeft:`4px solid ${vc.fg}`, borderRadius:'10px', marginBottom:'12px', overflow:'hidden' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap', padding:'10px 16px', borderBottom:'1px solid rgba(255,255,255,0.07)', background:'rgba(255,255,255,0.02)' }}>
-                    <span style={{ fontWeight:'800', color:'#58a6ff', fontSize:'14px' }}>{fmtUtcTime(r.race_time)}</span>
-                    <span style={{ fontWeight:'700', color:'white' }}>{r.course}</span>
-                    <span style={{ flex:1, fontSize:'11px', color:'rgba(255,255,255,0.45)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.race_name}</span>
-                    {r.our_pick && <span style={{ background:'rgba(88,166,255,0.18)', color:'#58a6ff', border:'1px solid rgba(88,166,255,0.4)', borderRadius:'4px', padding:'2px 6px', fontSize:'10px', fontWeight:'700' }}>\u26a1 OUR PICK</span>}
-                    <span style={{ background:vc.bg, color:vc.fg, border:`1px solid ${vc.border}`, borderRadius:'5px', padding:'2px 9px', fontSize:'10px', fontWeight:'700', textTransform:'uppercase', letterSpacing:'0.5px' }}>{r.verdict}</span>
-                  </div>
-                  <div style={{ display:'flex', gap:'16px', padding:'12px 16px', alignItems:'center', flexWrap:'wrap' }}>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:'17px', fontWeight:'800', color:'white', marginBottom:'5px' }}>{r.favourite}</div>
-                      <div style={{ display:'flex', flexWrap:'wrap', gap:'3px 14px', fontSize:'11px', color:'rgba(255,255,255,0.5)', marginBottom:'6px' }}>
-                        <span>@ <b style={{color:'#e6edf3'}}>{r.fav_odds?.toFixed(2)}</b></span>
-                        <span>Score <b style={{color:'#e6edf3'}}>{r.fav_sys_score?.toFixed(0)}</b></span>
-                        <span>Gap <b style={{color:'#e6edf3'}}>{r.score_gap?.toFixed(0)}</b></span>
-                        {r.form && <span>Form <b style={{color:'#e6edf3'}}>{r.form}</b></span>}
-                        <span>Runners <b style={{color:'#e6edf3'}}>{r.runners}</b></span>
-                        {r.trainer && <span>Trainer <b style={{color:'rgba(255,255,255,0.7)'}}>{r.trainer}</b></span>}
-                      </div>
-                      <div style={{ display:'flex', flexWrap:'wrap', gap:'4px' }}>
-                        {activeFlags.map(flag => {
-                          const fl = LAY_LABELS[flag] || { label:flag, colour:'#94a3b8' };
-                          return (
-                            <span key={flag} style={{ background:'rgba(255,255,255,0.08)', border:`1px solid ${fl.colour}55`, color:fl.colour, borderRadius:'4px', padding:'2px 7px', fontSize:'10px', fontWeight:'600' }}>
-                              {fl.label} +{LAY_WEIGHTS[flag] || 1}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div style={{ textAlign:'center', minWidth:'64px' }}>
-                      <div style={{ fontSize:'36px', fontWeight:'800', lineHeight:1, color:vc.fg }}>{r.lay_score}</div>
-                      <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.4)', marginBottom:'4px' }}>/ 18</div>
-                      <div style={{ background:vc.bg, color:vc.fg, border:`1px solid ${vc.border}`, borderRadius:'5px', padding:'2px 7px', fontSize:'10px', fontWeight:'700', textTransform:'uppercase' }}>{r.verdict}</div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            )}
           </div>
         );
       })()}
