@@ -16,6 +16,7 @@ This is intentionally lightweight — it does not touch any pick selection logic
 weights, or learning data.
 """
 
+import concurrent.futures
 import datetime
 import json
 import os
@@ -27,6 +28,17 @@ import boto3
 from boto3.dynamodb.conditions import Key
 
 REGION = os.environ.get('AWS_DEFAULT_REGION', 'eu-west-1')
+SL_BASE = 'https://www.sportinglife.com'
+_SL_HEADERS = {
+    'User-Agent': (
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) '
+        'Chrome/122.0.0.0 Safari/537.36'
+    ),
+    'Accept':          'text/html,application/xhtml+xml',
+    'Accept-Language': 'en-GB,en;q=0.5',
+    'Referer':         'https://www.sportinglife.com/',
+}
 
 # ── Decimal helper ──────────────────────────────────────────────────────────
 
@@ -80,24 +92,109 @@ def _utc_to_local_hhmm(utc_hhmm: str, date_str: str) -> str:
         return utc_hhmm
 
 
+# ── Shared HTTP helper ───────────────────────────────────────────────────────
+
+def _sl_http(url: str) -> str:
+    req = urllib.request.Request(url, headers=_SL_HEADERS)
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return r.read().decode('utf-8', errors='replace')
+
+
+# ── Parse a single SL race-result page → (off_time_hhmm, winner_name) ───────
+
+def _parse_sl_race_winner(race_url: str):
+    try:
+        html = _sl_http(race_url)
+    except Exception as e:
+        print(f'[fav_results] race page error: {e}')
+        return None, None
+
+    off_time = None
+    off_m = re.search(r'Off time:\s*(\d{1,2}:\d{2})', html)
+    if off_m:
+        off_time = off_m.group(1).zfill(5)
+
+    # SL ResultRunner CSS class — runners listed in finish order
+    runners_html = re.findall(
+        r'ResultRunner__StyledHorseName[^"]*"[^>]*>'
+        r'<a\s+href="/racing/profiles/horse/\d+"[^>]*>([^<]+)</a>',
+        html,
+    )
+    if runners_html:
+        w = re.sub(r'\s*\([A-Z]{2,3}\)\s*$', '', runners_html[0]).strip()
+        return off_time, w
+
+    # og:description fallback: "HorseName won ..."
+    for pattern in [
+        r'<meta[^>]+property="og:description"[^>]+content="([^"]*)"',
+        r'<meta[^>]+content="([^"]*)"[^>]+property="og:description"',
+    ]:
+        m = re.search(pattern, html, re.IGNORECASE)
+        if m:
+            wm = re.match(r'^([A-Z][^.]+?)\s+won\b', m.group(1))
+            if wm:
+                return off_time, wm.group(1).strip()
+
+    return off_time, None
+
+
+# ── Scrape per-race pages for the date (fallback for missing meeting coverage) ─
+
+def _fetch_per_race_winners(date_str: str, limit_courses=None) -> dict:
+    """
+    Fetch individual SL race-result pages for the given date.
+    Returns {(course_lower, off_time_hhmm): winner_name}.
+    limit_courses: optional set of course_lower strings to restrict to.
+    """
+    idx_url = f'{SL_BASE}/racing/results/{date_str}/'
+    try:
+        html = _sl_http(idx_url)
+    except Exception as e:
+        print(f'[fav_results] per-race index error: {e}')
+        return {}
+
+    pat = re.compile(
+        r'href="(/racing/results/' + re.escape(date_str) + r'/([^/]+)/(\d+)/[^"]+)"'
+    )
+    seen: set = set()
+    jobs = []
+    for m in pat.finditer(html):
+        full_path, course_slug, race_id = m.group(1), m.group(2), m.group(3)
+        key = (course_slug, race_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        course_lower = course_slug.replace('-', ' ').strip().lower()
+        if limit_courses and course_lower not in limit_courses:
+            continue
+        jobs.append((course_lower, f'{SL_BASE}{full_path}'))
+
+    print(f'[fav_results] per-race: fetching {len(jobs)} race pages '
+          f'({"all courses" if not limit_courses else ", ".join(sorted(limit_courses))})')
+
+    extra: dict = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as pool:
+        fs = {pool.submit(_parse_sl_race_winner, url): (crs, url) for crs, url in jobs}
+        for fut in concurrent.futures.as_completed(fs, timeout=45):
+            crs, url = fs[fut]
+            try:
+                off_t, winner = fut.result()
+                if winner:
+                    extra[(crs, off_t or '??:??')] = winner
+                    print(f'[fav_results] per-race: {crs} {off_t} → {winner}')
+            except Exception as e:
+                print(f'[fav_results] per-race parse error {url}: {e}')
+
+    print(f'[fav_results] per-race map: {len(extra)} winners found')
+    return extra
+
+
 # ── Fetch SL fast-results → {(course_lower, local_hhmm): winner_name} ───────
 
 def _fetch_sl_winner_map() -> dict:
     url = 'https://www.sportinglife.com/racing/fast-results/all'
     try:
-        req = urllib.request.Request(
-            url,
-            headers={
-                'User-Agent': (
-                    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-                    'AppleWebKit/537.36 (KHTML, like Gecko) '
-                    'Chrome/122.0.0.0 Safari/537.36'
-                ),
-                'Accept':          'text/html,application/xhtml+xml',
-                'Accept-Language': 'en-GB,en;q=0.5',
-                'Referer':         'https://www.sportinglife.com/',
-            },
-        )
+        req = urllib.request.Request(url, headers=_SL_HEADERS)
         with urllib.request.urlopen(req, timeout=20) as resp:
             html = resp.read().decode('utf-8', errors='replace')
     except Exception as e:
@@ -177,6 +274,7 @@ def lambda_handler(event, context):
 
     races_processed = 0
     favs_updated    = 0
+    unresolved_races = []   # (fav_name, fav_bet_id, local_hhmm, course_key)
 
     for race_key, runners in sorted(races.items()):
         rt, course = race_key.split('|', 1)
@@ -236,7 +334,7 @@ def lambda_handler(event, context):
         except Exception as ex:
             print(f'  [fav_results] matching error {course} {local_hhmm}: {ex}')
 
-        # ── Fallback: check if any runner in DynamoDB already has outcome='win' ─
+        # ── Fallback: check outcome='win' OR result_winner_name written by sl_results_fetcher ─
         if fav_outcome is None:
             for h in runners:
                 h_outcome = str(h.get('outcome') or '').lower()
@@ -248,9 +346,20 @@ def lambda_handler(event, context):
                         else 'loss'
                     )
                     break
+                # sl_results_fetcher writes result_winner_name to every settled pick in the race
+                rw = (h.get('result_winner_name') or h.get('winner_name') or '').strip()
+                if rw and not winner_name:
+                    winner_name = rw
+                    fav_outcome = (
+                        'win'
+                        if _norm_horse(rw) == _norm_horse(fav_name)
+                        else 'loss'
+                    )
+                    break
 
         if fav_outcome is None:
-            print(f'  [fav_results] No result found yet for {fav_name} in {course} {local_hhmm}')
+            # Collect for per-race HTML scraping fallback (3rd tier)
+            unresolved_races.append((fav_name, fav_bet_id, local_hhmm, course_key))
             continue
 
         # ── Write fav_outcome + race_winner_name to DynamoDB ────────────────
@@ -273,6 +382,60 @@ def lambda_handler(event, context):
             print(f'  [fav_results] {result_label}: {fav_name} @ {course} {local_hhmm} (winner: {winner_name})')
         except Exception as ex:
             print(f'  [fav_results] DynamoDB write error for {fav_name}: {ex}')
+
+    # ── 3rd tier: per-race HTML scraping for unresolved favourites ─────────────
+    if unresolved_races:
+        unresolved_courses = {r[3] for r in unresolved_races}
+        print(f'[fav_results] per-race fallback for {len(unresolved_races)} unresolved races '
+              f'at: {", ".join(sorted(unresolved_courses))}')
+        extra_map = _fetch_per_race_winners(date_str, limit_courses=unresolved_courses)
+
+        for (fav_name, fav_bet_id, local_hhmm, course_key) in unresolved_races:
+            winner_name = None
+            fav_outcome = None
+            if extra_map and local_hhmm:
+                try:
+                    lh, lm = map(int, local_hhmm.split(':'))
+                    local_mins = lh * 60 + lm
+                    for (c_key, t_key), w_name in extra_map.items():
+                        if c_key != course_key:
+                            continue
+                        try:
+                            wh, wm = map(int, t_key.split(':'))
+                            if abs((wh * 60 + wm) - local_mins) <= 15:
+                                winner_name = w_name.strip()
+                                fav_outcome = (
+                                    'win'
+                                    if _norm_horse(winner_name) == _norm_horse(fav_name)
+                                    else 'loss'
+                                )
+                                break
+                        except ValueError:
+                            pass
+                except Exception as ex:
+                    print(f'  [fav_results] per-race match error {fav_name}: {ex}')
+
+            if fav_outcome is None:
+                print(f'  [fav_results] Still unresolved: {fav_name} @ {course_key} {local_hhmm}')
+                continue
+
+            expr_vals = {':fo': fav_outcome}
+            update_expr = 'SET fav_outcome = :fo'
+            if winner_name:
+                update_expr += ', race_winner_name = :wn'
+                expr_vals[':wn'] = winner_name
+            try:
+                tbl.update_item(
+                    Key={'bet_date': date_str, 'bet_id': fav_bet_id},
+                    UpdateExpression=update_expr,
+                    ExpressionAttributeValues=expr_vals,
+                )
+                favs_updated += 1
+                result_label = '✓ FAV LOST (LAY WIN)' if fav_outcome == 'loss' else '✗ FAV WON'
+                print(f'  [fav_results] {result_label}: {fav_name} @ {course_key} {local_hhmm} '
+                      f'(winner: {winner_name}) [per-race scrape]')
+            except Exception as ex:
+                print(f'  [fav_results] DynamoDB write error for {fav_name}: {ex}')
 
     print(f'[fav_results] Done — {races_processed} races, {favs_updated} fav outcomes written')
     return {

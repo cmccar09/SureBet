@@ -3508,11 +3508,21 @@ def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
 
                     break
 
+                # sl_results_fetcher writes result_winner_name to every settled pick in this race
+
+                rw = (h.get('result_winner_name') or h.get('winner_name') or '').strip()
+
+                if rw and not winner_name:
+
+                    winner_name = rw
+
             if winner_name:
+
+                def _ns(n): return n.replace("'", '').replace('-', '').strip().lower()
 
                 fav_outcome = (
 
-                    'win' if winner_name.strip().lower() == fav_name.strip().lower()
+                    'win' if _ns(winner_name) == _ns(fav_name)
 
                     else 'loss'
 

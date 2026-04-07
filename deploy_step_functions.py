@@ -117,7 +117,7 @@ LAMBDAS = [
         'name'   : 'surebet-fav-results',
         'handler': 'sf_fav_results.lambda_handler',
         'src'    : 'sf_fav_results.py',
-        'timeout': 60,
+        'timeout': 120,
         'memory' : 256,
         'bundle' : [],
         'env'    : {},

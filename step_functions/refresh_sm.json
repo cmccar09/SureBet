@@ -144,8 +144,46 @@
       "Catch": [
         {
           "ErrorEquals": ["States.ALL"],
-          "Next": "RefreshComplete",
+          "Next": "RefreshFavResults",
           "ResultPath": "$.notifyError"
+        }
+      ],
+      "Next": "RefreshFavResults"
+    },
+
+    "RefreshFavResults": {
+      "Comment": "Write fav_outcome to favourites throughout the day so Results page shows win/loss for each lay candidate.",
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "PLACEHOLDER_surebet-fav-results",
+        "Payload.$": "$"
+      },
+      "ResultSelector": {
+        "races_processed.$": "$.Payload.races_processed",
+        "favs_updated.$":    "$.Payload.favs_updated",
+        "success.$":         "$.Payload.success"
+      },
+      "ResultPath": "$.favResultsResult",
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 15,
+          "MaxAttempts": 2,
+          "BackoffRate": 2.0
+        }
+      ],
+      "Catch": [
+        {
+          "ErrorEquals": ["States.ALL"],
+          "Next": "RefreshComplete",
+          "ResultPath": "$.favResultsError",
+          "Comment": "Non-fatal — refresh still succeeds even if fav results write fails"
         }
       ],
       "Next": "RefreshComplete"
