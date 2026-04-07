@@ -1568,7 +1568,25 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['large_field_penalty'] = 0
 
-    # 15. DRAW BIAS — UK/Irish track-specific stall advantage/disadvantage
+    # SMALL FIELD TACTICAL BONUS (2026-04-07)
+    # Pro workflow: small fields (6 runners) = high predictability, selected ahead of large ones.
+    _sf_market = str(horse_data.get('race_name', horse_data.get('market_name', ''))).lower()
+    _is_nh_sf  = any(x in _sf_market for x in ['hurdle', 'chase', 'nhf', 'bumper', 'national hunt'])
+    if not _is_nh_sf:
+        if 4 <= n_runners <= 6:
+            _sfb = 7
+            score += _sfb
+            breakdown['small_field_bonus'] = _sfb
+            reasons.append(f"Small field ({n_runners} runners) — high tactical predictability: +{_sfb}pts")
+        elif 7 <= n_runners <= 8:
+            _sfb = 4
+            score += _sfb
+            breakdown['small_field_bonus'] = _sfb
+            reasons.append(f"Manageable field ({n_runners} runners) — cleaner form read: +{_sfb}pts")
+        else:
+            breakdown['small_field_bonus'] = 0
+    else:
+        breakdown['small_field_bonus'] = 0
     # Source: well-documented published draw statistics for UK/Irish flat tracks.
     # Only applies to flat races where stall draw is meaningful.
     # NH racing (hurdles/chases/bumpers) has no meaningful draw bias.

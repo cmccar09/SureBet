@@ -363,9 +363,23 @@ def analyze_and_save_all():
                 reasons.append(f"Market steaming: backed {_pm_pct:.0f}% shorter: +{_steam_pts}pts")
             elif _pm == 'drifting' and _pm_pct <= -25:
                 _drift_pts = min(8, int(abs(_pm_pct) * 0.3))  # e.g. 30% rise → -9 → cap -8
+                # PROFESSIONAL WORKFLOW LESSON (2026-04-07): Pro re-checks fundamentals when
+                # Leopardstown drifts 5.0→5.5 and decides to KEEP the pick. Drift is a warning,
+                # not a veto, when the underlying form case is sound.
+                # If horse has strong form signals (deep_form >=16, trainer tier, going win),
+                # cap drift penalty at half — don't let minor market noise override solid form.
+                _strong_form = (
+                    float(breakdown.get('deep_form', 0)) >= 16
+                    or float(breakdown.get('trainer_reputation', 0)) >= 10
+                    or float(breakdown.get('going_win_match', 0)) >= 10
+                )
+                if _strong_form and _drift_pts > 3:
+                    _drift_pts = 3   # cap at -3 when fundamentals are sound
+                    reasons.append(f"Market drifting {abs(_pm_pct):.0f}% — capped at -3pts (strong form fundamentals override drift signal)")
+                else:
+                    reasons.append(f"Market drifting: {abs(_pm_pct):.0f}% longer than last fetch: -{_drift_pts}pts")
                 score -= _drift_pts
                 breakdown['price_steam'] = -_drift_pts
-                reasons.append(f"Market drifting: {abs(_pm_pct):.0f}% longer than last fetch: -{_drift_pts}pts")
             else:
                 breakdown['price_steam'] = 0
 
@@ -484,6 +498,7 @@ def analyze_and_save_all():
         })
 
     # ── SELECT TOP 5 CROSS-RACE BESTS ────────────────────────────────────────
+    import re as _re_s12  # for sprint distance detection in S12
     def _passes_quality_gates(r):
         """Quality gate filters applied at pick-selection time.
         S1: Non-market-backed picks need score >= 85 (or 80 if tr/cd anchor present; unexposed >= 50).
@@ -662,19 +677,31 @@ def analyze_and_save_all():
             print(f"  [GATE-S8 WARNING] {r['best']['horse']} score={score:.0f}: "
                   f"1 undeclared runner missing but pick is market leader \u2014 allowing through.")
 
-        # S9 — Minimum odds gate (2026-04-06)
+        # S9 — Minimum odds gate (2026-04-06, refined 2026-04-07)
         # LESSON: 2026-04-05 — all 3 morning picks (1.53, 1.73, 2.26) lost.
-        # Short-price horses at < 2.5 decimal (evens-to-6/4) require a >40% win rate to show
-        # positive EV. Our system's overall win rate is ~34%. Even top picks likely achieve
-        # ~40-45% win rate — making anything below 2.5 structurally marginal or negative EV.
-        # Better to make no pick than to bet on a <6/4 shot that beats us on probability.
+        # Short-price horses at < 2.5 decimal require a >40% win rate to show positive EV.
+        # PROFESSIONAL WORKFLOW LESSON (2026-04-07): Pro bettor example uses Ascot 3:45 at 2.2
+        # (50% true prob → EV=+0.10) as a valid pick. Blanket 2.5 floor is too aggressive
+        # for ELITE-scored picks where our win_probability calibration suggests 44-50%+ SR.
+        # Rule: 2.0 absolute floor always; 2.0-2.5 allowed ONLY for score>=90 AND EV>0.
         _min_odds = 2.5
         _best_odds = float(r['best'].get('odds', 99))
-        if _best_odds < _min_odds:
+        _wp_s9  = _win_prob_pct(score)
+        _ev_s9  = _expected_value(_wp_s9, _best_odds)
+        # Absolute floor: nothing below 2.0 regardless of score
+        if _best_odds < 2.0:
             print(f"  [GATE-S9 REJECTED] {r['best']['horse']} score={score:.0f}: "
-                  f"odds {_best_odds:.2f} < {_min_odds:.2f} minimum "
-                  f"(sub-6/4 picks are negative EV at our observed win rates)")
+                  f"odds {_best_odds:.2f} below absolute floor (2.0) — unbeatable for any system")
             return False
+        # 2.0-2.5: allow ELITE picks with genuine positive EV
+        if _best_odds < _min_odds:
+            if score >= 90 and _ev_s9 > 0:
+                print(f"  [GATE-S9 ELITE] {r['best']['horse']} score={score:.0f}: "
+                      f"odds {_best_odds:.2f} below 2.5 but ELITE score + EV={_ev_s9:+.3f} — allowing")
+            else:
+                print(f"  [GATE-S9 REJECTED] {r['best']['horse']} score={score:.0f}: "
+                      f"odds {_best_odds:.2f} < {_min_odds:.2f} (needs score>=90 AND EV>0 to waive)")
+                return False
 
         # S10 — Irish NHF bumper short-priced favourite gate (2026-04-06)
         # LESSON: Boundfornowhere (Cork 16:45, score=104 ELITE, 7/4 fav) — lost to 80/1 shot.
@@ -725,6 +752,26 @@ def analyze_and_save_all():
             print(f"  [GATE-S11 WARNING] {r['best']['horse']} score={score:.0f}: "
                   f"EV={_ev:+.3f} (marginally negative) — allowing through (calibration margin)")
 
+        # S12 — Sprint handicap with 12+ runners (2026-04-07)
+        # PROFESSIONAL WORKFLOW LESSON: Pro skips "Redcar 2:25 Sprint Handicap, messy pace,
+        # 12 runners" immediately. Sprint handicaps (≤7f) with large fields have extremely
+        # unpredictable pace dynamics — draw, barrier, early speed all dominate form.
+        # This is the single race type where well-handicapped horses lose most unexpectedly.
+        # We already block 16+ with S6. Here we extend: sprint handicaps block at 12+.
+        _mkt_s12 = str(r.get('market_name', '')).lower()
+        _dist_s12 = _re_s12.search(r'(\d+)f', _mkt_s12)
+        _dist_f_s12 = int(_dist_s12.group(1)) if _dist_s12 else 99
+        _is_sprint_hcap = (
+            ('hcap' in _mkt_s12 or 'handicap' in _mkt_s12 or ' h ' in _mkt_s12)
+            and _dist_f_s12 <= 7
+        )
+        if _is_sprint_hcap and n_runners >= 12:
+            if score < 92 and ml == 0:
+                print(f"  [GATE-S12 REJECTED] {r['best']['horse']} score={score:.0f}: "
+                      f"sprint handicap ({n_runners} runners) — messy pace dynamics, "
+                      f"no market backing. Pro workflow: skip this race type at 12+")
+                return False
+
         return True
 
     def _race_min_confidence(r):
@@ -748,30 +795,51 @@ def analyze_and_save_all():
                 if r['best']['score'] >= _race_min_confidence(r) and _passes_quality_gates(r)]
     eligible.sort(key=lambda r: r['best']['score'], reverse=True)
 
-    # ── DIVERSE PICK SELECTION (2026-03-30) ────────────────────────────────────
+    # ── DIVERSE PICK SELECTION (2026-03-30, enhanced 2026-04-07) ──────────────
+    # PROFESSIONAL WORKFLOW LESSON: Pro explicitly includes a "value play" (Leopardstown
+    # 5.0, EV=+0.90) alongside high-probability picks. Never an all-short-odds portfolio.
     # Naively taking top-N by score often yields all picks in the same 3.5-5.0 odds band.
-    # Mix across three price tiers so at least 1 pick is in each band when available:
-    #   Tier A: 1.5-3.9  (short-priced, lower payout but higher SR)
-    #   Tier B: 4.0-7.9  (value sweet-spot, avg winner odds 3.7)
-    #   Tier C: 8.0+     (outsider/value pick, higher upside)
-    # Fill strategy: take greedy top score but don't exceed 2 picks per tier.
+    # Mix across three price tiers + guarantee one EV+ value play (Tier B or C):
+    #   Tier A: 2.0-3.9  (high-probability, lower payout)
+    #   Tier B: 4.0-7.9  (value sweet-spot — "Big value play" per pro workflow)
+    #   Tier C: 8.0+     (outsider/longshot)
+    # Rules: max 2 per tier, AND must include at least 1 Tier B/C if one exists with EV>0.
     _tier_counts = {'A': 0, 'B': 0, 'C': 0}
     def _odds_tier(odds):
         if odds < 4.0:  return 'A'
         if odds < 8.0:  return 'B'
         return 'C'
+
+    # Identify best EV+ value play (Tier B or C with positive expected value)
+    _value_plays = [
+        r for r in eligible
+        if _odds_tier(float(r['best']['odds'])) in ('B', 'C')
+        and float(r['best']['item'].get('expected_value', -1)) > 0
+    ]
+    _reserved_value = _value_plays[0] if _value_plays else None
+
     top_picks = []
+    # Reserve slot for value play first if available
+    if _reserved_value:
+        top_picks.append(_reserved_value)
+        _tier_counts[_odds_tier(float(_reserved_value['best']['odds']))] += 1
+
     for r in eligible:
         if len(top_picks) >= TARGET_PICKS:
             break
+        if r is _reserved_value:
+            continue
         tier = _odds_tier(float(r['best']['odds']))
         if _tier_counts[tier] < 2:
             top_picks.append(r)
             _tier_counts[tier] += 1
-    # If we didn't fill 5 (rare — all remaining from already-full tiers), top up greedily
+    # Top up greedily if still short
     if len(top_picks) < TARGET_PICKS:
         remaining = [r for r in eligible if r not in top_picks]
         top_picks += remaining[:TARGET_PICKS - len(top_picks)]
+
+    # Sort final picks: rank 1 = highest score among selected
+    top_picks.sort(key=lambda r: r['best']['score'], reverse=True)
 
     # Build a set of bet_ids for the 3 winners
     top_bet_ids = {r['best']['item']['bet_id']: rank

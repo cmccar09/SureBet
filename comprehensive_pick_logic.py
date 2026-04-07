@@ -1584,6 +1584,33 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['large_field_penalty'] = 0
 
+    # SMALL FIELD TACTICAL BONUS (2026-04-07)
+    # PROFESSIONAL WORKFLOW LESSON: Pro explicitly selects Ascot 3:45 (6 runners) BECAUSE
+    # small fields have high predictability — fewer variables, form reads more reliably,
+    # pace dynamics clearer, class/quality differences more decisive.
+    # Source: Modern Pace Handicapping — "race shape determines winners more in large fields
+    # than small ones; small fields reward handicapping accuracy."
+    # 4-6 runners: highest predictability window — tactical races, class tells.
+    # 7-8 runners: moderate boost — field still manageable.
+    # Requires the pick NOT to be in a bumper/NHF (shallow form pool).
+    _sf_market = str(horse_data.get('race_name', horse_data.get('market_name', ''))).lower()
+    _is_nh_sf  = any(x in _sf_market for x in ['hurdle', 'chase', 'nhf', 'bumper', 'national hunt'])
+    if not _is_nh_sf:
+        if 4 <= n_runners <= 6:
+            _sfb = 7
+            score += _sfb
+            breakdown['small_field_bonus'] = _sfb
+            reasons.append(f"Small field ({n_runners} runners) — high tactical predictability: +{_sfb}pts")
+        elif 7 <= n_runners <= 8:
+            _sfb = 4
+            score += _sfb
+            breakdown['small_field_bonus'] = _sfb
+            reasons.append(f"Manageable field ({n_runners} runners) — cleaner form read: +{_sfb}pts")
+        else:
+            breakdown['small_field_bonus'] = 0
+    else:
+        breakdown['small_field_bonus'] = 0
+
     # 15. DRAW BIAS — UK/Irish track-specific stall advantage/disadvantage
     # Source: well-documented published draw statistics for UK/Irish flat tracks.
     # Only applies to flat races where stall draw is meaningful.
