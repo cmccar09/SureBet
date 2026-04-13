@@ -204,7 +204,7 @@ def get_live_betfair_races():
     odds_by_market = {}
     batch_size = 10
 
-    for i in range(0, min(len(markets), 30), batch_size):  # Limit to first 30 markets
+    for i in range(0, min(len(markets), 100), batch_size):  # 2026-04-13: raised from 30→100 to avoid missing evening races (e.g. Musselburgh 16:45 UTC)
         batch = markets[i:i+batch_size]
         market_ids = [market['marketId'] for market in batch]
 
