@@ -1,6 +1,12 @@
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 .App {
   min-height: 100vh;
   padding: 20px;
+  overflow-x: hidden;
 }
 
 @media (max-width: 768px) {

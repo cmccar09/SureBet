@@ -847,7 +847,7 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         'Charlie Appleby', 'C Appleby',
         'Aidan O Brien', "Aidan O'Brien", 'A OBrien', "A O'Brien", 'A P OBrien', "A P O'Brien",
         'Roger Varian', 'R Varian',
-        'Ralph Beckett', 'R Beckett',
+        'Ralph Beckett', 'R Beckett', 'R M Beckett',  # R M Beckett = Ralph Beckett (middle initial variant)
         'Roger Charlton', 'R Charlton',
         # Top Irish flat trainers
         'Joseph OBrien', "Joseph O'Brien", 'J OBrien', "J O'Brien",
@@ -1666,7 +1666,7 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
                      'R' if course.lower().strip() in _RIGHT_HANDED else None)
     _form_runs_h = horse_data.get('form_runs', [])
     if _today_handed and _form_runs_h and len(_form_runs_h) >= 3:
-        _wins_same_hand, _wins_opp_hand, _runs_same, _runs_opp = 0, 0, 0, 0
+        _wins_same, _wins_opp, _runs_same, _runs_opp = 0, 0, 0, 0
         for _fr in _form_runs_h:
             _fr_course = str(_fr.get('course', '')).lower().strip()
             _fr_fin    = str(_fr.get('finish_position', '') or '').strip()

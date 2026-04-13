@@ -103,6 +103,17 @@ def _mark_sent(table, date_str, picks_hash):
 def lambda_handler(event, context):
     date_str = event.get('date', datetime.datetime.utcnow().strftime('%Y-%m-%d'))
 
+    # ── 1PM BST GATE ─────────────────────────────────────────────────────────
+    # Hold notifications until 12:00 UTC (1:00pm BST).
+    # The morning pipeline runs at 08:30 UTC but picks may be re-scored by the
+    # 12:00 UTC refresh as going/flags update.  Only the 12:00+ runs should
+    # actually fire WhatsApp messages so users always see the settled final pick.
+    _now_utc = datetime.datetime.utcnow()
+    if _now_utc.hour < 12:
+        print(f"[sf_notify] Before 1pm BST ({_now_utc.strftime('%H:%M')} UTC) — skipping notifications until 12:00 UTC refresh")
+        return {'success': True, 'date': date_str, 'notifications_sent': 0, 'skipped': True,
+                'skip_reason': f'Before 1pm BST gate ({_now_utc.strftime("%H:%M")} UTC)'}
+
     # Get Twilio credentials
     sm = boto3.client('secretsmanager', region_name=REGION)
     try:

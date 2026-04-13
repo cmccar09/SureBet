@@ -12,6 +12,10 @@ import urllib.request
 
 import urllib.parse
 
+import secrets
+
+import hashlib, os, base64, re
+
 import boto3
 
 from datetime import datetime, timedelta
@@ -26,6 +30,30 @@ dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
 
 table = dynamodb.Table('SureBetBets')
 
+subscribers_table = dynamodb.Table('BetBudAI_Subscribers')
+
+ses_client = boto3.client('ses', region_name='eu-west-1')
+
+SENDER_EMAIL = 'charles.mccarthy@gmail.com'
+
+SITE_URL     = 'https://www.betbudai.com'
+
+
+
+def _hash_password(password: str) -> str:
+    salt = os.urandom(32)
+    key  = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 200_000)
+    return base64.b64encode(salt + key).decode('utf-8')
+
+def _verify_password(password: str, stored: str) -> bool:
+    try:
+        raw        = base64.b64decode(stored.encode('utf-8'))
+        salt       = raw[:32]
+        stored_key = raw[32:]
+        key        = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 200_000)
+        return key == stored_key
+    except Exception:
+        return False
 
 
 def decimal_to_float(obj):
@@ -137,6 +165,12 @@ def lambda_handler(event, context):
         elif 'results/auto-record' in path:
 
             return auto_record_pending_results(headers)
+
+        elif 'api/register' in path:
+            return register_subscriber(headers, event)
+
+        elif 'api/login' in path:
+            return login_subscriber(headers, event)
 
         elif 'results/cumulative-roi' in path:
 
@@ -1027,6 +1061,112 @@ def get_health(headers):
         })
 
     }
+
+
+
+def register_subscriber(headers, event):
+    """Register a new subscriber. POST /api/register"""
+    try:
+        body = event.get('body') or '{}'
+        if isinstance(body, str):
+            data = json.loads(body)
+        else:
+            data = body
+        full_name = (data.get('full_name') or '').strip()
+        email     = (data.get('email') or '').strip().lower()
+        address   = (data.get('address') or '').strip()
+        age       = data.get('age')
+        username  = (data.get('username') or '').strip().lower()
+        password  = data.get('password') or ''
+        if not full_name or len(full_name) < 3:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Full name is required.'})}
+        email_re = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
+        if not email_re.match(email):
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'A valid email address is required.'})}
+        if '..' in email:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Email address contains invalid consecutive dots.'})}
+        email_domain = email.split('@')[1] if '@' in email else ''
+        email_local  = email.split('@')[0] if '@' in email else ''
+        if len(email_domain.split('.')[-1]) < 2:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Email domain extension looks invalid.'})}
+        if re.match(r'^(test|asdf|qwerty|aaaaa|zzzzz|abcde|12345|noreply|fake|spam|none|null|xxx)', email_local):
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Please use a real email address.'})}
+        _fake_domains = {'test.com','fake.com','example.com','mailinator.com','guerrillamail.com','throwam.com','trashmail.com','yopmail.com','sharklasers.com'}
+        if email_domain in _fake_domains:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Disposable or test email addresses are not accepted.'})}
+        if len(address) < 10:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Please enter your full address (street, city and postcode).'})}
+        addr_words = [w for w in address.split() if len(w) > 1]
+        if len(addr_words) < 3:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Address looks incomplete — please include street, city and postcode.'})}
+        try:
+            age = int(age)
+            if age < 18 or age > 120:
+                raise ValueError
+        except (TypeError, ValueError):
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'You must be 18 or over to register.'})}
+        if not re.match(r'^[a-zA-Z0-9_]{3,30}$', username):
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Username must be 3-30 characters (letters, numbers, underscores).'})}
+        if len(password) < 8:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Password must be at least 8 characters.'})}
+        if subscribers_table.get_item(Key={'email': email}).get('Item'):
+            return {'statusCode': 409, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'An account with this email already exists.'})}
+        if subscribers_table.get_item(Key={'email': f'u#{username}'}).get('Item'):
+            return {'statusCode': 409, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'That username is already taken.'})}
+        pw_hash   = _hash_password(password)
+        joined_at = datetime.utcnow().isoformat() + 'Z'
+        subscribers_table.put_item(Item={
+            'email': email, 'full_name': full_name, 'address': address,
+            'age': Decimal(str(age)), 'username': username,
+            'password_hash': pw_hash, 'joined_at': joined_at, 'active': True, 'email_verified': True,
+        })
+        subscribers_table.put_item(Item={'email': f'u#{username}', 'username': username, 'ref_email': email, 'joined_at': joined_at})
+        try:
+            _send_welcome_email(email, full_name)
+        except Exception as mail_err:
+            print(f'Welcome email failed (non-fatal): {mail_err}')
+        return {'statusCode': 200, 'headers': headers, 'body': json.dumps({'success': True, 'message': 'Registration successful. Welcome to BetBudAI!'})}
+    except Exception as e:
+        print(f'register_subscriber error: {e}')
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Registration failed. Please try again.'})}
+
+
+def _send_welcome_email(email: str, full_name: str):
+    first_name = full_name.split()[0] if full_name else 'there'
+    html = f"""<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#0f172a;color:white;padding:40px;"><div style="max-width:560px;margin:0 auto;background:#1e293b;border-radius:16px;padding:40px;"><h1 style="color:#34d399;margin:0 0 8px;">BetBudAI</h1><h2 style="color:white;">Welcome, {first_name}!</h2><p style="color:rgba(255,255,255,0.7);">Your BetBudAI account is ready. <a href="{SITE_URL}" style="color:#34d399;">Sign in here</a> to see today's picks.</p><p style="color:rgba(255,255,255,0.3);font-size:11px;">BetBudAI provides data analysis for informational purposes only. Please gamble responsibly.</p></div></body></html>"""
+    ses_client.send_email(
+        Source=f'BetBudAI <{SENDER_EMAIL}>',
+        Destination={'ToAddresses': [email]},
+        Message={
+            'Subject': {'Data': 'Welcome to BetBudAI!', 'Charset': 'UTF-8'},
+            'Body': {'Html': {'Data': html, 'Charset': 'UTF-8'}, 'Text': {'Data': f'Hi {first_name}, welcome to BetBudAI! Visit {SITE_URL} to see today\'s picks.', 'Charset': 'UTF-8'}},
+        },
+    )
+
+
+def login_subscriber(headers, event):
+    """Authenticate a subscriber. POST /api/login"""
+    try:
+        body = json.loads(event.get('body') or '{}')
+        identifier = (body.get('email') or '').strip().lower()
+        password   = body.get('password') or ''
+        if not identifier or not password:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Email/username and password are required.'})}
+        if '@' not in identifier:
+            reservation = subscribers_table.get_item(Key={'email': f'u#{identifier}'}).get('Item')
+            if not reservation:
+                return {'statusCode': 401, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Invalid email/username or password.'})}
+            identifier = reservation['ref_email']
+        item = subscribers_table.get_item(Key={'email': identifier}).get('Item')
+        if not item or not _verify_password(password, item.get('password_hash', '')):
+            return {'statusCode': 401, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Invalid email/username or password.'})}
+        return {'statusCode': 200, 'headers': headers, 'body': json.dumps({
+            'success': True,
+            'user': {'email': identifier, 'username': item.get('username', ''), 'full_name': item.get('full_name', '')},
+        })}
+    except Exception as e:
+        print(f'login_subscriber error: {e}')
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Login failed. Please try again.'})}
 
 
 

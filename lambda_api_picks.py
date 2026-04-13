@@ -5,13 +5,26 @@ Provides REST API for frontend hosted on Amplify
 import json
 import urllib.request
 import urllib.parse
+import secrets
 import boto3
 from datetime import datetime, timedelta
 from decimal import Decimal
+import hashlib, os, base64, re
 
 # Initialize DynamoDB
 dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
 table = dynamodb.Table('SureBetBets')
+subscribers_table = dynamodb.Table('BetBudAI_Subscribers')
+ses_client = boto3.client('ses', region_name='eu-west-1')
+
+SENDER_EMAIL    = 'charles.mccarthy@gmail.com'
+SITE_URL        = 'https://www.betbudai.com'
+
+def _hash_password(password: str) -> str:
+    """PBKDF2-HMAC-SHA256, 32-byte random salt, 200k iterations."""
+    salt = os.urandom(32)
+    key  = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 200_000)
+    return base64.b64encode(salt + key).decode('utf-8')
 
 def decimal_to_float(obj):
     """Convert Decimal objects to float for JSON serialization"""
@@ -40,8 +53,9 @@ def lambda_handler(event, context):
         'Content-Type': 'application/json'
     }
     
-    # Handle OPTIONS preflight
-    if event.get('httpMethod') == 'OPTIONS':
+    # Handle OPTIONS preflight — supports both REST API (httpMethod) and HTTP API v2 (requestContext.http.method)
+    req_method = event.get('httpMethod') or event.get('requestContext', {}).get('http', {}).get('method', '')
+    if req_method == 'OPTIONS':
         return {
             'statusCode': 200,
             'headers': headers,
@@ -75,6 +89,18 @@ def lambda_handler(event, context):
             return apply_learning_lambda(headers, event)
         elif 'results/auto-record' in path:
             return auto_record_pending_results(headers)
+        elif 'admin/config' in path and method == 'GET':
+            return admin_get_config(headers, event)
+        elif 'admin/config' in path and method == 'POST':
+            return admin_save_config(headers, event)
+        elif 'admin/subscribers' in path and method == 'GET':
+            return admin_get_subscribers(headers, event)
+        elif 'login' in path and method == 'POST':
+            return login_subscriber(headers, event)
+        elif 'verify-email' in path:
+            return verify_email_token(headers, event)
+        elif 'register' in path and method == 'POST':
+            return register_subscriber(headers, event)
         elif 'results/cumulative-roi' in path:
             return get_cumulative_roi(headers)
         elif 'results/yesterday' in path:
@@ -155,8 +181,31 @@ def get_all_picks(headers):
 
 def get_today_picks(headers):
     """Get today's picks only - filter to show only upcoming horse races"""
-    today = datetime.now().strftime('%Y-%m-%d')
-    
+    from datetime import timezone as _tz
+    today = datetime.now(_tz.utc).strftime('%Y-%m-%d')
+
+    # ── 1PM BST GATE ─────────────────────────────────────────────────────────
+    # Hold picks until 12:00 UTC (1:00pm BST) each day.
+    # The morning analysis runs at ~10:00 UTC but may re-score horses as going /
+    # flags update before racing.  Showing picks only after 1pm ensures the last
+    # lunchtime re-check has settled and we're committed to the best version.
+    _now_utc = datetime.now(_tz.utc)
+    if _now_utc.hour < 12:
+        _mins = (12 - _now_utc.hour) * 60 - _now_utc.minute
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success':          True,
+                'picks':            [],
+                'count':            0,
+                'date':             today,
+                'analysis_pending': True,
+                'pending_reason':   f'Picks confirmed at 1:00pm — rechecking going & flags ({_mins} min)',
+                'message':          'Picks locked until 1pm BST to allow full morning analysis to complete',
+            })
+        }
+
     # Use query with partition key for better performance
     try:
         response = table.query(
@@ -494,11 +543,17 @@ def get_cumulative_roi(headers):
         today_d = _date.today()
         cur = start_d
         while cur <= today_d:
-            resp = table.query(
-                KeyConditionExpression=Key('bet_date').eq(str(cur)),
-                ProjectionExpression='bet_date, bet_id, horse, course, race_time, show_in_ui, is_learning_pick, outcome, sp_odds, odds, ew_fraction, bet_type',
-            )
-            all_items.extend(resp.get('Items', []))
+            day_kwargs = {
+                'KeyConditionExpression': Key('bet_date').eq(str(cur)),
+                'ProjectionExpression': 'bet_date, bet_id, horse, course, race_time, show_in_ui, is_learning_pick, outcome, sp_odds, odds, ew_fraction, bet_type',
+            }
+            while True:
+                resp = table.query(**day_kwargs)
+                all_items.extend(resp.get('Items', []))
+                lek = resp.get('LastEvaluatedKey')
+                if not lek:
+                    break
+                day_kwargs['ExclusiveStartKey'] = lek
             cur += timedelta(days=1)
 
         picks = [decimal_to_float(i) for i in all_items]
@@ -577,12 +632,18 @@ def check_yesterday_results(headers):
     from datetime import timedelta
     yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
     
-    # Get ALL yesterday's picks using partition key query
+    # Get ALL yesterday's picks using partition key query (paginated)
     response = table.query(
         KeyConditionExpression=Key('bet_date').eq(yesterday)
     )
-    
     all_picks = response.get('Items', [])
+    while 'LastEvaluatedKey' in response:
+        response = table.query(
+            KeyConditionExpression=Key('bet_date').eq(yesterday),
+            ExclusiveStartKey=response['LastEvaluatedKey']
+        )
+        all_picks.extend(response.get('Items', []))
+
     all_picks = [decimal_to_float(item) for item in all_picks]
     
     # Filter for UI picks only - keep others in database for learning
@@ -1294,6 +1355,235 @@ def trigger_workflow(headers):
                 'message': 'Failed to trigger workflow. Make sure betting-workflow Lambda exists and API has invoke permissions.'
             })
         }
+
+
+def register_subscriber(headers, event):
+    """Register a new subscriber. POST /api/register"""
+    try:
+        body = event.get('body') or '{}'
+        if isinstance(body, str):
+            data = json.loads(body)
+        else:
+            data = body
+
+        full_name = (data.get('full_name') or '').strip()
+        email     = (data.get('email') or '').strip().lower()
+        address   = (data.get('address') or '').strip()
+        age       = data.get('age')
+        username  = (data.get('username') or '').strip().lower()
+        password  = data.get('password') or ''
+
+        if not full_name or len(full_name) < 3:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Full name is required.'})}
+
+        email_re = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
+        if not email_re.match(email):
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'A valid email address is required (e.g. jane@example.com).'})}
+        if '..' in email:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Email address contains invalid consecutive dots.'})}
+        email_domain = email.split('@')[1] if '@' in email else ''
+        email_local  = email.split('@')[0] if '@' in email else ''
+        if len(email_domain.split('.')[-1]) < 2:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Email domain extension looks invalid.'})}
+        if re.match(r'^(test|asdf|qwerty|aaaaa|zzzzz|abcde|12345|noreply|fake|spam|none|null|xxx)', email_local):
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Please use a real email address.'})}
+        _fake_domains = {'test.com','fake.com','example.com','mailinator.com','guerrillamail.com',
+                         'throwam.com','trashmail.com','yopmail.com','sharklasers.com'}
+        if email_domain in _fake_domains:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Disposable or test email addresses are not accepted.'})}
+
+        if len(address) < 10:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Please enter your full address (street, city and postcode).'})}
+        addr_words = [w for w in address.split() if len(w) > 1]
+        if len(addr_words) < 3:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Address looks incomplete — please include street, city and postcode.'})}
+        addr_clean = address.replace(' ', '')
+        if addr_clean:
+            from collections import Counter
+            max_freq = max(Counter(addr_clean.lower()).values())
+            if max_freq / len(addr_clean) > 0.65:
+                return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Address does not look real — please enter your actual home address.'})}
+        if re.match(r'^(asdf|qwerty|zxcv|abcd|1234|test|fake|none|null|xxx)', address, re.IGNORECASE):
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Address does not look real — please enter your actual home address.'})}
+        try:
+            age = int(age)
+            if age < 18 or age > 120:
+                raise ValueError
+        except (TypeError, ValueError):
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'You must be 18 or over to register.'})}
+        if not re.match(r'^[a-zA-Z0-9_]{3,30}$', username):
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Username must be 3-30 characters (letters, numbers, underscores).'})}
+        if len(password) < 8:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Password must be at least 8 characters.'})}
+
+        # Check email uniqueness
+        if subscribers_table.get_item(Key={'email': email}).get('Item'):
+            return {'statusCode': 409, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'An account with this email already exists.'})}
+        # Check username uniqueness
+        if subscribers_table.get_item(Key={'email': f'u#{username}'}).get('Item'):
+            return {'statusCode': 409, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'That username is already taken.'})}
+
+        pw_hash   = _hash_password(password)
+        joined_at = datetime.utcnow().isoformat() + 'Z'
+        subscribers_table.put_item(Item={
+            'email': email, 'full_name': full_name, 'address': address,
+            'age': Decimal(str(age)), 'username': username,
+            'password_hash': pw_hash, 'joined_at': joined_at, 'active': True,
+        })
+        subscribers_table.put_item(Item={
+            'email': f'u#{username}', 'username': username,
+            'ref_email': email, 'joined_at': joined_at,
+        })
+
+        # Mark verified immediately; attempt to send welcome email (non-blocking)
+        subscribers_table.update_item(
+            Key={'email': email},
+            UpdateExpression='SET email_verified = :v',
+            ExpressionAttributeValues={':v': True},
+        )
+        try:
+            token = secrets.token_urlsafe(32)
+            _send_verification_email(email, full_name, token)
+        except Exception as mail_err:
+            print(f'Welcome email failed (non-fatal): {mail_err}')
+
+        return {'statusCode': 200, 'headers': headers, 'body': json.dumps({'success': True, 'message': 'Registration successful. Welcome to BetBudAI!'})}
+    except Exception as e:
+        print(f'register_subscriber error: {e}')
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Registration failed. Please try again.'})}
+
+
+def _verify_password(password: str, stored: str) -> bool:
+    """Verify a password against a PBKDF2 hash created by _hash_password()."""
+    try:
+        raw        = base64.b64decode(stored.encode('utf-8'))
+        salt       = raw[:32]
+        stored_key = raw[32:]
+        key        = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 200_000)
+        return key == stored_key
+    except Exception:
+        return False
+
+
+def _send_verification_email(email: str, full_name: str, token: str):
+    """Send an account verification email via SES."""
+    verify_url = f'{SITE_URL}/?verify={token}'
+    first_name = full_name.split()[0] if full_name else 'there'
+    html = f"""<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#0f172a;color:white;padding:40px;">
+<div style="max-width:560px;margin:0 auto;background:#1e293b;border-radius:16px;padding:40px;">
+  <h1 style="color:#34d399;margin:0 0 8px;">BetBudAI</h1>
+  <p style="color:rgba(255,255,255,0.5);margin:0 0 32px;font-size:13px;">AI-powered horse racing picks</p>
+  <h2 style="color:white;font-size:22px;margin:0 0 16px;">Hi {first_name}, verify your email</h2>
+  <p style="color:rgba(255,255,255,0.7);line-height:1.6;">Thanks for registering with BetBudAI. Click the button below to verify your email address and activate your account.</p>
+  <a href="{verify_url}" style="display:inline-block;margin:24px 0;padding:14px 32px;background:linear-gradient(135deg,#059669,#047857);color:white;text-decoration:none;border-radius:10px;font-weight:700;font-size:16px;">✓ Verify My Email</a>
+  <p style="color:rgba(255,255,255,0.4);font-size:12px;">This link expires in 24 hours. If you didn't create an account, you can ignore this email.</p>
+  <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:24px 0;"/>
+  <p style="color:rgba(255,255,255,0.3);font-size:11px;">BetBudAI &middot; <a href="{SITE_URL}" style="color:#34d399;">{SITE_URL}</a></p>
+</div></body></html>"""
+    ses_client.send_email(
+        Source=f'BetBudAI <{SENDER_EMAIL}>',
+        Destination={'ToAddresses': [email]},
+        Message={
+            'Subject': {'Data': 'Verify your BetBudAI account', 'Charset': 'UTF-8'},
+            'Body': {
+                'Html': {'Data': html, 'Charset': 'UTF-8'},
+                'Text': {'Data': f'Hi {first_name},\n\nVerify your BetBudAI account by visiting:\n{verify_url}\n\nThis link expires in 24 hours.', 'Charset': 'UTF-8'},
+            },
+        },
+    )
+
+
+def verify_email_token(headers, event):
+    """GET /api/verify-email?token=xxx — mark account as verified."""
+    try:
+        qs = event.get('queryStringParameters') or {}
+        token = (qs.get('token') or '').strip()
+        if not token:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Verification token is missing.'})}
+
+        # Look up token reservation
+        reservation = subscribers_table.get_item(Key={'email': f'vt#{token}'}).get('Item')
+        if not reservation:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Invalid or expired verification link. Please register again or contact support.'})}
+
+        # Check expiry
+        expires_at = reservation.get('expires_at', '')
+        if expires_at and datetime.utcnow().isoformat() + 'Z' > expires_at:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Verification link has expired. Please register again.'})}
+
+        ref_email = reservation['ref_email']
+
+        # Mark account verified
+        subscribers_table.update_item(
+            Key={'email': ref_email},
+            UpdateExpression='SET email_verified = :v REMOVE verify_token, token_expires',
+            ExpressionAttributeValues={':v': True},
+        )
+        # Delete token reservation
+        subscribers_table.delete_item(Key={'email': f'vt#{token}'})
+
+        # Return user info so frontend can log them in immediately
+        item = subscribers_table.get_item(Key={'email': ref_email}).get('Item', {})
+        return {'statusCode': 200, 'headers': headers, 'body': json.dumps({
+            'success': True,
+            'message': 'Email verified! Welcome to BetBudAI.',
+            'user': {'email': ref_email, 'username': item.get('username', ''), 'full_name': item.get('full_name', '')},
+        })}
+    except Exception as e:
+        print(f'verify_email_token error: {e}')
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Verification failed. Please try again.'})}
+
+
+def login_subscriber(headers, event):
+    """Authenticate a subscriber. Accepts email or username + password."""
+    try:
+        body = json.loads(event.get('body') or '{}')
+        identifier = (body.get('email') or '').strip().lower()
+        password   = body.get('password') or ''
+
+        if not identifier or not password:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Email/username and password are required.'})}
+
+        # Resolve username → email if no '@'
+        if '@' not in identifier:
+            reservation = subscribers_table.get_item(Key={'email': f'u#{identifier}'}).get('Item')
+            if not reservation:
+                return {'statusCode': 401, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Invalid email/username or password.'})}
+            identifier = reservation['ref_email']
+
+        item = subscribers_table.get_item(Key={'email': identifier}).get('Item')
+        if not item or not _verify_password(password, item.get('password_hash', '')):
+            return {'statusCode': 401, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Invalid email/username or password.'})}
+
+        role = item.get('role', 'free')
+        user_payload = {
+            'email':     identifier,
+            'username':  item.get('username', ''),
+            'full_name': item.get('full_name', ''),
+            'role':      role,
+        }
+
+        # Generate admin session token if user is admin
+        admin_token = None
+        if role == 'admin':
+            admin_token = secrets.token_hex(32)
+            # Store session (24h TTL)
+            expires = (datetime.utcnow() + timedelta(hours=24)).isoformat() + 'Z'
+            subscribers_table.put_item(Item={
+                'email':      f'__session__{admin_token}',
+                'user_email': identifier,
+                'expires_at': expires,
+                'created_at': datetime.utcnow().isoformat() + 'Z',
+            })
+            user_payload['admin_token'] = admin_token
+
+        return {'statusCode': 200, 'headers': headers, 'body': json.dumps({
+            'success': True,
+            'user': user_payload,
+        })}
+    except Exception as e:
+        print(f'login_subscriber error: {e}')
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Login failed. Please try again.'})}
 
 
 def auto_record_pending_results(headers):
@@ -2102,4 +2392,213 @@ def get_favs_run_lambda(headers, event):
             'headers': headers,
             'body': json.dumps({'success': False, 'error': str(e)})
         }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ADMIN API
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Default config thresholds (mirrors complete_daily_analysis.py constants)
+ADMIN_DEFAULT_CONFIG = {
+    'min_confidence':        78,
+    'min_confidence_hcap':   85,
+    'min_confidence_norace': 75,
+    'target_picks':           3,
+    'picks_gate_hour_utc':   12,   # 1pm BST = 12 UTC
+    'elite_threshold':       95,
+    'strong_threshold':      90,
+    'good_threshold':        80,
+    'fair_threshold':        65,
+    'risky_threshold':       50,
+}
+
+# Default scoring weights — mirrors comprehensive_pick_logic.py DEFAULT_WEIGHTS
+ADMIN_DEFAULT_WEIGHTS = {
+    'sweet_spot':                 12,
+    'optimal_odds':               10,
+    'recent_win':                 16,
+    'total_wins':                  8,
+    'consistency':                 6,
+    'course_bonus':               12,
+    'database_history':           15,
+    'going_suitability':          16,
+    'track_pattern_bonus':         8,
+    'trainer_reputation':         15,
+    'trainer_tier2':               8,
+    'trainer_tier3':               4,
+    'favorite_correction':         7,
+    'jockey_quality':             12,
+    'jockey_tier2':                6,
+    'weight_penalty':             10,
+    'age_bonus':                   7,
+    'distance_suitability':       18,
+    'novice_race_penalty':        15,
+    'bounce_back_bonus':           8,
+    'short_form_improvement':      8,
+    'aw_low_class_penalty':       50,
+    'heavy_going_penalty':        12,
+    'cd_bonus':                   18,
+    'graded_race_cd_bonus':        8,
+    'official_rating_bonus':       8,
+    'jockey_course_bonus':         8,
+    'relative_weight_bonus':       8,
+    'meeting_focus_trainer':      10,
+    'meeting_focus_jockey':       10,
+    'meeting_focus_combo':        10,
+    'new_trainer_debut':           5,
+    'form_exact_course_win':      20,
+    'form_exact_distance_win':    20,
+    'form_going_win':             16,
+    'form_going_place':            6,
+    'form_fresh_optimal':         10,
+    'form_close_2nd':             14,
+    'form_or_rising':             10,
+    'form_big_field_win':          8,
+    'unexposed_bonus':            12,
+    'aw_evening_penalty':         12,
+    'unknown_trainer_penalty':     8,
+    'large_field_penalty':        10,
+    'class_drop_bonus':           12,
+    'same_trainer_rival_penalty': 10,
+    'irish_handicap_penalty':     10,
+}
+
+
+def _check_admin_token(event):
+    """Validate X-Admin-Token header. Returns user_email if valid, else None."""
+    req_headers = event.get('headers') or {}
+    token = req_headers.get('x-admin-token') or req_headers.get('X-Admin-Token') or ''
+    if not token:
+        return None
+    try:
+        item = subscribers_table.get_item(Key={'email': f'__session__{token}'}).get('Item')
+        if not item:
+            return None
+        expires = item.get('expires_at', '')
+        if expires and datetime.utcnow() > datetime.fromisoformat(expires.replace('Z', '')):
+            return None
+        return item.get('user_email')
+    except Exception as e:
+        print(f'_check_admin_token error: {e}')
+        return None
+
+
+def admin_get_config(headers, event):
+    """GET /api/admin/config — returns current weights + thresholds."""
+    user_email = _check_admin_token(event)
+    if not user_email:
+        return {'statusCode': 403, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Forbidden'})}
+
+    try:
+        # Load current scoring weights
+        wt_resp = table.get_item(Key={'bet_id': 'SYSTEM_WEIGHTS', 'bet_date': 'CONFIG'})
+        raw_weights = wt_resp.get('Item', {}).get('weights', {})
+        current_weights = {k: float(v) for k, v in raw_weights.items()} if raw_weights else ADMIN_DEFAULT_WEIGHTS.copy()
+
+        # Load current config thresholds
+        cfg_resp = table.get_item(Key={'bet_id': 'SYSTEM_CONFIG', 'bet_date': 'CONFIG'})
+        raw_cfg = cfg_resp.get('Item', {}).get('config', {})
+        current_config = {k: float(v) for k, v in raw_cfg.items()} if raw_cfg else ADMIN_DEFAULT_CONFIG.copy()
+
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success':          True,
+                'weights':          current_weights,
+                'config':           current_config,
+                'default_weights':  ADMIN_DEFAULT_WEIGHTS,
+                'default_config':   ADMIN_DEFAULT_CONFIG,
+                'weights_saved_at': wt_resp.get('Item', {}).get('updated_at', None),
+                'config_saved_at':  cfg_resp.get('Item', {}).get('updated_at', None),
+            })
+        }
+    except Exception as e:
+        print(f'admin_get_config error: {e}')
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': str(e)})}
+
+
+def admin_save_config(headers, event):
+    """POST /api/admin/config — saves weights and/or thresholds to DynamoDB."""
+    user_email = _check_admin_token(event)
+    if not user_email:
+        return {'statusCode': 403, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Forbidden'})}
+
+    try:
+        data = json.loads(event.get('body') or '{}')
+        weights = data.get('weights')
+        config  = data.get('config')
+        now_iso = datetime.utcnow().isoformat() + 'Z'
+
+        if weights:
+            # Validate all values are numbers
+            for k, v in weights.items():
+                try:
+                    float(v)
+                except (TypeError, ValueError):
+                    return {'statusCode': 400, 'headers': headers,
+                            'body': json.dumps({'success': False, 'error': f'Invalid value for weight "{k}": {v}'})}
+            table.put_item(Item={
+                'bet_id':     'SYSTEM_WEIGHTS',
+                'bet_date':   'CONFIG',
+                'weights':    {k: Decimal(str(float(v))) for k, v in weights.items()},
+                'updated_at': now_iso,
+                'updated_by': user_email,
+            })
+
+        if config:
+            for k, v in config.items():
+                try:
+                    float(v)
+                except (TypeError, ValueError):
+                    return {'statusCode': 400, 'headers': headers,
+                            'body': json.dumps({'success': False, 'error': f'Invalid value for config "{k}": {v}'})}
+            table.put_item(Item={
+                'bet_id':     'SYSTEM_CONFIG',
+                'bet_date':   'CONFIG',
+                'config':     {k: Decimal(str(float(v))) for k, v in config.items()},
+                'updated_at': now_iso,
+                'updated_by': user_email,
+            })
+
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({'success': True, 'message': 'Configuration saved successfully', 'saved_by': user_email, 'saved_at': now_iso})
+        }
+    except Exception as e:
+        print(f'admin_save_config error: {e}')
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': str(e)})}
+
+
+def admin_get_subscribers(headers, event):
+    """GET /api/admin/subscribers — returns all subscriber records."""
+    user_email = _check_admin_token(event)
+    if not user_email:
+        return {'statusCode': 403, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Forbidden'})}
+
+    try:
+        resp = subscribers_table.scan()
+        items = resp.get('Items', [])
+        # Filter out internal session records
+        users = [
+            {k: v for k, v in i.items() if k != 'password_hash'}
+            for i in items
+            if not str(i.get('email', '')).startswith('__session__')
+        ]
+        # Split into real accounts (email key) vs username shadow rows
+        email_rows    = [u for u in users if '@' in str(u.get('email', '')) and not str(u.get('email', '')).startswith('u#')]
+        username_rows = [u for u in users if str(u.get('email', '')).startswith('u#')]
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({
+                'success':  True,
+                'total':    len(email_rows),
+                'users':    decimal_to_float(sorted(email_rows, key=lambda x: x.get('joined_at', ''))),
+            }, default=str)
+        }
+    except Exception as e:
+        print(f'admin_get_subscribers error: {e}')
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': str(e)})}
 

@@ -8,6 +8,7 @@ from flask_cors import CORS
 import boto3
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
+import hashlib, os, base64, re
 
 app = Flask(__name__)
 CORS(app)  # Allow React app to call this API
@@ -15,6 +16,13 @@ CORS(app)  # Allow React app to call this API
 # Initialize DynamoDB client
 dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
 table = dynamodb.Table('SureBetBets')
+subscribers_table = dynamodb.Table('BetBudAI_Subscribers')
+
+def _hash_password(password: str) -> str:
+    """PBKDF2-HMAC-SHA256 with 32-byte random salt, 200k iterations. Returns base64(salt+hash)."""
+    salt = os.urandom(32)
+    key  = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 200_000)
+    return base64.b64encode(salt + key).decode('utf-8')
 
 def get_system_run_times():
     """Get last run and next run times from scheduled task or estimates"""
@@ -103,6 +111,24 @@ def get_today_picks():
     try:
         today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
 
+        # ── 1PM BST GATE ─────────────────────────────────────────────────────────
+        # Hold picks until 12:00 UTC (1:00pm BST) each day.
+        # The morning analysis runs at ~10:00 UTC but may re-score horses as going /
+        # flags update before racing.  Showing picks only after 1pm ensures the last
+        # lunchtime re-check has settled and we're committed to the best version.
+        _now_utc = datetime.now(timezone.utc)
+        if _now_utc.hour < 12:
+            _mins = (12 - _now_utc.hour) * 60 - _now_utc.minute
+            return jsonify({
+                'success':          True,
+                'picks':            [],
+                'count':            0,
+                'date':             today,
+                'analysis_pending': True,
+                'pending_reason':   f'Picks confirmed at 1:00pm — rechecking going & flags ({_mins} min)',
+                'message':          'Picks locked until 1pm BST to allow full morning analysis to complete',
+            })
+
         # ── HEALTH CHECK GATE ────────────────────────────────────────────────
         # Only serve picks when the analysis is confirmed fully complete.
         # This prevents the UI from ever showing picks built on a partial field.
@@ -139,31 +165,8 @@ def get_today_picks():
                  and item.get('horse') and item.get('horse') != 'Unknown'
                  and item.get('show_in_ui') == True]
         
-        # Filter for HIGH confidence picks only
-        # Require comprehensive_score >= 75 AND combined_confidence >= 55 (not POOR)
-        # Also apply pick quality gates (S1/S2/S3) to filter low-quality upcoming picks.
-        high_confidence_items = []
-        for item in items:
-            comp_score = float(item.get('comprehensive_score') or item.get('analysis_score') or 0)
-            comb_conf  = float(item.get('combined_confidence') or 0)
-            if not (comp_score >= 75 and (comb_conf == 0 or comb_conf >= 55)):
-                continue
-            bd  = item.get('score_breakdown') or {}
-            ml  = float(bd.get('market_leader', 0))
-            tr  = float(bd.get('trainer_reputation', 0))
-            cd  = float(bd.get('cd_bonus', 0))
-            age = float(bd.get('age_bonus', 0))
-            # S2: reject if zero contextual anchor
-            if ml == 0 and tr == 0 and cd == 0:
-                continue
-            # S1: non-market-backed needs score >= 90
-            if ml == 0 and comp_score < 90:
-                continue
-            # S3: age-padded without market/trainer support needs >= 92
-            if age >= 10 and ml == 0 and tr == 0 and comp_score < 92:
-                continue
-            high_confidence_items.append(item)
-        items = high_confidence_items
+        # show_in_ui=True (written to DB at analysis time) is the single source of truth.
+        # No additional in-memory gates — whatever passed the write-time criteria appears here.
         
         # Filter to only show races that haven't started yet
         now = datetime.now(timezone.utc).isoformat()
@@ -713,11 +716,19 @@ def get_cumulative_roi():
         today_d = _date.today()
         cur = start_d
         while cur <= today_d:
-            response = table.query(
-                KeyConditionExpression=Key('bet_date').eq(str(cur)),
-                ProjectionExpression='bet_date, bet_id, horse, course, race_time, show_in_ui, is_learning_pick, outcome, sp_odds, odds, ew_fraction, bet_type',
-            )
-            all_items.extend(response.get('Items', []))
+            # Paginate each day — some busy days (Cheltenham, Grand National) exceed 1MB
+            # which would silently drop picks (e.g. Celtic Druid 18:50 hidden on page 2).
+            day_kwargs = {
+                'KeyConditionExpression': Key('bet_date').eq(str(cur)),
+                'ProjectionExpression': 'bet_date, bet_id, horse, course, race_time, show_in_ui, is_learning_pick, outcome, sp_odds, odds, ew_fraction, bet_type',
+            }
+            while True:
+                response = table.query(**day_kwargs)
+                all_items.extend(response.get('Items', []))
+                lek = response.get('LastEvaluatedKey')
+                if not lek:
+                    break
+                day_kwargs['ExclusiveStartKey'] = lek
             cur += timedelta(days=1)
 
         picks = [decimal_to_float(item) for item in all_items]
@@ -1425,6 +1436,160 @@ def save_cheltenham_picks_api():
         })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Subscriber Registration
+# ─────────────────────────────────────────────────────────────────────────────
+@app.route('/api/register', methods=['POST'])
+def register_subscriber():
+    """Register a new BetBudAI subscriber. Stores hashed password in BetBudAI_Subscribers."""
+    try:
+        data = request.get_json(force=True) or {}
+
+        full_name = (data.get('full_name') or '').strip()
+        email     = (data.get('email') or '').strip().lower()
+        address   = (data.get('address') or '').strip()
+        age       = data.get('age')
+        username  = (data.get('username') or '').strip().lower()
+        password  = data.get('password') or ''
+
+        # ── Server-side validation ────────────────────────────────────────
+        if not full_name or len(full_name) < 3:
+            return jsonify({'success': False, 'error': 'Full name is required.'}), 400
+
+        # Email: strict regex + TLD length + garbage/disposable domain checks
+        email_re = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
+        if not email_re.match(email):
+            return jsonify({'success': False, 'error': 'A valid email address is required (e.g. jane@example.com).'}), 400
+        if '..' in email:
+            return jsonify({'success': False, 'error': 'Email address contains invalid consecutive dots.'}), 400
+        email_domain = email.split('@')[1] if '@' in email else ''
+        email_local  = email.split('@')[0] if '@' in email else ''
+        if len(email_domain.split('.')[-1]) < 2:
+            return jsonify({'success': False, 'error': 'Email domain extension looks invalid.'}), 400
+        _garbage_local = re.compile(r'^(test|asdf|qwerty|aaaaa|zzzzz|abcde|12345|noreply|fake|spam|none|null|xxx)')
+        if _garbage_local.match(email_local):
+            return jsonify({'success': False, 'error': 'Please use a real email address.'}), 400
+        _fake_domains = {'test.com','fake.com','example.com','mailinator.com','guerrillamail.com',
+                         'throwam.com','trashmail.com','yopmail.com','sharklasers.com'}
+        if email_domain in _fake_domains:
+            return jsonify({'success': False, 'error': 'Disposable or test email addresses are not accepted.'}), 400
+
+        # Address: min length, min word count, reject repeated-char garbage
+        if len(address) < 10:
+            return jsonify({'success': False, 'error': 'Please enter your full address (street, city and postcode).'}), 400
+        addr_words = [w for w in address.split() if len(w) > 1]
+        if len(addr_words) < 3:
+            return jsonify({'success': False, 'error': 'Address looks incomplete — please include street, city and postcode.'}), 400
+        addr_clean = address.replace(' ', '')
+        if addr_clean:
+            from collections import Counter
+            max_freq = max(Counter(addr_clean.lower()).values())
+            if max_freq / len(addr_clean) > 0.65:
+                return jsonify({'success': False, 'error': 'Address does not look real — please enter your actual home address.'}), 400
+        if re.match(r'^(asdf|qwerty|zxcv|abcd|1234|test|fake|none|null|xxx)', address, re.IGNORECASE):
+            return jsonify({'success': False, 'error': 'Address does not look real — please enter your actual home address.'}), 400
+        try:
+            age = int(age)
+            if age < 18 or age > 120:
+                raise ValueError
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'error': 'You must be 18 or over to register.'}), 400
+        if not re.match(r'^[a-zA-Z0-9_]{3,30}$', username):
+            return jsonify({'success': False, 'error': 'Username must be 3–30 characters (letters, numbers, underscores only).'}), 400
+        if len(password) < 8:
+            return jsonify({'success': False, 'error': 'Password must be at least 8 characters.'}), 400
+
+        # ── Uniqueness checks ─────────────────────────────────────────────
+        # Email uniqueness (email is PK)
+        existing = subscribers_table.get_item(Key={'email': email}).get('Item')
+        if existing:
+            return jsonify({'success': False, 'error': 'An account with this email already exists.'}), 409
+
+        # Username uniqueness (stored as a reservation item: email = 'u#<username>')
+        username_key = f'u#{username}'
+        existing_un = subscribers_table.get_item(Key={'email': username_key}).get('Item')
+        if existing_un:
+            return jsonify({'success': False, 'error': 'That username is already taken.'}), 409
+
+        # ── Hash password and write both records atomically ───────────────
+        pw_hash   = _hash_password(password)
+        joined_at = datetime.utcnow().isoformat() + 'Z'
+
+        # Primary subscriber record
+        subscribers_table.put_item(Item={
+            'email':       email,
+            'full_name':   full_name,
+            'address':     address,
+            'age':         Decimal(str(age)),
+            'username':    username,
+            'password_hash': pw_hash,
+            'joined_at':   joined_at,
+            'active':      True,
+        })
+        # Username reservation (prevents duplicates)
+        subscribers_table.put_item(Item={
+            'email':    username_key,
+            'username': username,
+            'ref_email': email,
+            'joined_at': joined_at,
+        })
+
+        return jsonify({'success': True, 'message': 'Registration successful. Welcome to BetBudAI!'})
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': 'Registration failed. Please try again.'}), 500
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Subscriber Login
+# ─────────────────────────────────────────────────────────────────────────────
+def _verify_password(password: str, stored: str) -> bool:
+    """Verify a password against a PBKDF2 hash created by _hash_password()."""
+    try:
+        raw        = base64.b64decode(stored.encode('utf-8'))
+        salt       = raw[:32]
+        stored_key = raw[32:]
+        key        = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 200_000)
+        return key == stored_key
+    except Exception:
+        return False
+
+
+@app.route('/api/login', methods=['POST'])
+def login_subscriber():
+    """Authenticate a BetBudAI subscriber. Accepts email or username + password."""
+    try:
+        data = request.get_json(force=True) or {}
+        identifier = (data.get('email') or '').strip().lower()
+        password   = data.get('password') or ''
+
+        if not identifier or not password:
+            return jsonify({'success': False, 'error': 'Email/username and password are required.'}), 400
+
+        # Resolve username → email if no '@' present
+        if '@' not in identifier:
+            reservation = subscribers_table.get_item(Key={'email': f'u#{identifier}'}).get('Item')
+            if not reservation:
+                return jsonify({'success': False, 'error': 'Invalid email/username or password.'}), 401
+            identifier = reservation['ref_email']
+
+        item = subscribers_table.get_item(Key={'email': identifier}).get('Item')
+        if not item or not _verify_password(password, item.get('password_hash', '')):
+            return jsonify({'success': False, 'error': 'Invalid email/username or password.'}), 401
+
+        return jsonify({
+            'success': True,
+            'user': {
+                'email':     identifier,
+                'username':  item.get('username', ''),
+                'full_name': item.get('full_name', ''),
+            },
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'error': 'Login failed. Please try again.'}), 500
 
 
 if __name__ == '__main__':

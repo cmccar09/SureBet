@@ -7,43 +7,49 @@ Provides REST API for frontend hosted on Amplify
 """
 
 import json
-
 import urllib.request
-
 import urllib.parse
-
+import secrets
+import hashlib, os, base64, re
 import boto3
-
 from datetime import datetime, timedelta
-
 from decimal import Decimal
 
-
-
 # Initialize DynamoDB
-
 dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
-
 table = dynamodb.Table('SureBetBets')
+subscribers_table = dynamodb.Table('BetBudAI_Subscribers')
+ses_client = boto3.client('ses', region_name='eu-west-1')
+
+SENDER_EMAIL = 'charles.mccarthy@gmail.com'
+SITE_URL     = 'https://www.betbudai.com'
 
 
+
+def _hash_password(password: str) -> str:
+    """PBKDF2-HMAC-SHA256, 32-byte random salt, 200k iterations."""
+    salt = os.urandom(32)
+    key  = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 200_000)
+    return base64.b64encode(salt + key).decode('utf-8')
+
+def _verify_password(password: str, stored: str) -> bool:
+    try:
+        raw        = base64.b64decode(stored.encode('utf-8'))
+        salt       = raw[:32]
+        stored_key = raw[32:]
+        key        = hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), salt, 200_000)
+        return key == stored_key
+    except Exception:
+        return False
 
 def decimal_to_float(obj):
-
     """Convert Decimal objects to float for JSON serialization"""
-
     if isinstance(obj, Decimal):
-
         return float(obj)
-
     elif isinstance(obj, dict):
-
         return {k: decimal_to_float(v) for k, v in obj.items()}
-
     elif isinstance(obj, list):
-
         return [decimal_to_float(item) for item in obj]
-
     return obj
 
 
@@ -137,6 +143,12 @@ def lambda_handler(event, context):
         elif 'results/auto-record' in path:
 
             return auto_record_pending_results(headers)
+
+        elif 'api/register' in path:
+            return register_subscriber(headers, event)
+
+        elif 'api/login' in path:
+            return login_subscriber(headers, event)
 
         elif 'results/cumulative-roi' in path:
 
@@ -1029,6 +1041,131 @@ def get_health(headers):
     }
 
 
+def register_subscriber(headers, event):
+    """Register a new subscriber. POST /api/register"""
+    try:
+        body = event.get('body') or '{}'
+        if isinstance(body, str):
+            data = json.loads(body)
+        else:
+            data = body
+
+        full_name = (data.get('full_name') or '').strip()
+        email     = (data.get('email') or '').strip().lower()
+        address   = (data.get('address') or '').strip()
+        age       = data.get('age')
+        username  = (data.get('username') or '').strip().lower()
+        password  = data.get('password') or ''
+
+        if not full_name or len(full_name) < 3:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Full name is required.'})}
+        email_re = re.compile(r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$')
+        if not email_re.match(email):
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'A valid email address is required.'})}
+        if '..' in email:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Email address contains invalid consecutive dots.'})}
+        email_domain = email.split('@')[1] if '@' in email else ''
+        email_local  = email.split('@')[0] if '@' in email else ''
+        if len(email_domain.split('.')[-1]) < 2:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Email domain extension looks invalid.'})}
+        if re.match(r'^(test|asdf|qwerty|aaaaa|zzzzz|abcde|12345|noreply|fake|spam|none|null|xxx)', email_local):
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Please use a real email address.'})}
+        _fake_domains = {'test.com','fake.com','example.com','mailinator.com','guerrillamail.com',
+                         'throwam.com','trashmail.com','yopmail.com','sharklasers.com'}
+        if email_domain in _fake_domains:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Disposable or test email addresses are not accepted.'})}
+        if len(address) < 10:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Please enter your full address (street, city and postcode).'})}
+        addr_words = [w for w in address.split() if len(w) > 1]
+        if len(addr_words) < 3:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Address looks incomplete — please include street, city and postcode.'})}
+        try:
+            age = int(age)
+            if age < 18 or age > 120:
+                raise ValueError
+        except (TypeError, ValueError):
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'You must be 18 or over to register.'})}
+        if not re.match(r'^[a-zA-Z0-9_]{3,30}$', username):
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Username must be 3-30 characters (letters, numbers, underscores).'})}
+        if len(password) < 8:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Password must be at least 8 characters.'})}
+
+        if subscribers_table.get_item(Key={'email': email}).get('Item'):
+            return {'statusCode': 409, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'An account with this email already exists.'})}
+        if subscribers_table.get_item(Key={'email': f'u#{username}'}).get('Item'):
+            return {'statusCode': 409, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'That username is already taken.'})}
+
+        pw_hash   = _hash_password(password)
+        joined_at = datetime.utcnow().isoformat() + 'Z'
+        subscribers_table.put_item(Item={
+            'email': email, 'full_name': full_name, 'address': address,
+            'age': Decimal(str(age)), 'username': username,
+            'password_hash': pw_hash, 'joined_at': joined_at, 'active': True,
+            'email_verified': True,
+        })
+        subscribers_table.put_item(Item={
+            'email': f'u#{username}', 'username': username,
+            'ref_email': email, 'joined_at': joined_at,
+        })
+        try:
+            _send_welcome_email(email, full_name)
+        except Exception as mail_err:
+            print(f'Welcome email failed (non-fatal): {mail_err}')
+
+        return {'statusCode': 200, 'headers': headers, 'body': json.dumps({'success': True, 'message': 'Registration successful. Welcome to BetBudAI!'})}
+    except Exception as e:
+        print(f'register_subscriber error: {e}')
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Registration failed. Please try again.'})}
+
+
+def _send_welcome_email(email: str, full_name: str):
+    first_name = full_name.split()[0] if full_name else 'there'
+    html = f"""<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#0f172a;color:white;padding:40px;">
+<div style="max-width:560px;margin:0 auto;background:#1e293b;border-radius:16px;padding:40px;">
+  <h1 style="color:#34d399;margin:0 0 8px;">BetBudAI</h1>
+  <h2 style="color:white;">Welcome, {first_name}!</h2>
+  <p style="color:rgba(255,255,255,0.7);">Your BetBudAI account is ready. <a href="{SITE_URL}" style="color:#34d399;">Sign in here</a> to see today's picks.</p>
+  <p style="color:rgba(255,255,255,0.3);font-size:11px;">BetBudAI provides data analysis for informational purposes only. Please gamble responsibly.</p>
+</div></body></html>"""
+    ses_client.send_email(
+        Source=f'BetBudAI <{SENDER_EMAIL}>',
+        Destination={'ToAddresses': [email]},
+        Message={
+            'Subject': {'Data': 'Welcome to BetBudAI!', 'Charset': 'UTF-8'},
+            'Body': {'Html': {'Data': html, 'Charset': 'UTF-8'},
+                     'Text': {'Data': f'Hi {first_name}, welcome to BetBudAI! Visit {SITE_URL} to see today\'s picks.', 'Charset': 'UTF-8'}},
+        },
+    )
+
+
+def login_subscriber(headers, event):
+    """Authenticate a subscriber. POST /api/login"""
+    try:
+        body = json.loads(event.get('body') or '{}')
+        identifier = (body.get('email') or '').strip().lower()
+        password   = body.get('password') or ''
+
+        if not identifier or not password:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Email/username and password are required.'})}
+
+        if '@' not in identifier:
+            reservation = subscribers_table.get_item(Key={'email': f'u#{identifier}'}).get('Item')
+            if not reservation:
+                return {'statusCode': 401, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Invalid email/username or password.'})}
+            identifier = reservation['ref_email']
+
+        item = subscribers_table.get_item(Key={'email': identifier}).get('Item')
+        if not item or not _verify_password(password, item.get('password_hash', '')):
+            return {'statusCode': 401, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Invalid email/username or password.'})}
+
+        return {'statusCode': 200, 'headers': headers, 'body': json.dumps({
+            'success': True,
+            'user': {'email': identifier, 'username': item.get('username', ''), 'full_name': item.get('full_name', '')},
+        })}
+    except Exception as e:
+        print(f'login_subscriber error: {e}')
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Login failed. Please try again.'})}
+
 
 def get_cumulative_roi(headers):
 
@@ -1059,6 +1196,7 @@ def get_cumulative_roi(headers):
             kwargs = {
                 'KeyConditionExpression': Key('bet_date').eq(d),
                 'FilterExpression': Attr('show_in_ui').eq(True),
+                'ProjectionExpression': 'bet_date, bet_id, horse, course, race_time, show_in_ui, is_learning_pick, outcome, sp_odds, odds, ew_fraction, bet_type, comprehensive_score',
             }
 
             while True:
@@ -1293,30 +1431,28 @@ def check_yesterday_results(headers):
 
     
 
-    # Get ALL yesterday's picks using partition key query
-
+    # Get ALL yesterday's picks using partition key query (paginated)
     response = table.query(
-
         KeyConditionExpression=Key('bet_date').eq(yesterday)
-
     )
-
-    
-
     all_picks = response.get('Items', [])
+    while 'LastEvaluatedKey' in response:
+        response = table.query(
+            KeyConditionExpression=Key('bet_date').eq(yesterday),
+            ExclusiveStartKey=response['LastEvaluatedKey']
+        )
+        all_picks.extend(response.get('Items', []))
 
     all_picks = [decimal_to_float(item) for item in all_picks]
 
     
-
     # Filter for UI picks only - keep others in database for learning
-
-    picks = [item for item in all_picks if item.get('show_in_ui') == True]
+    # Also filter to picks whose race_time is on yesterday's date (handles mis-stored bet_date)
+    picks = [item for item in all_picks if item.get('show_in_ui') == True
+             and str(item.get('race_time', ''))[:10] == yesterday]
 
     
-
     # Normalize outcome values for frontend compatibility
-
     # Database uses: 'won', 'WON', 'lost', 'LOST'
 
     # Frontend expects: 'win', 'loss', 'placed'
@@ -2629,9 +2765,12 @@ def auto_record_pending_results(headers):
 
 
 
-    # Keep only races that finished >30 minutes ago and have a market_id
+    # Split pending picks: those with market_id use Betfair market lookup;
+    # those without are resolved by searching Betfair by venue + race time.
 
-    to_check = []
+    to_check         = []  # has market_id
+
+    to_check_by_name = []  # no market_id
 
     for pick in pending:
 
@@ -2639,7 +2778,7 @@ def auto_record_pending_results(headers):
 
         market_id = str(pick.get('market_id', '')).strip()
 
-        if not market_id or not rt_str:
+        if not rt_str:
 
             continue
 
@@ -2649,7 +2788,13 @@ def auto_record_pending_results(headers):
 
             if rt + timedelta(minutes=30) < now_utc:
 
-                to_check.append(pick)
+                if market_id:
+
+                    to_check.append(pick)
+
+                else:
+
+                    to_check_by_name.append(pick)
 
         except Exception:
 
@@ -2657,7 +2802,7 @@ def auto_record_pending_results(headers):
 
 
 
-    if not to_check:
+    if not to_check and not to_check_by_name:
 
         return {
 
@@ -2959,6 +3104,224 @@ def auto_record_pending_results(headers):
 
 
 
+    # ── 4. Settle picks without market_id by searching Betfair by venue + time ──
+
+    if to_check_by_name:
+
+        print(f'auto_record: searching Betfair by name for {len(to_check_by_name)} picks without market_id')
+
+        from collections import defaultdict
+
+        by_race = defaultdict(list)
+
+        for pick in to_check_by_name:
+
+            rt_str = pick.get('race_time', '')
+
+            course = (pick.get('course', '') or '').strip()
+
+            if not course or not rt_str:
+
+                continue
+
+            try:
+
+                rt = datetime.fromisoformat(rt_str.replace('Z', '+00:00')).replace(tzinfo=None)
+
+                race_key = f"{course}|{rt.strftime('%Y-%m-%dT%H:%M')}"
+
+                by_race[race_key].append({'pick': pick, 'rt': rt})
+
+            except Exception:
+
+                continue
+
+
+
+        for race_key, race_entries in by_race.items():
+
+            course_name, _slot = race_key.split('|', 1)
+
+            rt = race_entries[0]['rt']
+
+            try:
+
+                start_from = (rt - timedelta(minutes=3)).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+                start_to   = (rt + timedelta(minutes=8)).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+                cat_resp = bf_post('listMarketCatalogue', {
+
+                    'filter': {
+
+                        'eventTypeIds': ['7'],
+
+                        'marketStartTime': {'from': start_from, 'to': start_to},
+
+                        'textQuery': course_name,
+
+                        'marketTypeCodes': ['WIN'],
+
+                    },
+
+                    'marketProjection': ['RUNNER_DESCRIPTION', 'MARKET_START_TIME'],
+
+                    'maxResults': '5',
+
+                })
+
+                if not cat_resp:
+
+                    print(f'No Betfair market found for {course_name} at {_slot}')
+
+                    continue
+
+
+
+                found_market_id = cat_resp[0]['marketId']
+
+                runner_names = {str(r.get('selectionId')): (r.get('runnerName') or '').upper()
+
+                                for r in cat_resp[0].get('runners', [])}
+
+                name_to_sel  = {v: k for k, v in runner_names.items()}
+
+
+
+                book_resp = bf_post('listMarketBook', {
+
+                    'marketIds': [found_market_id],
+
+                    'priceProjection': {'priceData': []},
+
+                    'orderProjection': 'EXECUTABLE',
+
+                    'matchProjection': 'NO_ROLLUP',
+
+                })
+
+                if not book_resp:
+
+                    continue
+
+
+
+                mbook = book_resp[0] if isinstance(book_resp, list) else book_resp
+
+                if mbook.get('status') not in ('CLOSED',):
+
+                    print(f'{found_market_id}: status={mbook.get("status")} – not settled yet')
+
+                    continue
+
+
+
+                runners_b     = mbook.get('runners', [])
+
+                sort_by_sel_n = {str(r.get('selectionId')): r.get('sortPriority', 99) for r in runners_b}
+
+                status_by_sel_n = {str(r.get('selectionId')): r.get('status', '') for r in runners_b}
+
+
+
+                winner_name_n = 'Unknown'
+
+                for r in runners_b:
+
+                    if r.get('sortPriority') == 1 or r.get('status') == 'WINNER':
+
+                        winner_name_n = runner_names.get(str(r.get('selectionId')), 'Unknown')
+
+                        break
+
+
+
+                for entry in race_entries:
+
+                    pick = entry['pick']
+
+                    horse_upper = (pick.get('horse', '') or '').upper()
+
+                    sel_id = name_to_sel.get(horse_upper)
+
+                    if not sel_id:
+
+                        for sel_name, sid in name_to_sel.items():
+
+                            if horse_upper in sel_name or sel_name in horse_upper:
+
+                                sel_id = sid
+
+                                break
+
+                    if not sel_id:
+
+                        print(f"  {pick.get('horse')}: name not matched in market {found_market_id}")
+
+                        continue
+
+
+
+                    sel_status_n = status_by_sel_n.get(sel_id, '')
+
+                    finish_n     = int(sort_by_sel_n.get(sel_id, 99))
+
+
+
+                    if sel_status_n == 'WINNER' or finish_n == 1:
+
+                        outcome = 'win'
+
+                    elif finish_n in (2, 3):
+
+                        outcome = 'placed'
+
+                    elif sel_status_n in ('LOSER', 'REMOVED') or finish_n > 3:
+
+                        outcome = 'loss'
+
+                    else:
+
+                        print(f"  {pick.get('horse')}: unknown runner state in market {found_market_id}")
+
+                        continue
+
+
+
+                    boto3.resource('dynamodb', region_name='eu-west-1').Table('SureBetBets').update_item(
+
+                        Key={'bet_id': pick['bet_id'], 'bet_date': pick['bet_date']},
+
+                        UpdateExpression='SET outcome = :o, finish_position = :f, winner_horse = :w, market_id = :m, result_recorded_at = :t',
+
+                        ExpressionAttributeValues={
+
+                            ':o': outcome, ':f': finish_n, ':w': winner_name_n,
+
+                            ':m': found_market_id, ':t': now_utc.isoformat() + 'Z',
+
+                        }
+
+                    )
+
+                    updated += 1
+
+                    results_summary.append({'horse': pick.get('horse'), 'course': pick.get('course'),
+
+                                            'outcome': outcome, 'finish': finish_n, 'winner': winner_name_n})
+
+                    print(f"  Recorded (by name): {pick.get('horse')} @ {pick.get('course')} → {outcome} pos={finish_n}")
+
+
+
+            except Exception as e:
+
+                errors.append(f'name-lookup {race_key}: {str(e)}')
+
+                print(f'Error processing by-name for {race_key}: {e}')
+
+
+
     return {
 
         'statusCode': 200,
@@ -2969,7 +3332,7 @@ def auto_record_pending_results(headers):
 
             'success':  True,
 
-            'checked':  len(to_check),
+            'checked':  len(to_check) + len(to_check_by_name),
 
             'updated':  updated,
 
@@ -3507,11 +3870,21 @@ def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
 
                     break
 
+                # sl_results_fetcher writes result_winner_name to every settled pick in this race
+
+                rw = (h.get('result_winner_name') or h.get('winner_name') or '').strip()
+
+                if rw and not winner_name:
+
+                    winner_name = rw
+
             if winner_name:
+
+                def _ns(n): return n.replace("'", '').replace('-', '').strip().lower()
 
                 fav_outcome = (
 
-                    'win' if winner_name.strip().lower() == fav_name.strip().lower()
+                    'win' if _ns(winner_name) == _ns(fav_name)
 
                     else 'loss'
 
@@ -3519,7 +3892,9 @@ def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
 
             else:
 
-                fav_outcome = fav.get('outcome') or None
+                # Check fav_outcome written by sf_fav_results Lambda, then fall back to own outcome field
+
+                fav_outcome = fav.get('fav_outcome') or fav.get('outcome') or None
 
 
 
@@ -3601,9 +3976,11 @@ def get_favs_run_lambda(headers, event):
 
 
 
-        caution = [r for r in all_results if r['lay_score'] >= 4]
+        caution   = [r for r in all_results if r['lay_score'] >= 4]
 
-        strong  = [r for r in all_results if r['lay_score'] >= 9]
+        strong    = [r for r in all_results if r['lay_score'] >= 9]
+
+        red_flag  = [r for r in all_results if r['lay_score'] >= 13]
 
 
 
@@ -3619,7 +3996,7 @@ def get_favs_run_lambda(headers, event):
 
                 'generated': datetime.now().isoformat(),
 
-                'summary':   {'total': len(all_results), 'caution': len(caution), 'strong': len(strong)},
+                'summary':   {'total': len(all_results), 'caution': len(caution), 'strong': len(strong), 'red_flag': len(red_flag)},
 
                 'races':     all_results,
 
@@ -3760,7 +4137,8 @@ def apply_learning_lambda(headers, event):
             import base64
             body = base64.b64decode(body).decode('utf-8')
         data = json.loads(body) if body else {}
-        target_date = data.get('date') or (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        # Also accept date passed directly as a top-level event field (e.g. from Step Functions)
+        target_date = data.get('date') or event.get('date') or (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
         resp = table.query(KeyConditionExpression=Key('bet_date').eq(target_date))
         all_items = [decimal_to_float(i) for i in resp.get('Items', [])]
