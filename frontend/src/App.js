@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
+import { loadStripe } from '@stripe/stripe-js';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL ||
   'https://mnybvagd5m.execute-api.eu-west-1.amazonaws.com';
+
+const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY || 'pk_test_placeholder');
 
 // -- Upcoming major races calendar --
 const MAJOR_RACES = [
@@ -319,6 +322,38 @@ function App() {
       .catch(() => setVerifyState({ success: false, error: 'Network error during verification. Please try again.' }));
   }, []);
 
+  // ── Handle Stripe payment redirect (?payment=success&tier=...) ────────────
+  const [paymentSuccess, setPaymentSuccess] = useState(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const payment = params.get('payment');
+    const tier = params.get('tier');
+    if (payment === 'success' && tier) {
+      setPaymentSuccess(tier);
+      // Refresh user data from backend to get updated subscription_tier
+      if (authUser?.email) {
+        fetch(`${API_BASE_URL}/api/subscription-status`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: authUser.email })
+        })
+          .then(r => r.json())
+          .then(data => {
+            if (data.subscription_tier) {
+              const updatedUser = { ...authUser, role: data.subscription_tier, subscription_tier: data.subscription_tier, subscription_status: data.subscription_status };
+              try { localStorage.setItem('betbudai_user', JSON.stringify(updatedUser)); } catch {}
+              setAuthUser(updatedUser);
+            }
+          })
+          .catch(() => {});
+      }
+      window.history.replaceState({}, '', window.location.pathname);
+      setTimeout(() => setPaymentSuccess(null), 8000);
+    } else if (payment === 'cancelled') {
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleAuthSuccess = (userData) => {
     try { localStorage.setItem('betbudai_user', JSON.stringify(userData)); } catch {}
     setAuthUser(userData);
@@ -335,6 +370,7 @@ function App() {
 
   const handleTabClick = (key) => {
     if (!isAuthenticated && key !== 'home') return; // silently block — tab looks locked
+    if (isFreeUser && PAID_TABS.includes(key)) return; // block free users from paid tabs
     setPage(key);
   };
 
@@ -345,7 +381,11 @@ function App() {
   }, []);
 
   const isAdmin = authUser?.role === 'admin';
-  const GATED_TABS = ['picks', 'yesterday', 'laythe', 'majors', 'admin'];
+  const isFreeUser = isAuthenticated && (!authUser?.role || authUser?.role === 'free');
+  const isPremium = authUser?.role === 'premium' || authUser?.role === 'vip' || authUser?.role === 'admin';
+  const isVip = authUser?.role === 'vip' || authUser?.role === 'admin';
+  const GATED_TABS = ['picks', 'yesterday', 'laythe', 'majors', 'admin', 'pricing'];
+  const PAID_TABS = [];
 
   return (
     <div className="App">
@@ -385,13 +425,14 @@ function App() {
       <div style={{ display:'flex', justifyContent:'center', gap:'12px', marginBottom:'32px', flexWrap:'wrap' }}>
         {[
           { key:'home',      label:'Home',             emoji:'\ud83c\udfe0', sub:'About & sign in',     gated: false },
-          { key:'picks',     label:"Today's Picks",    emoji:'\ud83c\udfaf', sub:'Top 5 value bets',    gated: true  },
+          { key:'picks',     label:"Today's Picks",    emoji:'\ud83c\udfaf', sub:'AI selections',       gated: true  },
           { key:'yesterday', label:'Latest Results',   emoji:'\ud83d\udcca', sub:'Today & yesterday',   gated: true  },
-          { key:'laythe',    label:'Lay the Fav',      emoji:'\ud83d\udea8', sub:'Suspect favourites',  gated: true  },
+          { key:'laythe',    label:'VIP',              emoji:'\ud83d\udc51', sub:'Lay the Fav & more',  gated: true  },
           { key:'majors',    label:'Major Races',      emoji:'\ud83c\udfc6', sub:'Group 1 calendar',    gated: true  },
+          ...(isFreeUser ? [{ key:'pricing', label:'Upgrade', emoji:'\ud83d\ude80', sub:'Premium & VIP', gated: false }] : []),
           ...(isAdmin ? [{ key:'admin', label:'Admin', emoji:'\u2699\ufe0f', sub:'System controls', gated: true, admin: true }] : []),
         ].map(tab => {
-          const locked = tab.gated && !isAuthenticated;
+          const locked = (tab.gated && !isAuthenticated) || (isFreeUser && PAID_TABS.includes(tab.key));
           const isActive = page === tab.key;
           return (
             <button key={tab.key} onClick={() => handleTabClick(tab.key)} style={{
@@ -400,14 +441,18 @@ function App() {
                 : tab.admin
                   ? (isActive ? 'linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%)' : 'rgba(124,58,237,0.18)')
                   : tab.key==='laythe'
-                    ? (isActive ? 'linear-gradient(135deg,#b91c1c 0%,#991b1b 100%)' : 'rgba(185,28,28,0.18)')
+                    ? (isActive ? 'linear-gradient(135deg,#d97706 0%,#b45309 100%)' : 'rgba(217,119,6,0.18)')
+                    : tab.key==='pricing'
+                      ? (isActive ? 'linear-gradient(135deg,#7c3aed 0%,#6366f1 100%)' : 'linear-gradient(135deg,rgba(124,58,237,0.25),rgba(99,102,241,0.2))')
                     : (isActive ? 'linear-gradient(135deg,#059669 0%,#047857 100%)' : 'rgba(255,255,255,0.12)'),
               border: locked
                 ? '2px solid rgba(255,255,255,0.1)'
                 : tab.admin
                   ? (isActive ? '2px solid #a78bfa' : '2px solid rgba(167,139,250,0.4)')
                   : tab.key==='laythe'
-                    ? (isActive ? '2px solid #ef4444' : '2px solid rgba(239,68,68,0.4)')
+                    ? (isActive ? '2px solid #f59e0b' : '2px solid rgba(245,158,11,0.4)')
+                    : tab.key==='pricing'
+                      ? '2px solid rgba(124,58,237,0.5)'
                     : (isActive ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.25)'),
               borderRadius:'10px', color: locked ? 'rgba(255,255,255,0.3)' : 'white',
               cursor: locked ? 'not-allowed' : 'pointer',
@@ -420,7 +465,7 @@ function App() {
                 {locked ? '🔒' : tab.emoji} {tab.label}
               </div>
               <div style={{ fontSize:'11px', opacity:0.75, marginTop:'2px' }}>
-                {locked ? 'Sign in to access' : tab.sub}
+                {locked ? (isAuthenticated ? 'Upgrade to access' : 'Sign in to access') : tab.sub}
               </div>
             </button>
           );
@@ -428,13 +473,21 @@ function App() {
       </div>
 
       <main style={{ maxWidth:'960px', margin:'0 auto', padding:'0 12px' }}>
+        {paymentSuccess && (
+          <div style={{ background:'linear-gradient(135deg,rgba(52,211,153,0.2),rgba(16,185,129,0.15))', border:'1.5px solid rgba(52,211,153,0.5)', borderRadius:'12px', padding:'16px 20px', textAlign:'center', marginBottom:'16px' }}>
+            <div style={{ fontSize:'20px', marginBottom:'4px' }}>🎉</div>
+            <div style={{ fontSize:'16px', fontWeight:'800', color:'#34d399' }}>Welcome to {paymentSuccess === 'vip' ? 'VIP' : 'Premium'}!</div>
+            <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.7)', marginTop:'4px' }}>Your subscription is now active. Enjoy full access to all picks!</div>
+          </div>
+        )}
         {page==='home'
           ? <HomePageView onAuthSuccess={handleAuthSuccess} isAuthenticated={isAuthenticated} />
           : !isAuthenticated
             ? <HomePageView onAuthSuccess={handleAuthSuccess} isAuthenticated={isAuthenticated} />
-            : page==='picks'      ? <DailyPicksView />
-            : page==='yesterday'  ? <YesterdayResultsView />
+            : page==='picks'      ? <DailyPicksView isFreeUser={isFreeUser} onUpgrade={() => setPage('pricing')} />
+            : page==='yesterday'  ? <YesterdayResultsView isFreeUser={isFreeUser} />
             : page==='laythe'     ? <LayTheFavView />
+            : page==='pricing'    ? <PricingView authUser={authUser} onSuccess={(updatedUser) => { handleAuthSuccess(updatedUser); setPage('picks'); }} />
             : page==='admin' && isAdmin ? <AdminView authUser={authUser} />
             : <MajorRacesView />}
       </main>
@@ -556,7 +609,7 @@ const SCORE_LABELS = {
   cheltenham_festival:     'Cheltenham Festival',
 };
 
-function DailyPicksView() {
+function DailyPicksView({ isFreeUser, onUpgrade }) {
   const [picks, setPicks]                 = useState([]);
   const [loading, setLoading]             = useState(true);
   const [error, setError]                 = useState(null);
@@ -564,7 +617,7 @@ function DailyPicksView() {
   const [expandedPick,  setExpandedPick]  = useState(null);
   const [expandedField, setExpandedField] = useState(null);
   const [raceFields,    setRaceFields]    = useState({});
-  const [isMobile,      setIsMobile]      = useState(typeof window !== 'undefined' && window.innerWidth < 480);
+  const [isMobile,      setIsMobile]      = useState(typeof window !== 'undefined' && window.innerWidth < 600);
   const [now,           setNow]           = useState(new Date());
   const [analysisStatus, setAnalysisStatus] = useState(null);
   const [analysisPending, setAnalysisPending] = useState(false);
@@ -578,7 +631,7 @@ function DailyPicksView() {
   }, []);
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 480);
+    const onResize = () => setIsMobile(window.innerWidth < 600);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -635,8 +688,7 @@ function DailyPicksView() {
       if (data.success) {
         const sorted = (data.picks || [])
           .filter(p => p.show_in_ui !== false)
-          .sort((a,b) => (a.race_time||'').localeCompare(b.race_time||''))
-          .slice(0, 5);
+          .sort((a,b) => (a.race_time||'').localeCompare(b.race_time||''));
         setPicks(sorted);
         setRaceFields(data.race_fields || {});
         setLastUpdated(new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }));
@@ -680,9 +732,9 @@ function DailyPicksView() {
 
   return (
     <div>
-      <div style={{ background:'linear-gradient(135deg,#047857 0%,#065f46 100%)', borderRadius:'12px', padding:'24px 28px', marginBottom:'24px', color:'white', display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'12px' }}>
+      <div style={{ background:'linear-gradient(135deg,#047857 0%,#065f46 100%)', borderRadius:'12px', padding: isMobile ? '16px 14px' : '24px 28px', marginBottom:'24px', color:'white', display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'12px' }}>
         <div>
-          <div style={{ fontSize:'13px', textTransform:'uppercase', letterSpacing:'1px', opacity:0.75 }}>Today's Daily 3 — Best Bet From Each Race</div>
+          <div style={{ fontSize:'13px', textTransform:'uppercase', letterSpacing:'1px', opacity:0.75 }}>Today's Picks — Best Bet From Each Race</div>
           <div style={{ fontSize:'22px', fontWeight:'800', marginTop:'4px' }}>{today}</div>
           {lastUpdated && <div style={{ fontSize:'12px', opacity:0.65, marginTop:'4px' }}>Last updated {lastUpdated} \u00b7 Data refreshes 12:00, 14:00, 16:00, 18:00 \u00b7 Page auto-reloads every 30 min</div>}
         </div>
@@ -696,7 +748,7 @@ function DailyPicksView() {
         const rs  = cumulRoi?.success ? (cumulRoi.settled || 0) : null;
         const pos = rv === null || rv >= 0;
         return (
-          <div style={{ background: rv === null ? 'rgba(99,102,241,0.12)' : rv >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border: `1.5px solid ${rv === null ? 'rgba(99,102,241,0.35)' : rv >= 0 ? 'rgba(16,185,129,0.45)' : 'rgba(239,68,68,0.4)'}`, borderRadius: '14px', padding: isMobile ? '14px 16px' : '18px 24px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+          <div style={{ background: rv === null ? 'rgba(99,102,241,0.12)' : rv >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border: `1.5px solid ${rv === null ? 'rgba(99,102,241,0.35)' : rv >= 0 ? 'rgba(16,185,129,0.45)' : 'rgba(239,68,68,0.4)'}`, borderRadius: '14px', padding: isMobile ? '14px 16px' : '18px 24px', marginBottom: '20px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '14px' : '20px' }}>
               <div style={{ fontSize: isMobile ? '28px' : '38px' }}>💰</div>
               <div>
@@ -709,21 +761,20 @@ function DailyPicksView() {
                 </div>
               </div>
             </div>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', fontStyle: 'italic', maxWidth: '160px', lineHeight: '1.5' }}>Profit per £1 staked.<br/>10%+ is good.</div>
+            <div style={{ textAlign: isMobile ? 'left' : 'right', maxWidth: isMobile ? '100%' : '240px' }}>
+              {rv !== null ? (
+                <div style={{ fontSize: isMobile ? '12px' : '13px', color: 'rgba(255,255,255,0.55)', lineHeight: '1.6' }}>
+                  Across all bets, every €1 staked returned <span style={{ color: rv >= 0 ? '#34d399' : '#f87171', fontWeight:'700' }}>€{(1 + rv / 100).toFixed(2)}</span> on average — a {rv >= 0 ? 'profit' : 'loss'} of <span style={{ color: rv >= 0 ? '#34d399' : '#f87171', fontWeight:'700' }}>€{Math.abs(rv / 100).toFixed(2)}</span> per bet
+                </div>
+              ) : (
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', lineHeight: '1.5' }}>£1 flat stake per pick</div>
+              )}
             </div>
           </div>
         );
       })()}
 
-      {analysisStatus && analysisStatus.available && (
-        <AnalysisPipeline
-          stages={analysisStatus.stages}
-          signalCoverage={analysisStatus.signal_coverage}
-          runTime={analysisStatus.run_time}
-          isMobile={isMobile}
-        />
-      )}
+
 
       {picks.length === 0 ? (
         analysisPending ? (
@@ -756,10 +807,13 @@ function DailyPicksView() {
               const norm = s => { const m = (s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/); return m ? `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}T${m[4].padStart(2,'0')}:${m[5]}` : (s||''); };
               return norm(a.race_time).localeCompare(norm(b.race_time));
             });
-            const morningPicks  = sorted.filter(p => p.pick_type !== 'intraday').slice(0, 3);
-            const intradayPicks = sorted.filter(p => p.pick_type === 'intraday').slice(0, 2);
+            const morningPicks  = sorted.filter(p => p.pick_type !== 'intraday');
+            const intradayPicks = sorted.filter(p => p.pick_type === 'intraday');
             const allPicks = [...morningPicks, ...intradayPicks];
-            return allPicks.map((pick, idx) => {
+            const visiblePicks = isFreeUser ? allPicks.slice(0, 2) : allPicks;
+            const hiddenCount = allPicks.length - visiblePicks.length;
+            return (<>
+            {visiblePicks.map((pick, idx) => {
             const tier = tierInfo(pick.score);
             const rank = parseInt(pick.pick_rank || (idx+1));
             const isIntraday = pick.pick_type === 'intraday';
@@ -767,7 +821,7 @@ function DailyPicksView() {
             const rankColors = {1:'#d97706', 2:'#6b7280', 3:'#92400e'};
             const intradayColor = '#7c3aed';
             return (
-              <div key={idx} style={{ background:'white', borderRadius:'12px', padding:'20px 22px', borderLeft:`5px solid ${isIntraday ? intradayColor : (rankColors[rank]||tier.bg)}`, boxShadow:'0 2px 12px rgba(0,0,0,0.1)' }}>
+              <div key={idx} style={{ background:'white', borderRadius:'12px', padding: isMobile ? '14px 12px' : '20px 22px', borderLeft:`5px solid ${isIntraday ? intradayColor : (rankColors[rank]||tier.bg)}`, boxShadow:'0 2px 12px rgba(0,0,0,0.1)' }}>
                 {isIntraday && (
                   <div style={{ marginBottom:'10px', display:'flex', alignItems:'center', gap:'8px' }}>
                     <span style={{ background:intradayColor, color:'white', borderRadius:'6px', padding:'4px 12px', fontSize:'11px', fontWeight:'800', textTransform:'uppercase', letterSpacing:'0.5px' }}>
@@ -783,7 +837,7 @@ function DailyPicksView() {
                       <div style={{ fontSize:'9px', fontWeight:'700', opacity:0.85, textTransform:'uppercase', lineHeight:'1' }}>{isIntraday ? 'Live' : 'Pick'}</div>
                     </div>
                     <div>
-                      <div style={{ fontSize:'20px', fontWeight:'800', color:'#111' }}>{pick.horse || pick.horse_name || 'Unknown'}</div>
+                      <div style={{ fontSize: isMobile ? '17px' : '20px', fontWeight:'800', color:'#111' }}>{pick.horse || pick.horse_name || 'Unknown'}</div>
                       <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', marginTop:'6px', alignItems:'center' }}>
                         {(pick.course || pick.venue) && (
                           <span style={{ background:'#1e3a5f', color:'white', padding:'3px 10px', borderRadius:'6px', fontSize:'12px', fontWeight:'700' }}>
@@ -810,7 +864,7 @@ function DailyPicksView() {
                   <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', alignItems:'center' }}>
                     {pick.odds && (
                       <div style={{ textAlign:'center' }}>
-                        <div style={{ background:'#1e3a5f', color:'white', padding:'5px 14px', borderRadius:'8px', fontWeight:'900', fontSize:'22px', letterSpacing:'0.5px' }}>{toFractional(pick.odds)}</div>
+                        <div style={{ background:'#1e3a5f', color:'white', padding: isMobile ? '4px 10px' : '5px 14px', borderRadius:'8px', fontWeight:'900', fontSize: isMobile ? '18px' : '22px', letterSpacing:'0.5px' }}>{toFractional(pick.odds)}</div>
                         <div style={{ fontSize:'10px', color:'#6b7280', marginTop:'2px', fontWeight:'600' }}>ODDS</div>
                       </div>
                     )}
@@ -823,7 +877,7 @@ function DailyPicksView() {
                           onClick={() => setExpandedPick(expandedPick === idx ? null : idx)}
                           style={{ fontSize:'11px', color:'#1d4ed8', marginTop:'4px', fontWeight:'700', cursor:'pointer', userSelect:'none', display:'flex', alignItems:'center', justifyContent:'center', gap:'3px' }}
                         >
-                          Score: {parseFloat(pick.score).toFixed(0)}/100 {expandedPick === idx ? '\u25b2' : '\u25bc'}
+                          Score: {parseFloat(pick.score).toFixed(0)} {expandedPick === idx ? '\u25b2' : '\u25bc'}
                         </div>
                       )}
                     </div>
@@ -849,243 +903,34 @@ function DailyPicksView() {
                       +{parseFloat(pick.score_gap).toFixed(0)}pt clear of field
                     </span>
                   )}
-                  {pick.history_win_rate > 0 && (
-                    <span style={{ background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:'5px', padding:'2px 8px', fontSize:'12px', color:'#1d4ed8', fontWeight:'700' }}>
-                      DB: {parseFloat(pick.history_win_rate * 100).toFixed(0)}% win rate ({pick.history_wins}/{pick.history_runs} runs)
-                    </span>
-                  )}
+
                 </div>
-                {/* Why this wins — scoring reasons */}
+                {/* Score badge */}
                 {(() => {
-                  const hasReasons = Array.isArray(pick.selection_reasons) && pick.selection_reasons.length > 0;
-                  const topReasons = hasReasons
-                    ? bestKeyReasons(pick.selection_reasons, 2)
-                    : reasonsFromBreakdown(pick.score_breakdown, 2);
                   const score = parseFloat(pick.score || pick.comprehensive_score || 0);
-                  if (!topReasons.length && !score) return null;
-                  const hasBd = pick.score_breakdown && typeof pick.score_breakdown === 'object' && Object.keys(pick.score_breakdown).length > 0;
+                  if (!score) return null;
                   return (
-                    <div onClick={() => hasBd && setExpandedPick(expandedPick === idx ? null : idx)} style={{ marginTop:'10px', padding:'10px 14px', background: `${tier.bg}18`, borderRadius:'8px', borderLeft:`3px solid ${tier.bg}`, cursor: hasBd ? 'pointer' : 'default' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap', marginBottom: topReasons.length ? '6px' : '0' }}>
+                    <div style={{ marginTop:'10px', padding:'10px 14px', background: `${tier.bg}18`, borderRadius:'8px', borderLeft:`3px solid ${tier.bg}` }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
                         <span style={{ background:tier.bg, color:'white', borderRadius:'5px', padding:'2px 9px', fontSize:'11px', fontWeight:'800', letterSpacing:'0.5px' }}>{tier.label}</span>
-                        <span style={{ fontSize:'12px', fontWeight:'700', color:'#1e3a5f' }}>Score: {score.toFixed(0)}/100</span>
-                        {hasBd && <span style={{ fontSize:'11px', color:'#1d4ed8', fontWeight:'700', marginLeft:'auto' }}>{expandedPick === idx ? '▲ Hide breakdown' : '▼ See breakdown'}</span>}
-                      </div>
-                      {topReasons.length > 0 && (
-                        <div style={{ fontSize:'13px', color:'#374151', lineHeight:'1.55' }}>
-                          {topReasons.map((r, i) => (
-                            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:'6px' }}>
-                              <span style={{ color:tier.bg, fontWeight:'800', marginTop:'1px' }}>›</span>
-                              <span>{r}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-                {/* Race Intel Summary */}
-                {(() => {
-                  const { analysedStr, freshness, freshnessOk, keyEdge, rival, rivalGap, riskStr } = raceIntelSummary(pick, now);
-                  if (!analysedStr && !keyEdge) return null;
-                  return (
-                    <div style={{ marginTop:'10px', padding:'10px 14px', background:'#f8fafc', borderRadius:'8px', border:'1px solid #e2e8f0', fontSize:'12px' }}>
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'6px', marginBottom:'8px' }}>
-                        <span style={{ fontWeight:'800', color:'#1e3a5f', fontSize:'11px', textTransform:'uppercase', letterSpacing:'0.7px' }}>📡 Race Intel</span>
-                        <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', alignItems:'center' }}>
-                          {analysedStr && (
-                            <span style={{ background:'#eff6ff', border:'1px solid #bfdbfe', borderRadius:'5px', padding:'2px 8px', color:'#1d4ed8', fontWeight:'700', fontSize:'11px' }}>
-                              🕐 Analysed {analysedStr}
-                            </span>
-                          )}
-                          {freshness && (
-                            <span style={{ background: freshnessOk ? '#f0fdf4' : '#fef3c7', border:`1px solid ${freshnessOk ? '#86efac' : '#fcd34d'}`, borderRadius:'5px', padding:'2px 8px', color: freshnessOk ? '#166534' : '#92400e', fontWeight:'700', fontSize:'11px' }}>
-                              {freshness}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div style={{ display:'flex', flexDirection:'column', gap:'5px' }}>
-                        {keyEdge && (
-                          <div style={{ display:'flex', gap:'6px', alignItems:'flex-start' }}>
-                            <span style={{ color:'#059669', fontWeight:'800', fontSize:'13px', lineHeight:'1.2' }}>✓</span>
-                            <span style={{ color:'#065f46', fontWeight:'600' }}><strong>Key edge:</strong> {keyEdge}</span>
-                          </div>
-                        )}
-                        {rival && rivalGap !== null && (
-                          <div style={{ display:'flex', gap:'6px', alignItems:'flex-start' }}>
-                            <span style={{ color:'#6b7280', fontWeight:'800', fontSize:'13px', lineHeight:'1.2' }}>→</span>
-                            <span style={{ color:'#374151' }}><strong>Main rival:</strong> {rival.horse} ({parseFloat(rival.odds||0)>1 ? toFractional(parseFloat(rival.odds)) : '?'}) — {rivalGap}pt{rivalGap==='1'?'':'s'} behind</span>
-                          </div>
-                        )}
-                        {riskStr && (
-                          <div style={{ display:'flex', gap:'6px', alignItems:'flex-start' }}>
-                            <span style={{ color:'#d97706', fontWeight:'800', fontSize:'13px', lineHeight:'1.2' }}>⚠</span>
-                            <span style={{ color:'#92400e', fontWeight:'600' }}><strong>Risk:</strong> {riskStr}</span>
-                          </div>
-                        )}
+                        <span style={{ fontSize:'12px', fontWeight:'700', color:'#1e3a5f' }}>Score: {score.toFixed(0)}</span>
                       </div>
                     </div>
                   );
                 })()}
-                {/* Full race card — all runners ranked by score */}
-                {(() => {
-                  // Use all_horses from pick data (DynamoDB), fall back to raceFields from API
-                  const raceKey  = `${pick.venue || pick.course}|${pick.race_time}`;
-                  const rawField = (pick.all_horses && pick.all_horses.length > 0)
-                    ? pick.all_horses
-                    : (raceFields[raceKey] || []);
-                  if (!rawField.length) return null;
-
-                  // Sort by score descending; mark our pick
-                  const ourHorse = (pick.horse || pick.horse_name || '').toLowerCase();
-                  const field = [...rawField]
-                    .map(h => ({ ...h, score: parseFloat(h.score || 0), odds: parseFloat(h.odds || 0) }))
-                    .sort((a, b) => b.score - a.score);
-                  const topScore  = field[0]?.score || 1;
-                  const open      = expandedField === idx;
-                  const ourRank   = field.findIndex(h => (h.horse||'').toLowerCase() === ourHorse);
-                  const nextBest  = field.find(h => (h.horse||'').toLowerCase() !== ourHorse);
-                  const gap       = ourRank === 0 && nextBest ? (field[0].score - nextBest.score).toFixed(0) : null;
-
-                  return (
-                    <div style={{ marginTop:'10px' }}>
-                      <button
-                        onClick={() => setExpandedField(open ? null : idx)}
-                        style={{ background: open ? '#f0fdf4' : 'none', border:`1px solid ${open ? '#86efac' : '#d1d5db'}`, borderRadius:'6px', padding:'6px 14px', fontSize:'12px', fontWeight:'700', color: open ? '#166534' : '#374151', cursor:'pointer', width:'100%', textAlign:'left', display:'flex', justifyContent:'space-between', alignItems:'center', transition:'all 0.15s' }}
-                      >
-                        <span>
-                          🏇 See how all {field.length} runners rated
-                          {gap && <span style={{ marginLeft:'8px', background:'#dcfce7', color:'#166534', borderRadius:'4px', padding:'1px 7px', fontSize:'11px' }}>+{gap}pt clear</span>}
-                        </span>
-                        <span style={{ fontSize:'10px', color:'#6b7280' }}>{open ? '▲ Hide' : '▼ Show'}</span>
-                      </button>
-
-                      {open && (
-                        <div style={{ marginTop:'6px', background:'#f8fafc', borderRadius:'10px', overflow:'hidden', border:'1px solid #e5e7eb' }}>
-                          {/* Column headers */}
-                          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '22px 1fr 42px 52px' : '28px 1fr 64px 160px 60px', gap:'0', background:'#1e3a5f', padding:'7px 12px', fontSize:'10px', fontWeight:'800', color:'rgba(255,255,255,0.7)', textTransform:'uppercase', letterSpacing:'0.8px', alignItems:'center' }}>
-                            <span>#</span>
-                            <span>Horse</span>
-                            <span style={{ textAlign:'center' }}>Odds</span>
-                            <span style={{ textAlign:'center' }}>{isMobile ? 'Pts' : 'Model Score'}</span>
-                            {!isMobile && <span style={{ textAlign:'center' }}>Tier</span>}
-                          </div>
-                          {field.map((runner, ri) => {
-                            const rScore    = runner.score;
-                            const t         = tierInfo(rScore);
-                            const isOurPick = (runner.horse||'').toLowerCase() === ourHorse;
-                            const barPct    = topScore > 0 ? Math.min(rScore / topScore * 100, 100) : 0;
-                            const scoreDiff = ri > 0 ? (rScore - field[0].score).toFixed(0) : null;
-                            return (
-                              <div key={ri} style={{ display:'grid', gridTemplateColumns: isMobile ? '22px 1fr 42px 52px' : '28px 1fr 64px 160px 60px', gap:'0', padding: isMobile ? '7px 10px' : '8px 12px', alignItems:'center', background: isOurPick ? 'rgba(5,150,105,0.08)' : ri % 2 === 0 ? 'white' : '#f9fafb', borderBottom:'1px solid #f0f0f0', borderLeft: isOurPick ? '3px solid #059669' : '3px solid transparent' }}>
-                                {/* Rank */}
-                                <span style={{ fontSize:'11px', fontWeight:'800', color: ri === 0 ? '#d97706' : '#9ca3af' }}>
-                                  {ri === 0 ? '★' : ri + 1}
-                                </span>
-                                {/* Horse name */}
-                                <div>
-                                  <div style={{ display:'flex', alignItems:'center', gap:'5px', flexWrap:'wrap' }}>
-                                    <span style={{ fontWeight: isOurPick ? '800' : '600', color: isOurPick ? '#065f46' : '#111', fontSize:'13px' }}>
-                                      {runner.horse}
-                                    </span>
-                                    {isOurPick && (
-                                      <span style={{ background:'#059669', color:'white', borderRadius:'3px', padding:'1px 6px', fontSize:'9px', fontWeight:'800', textTransform:'uppercase' }}>Our Pick</span>
-                                    )}
-                                  </div>
-                                  {(runner.jockey || runner.trainer) && (
-                                    <div style={{ fontSize:'10px', color:'#9ca3af', marginTop:'2px' }}>
-                                      {runner.jockey  && `J: ${runner.jockey}`}
-                                      {runner.jockey && runner.trainer && ' · '}
-                                      {runner.trainer && `T: ${runner.trainer}`}
-                                    </div>
-                                  )}
-                                </div>
-                                {/* Odds */}
-                                <div style={{ textAlign:'center', fontWeight:'700', color:'#1e3a5f', fontSize:'12px' }}>
-                                  {runner.odds > 1 ? toFractional(runner.odds) : '—'}
-                                </div>
-                                {/* Score bar — full on desktop, compact number on mobile */}
-                                {isMobile ? (
-                                  <div style={{ textAlign:'center' }}>
-                                    <span style={{ fontSize:'13px', fontWeight:'900', color: isOurPick ? '#065f46' : t.bg }}>{rScore.toFixed(0)}</span>
-                                    {scoreDiff !== null && <div style={{ fontSize:'9px', fontWeight:'700', color:'#ef4444', lineHeight:1 }}>{scoreDiff}</div>}
-                                  </div>
-                                ) : (
-                                  <div style={{ display:'flex', alignItems:'center', gap:'7px' }}>
-                                    <div style={{ flex:1, height:'10px', background:'#e5e7eb', borderRadius:'5px', overflow:'hidden' }}>
-                                      <div style={{ width:`${barPct}%`, height:'100%', background: isOurPick ? '#059669' : t.bg, borderRadius:'5px', transition:'width 0.3s' }} />
-                                    </div>
-                                    <span style={{ fontSize:'12px', fontWeight:'800', color: isOurPick ? '#065f46' : '#374151', minWidth:'26px', textAlign:'right' }}>
-                                      {rScore.toFixed(0)}
-                                    </span>
-                                    {scoreDiff !== null && (
-                                      <span style={{ fontSize:'10px', fontWeight:'700', color:'#ef4444', minWidth:'28px', textAlign:'right' }}>
-                                        {scoreDiff}
-                                      </span>
-                                    )}
-                                  </div>
-                                )}
-                                {/* Tier badge — desktop only */}
-                                {!isMobile && (
-                                  <div style={{ textAlign:'center' }}>
-                                    <span style={{ background: isOurPick ? '#059669' : t.bg, color:'white', borderRadius:'4px', padding:'2px 6px', fontSize:'10px', fontWeight:'700' }}>
-                                      {t.label}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
-                          <div style={{ padding:'8px 14px', background:'#f1f5f9', fontSize:'11px', color:'#64748b', textAlign:'right' }}>
-                            Score = AI model rating out of 100 · Red numbers = points behind our pick
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()}
-                {/* Score Breakdown Panel — toggled by clicking the score badge */}
-                {expandedPick === idx && pick.score_breakdown && typeof pick.score_breakdown === 'object' && (() => {
-                  const entries = Object.entries(pick.score_breakdown)
-                    .filter(([,v]) => parseFloat(v) !== 0)
-                    .sort(([,a],[,b]) => parseFloat(b)-parseFloat(a));
-                  const maxVal = entries.reduce((m,[,v]) => Math.max(m, Math.abs(parseFloat(v))), 1);
-                  const total  = parseFloat(pick.score || 0);
-                  return (
-                    <div style={{ marginTop:'14px', padding:'16px 18px', background:'#f0f4ff', borderRadius:'10px', border:'1px solid #c7d7f8' }}>
-                      <div style={{ fontSize:'11px', fontWeight:'800', color:'#1e3a5f', textTransform:'uppercase', letterSpacing:'0.8px', marginBottom:'12px' }}>
-                        Score Breakdown &mdash; how {total.toFixed(0)} pts was calculated
-                      </div>
-                      <div style={{ display:'flex', flexDirection:'column', gap:'7px' }}>
-                        {entries.map(([k, v]) => {
-                          const pts   = parseFloat(v);
-                          const label = SCORE_LABELS[k] || k.replace(/_/g,' ').replace(/\b\w/g, c => c.toUpperCase());
-                          const pct   = Math.round(Math.abs(pts) / maxVal * 100);
-                          const pos   = pts >= 0;
-                          return (
-                            <div key={k} style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                              <div style={{ width: isMobile ? '90px' : '140px', fontSize:'11px', color:'#374151', fontWeight:'600', flexShrink:0, textAlign:'right' }}>{label}</div>
-                              <div style={{ flex:1, height:'16px', background:'#dde5f7', borderRadius:'4px', overflow:'hidden' }}>
-                                <div style={{ width: pct+'%', height:'100%', background: pos ? '#1d6f4e' : '#dc2626', borderRadius:'4px' }} />
-                              </div>
-                              <div style={{ width:'44px', fontSize:'12px', fontWeight:'800', color: pos ? '#166534' : '#dc2626', textAlign:'right', flexShrink:0 }}>
-                                {pts >= 0 ? '+' : ''}{pts.toFixed(0)}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      <div style={{ marginTop:'10px', paddingTop:'10px', borderTop:'1px solid #c7d7f8', display:'flex', justifyContent:'flex-end', alignItems:'center', gap:'8px' }}>
-                        <span style={{ fontSize:'12px', color:'#374151', fontWeight:'600' }}>Total Score</span>
-                        <span style={{ background:'#1e3a5f', color:'white', padding:'3px 12px', borderRadius:'6px', fontSize:'14px', fontWeight:'900' }}>{total.toFixed(0)} pts</span>
-                      </div>
-                    </div>
-                  );
-                })()}
+                {/* Race Intel, Full Field & Breakdown — moved to VIP/Admin */}
               </div>
             );
-            });
+            })}
+            {hiddenCount > 0 && (
+              <div style={{ background:'linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1))', border:'1.5px solid rgba(139,92,246,0.35)', borderRadius:'12px', padding:'24px 20px', textAlign:'center' }}>
+                <div style={{ fontSize:'20px', marginBottom:'8px' }}>🔒</div>
+                <div style={{ fontSize:'16px', fontWeight:'800', color:'white', marginBottom:'6px' }}>+{hiddenCount} more pick{hiddenCount > 1 ? 's' : ''} available</div>
+                <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.6)', marginBottom:'12px' }}>Upgrade to Premium or VIP to see all picks</div>
+                <div onClick={onUpgrade} style={{ display:'inline-block', background:'linear-gradient(135deg,#7c3aed,#5b21b6)', color:'white', borderRadius:'8px', padding:'8px 24px', fontSize:'13px', fontWeight:'700', cursor:'pointer' }}>Upgrade Now</div>
+              </div>
+            )}
+            </>);
           })()}
         </div>
       )}
@@ -1098,17 +943,199 @@ function DailyPicksView() {
   );
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// PRICING / SUBSCRIPTION VIEW
+// ════════════════════════════════════════════════════════════════════════════
+function PricingView({ authUser, onSuccess }) {
+  const [loading, setLoading] = useState(null); // null | 'premium' | 'vip'
+  const [error, setError] = useState(null);
+  const [subStatus, setSubStatus] = useState(null);
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  // Fetch current subscription status
+  useEffect(() => {
+    if (!authUser?.email) return;
+    fetch(`${API_BASE_URL}/api/subscription-status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: authUser.email })
+    })
+      .then(r => r.json())
+      .then(data => setSubStatus(data))
+      .catch(() => {});
+  }, [authUser?.email]);
+
+  const handleSubscribe = async (tier) => {
+    setLoading(tier);
+    setError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authUser.email, tier })
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setError(data.error || 'Failed to start checkout');
+        setLoading(null);
+      }
+    } catch (e) {
+      setError('Network error. Please try again.');
+      setLoading(null);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/customer-portal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authUser.email })
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (e) {
+      setError('Failed to open subscription management');
+    }
+    setPortalLoading(false);
+  };
+
+  const currentTier = subStatus?.subscription_tier || authUser?.subscription_tier || 'free';
+  const isActive = subStatus?.subscription_status === 'active' || subStatus?.subscription_status === 'canceling';
+
+  return (
+    <div style={{ padding: '20px 0' }}>
+      <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+        <h2 style={{ fontSize: '28px', fontWeight: '900', color: 'white', marginBottom: '8px' }}>
+          Upgrade Your Plan
+        </h2>
+        <p style={{ fontSize: '15px', color: 'rgba(255,255,255,0.6)', maxWidth: '500px', margin: '0 auto' }}>
+          Get full access to AI-powered racing picks and unlock your edge
+        </p>
+      </div>
+
+      {error && (
+        <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '12px 16px', textAlign: 'center', marginBottom: '16px', color: '#f87171', fontSize: '14px' }}>
+          {error}
+        </div>
+      )}
+
+      {/* Current plan banner */}
+      {isActive && currentTier !== 'free' && (
+        <div style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.35)', borderRadius: '10px', padding: '14px 18px', textAlign: 'center', marginBottom: '24px' }}>
+          <span style={{ color: '#34d399', fontWeight: '700', fontSize: '14px' }}>
+            ✓ You're on the {currentTier === 'vip' ? 'VIP' : 'Premium'} plan
+          </span>
+          {subStatus?.subscription_status === 'canceling' && (
+            <span style={{ color: '#fbbf24', fontSize: '13px', marginLeft: '12px' }}>(cancels at period end)</span>
+          )}
+          <div style={{ marginTop: '10px' }}>
+            <button onClick={handleManageSubscription} disabled={portalLoading}
+              style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '8px', padding: '8px 20px', color: 'white', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+              {portalLoading ? 'Opening...' : 'Manage Subscription'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', maxWidth: '700px', margin: '0 auto' }}>
+
+        {/* FREE TIER */}
+        <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', padding: '28px 24px', position: 'relative' }}>
+          <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.45)', fontWeight: '700', marginBottom: '8px' }}>Free</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '16px' }}>
+            <span style={{ fontSize: '36px', fontWeight: '900', color: 'white' }}>€0</span>
+            <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>/month</span>
+          </div>
+          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '14px', color: 'rgba(255,255,255,0.7)', lineHeight: '2' }}>
+            <li>✓ 2 picks per day</li>
+            <li>✓ Basic race info</li>
+            <li style={{ color: 'rgba(255,255,255,0.3)' }}>✗ Full pick analysis</li>
+            <li style={{ color: 'rgba(255,255,255,0.3)' }}>✗ VIP insights</li>
+          </ul>
+          <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '10px', padding: '10px', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontWeight: '700', fontSize: '14px' }}>
+            {currentTier === 'free' ? 'Current Plan' : '—'}
+          </div>
+        </div>
+
+        {/* PREMIUM TIER */}
+        <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08))', border: '2px solid rgba(99,102,241,0.4)', borderRadius: '16px', padding: '28px 24px', position: 'relative' }}>
+          <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', borderRadius: '20px', padding: '4px 16px', fontSize: '11px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '1px' }}>Most Popular</div>
+          <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#818cf8', fontWeight: '700', marginBottom: '8px' }}>Premium</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '16px' }}>
+            <span style={{ fontSize: '36px', fontWeight: '900', color: 'white' }}>€19.99</span>
+            <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>/month</span>
+          </div>
+          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '14px', color: 'rgba(255,255,255,0.7)', lineHeight: '2' }}>
+            <li>✓ All daily picks (5+ per day)</li>
+            <li>✓ Full enhanced analysis</li>
+            <li>✓ Yesterday's results &amp; ROI</li>
+            <li>✓ Lay the Favourite strategy</li>
+            <li style={{ color: 'rgba(255,255,255,0.3)' }}>✗ VIP race intel &amp; field data</li>
+          </ul>
+          {currentTier === 'premium' && isActive ? (
+            <div style={{ background: 'rgba(52,211,153,0.15)', borderRadius: '10px', padding: '10px', textAlign: 'center', color: '#34d399', fontWeight: '700', fontSize: '14px' }}>
+              ✓ Current Plan
+            </div>
+          ) : (
+            <button onClick={() => handleSubscribe('premium')} disabled={!!loading}
+              style={{ width: '100%', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', border: 'none', borderRadius: '10px', padding: '12px', color: 'white', fontSize: '15px', fontWeight: '800', cursor: loading ? 'wait' : 'pointer', opacity: loading === 'vip' ? 0.5 : 1 }}>
+              {loading === 'premium' ? 'Redirecting to Stripe...' : 'Subscribe to Premium'}
+            </button>
+          )}
+        </div>
+
+        {/* VIP TIER */}
+        <div style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(251,191,36,0.06))', border: '2px solid rgba(245,158,11,0.35)', borderRadius: '16px', padding: '28px 24px', position: 'relative' }}>
+          <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#fbbf24', fontWeight: '700', marginBottom: '8px' }}>VIP</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '16px' }}>
+            <span style={{ fontSize: '36px', fontWeight: '900', color: 'white' }}>€99</span>
+            <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>/month</span>
+          </div>
+          <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '14px', color: 'rgba(255,255,255,0.7)', lineHeight: '2' }}>
+            <li>✓ Everything in Premium</li>
+            <li>✓ Race intel &amp; full field data</li>
+            <li>✓ Score breakdowns</li>
+            <li>✓ Priority support</li>
+            <li>✓ Early access to new features</li>
+          </ul>
+          {currentTier === 'vip' && isActive ? (
+            <div style={{ background: 'rgba(52,211,153,0.15)', borderRadius: '10px', padding: '10px', textAlign: 'center', color: '#34d399', fontWeight: '700', fontSize: '14px' }}>
+              ✓ Current Plan
+            </div>
+          ) : (
+            <button onClick={() => handleSubscribe('vip')} disabled={!!loading}
+              style={{ width: '100%', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', borderRadius: '10px', padding: '12px', color: 'white', fontSize: '15px', fontWeight: '800', cursor: loading ? 'wait' : 'pointer', opacity: loading === 'premium' ? 0.5 : 1 }}>
+              {loading === 'vip' ? 'Redirecting to Stripe...' : 'Subscribe to VIP'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div style={{ marginTop: '32px', textAlign: 'center', fontSize: '12px', color: 'rgba(255,255,255,0.4)', lineHeight: '1.8' }}>
+        Payments securely processed by Stripe · Cancel anytime from your account<br/>
+        Subscriptions renew monthly · All prices in EUR
+      </div>
+    </div>
+  );
+}
+
 // ---- Yesterday's Results ----
-function YesterdayResultsView() {
+function YesterdayResultsView({ isFreeUser }) {
   const [results, setResults]         = useState(null);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState(null);
-  const [isMobile, setIsMobile]       = useState(typeof window !== 'undefined' && window.innerWidth < 480);
+  const [isMobile, setIsMobile]       = useState(typeof window !== 'undefined' && window.innerWidth < 600);
   const [cumulRoi, setCumulRoi]         = useState(null);
   const [layData,  setLayData]          = useState(null);
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 480);
+    const onResize = () => setIsMobile(window.innerWidth < 600);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -1252,7 +1279,7 @@ function YesterdayResultsView() {
   return (
     <div>
       {/* Header */}
-      <div style={{ background:'linear-gradient(135deg,#1e3a5f 0%,#1e40af 50%,#1e3a5f 100%)', border:'2px solid #3b82f6', borderRadius:'12px', padding:'24px 28px', marginBottom:'24px', color:'white', display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'12px' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e3a5f 0%,#1e40af 50%,#1e3a5f 100%)', border:'2px solid #3b82f6', borderRadius:'12px', padding: isMobile ? '16px 14px' : '24px 28px', marginBottom:'24px', color:'white', display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'12px' }}>
         <div>
           <div style={{ fontSize:'13px', textTransform:'uppercase', letterSpacing:'1px', color:'#93c5fd', opacity:0.9 }}>Post-Race Analysis</div>
           <div style={{ fontSize:'22px', fontWeight:'800', marginTop:'4px' }}>Latest Results</div>
@@ -1277,7 +1304,7 @@ function YesterdayResultsView() {
         return (
           <div style={{ marginBottom:'24px' }}>
             {/* Top row: 4 count stats */}
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap: isMobile ? '6px' : '10px', marginBottom:'10px' }}>
+            <div style={{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(4,1fr)', gap: isMobile ? '6px' : '10px', marginBottom:'10px' }}>
               {statsLeft.map((stat, i) => (
                 <div key={i} style={{ background:stat.bg, border:`1.5px solid ${stat.border}`, borderRadius:'10px', padding: isMobile ? '10px 4px 8px' : '16px 10px 12px', textAlign:'center' }}>
                   <div style={{ fontSize: isMobile ? '14px' : '12px', marginBottom:'2px' }}>{stat.icon}</div>
@@ -1286,27 +1313,29 @@ function YesterdayResultsView() {
                 </div>
               ))}
             </div>
-            {/* Bottom row: P&L + ROI spanning full width */}
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' }}>
-              <div style={{ background: pnlPos ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${pnlPos ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding: isMobile ? '10px 12px' : '14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px' }}>
-                <div>
-                  <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'3px' }}>Profit / Loss</div>
-                  <div style={{ fontSize: isMobile ? '22px' : '30px', fontWeight:'900', color: pnlPos ? '#34d399' : '#f87171', lineHeight:1 }}>
-                    {pnlPos ? '+' : ''}£{Math.abs(profit).toFixed(2)}
-                  </div>
-                </div>
-                <div style={{ fontSize: isMobile ? '22px' : '32px' }}>{pnlPos ? '📈' : '📉'}</div>
-              </div>
+            {/* Bottom row: ROI spanning full width */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:'10px' }}>
               <div style={{ background: cumulRoiVal === null ? 'rgba(99,102,241,0.1)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${cumulRoiVal === null ? 'rgba(99,102,241,0.3)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding: isMobile ? '10px 12px' : '14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px' }}>
                 <div>
-                  <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'3px' }}>{isMobile ? 'ROI' : 'Return on Investment'}</div>
+                  <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'3px' }}>Return on Investment</div>
                   <div style={{ fontSize: isMobile ? '22px' : '30px', fontWeight:'900', color: cumulRoiVal === null ? '#818cf8' : cumulRoiVal >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>
                     {cumulRoiVal === null ? '—' : `${cumulRoiVal >= 0 ? '+' : ''}${cumulRoiVal.toFixed(1)}%`}
                   </div>
                   <div style={{ fontSize:'9px', color:'rgba(255,255,255,0.4)', marginTop:'4px', fontWeight:'500' }}>
                     {cumulRoiVal === null ? 'Loading…' : `Since 22 Mar · ${cumulSettled} settled`}
                   </div>
-                  <div style={{ fontSize:'9px', color:'rgba(255,255,255,0.3)', marginTop:'2px', fontStyle:'italic' }}>Profit per £1 staked. 10%+ is good.</div>
+                  {cumulRoiVal !== null ? (
+                    <div style={{ fontSize: isMobile ? '10px' : '11px', color:'rgba(255,255,255,0.45)', marginTop:'2px' }}>
+                      Every €1 → <span style={{ color: cumulRoiVal >= 0 ? '#34d399' : '#f87171', fontWeight:'700' }}>€{(1 + cumulRoiVal / 100).toFixed(2)}</span> back · {cumulRoiVal >= 0 ? 'profit' : 'loss'} €{Math.abs(cumulRoiVal / 100).toFixed(2)}/bet
+                    </div>
+                  ) : (
+                    <div style={{ fontSize:'9px', color:'rgba(255,255,255,0.3)', marginTop:'2px', fontStyle:'italic' }}>£1 flat stake per pick</div>
+                  )}
+                  <a
+                    href={API_BASE_URL + '/api/results/export-csv'}
+                    download="BetBudAI_ROI_Data.csv"
+                    style={{ display:'inline-block', marginTop:'6px', fontSize: isMobile ? '10px' : '11px', color:'#60a5fa', textDecoration:'underline', cursor:'pointer', fontWeight:'600' }}
+                  >📥 Download full data (CSV)</a>
                 </div>
                 <div style={{ fontSize: isMobile ? '22px' : '32px' }}>💰</div>
               </div>
@@ -1344,7 +1373,7 @@ function YesterdayResultsView() {
             {/* 4 stat tiles */}
             <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', gap:'8px', marginBottom:'14px' }}>
               <div style={{ background: roiPos ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.1)', border:`1.5px solid ${roiPos ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.3)'}`, borderRadius:'10px', padding:'12px 14px' }}>
-                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)', textTransform:'uppercase', letterSpacing:'0.8px', fontWeight:'600', marginBottom:'4px' }}>ROI</div>
+                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)', textTransform:'uppercase', letterSpacing:'0.8px', fontWeight:'600', marginBottom:'4px' }}>Return on Investment</div>
                 <div style={{ fontSize:'26px', fontWeight:'900', color: roiPos ? '#34d399' : '#f87171', lineHeight:1 }}>{roiPos ? '+' : ''}{roi.toFixed(1)}%</div>
                 <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.35)', marginTop:'5px', lineHeight:1.5 }}>£{cr.total_return?.toFixed(2)} returned<br/>on £{cr.total_stake?.toFixed(0)} staked</div>
               </div>
@@ -1367,11 +1396,11 @@ function YesterdayResultsView() {
 
             {/* ROI formula explainer */}
             <div style={{ background:'rgba(59,130,246,0.07)', border:'1px solid rgba(59,130,246,0.18)', borderRadius:'8px', padding:'9px 13px', marginBottom:'14px', fontSize:'11px', color:'rgba(255,255,255,0.45)', lineHeight:1.6 }}>
-              <span style={{ color:'rgba(255,255,255,0.7)', fontWeight:'700' }}>How ROI is calculated: </span>
+              <span style={{ color:'rgba(255,255,255,0.7)', fontWeight:'700' }}>How Return on Investment is calculated: </span>
               Level-stakes method — 1 unit wagered per pick (industry-standard tipster measure).
               Wins return stake × decimal odds. Place returns ½ stake at ¼ odds. Loss forfeits stake.
               <span style={{ color:'rgba(255,255,255,0.55)', display:'block', marginTop:'2px' }}>
-                ROI = (total returned − total staked) ÷ total staked × 100
+                Return on Investment = (total returned − total staked) ÷ total staked × 100
               </span>
             </div>
 
@@ -1618,7 +1647,7 @@ function YesterdayResultsView() {
         <div style={{ background:'rgba(255,255,255,0.05)', borderRadius:'14px', overflow:'hidden', border:'1px solid rgba(255,255,255,0.12)' }}>
           {/* Table header — desktop only */}
           {!isMobile && (
-          <div style={{ display:'grid', gridTemplateColumns:'90px 55px 110px 1fr 70px minmax(0,2fr) 80px 70px', gap:'0', background:'rgba(30,58,95,0.9)', padding:'10px 16px', fontSize:'11px', fontWeight:'800', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'0.8px', alignItems:'center' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'90px 55px 110px 1fr 70px minmax(0,2fr) 80px', gap:'0', background:'rgba(30,58,95,0.9)', padding:'10px 16px', fontSize:'11px', fontWeight:'800', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'0.8px', alignItems:'center' }}>
             <span>Result</span>
             <span>Day</span>
             <span>Time / Course</span>
@@ -1626,7 +1655,6 @@ function YesterdayResultsView() {
             <span style={{textAlign:'center'}}>Rating</span>
             <span>Key Reason</span>
             <span style={{textAlign:'center'}}>Odds</span>
-            <span style={{textAlign:'right'}}>P&amp;L</span>
           </div>
           )}
           {(() => {
@@ -1638,7 +1666,11 @@ function YesterdayResultsView() {
               const course = (r.course || '').toLowerCase();
               if (hhmm && course) layMap[`${course}|${hhmm}`] = r.outcome;
             });
-          return [...picks].sort((a, b) => {
+          return [...picks].filter(p => {
+            if (!isFreeUser) return true;
+            const oc = (p.outcome || '').toLowerCase();
+            return ['win', 'won', 'loss', 'lost', 'placed', 'place'].includes(oc);
+          }).sort((a, b) => {
             const ta = a.race_time || ''; const tb = b.race_time || '';
             // ISO strings sort lexicographically; US format needs normalising
             const norm = s => { const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/); return m ? `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}T${m[4].padStart(2,'0')}:${m[5]}` : s; };
@@ -1661,12 +1693,8 @@ function YesterdayResultsView() {
             const pnl   = parseFloat(pick.profit || 0);
             const isPending = !rawOutcome || rawOutcome === 'PENDING';
             const displayOdds = !isPending && pick.sp_odds ? parseFloat(pick.sp_odds) : parseFloat(pick.odds || 0);
-            // Key reason: for settled picks show result_analysis; for pending show best pre-race reason
-            const keyReason = !isPending && pick.result_analysis
-              ? pick.result_analysis
-              : (Array.isArray(pick.selection_reasons) && pick.selection_reasons.length > 0
-                  ? bestKeyReasons(pick.selection_reasons, 1)[0] || ''
-                  : (pick.result_analysis ? pick.result_analysis.substring(0,80) : ''));
+            // Key reason: only show result_analysis for settled picks (no pre-race breakdown for free users)
+            const keyReason = !isPending && pick.result_analysis ? pick.result_analysis : '';
             const winnerNote = !isPending && winner && winner !== pick.horse ? `Winner: ${winner}` : '';
             // Fav outcome from lay analysis
             const layOutcome = (() => {
@@ -1695,10 +1723,7 @@ function YesterdayResultsView() {
                     </div>
                   </div>
                   <div style={{ textAlign:'right', flexShrink:0 }}>
-                    <div style={{ fontWeight:'900', fontSize:'15px', color: pnl > 0 ? '#34d399' : pnl < 0 ? '#f87171' : 'rgba(255,255,255,0.4)' }}>
-                      {isPending ? '—' : pnl >= 0 ? `+£${pnl.toFixed(2)}` : `-£${Math.abs(pnl).toFixed(2)}`}
-                    </div>
-                    <div style={{ fontSize:'11px', color:'#93c5fd', fontWeight:'700' }}>{displayOdds > 1 ? toFractional(displayOdds) : ''}</div>
+                    <div style={{ fontSize:'13px', color:'#93c5fd', fontWeight:'700' }}>{displayOdds > 1 ? toFractional(displayOdds) : ''}</div>
                   </div>
                 </div>
                 {/* Row 2: key reason + winner note — no truncation on mobile */}
@@ -1719,7 +1744,7 @@ function YesterdayResultsView() {
             );
             return (
               /* ── Desktop table row ── */
-              <div key={idx} style={{ display:'grid', gridTemplateColumns:'90px 55px 110px 1fr 70px minmax(0,2fr) 80px 70px', gap:'0', padding:'11px 16px', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.07)', background: idx % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent', borderLeft:`3px solid ${oc.border}` }}>
+              <div key={idx} style={{ display:'grid', gridTemplateColumns:'90px 55px 110px 1fr 70px minmax(0,2fr) 80px', gap:'0', padding:'11px 16px', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.07)', background: idx % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent', borderLeft:`3px solid ${oc.border}` }}>
 
                 {/* Result badge */}
                 <span style={{ display:'inline-block', background:oc.bg, color:'white', padding:'4px 8px', borderRadius:'6px', fontSize:'11px', fontWeight:'800', letterSpacing:'0.3px', textAlign:'center', width:'fit-content' }}>
@@ -1769,11 +1794,6 @@ function YesterdayResultsView() {
                 {/* Odds */}
                 <div style={{ textAlign:'center', fontWeight:'700', color:'#93c5fd', fontSize:'13px' }}>
                   {displayOdds > 1 ? toFractional(displayOdds) : '—'}
-                </div>
-
-                {/* P&L */}
-                <div style={{ textAlign:'right', fontWeight:'800', fontSize:'14px', color: pnl > 0 ? '#34d399' : pnl < 0 ? '#f87171' : 'rgba(255,255,255,0.4)' }}>
-                  {isPending ? '—' : pnl >= 0 ? `+£${pnl.toFixed(2)}` : `-£${Math.abs(pnl).toFixed(2)}`}
                 </div>
               </div>
             );
@@ -2049,6 +2069,13 @@ function LayTheFavView() {
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState(null);
   const [filter, setFilter] = useState('all'); // all | caution | strong
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 600);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 600);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     setLoading(true);
@@ -2066,23 +2093,24 @@ function LayTheFavView() {
   };
 
   const FLAG_LABELS = {
-    short_price:      { label:'Price',         colour:'#a78bfa' },
-    rivals_close:     { label:'Rivals',        colour:'#60a5fa' },
-    trip_new:         { label:'Trip',          colour:'#6ee7b7' },
-    going_unproven:   { label:'Going',         colour:'#34d399' },
-    draw_poor:        { label:'Draw',          colour:'#fbbf24' },
-    layoff:           { label:'Layoff',        colour:'#fca5a5' },
-    pace_doubt:       { label:'Pace',          colour:'#93c5fd' },
-    drift:            { label:'Drift',         colour:'#fcd34d' },
-    class_up:         { label:'Class',         colour:'#c084fc' },
-    trainer_track:    { label:'Trainer@Track', colour:'#a5b4fc' },
-    trainer_cold:     { label:'TrainerCold',   colour:'#818cf8' },
-    trainer_multiple: { label:'MultiRunner',   colour:'#e879f9' },
+    short_price:          { label:'Price',         colour:'#a78bfa' },
+    rivals_close:         { label:'Rivals',        colour:'#60a5fa' },
+    trip_new:             { label:'Trip',          colour:'#6ee7b7' },
+    going_unproven:       { label:'Going',         colour:'#34d399' },
+    draw_poor:            { label:'Draw',          colour:'#fbbf24' },
+    layoff:               { label:'Layoff',        colour:'#fca5a5' },
+    pace_doubt:           { label:'Pace',          colour:'#93c5fd' },
+    drift:                { label:'Drift',         colour:'#fcd34d' },
+    class_up:             { label:'Class',         colour:'#c084fc' },
+    trainer_track:        { label:'Trainer@Track', colour:'#a5b4fc' },
+    trainer_cold:         { label:'TrainerCold',   colour:'#818cf8' },
+    trainer_multiple:     { label:'MultiRunner',   colour:'#e879f9' },
+    current_form_no_wins: { label:'FormNoWins',    colour:'#fb923c' },
   };
 
   const FLAG_WEIGHTS = { short_price:1, rivals_close:2, trip_new:2, going_unproven:2,
     draw_poor:1, layoff:1, pace_doubt:1, drift:1, class_up:4,
-    trainer_track:1, trainer_cold:1, trainer_multiple:1 };
+    trainer_track:1, trainer_cold:1, trainer_multiple:1, current_form_no_wins:1 };
 
   if (loading) return (
     <div style={{ textAlign:'center', padding:'60px', color:'rgba(255,255,255,0.5)' }}>
@@ -2111,7 +2139,7 @@ function LayTheFavView() {
   const filtered = races.filter(r =>
     isPast(r) && (
       filter === 'red'     ? r.lay_score >= 13 :
-      filter === 'strong'  ? r.lay_score >= 10 :
+      filter === 'strong'  ? r.lay_score >= 9 :
       filter === 'caution' ? r.lay_score >= 4 :
       true
     )
@@ -2121,14 +2149,14 @@ function LayTheFavView() {
     <div style={{ paddingBottom:'40px' }}>
 
       {/* Header */}
-      <div style={{ background:'linear-gradient(135deg,rgba(185,28,28,0.25) 0%,rgba(127,29,29,0.18) 100%)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'14px', padding:'24px 28px', marginBottom:'24px' }}>
-        <div style={{ fontSize:'11px', letterSpacing:'2px', textTransform:'uppercase', color:'rgba(255,255,255,0.4)', marginBottom:'6px' }}>Favs-Run · Read-only parallel analysis</div>
-        <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'4px' }}>🚨 Lay the Favourite</div>
-        <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.55)', marginBottom:'18px' }}>Identifies short-price favourites with structural vulnerabilities. Does <strong style={{color:'rgba(255,255,255,0.8)'}}>not</strong> affect picks, weights or UI.</div>
+      <div style={{ background:'linear-gradient(135deg,rgba(217,119,6,0.25) 0%,rgba(180,83,9,0.18) 100%)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:'14px', padding: isMobile ? '16px 14px' : '24px 28px', marginBottom:'24px' }}>
+        <div style={{ fontSize:'11px', letterSpacing:'2px', textTransform:'uppercase', color:'rgba(255,255,255,0.4)', marginBottom:'6px' }}>VIP · Lay the Fav analysis</div>
+        <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'4px' }}>👑 VIP — Lay the Fav</div>
+        <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.55)', marginBottom:'18px' }}>Identifies short-price favourites with structural vulnerabilities — favourites to avoid backing.</div>
 
         {/* Score legend */}
         <div style={{ display:'flex', gap:'10px', flexWrap:'wrap', marginBottom:'18px' }}>
-          {[{score:'0–3', label:'Leave Alone', c:'#34d399'}, {score:'4–9', label:'Caution / Look', c:'#fbbf24'}, {score:'10–12', label:'Strong Lay', c:'#f97316'}, {score:'13+', label:'Strong Lay Candidate', c:'#f87171'}].map(l => (
+          {[{score:'0–3', label:'Do Not Show', c:'#34d399'}, {score:'4–8', label:'Caution / Look', c:'#fbbf24'}, {score:'9–12', label:'Strong Lay', c:'#f97316'}, {score:'13+', label:'Strong Lay Candidate', c:'#f87171'}].map(l => (
             <div key={l.score} style={{ display:'flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.06)', borderRadius:'8px', padding:'5px 12px', fontSize:'12px', color:'rgba(255,255,255,0.7)' }}>
               <span style={{ background:l.c, width:'8px', height:'8px', borderRadius:'50%', display:'inline-block' }} />
               <b style={{ color:l.c }}>{l.score}</b>&nbsp;{l.label}
@@ -2137,8 +2165,9 @@ function LayTheFavView() {
         </div>
 
         {/* Stats */}
-        <div style={{ display:'flex', gap:'16px', flexWrap:'wrap' }}>
-          {[{v:summary.total, lbl:'Analysed', c:'#94a3b8'}, {v:summary.caution, lbl:'Caution+', c:'#fbbf24'}, {v:summary.strong, lbl:'Strong Lay (10+)', c:'#f97316'}, {v:summary.red_flag, lbl:'Red Flag (13+)', c:'#f87171'}].map(s => (
+        <div style={{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(2,1fr)' : 'repeat(auto-fill,minmax(120px,1fr))', gap:'10px', flexWrap:'wrap' }}>
+          {[{v:summary.total, lbl:'Analysed', c:'#94a3b8'}, {v:summary.caution, lbl:'Caution+', c:'#fbbf24'}, {v:summary.strong, lbl:'Strong Lay (9+)', c:'#f97316'}, {v:summary.red_flag, lbl:'Red Flag (13+)', c:'#f87171'},
+            {v: summary.lay_win_pct != null ? `${summary.lay_win_pct}%` : '—', lbl:`Lay Win % (${summary.fav_lost ?? 0}/${summary.settled ?? 0})`, c:'#22d3ee'}].map(s => (
             <div key={s.lbl} style={{ background:'rgba(255,255,255,0.07)', borderRadius:'10px', padding:'10px 18px', textAlign:'center' }}>
               <div style={{ fontSize:'24px', fontWeight:'800', color:s.c }}>{s.v}</div>
               <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.5)', marginTop:'2px' }}>{s.lbl}</div>
@@ -2148,32 +2177,9 @@ function LayTheFavView() {
         </div>
       </div>
 
-      {/* Factor scoring key */}
-      <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'10px', padding:'16px 20px', marginBottom:'20px' }}>
-        <div style={{ fontSize:'11px', textTransform:'uppercase', letterSpacing:'1px', color:'rgba(255,255,255,0.35)', marginBottom:'10px' }}>Scoring Factors</div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px, 1fr))', gap:'5px 24px' }}>
-          {Object.entries(FLAG_WEIGHTS).map(([k, pts]) => {
-            const fl = FLAG_LABELS[k] || { label: k, colour: '#94a3b8' };
-            return (
-              <div key={k} style={{ display:'flex', alignItems:'center', gap:'6px', fontSize:'12px' }}>
-                <span style={{ color:'#fbbf24', fontWeight:'700', minWidth:'20px' }}>+{pts}</span>
-                <span style={{ color:fl.colour, fontWeight:'600' }}>{fl.label}</span>
-                <span style={{ color:'rgba(255,255,255,0.35)' }}>—</span>
-                <span style={{ color:'rgba(255,255,255,0.5)', fontSize:'11px' }}>{
-                  ({ short_price:'5/4 or less / odds-on', rivals_close:'2nd/3rd within 25% score', trip_new:'Unproven distance',
-                     going_unproven:'Unproven going', draw_poor:'Poor draw', layoff:'30-90 day break',
-                     pace_doubt:'Pace may not suit', drift:'Open vs current price', class_up:'Moving up in class',
-                     trainer_track:'No tier status at this track', trainer_cold:'No meeting focus & no recent win', trainer_multiple:'Trainer has multiple runners' })[k]
-                }</span>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Filter buttons */}
       <div style={{ display:'flex', gap:'8px', marginBottom:'16px', flexWrap:'wrap' }}>
-        {[{k:'all',label:'All'},{ k:'caution',label:'Caution+ (4+)'},{ k:'strong',label:'Strong Lay (10+)'},{ k:'red',label:'Red Flag (13+)'}].map(f => (
+        {[{k:'all',label:'All'},{ k:'caution',label:'Caution+ (4+)'},{ k:'strong',label:'Strong Lay (9+)'},{ k:'red',label:'Red Flag (13+)'}].map(f => (
           <button key={f.k} onClick={() => setFilter(f.k)} style={{
             background: filter===f.k ? 'rgba(239,68,68,0.3)' : 'rgba(255,255,255,0.07)',
             border: filter===f.k ? '1px solid #f87171' : '1px solid rgba(255,255,255,0.15)',
@@ -2192,15 +2198,15 @@ function LayTheFavView() {
 
       {filtered.map((r, i) => {
         const vc = VERDICT_COLOURS[r.verdict_colour] || VERDICT_COLOURS.GREEN;
-        const barPct = Math.min(100, Math.round(r.lay_score / 18 * 100));
+        const barPct = Math.min(100, Math.round(r.lay_score / 19 * 100));
         return (
           <div key={i} style={{ background:'rgba(22,27,34,0.95)', border:`1px solid ${vc.border}`, borderLeft:`4px solid ${vc.fg}`, borderRadius:'10px', marginBottom:'14px', overflow:'hidden' }}>
 
             {/* Card header */}
-            <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap', padding:'12px 18px', borderBottom:'1px solid rgba(255,255,255,0.07)', background:'rgba(255,255,255,0.02)' }}>
-              <span style={{ fontWeight:'800', color:'#58a6ff', fontSize:'15px', minWidth:'40px' }}>{fmtUtcTime(r.race_time)}</span>
-              <span style={{ fontWeight:'700', color:'white' }}>{r.course}</span>
-              <span style={{ flex:1, fontSize:'12px', color:'rgba(255,255,255,0.45)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{r.race_name}</span>
+            <div style={{ display:'flex', alignItems:'center', gap: isMobile ? '6px' : '10px', flexWrap:'wrap', padding: isMobile ? '10px 12px' : '12px 18px', borderBottom:'1px solid rgba(255,255,255,0.07)', background:'rgba(255,255,255,0.02)' }}>
+              <span style={{ fontWeight:'800', color:'#58a6ff', fontSize: isMobile ? '13px' : '15px', minWidth:'40px' }}>{fmtUtcTime(r.race_time)}</span>
+              <span style={{ fontWeight:'700', color:'white', fontSize: isMobile ? '13px' : '14px' }}>{r.course}</span>
+              <span style={{ flex:1, fontSize:'12px', color:'rgba(255,255,255,0.45)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace: isMobile ? 'normal' : 'nowrap', minWidth:0 }}>{r.race_name}</span>
               {r.our_pick && <span style={{ background:'rgba(88,166,255,0.18)', color:'#58a6ff', border:'1px solid rgba(88,166,255,0.4)', borderRadius:'4px', padding:'2px 8px', fontSize:'11px', fontWeight:'700' }}>⚡ OUR PICK</span>}
               {r.outcome && (() => {
                 const oc = r.outcome.toLowerCase();
@@ -2221,13 +2227,11 @@ function LayTheFavView() {
             </div>
 
             {/* Card body */}
-            <div style={{ display:'flex', alignItems:'center', gap:'20px', padding:'14px 18px' }}>
-              <div style={{ flex:1 }}>
+            <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '12px' : '20px', padding: isMobile ? '12px 14px' : '14px 18px' }}>
+              <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontSize:'20px', fontWeight:'800', color:'white', marginBottom:'6px' }}>{r.favourite}</div>
                 <div style={{ display:'flex', flexWrap:'wrap', gap:'4px 16px', fontSize:'12px', color:'rgba(255,255,255,0.5)', marginBottom:'4px' }}>
                   <span>@ <b style={{color:'#e6edf3'}}>{r.fav_odds?.toFixed(2)}</b></span>
-                  <span>Sys Score <b style={{color:'#e6edf3'}}>{r.fav_sys_score?.toFixed(0)}</b></span>
-                  <span>Score Gap <b style={{color:'#e6edf3'}}>{r.score_gap?.toFixed(0)}</b></span>
                   <span>Form <b style={{color:'#e6edf3'}}>{r.form || '—'}</b></span>
                   <span>Runners <b style={{color:'#e6edf3'}}>{r.runners}</b></span>
                 </div>
@@ -2238,38 +2242,15 @@ function LayTheFavView() {
               </div>
 
               {/* Score circle */}
-              <div style={{ textAlign:'center', minWidth:'72px' }}>
-                <div style={{ fontSize:'38px', fontWeight:'800', lineHeight:1, color:vc.fg }}>{r.lay_score}</div>
-                <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.4)', marginBottom:'6px' }}>/ 18</div>
-                <div style={{ width:'64px', height:'6px', background:'rgba(255,255,255,0.1)', borderRadius:'3px', overflow:'hidden', margin:'0 auto' }}>
+              <div style={{ textAlign: isMobile ? 'left' : 'center', minWidth: isMobile ? 'auto' : '72px', display: isMobile ? 'flex' : 'block', alignItems:'center', gap:'10px' }}>
+                <div style={{ fontSize: isMobile ? '28px' : '38px', fontWeight:'800', lineHeight:1, color:vc.fg }}>{r.lay_score}</div>
+                <div style={{ display: isMobile ? 'none' : 'block', fontSize:'11px', color:'rgba(255,255,255,0.4)', marginBottom:'6px' }}>/ 19</div>
+                <div style={{ width:'64px', height:'6px', background:'rgba(255,255,255,0.1)', borderRadius:'3px', overflow:'hidden', margin: isMobile ? '0' : '0 auto' }}>
                   <div style={{ width:`${barPct}%`, height:'100%', background:vc.fg, borderRadius:'3px' }} />
                 </div>
               </div>
             </div>
 
-            {/* Flags */}
-            {r.flags && r.flags.length > 0 && (
-              <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', padding:'4px 18px 10px' }}>
-                {r.flags.map(f => {
-                  const fl = FLAG_LABELS[f] || { label: f, colour: '#94a3b8' };
-                  const pts = FLAG_WEIGHTS[f] || 0;
-                  return (
-                    <span key={f} style={{ background:'rgba(255,255,255,0.07)', border:`1px solid rgba(255,255,255,0.15)`, color:fl.colour, borderRadius:'4px', padding:'2px 8px', fontSize:'11px', fontWeight:'600' }}>
-                      {fl.label} +{pts}
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Details */}
-            {r.details && r.details.length > 0 && (
-              <ul style={{ margin:'0 18px 14px 30px', padding:0, listStyle:'disc' }}>
-                {r.details.map((d, di) => (
-                  <li key={di} style={{ fontSize:'12px', color:'rgba(255,255,255,0.5)', marginBottom:'3px' }}>{d}</li>
-                ))}
-              </ul>
-            )}
           </div>
         );
       })}
@@ -2330,7 +2311,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated }) {
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 600);
 
   const [form, setForm] = useState({
-    fullName: '', email: '', address: '', age: '',
+    fullName: '', email: '', age: '',
     username: '', password: '', confirmPassword: '', agreeTerms: false,
   });
   const [formState, setFormState] = useState('idle');
@@ -2383,20 +2364,6 @@ function HomePageView({ onAuthSuccess, isAuthenticated }) {
     if (fakeDomains.includes(emailDomain))
       return setFormError('Please use a real email address — disposable/test addresses are not accepted.');
 
-    // ── Address quality checks ────────────────────────────────────────
-    const addrVal = form.address.trim();
-    if (addrVal.length < 10)
-      return setFormError('Please enter your full address (at least street, city and postcode).');
-    const addrWords = addrVal.split(/\s+/).filter(w => w.length > 1);
-    if (addrWords.length < 3)
-      return setFormError('Address looks incomplete — please include street, city and postcode.');
-    const addrClean = addrVal.replace(/\s/g, '');
-    const addrCharFreq = [...addrClean].reduce((acc, c) => { acc[c.toLowerCase()] = (acc[c.toLowerCase()] || 0) + 1; return acc; }, {});
-    const addrMaxFreq  = Math.max(...Object.values(addrCharFreq));
-    if (addrMaxFreq / addrClean.length > 0.65)
-      return setFormError('Address doesn\'t look real — please enter your actual home address.');
-    if (/^(asdf|qwerty|zxcv|abcd|1234|test|fake|none|null|xxx|nnn|aaa|bbb)/i.test(addrVal))
-      return setFormError('Address doesn\'t look real — please enter your actual home address.');
     const age = parseInt(form.age, 10);
     if (isNaN(age) || age < 18 || age > 120)
       return setFormError('You must be 18 or over to register.');
@@ -2417,7 +2384,6 @@ function HomePageView({ onAuthSuccess, isAuthenticated }) {
         body: JSON.stringify({
           full_name: form.fullName.trim(),
           email:     form.email.trim().toLowerCase(),
-          address:   form.address.trim(),
           age:       age,
           username:  form.username.trim(),
           password:  form.password,
@@ -2483,7 +2449,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated }) {
         <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎉</div>
         <h2 style={{ color: '#34d399', fontSize: '28px', margin: '0 0 12px' }}>Welcome to BetBudAI!</h2>
         <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '16px', maxWidth: '480px', margin: '0 auto 32px' }}>
-          Your account has been created. You now have access to our AI-powered daily racing picks and live ROI tracker.
+          Your account has been created. You now have access to our AI-powered daily racing picks and live Return on Investment tracker.
         </p>
         <div style={{ background: 'rgba(5,150,105,0.15)', border: '1px solid rgba(52,211,153,0.35)', borderRadius: '12px', padding: '20px 32px', display: 'inline-block' }}>
           <p style={{ color: '#34d399', margin: 0, fontSize: '15px', fontWeight: '600' }}>✓ Account confirmed for <strong>{form.email}</strong></p>
@@ -2504,7 +2470,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated }) {
         <h2 style={{ fontSize: isMobile ? '26px' : '42px', fontWeight: '900', margin: '0 0 16px', lineHeight: 1.15, color: 'white' }}>
           Stop guessing. Start winning.<br/>
           <span style={{ background: 'linear-gradient(135deg,#34d399,#059669)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            {roiLoading ? '…' : roi !== null ? `+${roi}% ROI and counting.` : 'AI-powered edge.'}
+            {roiLoading ? '…' : roi !== null ? `+${roi}% ROI — backed by data, powered by AI.` : 'AI-powered edge.'}
           </span>
         </h2>
         {/* ── VS comparison banner ── */}
@@ -2542,6 +2508,46 @@ function HomePageView({ onAuthSuccess, isAuthenticated }) {
               <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>{p.label}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* ── 3-TIER PLAN CARDS ─────────────────────────────────────────── */}
+      <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap:'16px', marginBottom:'36px' }}>
+        {/* Core (Free) */}
+        <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'16px', padding:'28px 20px', textAlign:'center' }}>
+          <div style={{ fontSize:'36px', marginBottom:'10px' }}>🏇</div>
+          <div style={{ fontSize:'18px', fontWeight:'800', color:'white', marginBottom:'4px' }}>Core</div>
+          <div style={{ fontSize:'13px', color:'#34d399', fontWeight:'700', marginBottom:'14px' }}>Free</div>
+          <ul style={{ listStyle:'none', padding:0, margin:0, fontSize:'13px', color:'rgba(255,255,255,0.6)', lineHeight:'2' }}>
+            <li>✅ 2 AI picks per day</li>
+            <li>✅ Live ROI tracker</li>
+            <li>✅ Results history</li>
+          </ul>
+        </div>
+        {/* Premium */}
+        <div style={{ background:'linear-gradient(135deg,rgba(5,150,105,0.12) 0%,rgba(4,120,87,0.08) 100%)', border:'1px solid rgba(52,211,153,0.3)', borderRadius:'16px', padding:'28px 20px', textAlign:'center', position:'relative' }}>
+          <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#059669,#047857)', color:'white', fontSize:'10px', fontWeight:'800', letterSpacing:'1px', textTransform:'uppercase', padding:'4px 14px', borderRadius:'20px' }}>Most Popular</div>
+          <div style={{ fontSize:'36px', marginBottom:'10px' }}>⭐</div>
+          <div style={{ fontSize:'18px', fontWeight:'800', color:'white', marginBottom:'4px' }}>Premium</div>
+          <div style={{ fontSize:'13px', color:'#34d399', fontWeight:'700', marginBottom:'14px' }}>€19.99/month</div>
+          <ul style={{ listStyle:'none', padding:0, margin:0, fontSize:'13px', color:'rgba(255,255,255,0.6)', lineHeight:'2' }}>
+            <li>✅ All daily AI picks (5+)</li>
+            <li>✅ Full results &amp; stats</li>
+            <li>✅ Enhanced analysis</li>
+          </ul>
+        </div>
+        {/* VIP */}
+        <div style={{ background:'linear-gradient(135deg,rgba(217,119,6,0.12) 0%,rgba(180,83,9,0.08) 100%)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:'16px', padding:'28px 20px', textAlign:'center', position:'relative' }}>
+          <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#d97706,#b45309)', color:'white', fontSize:'10px', fontWeight:'800', letterSpacing:'1px', textTransform:'uppercase', padding:'4px 14px', borderRadius:'20px' }}>Full Access</div>
+          <div style={{ fontSize:'36px', marginBottom:'10px' }}>👑</div>
+          <div style={{ fontSize:'18px', fontWeight:'800', color:'white', marginBottom:'4px' }}>VIP</div>
+          <div style={{ fontSize:'13px', color:'#f59e0b', fontWeight:'700', marginBottom:'14px' }}>€99/month</div>
+          <ul style={{ listStyle:'none', padding:0, margin:0, fontSize:'13px', color:'rgba(255,255,255,0.6)', lineHeight:'2' }}>
+            <li>✅ Everything in Premium</li>
+            <li>✅ Lay the Fav strategy</li>
+            <li>✅ Race intel &amp; full field data</li>
+            <li>✅ Priority support</li>
+          </ul>
         </div>
       </div>
 
@@ -2605,7 +2611,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated }) {
           /* ── REGISTER FORM ──────────────────────────────────────────── */
           <>
         <h3 style={{ color: 'white', fontSize: '22px', fontWeight: '800', margin: '0 0 6px', textAlign: 'center' }}>Create Your Free Account</h3>
-        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', textAlign: 'center', margin: '0 0 28px' }}>Get access to today's picks, live ROI tracking and full results history.</p>
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', textAlign: 'center', margin: '0 0 28px' }}>Get access to today's picks, live Return on Investment tracking and full results history.</p>
 
         <form onSubmit={handleSubmit} noValidate autoComplete="off">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: '18px', marginBottom: '18px' }}>
@@ -2629,11 +2635,6 @@ function HomePageView({ onAuthSuccess, isAuthenticated }) {
               <label style={labelStyle}>Username</label>
               <input style={inputStyle} type="text" name="username" value={form.username} onChange={handleChange} placeholder="e.g. Henrik0707 or punter_99" maxLength={30} required />
               <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.35)', marginTop: '4px' }}>Letters, numbers and underscores only — no spaces or special characters</div>
-            </div>
-
-            <div style={{ ...fieldStyle, gridColumn: '1 / -1' }}>
-              <label style={labelStyle}>Home Address</label>
-              <textarea style={{ ...inputStyle, resize: 'vertical', minHeight: '72px' }} name="address" value={form.address} onChange={handleChange} placeholder="Street, City, Postcode, Country" maxLength={400} required />
             </div>
 
             <div style={fieldStyle}>
@@ -2962,7 +2963,7 @@ function AdminView({ authUser }) {
             <div style={{ fontSize:'16px', fontWeight:'700', color:'#e2e8f0' }}>Score Thresholds &amp; Timing</div>
             <button onClick={() => handleReset('config')} style={{ background:'rgba(255,255,255,0.07)', border:'1px solid rgba(255,255,255,0.17)', borderRadius:'6px', color:'rgba(255,255,255,0.6)', padding:'5px 14px', cursor:'pointer', fontSize:'12px' }}>↩ Reset to defaults</button>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(420px,1fr))', gap:'12px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,420px),1fr))', gap:'12px' }}>
             {CONFIG_FIELDS.map(f => (
               <AdminSliderRow
                 key={f.key}
@@ -2992,7 +2993,7 @@ function AdminView({ authUser }) {
               <div style={{ fontSize:'13px', fontWeight:'700', color: group.penalty ? '#fca5a5' : '#a78bfa', textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:'10px', borderBottom: `1px solid ${group.penalty ? 'rgba(252,165,165,0.2)' : 'rgba(167,139,250,0.2)'}`, paddingBottom:'6px' }}>
                 {group.penalty ? '⚠ ' : ''}{group.label}
               </div>
-              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(420px,1fr))', gap:'10px' }}>
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(min(100%,420px),1fr))', gap:'10px' }}>
                 {group.keys.map(({ key, label, desc }) => (
                   <AdminSliderRow
                     key={key}

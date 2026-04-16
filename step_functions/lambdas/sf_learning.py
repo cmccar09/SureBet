@@ -33,48 +33,58 @@ sys.path.insert(0, '/var/task')
 # ── DynamoDB helpers ──────────────────────────────────────────────────────────
 
 def _load_results_from_dynamodb(table):
-    """Scan last DAYS_BACK days of settled picks from DynamoDB."""
-    cutoff = (datetime.datetime.utcnow() - datetime.timedelta(days=DAYS_BACK)).isoformat()
+    """Query last DAYS_BACK days of settled picks from DynamoDB by bet_date."""
+    today   = datetime.datetime.utcnow().date()
     results = []
-    kwargs  = {
-        'FilterExpression': (
-            Attr('timestamp').gt(cutoff) & Attr('outcome').exists()
-        ),
-    }
-    while True:
-        resp  = table.scan(**kwargs)
-        items = resp.get('Items', [])
-        for item in items:
-            def _f(v):
-                try: return float(v)
-                except: return 0.0
+    SETTLED = {'win', 'won', 'WIN', 'loss', 'lost', 'LOSS', 'placed', 'PLACED'}
 
-            results.append({
-                'date': item.get('date', ''),
-                'sport': item.get('sport', 'horses'),
-                'selection': {
-                    'selection_id' : item.get('selection_id', ''),
-                    'runner_name'  : item.get('horse', item.get('dog', '')),
-                    'venue'        : item.get('course', ''),
-                    'odds'         : _f(item.get('odds')),
-                    'bet_type'     : item.get('bet_type', 'WIN'),
-                    'confidence'   : _f(item.get('comprehensive_score', item.get('confidence'))),
-                    'tags'         : item.get('tags', ''),
-                    'why_now'      : item.get('why_now', ''),
-                    'stake'        : _f(item.get('stake', 10)),
-                },
-                'result': {
-                    'is_winner'      : item.get('outcome') in ('WON', 'won', 'Win', True),
-                    'is_placed'      : item.get('outcome') in ('WON', 'PLACED', 'won', 'placed'),
-                    'final_odds'     : _f(item.get('odds')),
-                    'actual_position': item.get('actual_position'),
-                    'profit_loss'    : _f(item.get('profit_loss')),
-                },
-            })
-        lk = resp.get('LastEvaluatedKey')
-        if not lk:
-            break
-        kwargs['ExclusiveStartKey'] = lk
+    for days_ago in range(DAYS_BACK):
+        d = (today - datetime.timedelta(days=days_ago)).isoformat()
+        kwargs = {
+            'KeyConditionExpression': Key('bet_date').eq(d),
+            'FilterExpression': Attr('show_in_ui').eq(True),
+        }
+        while True:
+            resp  = table.query(**kwargs)
+            items = resp.get('Items', [])
+            for item in items:
+                outcome = str(item.get('outcome', '')).lower().strip()
+                if outcome not in {'win', 'won', 'loss', 'lost', 'placed'}:
+                    continue  # skip pending / unresolved
+
+                def _f(v):
+                    try: return float(v)
+                    except: return 0.0
+
+                is_winner = outcome in ('win', 'won')
+                is_placed = outcome in ('win', 'won', 'placed')
+
+                results.append({
+                    'date'  : item.get('bet_date', d),
+                    'sport' : item.get('sport', 'horses'),
+                    'selection': {
+                        'selection_id' : item.get('selection_id', ''),
+                        'runner_name'  : item.get('horse', item.get('dog', '')),
+                        'venue'        : item.get('course', ''),
+                        'odds'         : _f(item.get('odds')),
+                        'bet_type'     : item.get('bet_type', 'WIN'),
+                        'confidence'   : _f(item.get('comprehensive_score', item.get('confidence'))),
+                        'tags'         : item.get('tags', ''),
+                        'why_now'      : item.get('why_now', ''),
+                        'stake'        : _f(item.get('stake', 10)),
+                    },
+                    'result': {
+                        'is_winner'      : is_winner,
+                        'is_placed'      : is_placed,
+                        'final_odds'     : _f(item.get('odds')),
+                        'actual_position': item.get('actual_position'),
+                        'profit_loss'    : _f(item.get('profit_loss')),
+                    },
+                })
+            lk = resp.get('LastEvaluatedKey')
+            if not lk:
+                break
+            kwargs['ExclusiveStartKey'] = lk
 
     return results
 

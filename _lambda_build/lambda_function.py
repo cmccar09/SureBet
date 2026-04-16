@@ -576,17 +576,7 @@ def get_today_picks(headers):
 
 
 
-    # Sort by score; cap 3 morning + 2 intraday = 5 total
-
-    future_picks.sort(key=lambda x: float(x.get('comprehensive_score') or x.get('analysis_score') or 0), reverse=True)
-
-    morning_picks  = [p for p in future_picks if p.get('pick_type', 'morning') != 'intraday'][:3]
-
-    intraday_picks = [p for p in future_picks if p.get('pick_type') == 'intraday'][:2]
-
-    future_picks = morning_picks + intraday_picks
-
-    # Re-sort by race time for display
+    # Sort by race time for display (daily pick cap enforced at creation in complete_daily_analysis.py)
 
     future_picks.sort(key=lambda x: x.get('race_time', ''))
 
@@ -602,7 +592,11 @@ def get_today_picks(headers):
 
 
 
-    print(f"Total picks: {len(items)}, Horse picks: {len(horse_items)}, Future picks: {len(future_picks)} (morning={len(morning_picks)}, intraday={len(intraday_picks)})")
+    print(f"Total picks: {len(items)}, Horse picks: {len(horse_items)}, Future picks: {len(future_picks)}")
+
+    morning_picks = [p for p in future_picks if p.get('pick_type', 'morning') != 'intraday']
+
+    intraday_picks = [p for p in future_picks if p.get('pick_type') == 'intraday']
 
     intraday_slots_used = len(intraday_picks)
 
@@ -1875,13 +1869,11 @@ def check_today_results(headers):
 
     picks = list(seen_races.values())
 
-    # Sort by score and keep top 5
+    # Sort by race_time for display (top-N cap is applied at pick selection time, not here)
 
-    picks.sort(key=lambda x: float(x.get('comprehensive_score') or x.get('analysis_score') or 0), reverse=True)
+    picks.sort(key=lambda x: x.get('race_time', ''))
 
-    picks = picks[:5]
-
-    print(f"After dedup + top-5 filter: {len(picks)} picks")
+    print(f"After dedup: {len(picks)} picks")
 
 
 
@@ -3189,6 +3181,8 @@ _SCORE_WEIGHTS = {
 
     'layoff': 1, 'pace_doubt': 1, 'rivals_close': 2, 'drift': 1, 'short_price': 1,
 
+    'trainer_track': 1, 'trainer_cold': 1, 'trainer_multiple': 1, 'current_form_no_wins': 1,
+
 }
 
 
@@ -3337,7 +3331,29 @@ def _score_fav(fav, all_horses_sorted):
 
 
 
-    total = sum(_SCORE_WEIGHTS[f] for f in flags)
+    # --- Current form – no wins (+1) ---
+
+    form_str = str(fav.get('form') or '')
+
+    form_digits = []
+
+    for ch in form_str.replace('-', '').replace('/', ''):
+
+        if ch.isdigit(): form_digits.append(int(ch))
+
+        elif ch.upper() in ('U', 'F', 'P', 'R'): form_digits.append(99)
+
+    last_4 = form_digits[-4:] if len(form_digits) >= 4 else form_digits
+
+    if last_4 and all(pos >= 2 for pos in last_4):
+
+        flags['current_form_no_wins'] = True
+
+        details.append(f'No wins in last 4 races — 2nd or worse throughout')
+
+
+
+    total = sum(_SCORE_WEIGHTS[f] for f in flags if f in _SCORE_WEIGHTS)
 
     return total, flags, details
 
@@ -3347,7 +3363,11 @@ def _score_fav(fav, all_horses_sorted):
 
 def _verdict(score):
 
-    if score >= 9:
+    if score >= 13:
+
+        return 'STRONG LAY CANDIDATE'
+
+    elif score >= 9:
 
         return 'STRONG LAY'
 
@@ -3355,7 +3375,7 @@ def _verdict(score):
 
         return 'CAUTION'
 
-    return 'LEAVE ALONE'
+    return 'DO NOT SHOW'
 
 
 

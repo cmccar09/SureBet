@@ -91,33 +91,35 @@ def parse_form(form_str):
 # ── Suspect Favourite Scoring ───────────────────────────────────────────────
 
 SCORE_LABELS = {
-    'class_up':         ('Class',         '+4  Moving up in class'),
-    'trip_new':         ('Trip',          '+2  Unproven at this distance'),
-    'going_unproven':   ('Going',         '+2  Unproven on current going'),
-    'draw_poor':        ('Draw',          '+1  Poor draw position'),
-    'layoff':           ('Layoff',        '+1  30-90 days off (stale form)'),
-    'pace_doubt':       ('Pace',          '+1  Pace may not suit'),
-    'rivals_close':     ('Rivals',        '+2  2nd/3rd fav within 25% of favourite score'),
-    'drift':            ('Drift',         '+1  Market drift — open vs current price'),
-    'short_price':      ('Price',         '+1  5/4 or less / odds-on'),
-    'trainer_track':    ('Trainer@Track', '+1  Trainer win rate at this track'),
-    'trainer_cold':     ('TrainerCold',   '+1  Trainer cold last 14 days'),
-    'trainer_multiple': ('MultiRunner',   '+1  Trainer with multiple runners in race'),
+    'class_up':              ('Class',         '+4  Moving up in class'),
+    'trip_new':              ('Trip',          '+2  Unproven at this distance'),
+    'going_unproven':        ('Going',         '+2  Unproven on current going'),
+    'draw_poor':             ('Draw',          '+1  Poor draw position'),
+    'layoff':                ('Layoff',        '+1  30-90 days off (stale form)'),
+    'pace_doubt':            ('Pace',          '+1  Pace may not suit'),
+    'rivals_close':          ('Rivals',        '+2  2nd/3rd fav within 25% of favourite score'),
+    'drift':                 ('Drift',         '+1  Market drift — open vs current price'),
+    'short_price':           ('Price',         '+1  5/4 or less / odds-on'),
+    'trainer_track':         ('Trainer@Track', '+1  Trainer win rate at this track'),
+    'trainer_cold':          ('TrainerCold',   '+1  Trainer cold last 14 days'),
+    'trainer_multiple':      ('MultiRunner',   '+1  Trainer with multiple runners in race'),
+    'current_form_no_wins':  ('FormNoWins',    '+1  No wins in last 4 races'),
 }
 
 SCORE_WEIGHTS = {
-    'class_up':          4,
-    'trip_new':          2,
-    'going_unproven':    2,
-    'draw_poor':         1,
-    'layoff':            1,
-    'pace_doubt':        1,
-    'rivals_close':      2,
-    'drift':             1,
-    'short_price':       1,
-    'trainer_track':     1,
-    'trainer_cold':      1,
-    'trainer_multiple':  1,
+    'class_up':              4,
+    'trip_new':              2,
+    'going_unproven':        2,
+    'draw_poor':             1,
+    'layoff':                1,
+    'pace_doubt':            1,
+    'rivals_close':          2,
+    'drift':                 1,
+    'short_price':           1,
+    'trainer_track':         1,
+    'trainer_cold':          1,
+    'trainer_multiple':      1,
+    'current_form_no_wins':  1,
 }
 
 
@@ -244,6 +246,14 @@ def score_favourite(fav, all_horses_sorted, race_going=''):
         flags['drift'] = True
         details.append('Score gap = 0 — our model does not separate the favourite clearly')
 
+    # --- Current form – no wins (+1) ---
+    # Horse with 2nd or worse over last 4 races
+    form_digits = _parse_form(form_str)
+    last_4 = form_digits[-4:] if len(form_digits) >= 4 else form_digits
+    if last_4 and all(pos >= 2 for pos in last_4):
+        flags['current_form_no_wins'] = True
+        details.append(f'No wins in last 4 races (form: {form_str[-8:]}) — 2nd or worse throughout')
+
     total = sum(SCORE_WEIGHTS[f] for f in flags)
     return total, flags, details
 
@@ -253,12 +263,12 @@ def score_favourite(fav, all_horses_sorted, race_going=''):
 def verdict(score):
     if score >= 13:
         return 'STRONG LAY CANDIDATE', 'RED'
-    elif score >= 10:
+    elif score >= 9:
         return 'STRONG LAY', 'AMBER'
     elif score >= 4:
         return 'CAUTION / TAKE A LOOK', 'YELLOW'
     else:
-        return 'LEAVE ALONE', 'GREEN'
+        return 'DO NOT SHOW', 'GREEN'
 
 
 ANSI = {
@@ -448,15 +458,20 @@ def analyse_date(target_date_str, db_table, winner_map=None):
             try:
                 lh, lm = map(int, local_hhmm.split(':'))
                 local_mins = lh * 60 + lm
+                best_diff = 999
+                best_winner = None
                 for (c_key, t_key), w_name in winner_map.items():
                     # Fuzzy course match: exact OR one name contains the other
                     if c_key != course_key and c_key not in course_key and course_key not in c_key:
                         continue
                     wh, wm = map(int, t_key.split(':'))
-                    if abs((wh * 60 + wm) - local_mins) <= 15:
-                        w_norm = re.sub(r"['\-]+", ' ', w_name).strip().lower()
-                        fav_outcome = 'win' if w_norm == fav_name_norm else 'loss'
-                        break
+                    diff = abs((wh * 60 + wm) - local_mins)
+                    if diff < best_diff:
+                        best_diff = diff
+                        best_winner = w_name.strip()
+                if best_winner and best_diff <= 10:
+                    w_norm = re.sub(r"['\-]+", ' ', best_winner).strip().lower()
+                    fav_outcome = 'win' if w_norm == fav_name_norm else 'loss'
             except Exception:
                 pass
 
@@ -505,7 +520,7 @@ def analyse_date(target_date_str, db_table, winner_map=None):
 def print_results(all_results, threshold=0):
     total_races = len(all_results)
     lay_candidates = [r for r in all_results if r['lay_score'] >= 4]
-    amber_lays    = [r for r in all_results if r['lay_score'] >= 10]
+    amber_lays    = [r for r in all_results if r['lay_score'] >= 9]
     strong_lays   = [r for r in all_results if r['lay_score'] >= 13]
 
     print()
@@ -514,7 +529,7 @@ def print_results(all_results, threshold=0):
     print(colour('=' * 72, 'BOLD'))
     print(f'  Short-price favourites analysed:    {total_races}')
     print(f'  Caution candidates (score 4+):      {len(lay_candidates)}')
-    print(f'  Strong lay candidates (10–12):      {len(amber_lays) - len(strong_lays)}')
+    print(f'  Strong lay candidates (9–12):       {len(amber_lays) - len(strong_lays)}')
     print(f'  Red flag candidates (13+):          {len(strong_lays)}')
     print()
 
@@ -620,7 +635,7 @@ def build_html(all_results, generated_at=None):
 
     total    = len(all_results)
     caution  = sum(1 for r in all_results if r['lay_score'] >= 4)
-    strong   = sum(1 for r in all_results if r['lay_score'] >= 10)
+    strong   = sum(1 for r in all_results if r['lay_score'] >= 9)
     red_flag = sum(1 for r in all_results if r['lay_score'] >= 13)
 
     COLOUR_MAP = {

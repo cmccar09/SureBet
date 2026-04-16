@@ -45,61 +45,22 @@ Historical performance data (Feb 2026, 85+ score picks, real results):
 4. CAUTION: Do NOT boost confidence just because recent form looks good - it is NOT reliable
 
 The evidence shows 5-8 odds is where winners live. Avoid the 3-4 range - it looks safe but loses money.
-
-=== SELECTION CRITERIA ===
-
-**PRIORITY Factors (in order):**
-
-1. **VALUE EDGE (CRITICAL - HARD RULE)** - Market efficiency check
-   - **NEVER BET IF edge_percentage < 0%** = AUTOMATIC REJECTION
-   - Negative edge means market knows something we don't
-   - Positive edge required: Shows genuine value opportunity
-   - Best picks have edge_percentage > 20%
-
-2. **VALUE & FORM** - Best combination of value + recent winning form
-   - Odds 3.0-9.0 with recent win = IDEAL target
-   - Odds 2.5-2.9 or 9.0-12.0 with exceptional form = Consider
-   - Focus on WINNERS, not just placers
-
-3. **CLASS CONTEXT (CRITICAL NEW RULE)** - Wins must be in relevant class
-   - **Recent win in SAME class** > multiple wins in lower class
-   - **Class step-up risk:** If last wins were in lower class, reduce confidence by 30%
-   - **Class drop opportunity:** Won at higher class before, increase confidence by 20%
-   - **ALWAYS verify class level of last 3 wins** - context matters more than count
-   - Form from 2 classes below = largely irrelevant
-
-4. **COURSE FORM (MAJOR EDGE)** - Proven winners at this specific track
-   - **Course winner (1+ wins here):** +25 confidence points (proven edge)
-   - Course placed (2-3 finishes): +12 points
-   - Never raced here: Neutral (not negative, but needs strong form)
-   - **Course winners repeat at ~25% higher rate** than first-timers
-   - Course form > generic form in close calls
-
-5. **RECENT WINNER** - Must have WON (not just placed) in last 3-5 races
-   - Win in last race **in same/higher class**: +30 confidence points
-   - Win in last 2-3 races **in same/higher class**: +20 confidence points
-   - Multiple wins in last 5 **in same/higher class**: +40 confidence points
-   - **Wins in lower class:** Half points (e.g., +15 instead of +30)
-
-6. **GOING MATCH PRECISION (NEW WEIGHTING)** - Track conditions matter
-   - **"Perfect" going match:** +15 confidence points (rare, valuable edge)
-   - "Good" going match: +5 confidence points (common)
-   - "Unknown" going match: -10 confidence points (hidden risk)
-   - Perfect conditions can make 15-20% performance difference
 ============================================================
-Performance-Based Adjustments (Updated: 2026-04-07)
+Performance-Based Adjustments (Updated: 2026-04-09)
 ============================================================
 
 Score threshold (show_in_ui): 90+
 
-1. STRONG ODDS BAND (3.0–5.0 dec): ROI=+27.3% over 62 picks → prioritise
+1. STRONG ODDS BAND (3.0–5.0 dec): ROI=+28.5% over 62 picks → prioritise
 
-2. STRONG ODDS BAND (8.0–15.0 dec): ROI=+100.2% over 13 picks → prioritise
+2. LOSING ODDS BAND (5.0–8.0 dec / 4/1–7/1): ROI=-18.9% over 37 picks → avoid or block unless score≥95
+
+3. STRONG ODDS BAND (8.0–15.0 dec): ROI=+100.2% over 13 picks → prioritise
 
 Odds-band ROI summary (last 21 days, level stakes):
   1.0–3.0 dec: ROI=+10.0%  WinRate=56.0%  N=25
-  3.0–5.0 dec: ROI=+27.3%  WinRate=27.4%  N=62
-  5.0–8.0 dec: ROI=-13.5%  WinRate=14.7%  N=34
+  3.0–5.0 dec: ROI=+28.5%  WinRate=27.4%  N=62
+  5.0–8.0 dec: ROI=-18.9%  WinRate=13.5%  N=37
   8.0–15.0 dec: ROI=+100.2%  WinRate=30.8%  N=13
   15.0–200.0 dec: ROI=-30.0%  WinRate=50.0%  N=2
 

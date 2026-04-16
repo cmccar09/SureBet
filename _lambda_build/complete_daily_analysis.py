@@ -40,7 +40,7 @@ table = db.Table('SureBetBets')
 
 TARGET_PICKS   = 3      # 2026-04-05: 3 morning picks + 2 intraday slots reserved for afternoon additions.
                         # Intraday picks are added via /api/picks/intraday with pick_type='intraday'.
-MIN_CONFIDENCE = 78     # 2026-03-27: restored from over-corrected 85 back to 78.
+MIN_CONFIDENCE = 95     # 2026-04-16: Elite only — only 95+ score picks go to UI.
                         # Raising to 85 + halving market_leader_bonus (12→6) created a deadlock:
                         # no horses reached 85 on Mar 26-27 (best was 83). 78 is the new floor.
 
@@ -218,6 +218,26 @@ def analyze_and_save_all():
     today        = datetime.now(timezone.utc).strftime('%Y-%m-%d')
     avg_winner_odds = 4.65  # UK average winning SP
 
+    # ── CHECK EXISTING UI PICKS (intraday accumulation guard) ─────────────────
+    _dow = datetime.now(timezone.utc).weekday()  # 0=Mon … 6=Sun
+    MAX_DAILY_UI_PICKS = 8 if _dow >= 5 else 5   # Sat/Sun=8, Mon-Fri=5
+    from boto3.dynamodb.conditions import Key as _Key
+    _existing_resp = table.query(KeyConditionExpression=_Key('bet_date').eq(today))
+    _existing_items = _existing_resp.get('Items', [])
+    while _existing_resp.get('LastEvaluatedKey'):
+        _existing_resp = table.query(
+            KeyConditionExpression=_Key('bet_date').eq(today),
+            ExclusiveStartKey=_existing_resp['LastEvaluatedKey'])
+        _existing_items.extend(_existing_resp.get('Items', []))
+    _existing_ui = [i for i in _existing_items if i.get('show_in_ui') is True]
+    _existing_ui_count = len(_existing_ui)
+    _slots_remaining = max(0, MAX_DAILY_UI_PICKS - _existing_ui_count)
+    print(f"  Existing UI picks today: {_existing_ui_count} / {MAX_DAILY_UI_PICKS} "
+          f"({_slots_remaining} slots remaining)")
+    if _slots_remaining == 0:
+        print(f"  Daily pick cap reached — new horses will be saved as learning data only")
+    _effective_target = min(TARGET_PICKS, _slots_remaining)
+
     # ── STAGE 2: Horse history from DynamoDB ─────────────────────────────────
     print("[STAGE 2/5] Loading horse history from DynamoDB...")
     horse_history = load_horse_history()
@@ -226,6 +246,19 @@ def analyze_and_save_all():
     # Build a list of races, each containing scored runner items.
     # Also track the best-scoring horse in each race.
     all_races_data = []  # [{venue, race_time, market_id, runners:[{item, score}], best_idx}]
+
+    def _ew_terms(mkt_name, n_runners):
+        """Return (num_places, ew_fraction) based on UK standard EW terms."""
+        mn = (mkt_name or '').lower()
+        is_hcap = any(kw in mn for kw in ('handicap', 'hcap', ' h '))
+        if n_runners <= 4:
+            return (0, 0)
+        elif n_runners <= 7:
+            return (2, 0.25)
+        elif is_hcap:
+            return (4, 0.25) if n_runners >= 16 else (3, 0.25)
+        else:
+            return (3, 0.20)
 
     now_utc = datetime.now(timezone.utc)
     cutoff  = now_utc + timedelta(minutes=15)
@@ -728,12 +761,12 @@ def analyze_and_save_all():
     _reserved_value = _value_plays[0] if _value_plays else None
 
     top_picks = []
-    if _reserved_value:
+    if _reserved_value and _effective_target > 0:
         top_picks.append(_reserved_value)
         _tier_counts[_odds_tier(float(_reserved_value['best']['odds']))] += 1
 
     for r in eligible:
-        if len(top_picks) >= TARGET_PICKS:
+        if len(top_picks) >= _effective_target:
             break
         if r is _reserved_value:
             continue
@@ -741,9 +774,9 @@ def analyze_and_save_all():
         if _tier_counts[tier] < 2:
             top_picks.append(r)
             _tier_counts[tier] += 1
-    if len(top_picks) < TARGET_PICKS:
+    if len(top_picks) < _effective_target:
         remaining = [r for r in eligible if r not in top_picks]
-        top_picks += remaining[:TARGET_PICKS - len(top_picks)]
+        top_picks += remaining[:_effective_target - len(top_picks)]
 
     top_picks.sort(key=lambda r: r['best']['score'], reverse=True)
 
@@ -805,7 +838,10 @@ def analyze_and_save_all():
                 _stake_pts = max(_kelly_units, _rank_floor)
                 item['stake']       = Decimal(str(_stake_pts))
                 item['stake_pts']   = _stake_pts
-                item['bet_type']    = 'Each Way'
+                _ew_p, _ew_f = _ew_terms(market_name, len(runners))
+                item['bet_type']         = 'Win' if _ew_p == 0 else 'Each Way'
+                item['number_of_places'] = _ew_p
+                item['ew_fraction']      = Decimal(str(_ew_f))
             item['sl_declared_count']   = _sl_decl
             item['missing_runners']     = _race_missing
             item['all_horses']          = _all_horses_list  # full field for UI display

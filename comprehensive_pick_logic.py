@@ -539,7 +539,27 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     # get a significant edge over rivals who prefer quicker ground.
     base_going_pts = int(weights.get('going_suitability', 14))
     _going_uncertain = False   # default: assume official going unless overridden below
-    
+
+    # ── OurHub going override: if race has confirmed going from OurHub API, inject it
+    #    into going_data so the downstream logic treats it as official (no halving).
+    _ourhub_going = horse_data.get('_race_ourhub_going', '')
+    if _ourhub_going and course not in going_data:
+        # Only override if we have NO going data for this course at all
+        going_data[course] = {
+            'going': _ourhub_going,
+            'adjustment': 0,
+            'source': 'ourhub_official',
+            'surface': 'all-weather' if 'Standard' in _ourhub_going else 'turf',
+        }
+        reasons.append(f"📡 Going from OurHub API: {_ourhub_going}")
+    elif _ourhub_going and course in going_data:
+        # We have going data but it's estimated — upgrade to official if OurHub confirms
+        _existing_source = going_data[course].get('source', 'official')
+        if _existing_source in ('weather_api', 'unavailable'):
+            going_data[course]['going'] = _ourhub_going
+            going_data[course]['source'] = 'ourhub_official'
+            reasons.append(f"📡 Going upgraded via OurHub: {_ourhub_going} (was estimated)")
+
     if course in going_data:
         going_info = going_data[course]
         going_adjustment = going_info.get('adjustment', 0)
@@ -1012,7 +1032,27 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
             is_elite_jockey = True
 
     if not is_elite_jockey:
-        breakdown['jockey_quality'] = 0
+        # 2026-04-13: OurHub integration — use real jockey win rate for unlisted jockeys
+        _oh_jwr = horse_data.get('ourhub_jockey_win_rate', 0)
+        _oh_jruns = horse_data.get('ourhub_jockey_runs', 0)
+        if _oh_jwr and _oh_jruns >= 10 and jockey_name:
+            if _oh_jwr >= 18:
+                jq_pts = int(weights.get('jockey_tier2', 6))
+                score += jq_pts
+                breakdown['jockey_quality'] = jq_pts
+                reasons.append(f"📡 OurHub: {jockey_name} {_oh_jwr:.0f}% win rate ({_oh_jruns} runs): +{jq_pts}pts")
+            elif _oh_jwr >= 10:
+                jq_pts = int(weights.get('jockey_tier2', 6)) // 2
+                if jq_pts > 0:
+                    score += jq_pts
+                    breakdown['jockey_quality'] = jq_pts
+                    reasons.append(f"📡 OurHub: {jockey_name} {_oh_jwr:.0f}% win rate ({_oh_jruns} runs): +{jq_pts}pts")
+                else:
+                    breakdown['jockey_quality'] = 0
+            else:
+                breakdown['jockey_quality'] = 0
+        else:
+            breakdown['jockey_quality'] = 0
     
     # 11. NOVICE RACE PENALTY (NEW - Lesson from Ascot 13:15)
     novice_penalty = 0
@@ -1114,11 +1154,35 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     # 11d. UNKNOWN TRAINER PENALTY (2026-03-25)
     # LESSON: Brian Toomey, D M Simcock, K Woollacott — not in any trainer tier.
     # Horses from unlisted trainers score via form/odds only; reliability is lower.
+    # 2026-04-13: OurHub integration — if we have real trainer win-rate data, use it
+    # instead of blindly penalising. >20% win rate = award T2-equivalent bonus,
+    # >12% = no penalty, otherwise keep the penalty.
     if trainer and trainer_tier == 0 and trainer_bonus == 0:
-        _utp = int(weights.get('unknown_trainer_penalty', 8))
-        score -= _utp
-        breakdown['unknown_trainer_penalty'] = -_utp
-        reasons.append(f"Unknown trainer tier ({trainer}): -{_utp}pts")
+        _oh_twr = horse_data.get('ourhub_trainer_win_rate', 0)
+        _oh_truns = horse_data.get('ourhub_trainer_runs', 0)
+        if _oh_twr and _oh_truns >= 10:
+            # Enough data from OurHub to make a call
+            if _oh_twr >= 20:
+                # Strong trainer — give T2-equivalent bonus instead of penalty
+                _oh_bonus = int(weights.get('trainer_tier2', 8))
+                score += _oh_bonus
+                breakdown['unknown_trainer_penalty'] = _oh_bonus
+                reasons.append(f"📡 OurHub: {trainer} {_oh_twr:.0f}% win rate ({_oh_truns} runs): +{_oh_bonus}pts")
+            elif _oh_twr >= 12:
+                # Decent trainer — no penalty
+                breakdown['unknown_trainer_penalty'] = 0
+                reasons.append(f"📡 OurHub: {trainer} {_oh_twr:.0f}% win rate ({_oh_truns} runs) — penalty waived")
+            else:
+                # Low win rate — keep penalty
+                _utp = int(weights.get('unknown_trainer_penalty', 8))
+                score -= _utp
+                breakdown['unknown_trainer_penalty'] = -_utp
+                reasons.append(f"📡 OurHub: {trainer} {_oh_twr:.0f}% win rate ({_oh_truns} runs): -{_utp}pts")
+        else:
+            _utp = int(weights.get('unknown_trainer_penalty', 8))
+            score -= _utp
+            breakdown['unknown_trainer_penalty'] = -_utp
+            reasons.append(f"Unknown trainer tier ({trainer}): -{_utp}pts")
     else:
         breakdown['unknown_trainer_penalty'] = 0
 

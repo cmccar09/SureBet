@@ -328,40 +328,21 @@ def get_today_picks(headers):
     """Get today's picks only - filter to show only upcoming horse races"""
 
     today = datetime.now().strftime('%Y-%m-%d')
+    yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
-    
-
-    # Use query with partition key for better performance
-
-    try:
-
-        response = table.query(
-
-            KeyConditionExpression='bet_date = :today',
-
-            ExpressionAttributeValues={':today': today}
-
-        )
-
-    except Exception as e:
-
-        print(f"Query failed, falling back to scan: {e}")
-
-        # Fallback to scan if query fails
-
-        response = table.scan(
-
-            FilterExpression='(#d = :today OR bet_date = :today)',
-
-            ExpressionAttributeNames={'#d': 'date'},
-
-            ExpressionAttributeValues={':today': today}
-
-        )
-
-    
-
-    items = response.get('Items', [])
+    # Query today AND yesterday — picks for tomorrow's races are stored under
+    # yesterday's/today's bet_date depending on when the analysis ran.
+    items = []
+    for query_date in [today, yesterday]:
+        try:
+            response = table.query(
+                KeyConditionExpression='bet_date = :d',
+                ExpressionAttributeValues={':d': query_date}
+            )
+        except Exception as e:
+            print(f"Query failed for {query_date}: {e}")
+            response = {'Items': []}
+        items.extend(response.get('Items', []))
 
     items = [decimal_to_float(item) for item in items]
 
@@ -577,6 +558,35 @@ def get_today_picks(headers):
 
     future_picks.sort(key=lambda x: x.get('race_time', ''))
 
+    # ── 1pm gate: hold morning picks until 13:00 UTC ─────────────────────────
+    # The morning analysis runs from ~09:30 UTC and may re-score picks several
+    # times before settling. We only show picks once all signals have finalised.
+    now_utc = datetime.utcnow()
+    GATE_HOUR = 12  # 12:00 UTC = 13:00 BST (1pm)
+    if now_utc.hour < GATE_HOUR and morning_picks:
+        # Intraday picks (manually promoted) bypass the gate
+        if not intraday_picks:
+            return {
+                'statusCode': 200,
+                'headers': headers,
+                'body': json.dumps({
+                    'success': True,
+                    'picks': [],
+                    'morning_picks': [],
+                    'intraday_picks': [],
+                    'intraday_slots_free': 2,
+                    'count': 0,
+                    'date': today,
+                    'analysis_pending': True,
+                    'pending_reason': f'Morning analysis complete — picks unlock at 12:00 UTC / 1pm BST ({now_utc.strftime("%H:%M")} UTC now)',
+                    'message': 'Picks held until 1pm BST',
+                })
+            }
+        else:
+            # Show intraday picks only; hide ungated morning picks
+            future_picks = intraday_picks
+            morning_picks = []
+
 
 
     # Map reasons -> selection_reasons for UI compatibility
@@ -672,6 +682,10 @@ def get_today_picks(headers):
             'count': len(future_picks),
 
             'date': today,
+
+            'analysis_pending': False,
+
+            'pending_reason': '',
 
             'last_run': last_run.isoformat() + 'Z',
 
@@ -1924,13 +1938,11 @@ def check_today_results(headers):
 
     picks = list(seen_races.values())
 
-    # Sort by score and keep top 5
+    # Sort by race_time for display (top-N cap applied at pick selection time, not here)
 
-    picks.sort(key=lambda x: float(x.get('comprehensive_score') or x.get('analysis_score') or 0), reverse=True)
+    picks.sort(key=lambda x: x.get('race_time', ''))
 
-    picks = picks[:5]
-
-    print(f"After dedup + top-5 filter: {len(picks)} picks")
+    print(f"After dedup: {len(picks)} picks")
 
 
 

@@ -35,6 +35,16 @@ except ImportError:
     _FORM_ENRICHER_AVAILABLE = False
     def _form_enrich(races, **kw): return races
 
+# ── OurHub Racing API enricher ──────────────────────────────────────────────
+# Injects trainer/jockey win rates, confirmed going, and win probabilities
+# into each runner dict so the scoring engine can use real stats instead of
+# hardcoded tier lists for unknowns.
+try:
+    from ourhub_enricher import fetch_ourhub_data, enrich_races as _ourhub_enrich
+    _OURHUB_AVAILABLE = True
+except ImportError:
+    _OURHUB_AVAILABLE = False
+
 db    = boto3.resource('dynamodb', region_name='eu-west-1')
 table = db.Table('SureBetBets')
 
@@ -224,6 +234,20 @@ def analyze_and_save_all():
     else:
         print("[STAGE 1/5] Form enrichment unavailable — deep form signals will score 0")
 
+    # ── STAGE 1b: OurHub Racing API enrichment ───────────────────────────────
+    # Fetches confirmed going, trainer/jockey win rates, and win probabilities.
+    # Only 3 API calls per day (well within 80/day free tier).
+    if _OURHUB_AVAILABLE:
+        _oh_date = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        print(f"\n[STAGE 1b] OurHub API enrichment for {_oh_date}...")
+        try:
+            _oh_data = fetch_ourhub_data(_oh_date)
+            races = _ourhub_enrich(races, _oh_data)
+        except Exception as e:
+            print(f"  [OurHub] Enrichment failed (non-fatal): {e}")
+    else:
+        print("\n[STAGE 1b] OurHub enrichment unavailable — using defaults")
+
     print("\n" + "=" * 100)
     print("DAILY 3-PICK SELECTION ENGINE")
     print("=" * 100)
@@ -233,6 +257,30 @@ def analyze_and_save_all():
 
     today        = datetime.now(timezone.utc).strftime('%Y-%m-%d')
     avg_winner_odds = 4.65  # UK average winning SP
+
+    # ── CHECK EXISTING UI PICKS (intraday accumulation guard) ─────────────────
+    # Each refresh only fetches FUTURE races, so previous picks are never overwritten.
+    # Without this guard, 3 new picks are added per 2-hour refresh → 9+ picks/day.
+    # Weekends have more racing cards → allow 8 picks; weekdays capped at 5.
+    _dow = datetime.now(timezone.utc).weekday()  # 0=Mon … 6=Sun
+    MAX_DAILY_UI_PICKS = 8 if _dow >= 5 else 5   # Sat/Sun=8, Mon-Fri=5
+    from boto3.dynamodb.conditions import Key as _Key
+    _existing_resp = table.query(KeyConditionExpression=_Key('bet_date').eq(today))
+    _existing_items = _existing_resp.get('Items', [])
+    while _existing_resp.get('LastEvaluatedKey'):
+        _existing_resp = table.query(
+            KeyConditionExpression=_Key('bet_date').eq(today),
+            ExclusiveStartKey=_existing_resp['LastEvaluatedKey'])
+        _existing_items.extend(_existing_resp.get('Items', []))
+    _existing_ui = [i for i in _existing_items if i.get('show_in_ui') is True]
+    _existing_ui_count = len(_existing_ui)
+    _slots_remaining = max(0, MAX_DAILY_UI_PICKS - _existing_ui_count)
+    print(f"  Existing UI picks today: {_existing_ui_count} / {MAX_DAILY_UI_PICKS} "
+          f"({_slots_remaining} slots remaining)")
+    if _slots_remaining == 0:
+        print(f"  Daily pick cap reached — new horses will be saved as learning data only")
+    # Use remaining slots instead of TARGET_PICKS for this run
+    _effective_target = min(TARGET_PICKS, _slots_remaining)
 
     # ── STAGE 2: Horse history from DynamoDB ─────────────────────────────────
     print("[STAGE 2/5] Loading horse history from DynamoDB...")
@@ -289,6 +337,10 @@ def analyze_and_save_all():
         for runner in runners:
             horse_name = runner.get('name', 'Unknown')
             odds       = float(runner.get('odds', 0))
+
+            # Inject race-level OurHub going into runner so scoring can access it
+            if race.get('ourhub_going'):
+                runner['_race_ourhub_going'] = race['ourhub_going']
 
             score, breakdown, reasons = analyze_horse_comprehensive(
                 runner,
@@ -820,12 +872,12 @@ def analyze_and_save_all():
 
     top_picks = []
     # Reserve slot for value play first if available
-    if _reserved_value:
+    if _reserved_value and _effective_target > 0:
         top_picks.append(_reserved_value)
         _tier_counts[_odds_tier(float(_reserved_value['best']['odds']))] += 1
 
     for r in eligible:
-        if len(top_picks) >= TARGET_PICKS:
+        if len(top_picks) >= _effective_target:
             break
         if r is _reserved_value:
             continue
@@ -834,9 +886,9 @@ def analyze_and_save_all():
             top_picks.append(r)
             _tier_counts[tier] += 1
     # Top up greedily if still short
-    if len(top_picks) < TARGET_PICKS:
+    if len(top_picks) < _effective_target:
         remaining = [r for r in eligible if r not in top_picks]
-        top_picks += remaining[:TARGET_PICKS - len(top_picks)]
+        top_picks += remaining[:_effective_target - len(top_picks)]
 
     # Sort final picks: rank 1 = highest score among selected
     top_picks.sort(key=lambda r: r['best']['score'], reverse=True)

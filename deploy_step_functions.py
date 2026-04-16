@@ -71,6 +71,7 @@ LAMBDAS = [
             'notify_picks.py',
             'weather_going_inference.py',
             'betfair_odds_fetcher.py',
+            'ourhub_enricher.py',
         ],
         'optional_bundle': [
             'track_daily_insights.py',

@@ -36,13 +36,14 @@ def to_f(v, default=0.0):
 WEIGHTS = {
     'class_up': 4, 'trip_new': 2, 'going_unproven': 2, 'draw_poor': 1,
     'layoff': 1, 'pace_doubt': 1, 'rivals_close': 2, 'drift': 1, 'short_price': 1,
-    'trainer_track': 1, 'trainer_cold': 1, 'trainer_multiple': 1,
+    'trainer_track': 1, 'trainer_cold': 1, 'trainer_multiple': 1, 'current_form_no_wins': 1,
 }
 FLAG_LABELS = {
     'short_price': 'Short Price', 'rivals_close': 'Rivals Close', 'trip_new': 'Trip Unproven',
     'going_unproven': 'Going Unproven', 'draw_poor': 'Poor Draw', 'layoff': 'Layoff',
     'pace_doubt': 'Pace Doubt', 'drift': 'Low Score Gap', 'class_up': 'Class Up',
     'trainer_track': 'Trainer @ Track', 'trainer_cold': 'Trainer Cold', 'trainer_multiple': 'Multi Runner',
+    'current_form_no_wins': 'Form No Wins',
 }
 
 def score_fav(fav, runners_sorted):
@@ -75,6 +76,17 @@ def score_fav(fav, runners_sorted):
         flags['drift'] = True
     if to_f(sb.get('going_suitability', 0)) == 0 and to_f(sb.get('recent_win', 0)) == 0:
         flags['pace_doubt'] = True
+    # --- Current form – no wins (+1) ---
+    form_str = str(fav.get('form') or '')
+    form_digits = []
+    for ch in form_str.replace('-', '').replace('/', ''):
+        if ch.isdigit():
+            form_digits.append(int(ch))
+        elif ch.upper() in ('U', 'F', 'P', 'R'):
+            form_digits.append(99)
+    last_4 = form_digits[-4:] if len(form_digits) >= 4 else form_digits
+    if last_4 and all(pos >= 2 for pos in last_4):
+        flags['current_form_no_wins'] = True
     total = sum(WEIGHTS.get(f, 1) for f in flags)
     return total, list(flags.keys())
 
@@ -119,7 +131,7 @@ results.sort(key=lambda x: x['date'] + x['time'])
 
 # ── Stats ────────────────────────────────────────────────────────────────────
 total     = len(results)
-thresholds = [4, 6, 8, 10, 13]
+thresholds = [4, 6, 8, 9, 13]
 stats = {}
 for t in thresholds:
     subset = [r for r in results if r['lay_score'] >= t]

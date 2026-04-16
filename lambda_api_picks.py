@@ -10,6 +10,7 @@ import boto3
 from datetime import datetime, timedelta
 from decimal import Decimal
 import hashlib, os, base64, re
+import stripe
 
 # Initialize DynamoDB
 dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
@@ -19,6 +20,12 @@ ses_client = boto3.client('ses', region_name='eu-west-1')
 
 SENDER_EMAIL    = 'charles.mccarthy@gmail.com'
 SITE_URL        = 'https://www.betbudai.com'
+
+# ── Stripe configuration ────────────────────────────────────────────────────
+stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+STRIPE_PRICE_PREMIUM = os.environ.get('STRIPE_PRICE_PREMIUM', '')   # price_xxx for €19.99/mo
+STRIPE_PRICE_VIP     = os.environ.get('STRIPE_PRICE_VIP', '')       # price_xxx for €99/mo
 
 def _hash_password(password: str) -> str:
     """PBKDF2-HMAC-SHA256, 32-byte random salt, 200k iterations."""
@@ -101,6 +108,16 @@ def lambda_handler(event, context):
             return verify_email_token(headers, event)
         elif 'register' in path and method == 'POST':
             return register_subscriber(headers, event)
+        elif 'create-checkout-session' in path and method == 'POST':
+            return create_checkout_session(headers, event)
+        elif 'stripe-webhook' in path and method == 'POST':
+            return handle_stripe_webhook(headers, event)
+        elif 'subscription-status' in path and method == 'POST':
+            return get_subscription_status(headers, event)
+        elif 'customer-portal' in path and method == 'POST':
+            return create_customer_portal(headers, event)
+        elif 'cancel-subscription' in path and method == 'POST':
+            return cancel_subscription(headers, event)
         elif 'results/cumulative-roi' in path:
             return get_cumulative_roi(headers)
         elif 'results/yesterday' in path:
@@ -928,10 +945,9 @@ def check_today_results(headers):
         if not existing or score > existing_score:
             seen_races[race_key] = pick
     picks = list(seen_races.values())
-    # Sort by score and keep top 5
-    picks.sort(key=lambda x: float(x.get('comprehensive_score') or x.get('analysis_score') or 0), reverse=True)
-    picks = picks[:5]
-    print(f"After dedup + top-5 filter: {len(picks)} picks")
+    # Sort by race_time for display (top-N cap applied at pick selection time, not here)
+    picks.sort(key=lambda x: x.get('race_time', ''))
+    print(f"After dedup: {len(picks)} picks")
 
     # Normalize outcome values for frontend compatibility
     # Database uses: 'won', 'WON', 'lost', 'LOST'
@@ -1534,6 +1550,309 @@ def verify_email_token(headers, event):
         return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Verification failed. Please try again.'})}
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# STRIPE PAYMENT HANDLERS
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def create_checkout_session(headers, event):
+    """Create a Stripe Checkout session for Premium (€19.99/mo) or VIP (€99/mo).
+    POST /api/create-checkout-session  { "email": "...", "tier": "premium"|"vip" }
+    """
+    try:
+        body = json.loads(event.get('body') or '{}')
+        email = (body.get('email') or '').strip().lower()
+        tier  = (body.get('tier') or '').strip().lower()
+
+        if not email or tier not in ('premium', 'vip'):
+            return {'statusCode': 400, 'headers': headers,
+                    'body': json.dumps({'error': 'email and tier (premium/vip) required'})}
+
+        # Look up subscriber
+        sub = subscribers_table.get_item(Key={'email': email}).get('Item')
+        if not sub:
+            return {'statusCode': 404, 'headers': headers,
+                    'body': json.dumps({'error': 'User not found'})}
+
+        price_id = STRIPE_PRICE_PREMIUM if tier == 'premium' else STRIPE_PRICE_VIP
+
+        # Reuse or create Stripe customer
+        stripe_customer_id = sub.get('stripe_customer_id')
+        if not stripe_customer_id:
+            customer = stripe.Customer.create(
+                email=email,
+                name=sub.get('full_name', ''),
+                metadata={'betbudai_email': email}
+            )
+            stripe_customer_id = customer.id
+            subscribers_table.update_item(
+                Key={'email': email},
+                UpdateExpression='SET stripe_customer_id = :cid',
+                ExpressionAttributeValues={':cid': stripe_customer_id}
+            )
+
+        # Create Checkout Session
+        session = stripe.checkout.Session.create(
+            customer=stripe_customer_id,
+            mode='subscription',
+            line_items=[{'price': price_id, 'quantity': 1}],
+            success_url=f'{SITE_URL}?payment=success&tier={tier}',
+            cancel_url=f'{SITE_URL}?payment=cancelled',
+            metadata={'betbudai_email': email, 'tier': tier},
+            subscription_data={'metadata': {'betbudai_email': email, 'tier': tier}},
+        )
+
+        return {'statusCode': 200, 'headers': headers,
+                'body': json.dumps({'url': session.url, 'session_id': session.id})}
+
+    except stripe.error.StripeError as e:
+        print(f'Stripe error in create_checkout_session: {e}')
+        return {'statusCode': 500, 'headers': headers,
+                'body': json.dumps({'error': str(e)})}
+    except Exception as e:
+        print(f'create_checkout_session error: {e}')
+        import traceback; traceback.print_exc()
+        return {'statusCode': 500, 'headers': headers,
+                'body': json.dumps({'error': 'Failed to create checkout session'})}
+
+
+def handle_stripe_webhook(headers, event):
+    """Handle Stripe webhook events — subscription lifecycle.
+    POST /api/stripe-webhook
+    """
+    try:
+        payload = event.get('body', '')
+        sig_header = (event.get('headers') or {}).get('Stripe-Signature') or \
+                     (event.get('headers') or {}).get('stripe-signature', '')
+
+        # Verify webhook signature
+        try:
+            webhook_event = stripe.Webhook.construct_event(
+                payload, sig_header, STRIPE_WEBHOOK_SECRET
+            )
+        except ValueError:
+            return {'statusCode': 400, 'headers': headers, 'body': 'Invalid payload'}
+        except stripe.error.SignatureVerificationError:
+            return {'statusCode': 400, 'headers': headers, 'body': 'Invalid signature'}
+
+        event_type = webhook_event['type']
+        data = webhook_event['data']['object']
+        print(f'Stripe webhook: {event_type}')
+
+        if event_type == 'checkout.session.completed':
+            _handle_checkout_completed(data)
+
+        elif event_type in ('customer.subscription.updated', 'customer.subscription.created'):
+            _handle_subscription_updated(data)
+
+        elif event_type == 'customer.subscription.deleted':
+            _handle_subscription_deleted(data)
+
+        elif event_type == 'invoice.payment_failed':
+            _handle_payment_failed(data)
+
+        return {'statusCode': 200, 'headers': headers,
+                'body': json.dumps({'received': True})}
+
+    except Exception as e:
+        print(f'stripe webhook error: {e}')
+        import traceback; traceback.print_exc()
+        return {'statusCode': 500, 'headers': headers,
+                'body': json.dumps({'error': str(e)})}
+
+
+def _find_email_from_stripe(data):
+    """Extract betbudai_email from Stripe object metadata or customer."""
+    email = (data.get('metadata') or {}).get('betbudai_email')
+    if email:
+        return email
+    # Fallback: look up customer
+    customer_id = data.get('customer')
+    if customer_id:
+        from boto3.dynamodb.conditions import Attr
+        resp = subscribers_table.scan(
+            FilterExpression=Attr('stripe_customer_id').eq(customer_id),
+            ProjectionExpression='email'
+        )
+        if resp.get('Items'):
+            return resp['Items'][0]['email']
+    return None
+
+
+def _handle_checkout_completed(session):
+    """After successful Checkout, activate subscription."""
+    email = (session.get('metadata') or {}).get('betbudai_email')
+    tier  = (session.get('metadata') or {}).get('tier', 'premium')
+    subscription_id = session.get('subscription')
+
+    if not email:
+        print('checkout.session.completed: no betbudai_email in metadata')
+        return
+
+    update_expr = 'SET subscription_tier = :tier, subscription_status = :status'
+    expr_vals = {':tier': tier, ':status': 'active'}
+
+    if subscription_id:
+        update_expr += ', stripe_subscription_id = :sid'
+        expr_vals[':sid'] = subscription_id
+
+    subscribers_table.update_item(
+        Key={'email': email},
+        UpdateExpression=update_expr,
+        ExpressionAttributeValues=expr_vals
+    )
+    print(f'Activated {tier} for {email}')
+
+
+def _handle_subscription_updated(subscription):
+    """Handle subscription status changes (renewals, payment method updates, etc.)."""
+    email = _find_email_from_stripe(subscription)
+    if not email:
+        print(f'subscription.updated: cannot find user for sub {subscription["id"]}')
+        return
+
+    status = subscription.get('status', 'active')
+    tier = (subscription.get('metadata') or {}).get('tier', 'premium')
+
+    subscribers_table.update_item(
+        Key={'email': email},
+        UpdateExpression='SET subscription_status = :s, subscription_tier = :t, stripe_subscription_id = :sid, subscription_current_period_end = :end',
+        ExpressionAttributeValues={
+            ':s': status,
+            ':t': tier,
+            ':sid': subscription['id'],
+            ':end': subscription.get('current_period_end', 0),
+        }
+    )
+    print(f'Subscription updated: {email} → {tier}/{status}')
+
+
+def _handle_subscription_deleted(subscription):
+    """Handle subscription cancellation — downgrade to free."""
+    email = _find_email_from_stripe(subscription)
+    if not email:
+        print(f'subscription.deleted: cannot find user for sub {subscription["id"]}')
+        return
+
+    subscribers_table.update_item(
+        Key={'email': email},
+        UpdateExpression='SET subscription_tier = :t, subscription_status = :s',
+        ExpressionAttributeValues={':t': 'free', ':s': 'canceled'}
+    )
+    print(f'Subscription canceled: {email} → free')
+
+
+def _handle_payment_failed(invoice):
+    """Mark subscription as past_due on payment failure."""
+    subscription_id = invoice.get('subscription')
+    if not subscription_id:
+        return
+    # Find user by subscription ID
+    from boto3.dynamodb.conditions import Attr
+    resp = subscribers_table.scan(
+        FilterExpression=Attr('stripe_subscription_id').eq(subscription_id),
+        ProjectionExpression='email'
+    )
+    if resp.get('Items'):
+        email = resp['Items'][0]['email']
+        subscribers_table.update_item(
+            Key={'email': email},
+            UpdateExpression='SET subscription_status = :s',
+            ExpressionAttributeValues={':s': 'past_due'}
+        )
+        print(f'Payment failed: {email} → past_due')
+
+
+def get_subscription_status(headers, event):
+    """Get current subscription status for a user.
+    POST /api/subscription-status  { "email": "..." }
+    """
+    try:
+        body = json.loads(event.get('body') or '{}')
+        email = (body.get('email') or '').strip().lower()
+        if not email:
+            return {'statusCode': 400, 'headers': headers,
+                    'body': json.dumps({'error': 'email required'})}
+
+        sub = subscribers_table.get_item(Key={'email': email}).get('Item')
+        if not sub:
+            return {'statusCode': 404, 'headers': headers,
+                    'body': json.dumps({'error': 'User not found'})}
+
+        return {'statusCode': 200, 'headers': headers, 'body': json.dumps({
+            'subscription_tier': sub.get('subscription_tier', 'free'),
+            'subscription_status': sub.get('subscription_status', ''),
+            'subscription_current_period_end': int(sub.get('subscription_current_period_end', 0)),
+        })}
+    except Exception as e:
+        print(f'get_subscription_status error: {e}')
+        return {'statusCode': 500, 'headers': headers,
+                'body': json.dumps({'error': 'Failed to get subscription status'})}
+
+
+def create_customer_portal(headers, event):
+    """Create a Stripe Customer Portal session for managing subscription.
+    POST /api/customer-portal  { "email": "..." }
+    """
+    try:
+        body = json.loads(event.get('body') or '{}')
+        email = (body.get('email') or '').strip().lower()
+        if not email:
+            return {'statusCode': 400, 'headers': headers,
+                    'body': json.dumps({'error': 'email required'})}
+
+        sub = subscribers_table.get_item(Key={'email': email}).get('Item')
+        if not sub or not sub.get('stripe_customer_id'):
+            return {'statusCode': 404, 'headers': headers,
+                    'body': json.dumps({'error': 'No active subscription found'})}
+
+        session = stripe.billing_portal.Session.create(
+            customer=sub['stripe_customer_id'],
+            return_url=SITE_URL,
+        )
+        return {'statusCode': 200, 'headers': headers,
+                'body': json.dumps({'url': session.url})}
+    except Exception as e:
+        print(f'create_customer_portal error: {e}')
+        return {'statusCode': 500, 'headers': headers,
+                'body': json.dumps({'error': 'Failed to create portal session'})}
+
+
+def cancel_subscription(headers, event):
+    """Cancel a subscription (at period end).
+    POST /api/cancel-subscription  { "email": "..." }
+    """
+    try:
+        body = json.loads(event.get('body') or '{}')
+        email = (body.get('email') or '').strip().lower()
+        if not email:
+            return {'statusCode': 400, 'headers': headers,
+                    'body': json.dumps({'error': 'email required'})}
+
+        sub = subscribers_table.get_item(Key={'email': email}).get('Item')
+        if not sub or not sub.get('stripe_subscription_id'):
+            return {'statusCode': 404, 'headers': headers,
+                    'body': json.dumps({'error': 'No active subscription found'})}
+
+        # Cancel at end of billing period (not immediately)
+        stripe.Subscription.modify(
+            sub['stripe_subscription_id'],
+            cancel_at_period_end=True
+        )
+
+        subscribers_table.update_item(
+            Key={'email': email},
+            UpdateExpression='SET subscription_status = :s',
+            ExpressionAttributeValues={':s': 'canceling'}
+        )
+
+        return {'statusCode': 200, 'headers': headers,
+                'body': json.dumps({'success': True, 'message': 'Subscription will cancel at end of billing period'})}
+    except Exception as e:
+        print(f'cancel_subscription error: {e}')
+        return {'statusCode': 500, 'headers': headers,
+                'body': json.dumps({'error': 'Failed to cancel subscription'})}
+
+
 def login_subscriber(headers, event):
     """Authenticate a subscriber. Accepts email or username + password."""
     try:
@@ -1556,11 +1875,17 @@ def login_subscriber(headers, event):
             return {'statusCode': 401, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Invalid email/username or password.'})}
 
         role = item.get('role', 'free')
+        subscription_tier = item.get('subscription_tier', 'free')
+        # If user has an active paid subscription, reflect that in role
+        if subscription_tier in ('premium', 'vip') and item.get('subscription_status') == 'active':
+            role = subscription_tier
         user_payload = {
             'email':     identifier,
             'username':  item.get('username', ''),
             'full_name': item.get('full_name', ''),
             'role':      role,
+            'subscription_tier': subscription_tier,
+            'subscription_status': item.get('subscription_status', ''),
         }
 
         # Generate admin session token if user is admin
@@ -1843,7 +2168,7 @@ def _odds_dec(odds):
 _SCORE_WEIGHTS = {
     'class_up': 4, 'trip_new': 2, 'going_unproven': 2, 'draw_poor': 1,
     'layoff': 1, 'pace_doubt': 1, 'rivals_close': 2, 'drift': 1, 'short_price': 1,
-    'trainer_track': 1, 'trainer_cold': 1, 'trainer_multiple': 1,
+    'trainer_track': 1, 'trainer_cold': 1, 'trainer_multiple': 1, 'current_form_no_wins': 1,
 }
 
 
@@ -1945,6 +2270,18 @@ def _score_fav(fav, all_horses_sorted):
     elif score_gap == 0 and fav_score > 0:
         flags['drift'] = True
         details.append('Score gap = 0 — model does not separate the favourite clearly')
+
+    # --- Current form – no wins (+1) ---
+    form_digits = []
+    for ch in str(form_str).replace('-', '').replace('/', ''):
+        if ch.isdigit():
+            form_digits.append(int(ch))
+        elif ch.upper() in ('U', 'F', 'P', 'R'):
+            form_digits.append(99)
+    last_4 = form_digits[-4:] if len(form_digits) >= 4 else form_digits
+    if last_4 and all(pos >= 2 for pos in last_4):
+        flags['current_form_no_wins'] = True
+        details.append(f'No wins in last 4 races (form: {form_str[-8:]}) — 2nd or worse throughout')
 
     total = sum(_SCORE_WEIGHTS[f] for f in flags if f in _SCORE_WEIGHTS)
     return total, flags, details
@@ -2160,17 +2497,17 @@ def apply_learning_lambda(headers, event):
 def _verdict(score):
     if score >= 13:
         return 'STRONG LAY CANDIDATE'
-    elif score >= 10:
+    elif score >= 9:
         return 'STRONG LAY'
     elif score >= 4:
         return 'CAUTION'
-    return 'LEAVE ALONE'
+    return 'DO NOT SHOW'
 
 
 def _verdict_colour(score):
     if score >= 13:
         return 'RED'
-    elif score >= 10:
+    elif score >= 9:
         return 'AMBER'
     elif score >= 4:
         return 'YELLOW'
@@ -2303,16 +2640,21 @@ def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
             try:
                 lh, lm = map(int, local_hhmm.split(':'))
                 local_mins = lh * 60 + lm
+                best_diff = 999
+                best_winner = None
                 for (c_key, t_key), w_name in winner_map.items():
                     if c_key != course_key:
                         continue
                     wh, wm = map(int, t_key.split(':'))
-                    if abs((wh * 60 + wm) - local_mins) <= 15:
-                        fav_outcome = (
-                            'win' if w_name.strip().lower() == fav_name.strip().lower()
-                            else 'loss'
-                        )
-                        break
+                    diff = abs((wh * 60 + wm) - local_mins)
+                    if diff < best_diff:
+                        best_diff = diff
+                        best_winner = w_name.strip()
+                if best_winner and best_diff <= 10:
+                    fav_outcome = (
+                        'win' if best_winner.lower() == fav_name.strip().lower()
+                        else 'loss'
+                    )
             except Exception:
                 pass
         if fav_outcome is None:
@@ -2372,8 +2714,13 @@ def get_favs_run_lambda(headers, event):
             all_results.extend(_analyse_date_lambda(d, tbl, winner_map))
 
         caution   = [r for r in all_results if r['lay_score'] >= 4]
-        strong    = [r for r in all_results if r['lay_score'] >= 10]
+        strong    = [r for r in all_results if r['lay_score'] >= 9]
         red_flag  = [r for r in all_results if r['lay_score'] >= 13]
+
+        # Lay win % — how often the favourite lost (settled races only)
+        settled   = [r for r in all_results if r.get('outcome') and r['outcome'].lower() in ('win','won','loss','lost')]
+        fav_lost  = [r for r in settled if r['outcome'].lower() in ('loss','lost')]
+        lay_win_pct = round(len(fav_lost) / len(settled) * 100, 1) if settled else None
 
         return {
             'statusCode': 200,
@@ -2381,7 +2728,8 @@ def get_favs_run_lambda(headers, event):
             'body': json.dumps({
                 'success':   True,
                 'generated': datetime.now().isoformat(),
-                'summary':   {'total': len(all_results), 'caution': len(caution), 'strong': len(strong), 'red_flag': len(red_flag)},
+                'summary':   {'total': len(all_results), 'caution': len(caution), 'strong': len(strong), 'red_flag': len(red_flag),
+                              'settled': len(settled), 'fav_lost': len(fav_lost), 'lay_win_pct': lay_win_pct},
                 'races':     all_results,
             }, default=str)
         }

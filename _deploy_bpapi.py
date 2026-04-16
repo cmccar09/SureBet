@@ -7,7 +7,7 @@ import shutil
 
 FUNCTION_NAME = 'BettingPicksAPI'
 REGION        = 'eu-west-1'
-SRC_FILE      = '_bpapi_patched.py'
+SRC_FILE      = os.path.join('_lambda_build', '_bpapi_patched.py')
 
 # Read patched source
 with open(SRC_FILE, 'r', encoding='utf-8') as f:

@@ -66,7 +66,7 @@ def lambda_handler(event, context):
 
         'Access-Control-Allow-Origin': '*',
 
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-admin-token',
 
         'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
 
@@ -149,6 +149,18 @@ def lambda_handler(event, context):
 
         elif 'api/login' in path:
             return login_subscriber(headers, event)
+
+        elif 'admin/config' in path and method == 'GET':
+            return admin_get_config(headers, event)
+
+        elif 'admin/config' in path and method == 'POST':
+            return admin_save_config(headers, event)
+
+        elif 'admin/subscribers' in path:
+            return admin_get_subscribers(headers, event)
+
+        elif 'results/export-csv' in path:
+            return export_roi_csv(headers)
 
         elif 'results/cumulative-roi' in path:
 
@@ -369,6 +381,8 @@ def get_today_picks(headers):
     horse_items = [item for item in horse_items if item.get('show_in_ui') == True]
 
     
+    # 2026-04-16: Elite only — only show picks with score >= 95
+    horse_items = [item for item in horse_items if float(item.get('comprehensive_score', 0) or 0) >= 95]
 
     # Filter to System A only: picks with stake <= 10 (excludes learning_workflow picks)
 
@@ -554,17 +568,7 @@ def get_today_picks(headers):
 
 
 
-    # Sort by score; cap 3 morning + 2 intraday = 5 total
-
-    future_picks.sort(key=lambda x: float(x.get('comprehensive_score') or x.get('analysis_score') or 0), reverse=True)
-
-    morning_picks  = [p for p in future_picks if p.get('pick_type', 'morning') != 'intraday'][:3]
-
-    intraday_picks = [p for p in future_picks if p.get('pick_type') == 'intraday'][:2]
-
-    future_picks = morning_picks + intraday_picks
-
-    # Re-sort by race time for display
+    # Sort by race time for display (daily pick cap enforced at creation in complete_daily_analysis.py)
 
     future_picks.sort(key=lambda x: x.get('race_time', ''))
 
@@ -580,13 +584,44 @@ def get_today_picks(headers):
 
 
 
-    print(f"Total picks: {len(items)}, Horse picks: {len(horse_items)}, Future picks: {len(future_picks)} (morning={len(morning_picks)}, intraday={len(intraday_picks)})")
+    print(f"Total picks: {len(items)}, Horse picks: {len(horse_items)}, Future picks: {len(future_picks)}")
+
+    morning_picks = [p for p in future_picks if p.get('pick_type', 'morning') != 'intraday']
+
+    intraday_picks = [p for p in future_picks if p.get('pick_type') == 'intraday']
 
     intraday_slots_used = len(intraday_picks)
 
     intraday_slots_free = max(0, 2 - intraday_slots_used)
 
-    
+    # ── 1pm gate: hold morning picks until 12:00 UTC / 13:00 BST ─────────────
+    # The morning analysis runs from ~09:30 UTC and may re-score picks several
+    # times before settling. We only show picks once all signals have finalised.
+    now_utc = datetime.utcnow()
+    GATE_HOUR = 12  # 12:00 UTC = 13:00 BST (1pm)
+    if now_utc.hour < GATE_HOUR and morning_picks:
+        # Intraday picks (manually promoted) bypass the gate
+        if not intraday_picks:
+            return {
+                'statusCode': 200,
+                'headers': headers,
+                'body': json.dumps({
+                    'success': True,
+                    'picks': [],
+                    'morning_picks': [],
+                    'intraday_picks': [],
+                    'intraday_slots_free': 2,
+                    'count': 0,
+                    'date': today,
+                    'analysis_pending': True,
+                    'pending_reason': f'Morning analysis complete — picks unlock at 12:00 UTC / 1pm BST ({now_utc.strftime("%H:%M")} UTC now)',
+                    'message': 'Picks held until 1pm BST',
+                })
+            }
+        else:
+            # Show intraday picks only; hide ungated morning picks
+            future_picks = intraday_picks
+            morning_picks = []
 
     # Calculate workflow schedule (runs every 30 min at :15 and :45)
 
@@ -1102,6 +1137,7 @@ def register_subscriber(headers, event):
             'age': Decimal(str(age)), 'username': username,
             'password_hash': pw_hash, 'joined_at': joined_at, 'active': True,
             'email_verified': True,
+            'role': 'free',
         })
         subscribers_table.put_item(Item={
             'email': f'u#{username}', 'username': username,
@@ -1158,9 +1194,26 @@ def login_subscriber(headers, event):
         if not item or not _verify_password(password, item.get('password_hash', '')):
             return {'statusCode': 401, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Invalid email/username or password.'})}
 
+        user_data = {'email': identifier, 'username': item.get('username', ''), 'full_name': item.get('full_name', '')}
+        role = item.get('role', 'free')
+        user_data['role'] = role
+
+        # Generate admin session token for admin users
+        if role == 'admin':
+            import uuid
+            session_token = str(uuid.uuid4())
+            expires = (datetime.utcnow() + timedelta(hours=24)).isoformat() + 'Z'
+            subscribers_table.put_item(Item={
+                'email': f'__session__{session_token}',
+                'user_email': identifier,
+                'expires_at': expires,
+                'created_at': datetime.utcnow().isoformat() + 'Z',
+            })
+            user_data['admin_token'] = session_token
+
         return {'statusCode': 200, 'headers': headers, 'body': json.dumps({
             'success': True,
-            'user': {'email': identifier, 'username': item.get('username', ''), 'full_name': item.get('full_name', '')},
+            'user': user_data,
         })}
     except Exception as e:
         print(f'login_subscriber error: {e}')
@@ -1415,6 +1468,102 @@ def get_cumulative_roi(headers):
 
         }
 
+
+def export_roi_csv(headers):
+    """Export all settled UI picks as CSV for ROI verification."""
+    from boto3.dynamodb.conditions import Key, Attr
+    from datetime import date, timedelta
+    from concurrent.futures import ThreadPoolExecutor
+    CUMULATIVE_ROI_START = '2026-03-22'
+    try:
+        start_d = date.fromisoformat(CUMULATIVE_ROI_START)
+        today_d = date.today()
+        dates = [(start_d + timedelta(days=i)).isoformat()
+                 for i in range((today_d - start_d).days + 1)]
+        def _query_date(d):
+            items = []
+            kwargs = {
+                'KeyConditionExpression': Key('bet_date').eq(d),
+                'FilterExpression': Attr('show_in_ui').eq(True),
+                'ProjectionExpression': 'bet_date, bet_id, horse, course, race_time, outcome, sp_odds, odds, ew_fraction, bet_type, comprehensive_score, finish_position, winner_horse, number_of_places, confidence_grade, jockey, trainer',
+            }
+            while True:
+                resp = table.query(**kwargs)
+                items.extend(resp.get('Items', []))
+                if 'LastEvaluatedKey' not in resp:
+                    break
+                kwargs['ExclusiveStartKey'] = resp['LastEvaluatedKey']
+            return items
+        all_items = []
+        with ThreadPoolExecutor(max_workers=10) as ex:
+            for batch in ex.map(_query_date, dates):
+                all_items.extend(batch)
+        picks = [decimal_to_float(i) for i in all_items]
+        picks = [p for p in picks if p.get('horse') and p.get('horse') != 'Unknown' and p.get('show_in_ui') is True]
+        # Deduplicate
+        seen = {}
+        for p in picks:
+            course = p.get('course', '') or ''
+            if course and course != 'Unknown':
+                k = (course, p.get('race_time', ''))
+            else:
+                k = ('__unknown__', p.get('bet_id', ''), p.get('race_time', ''))
+            if k not in seen or p.get('bet_date', '') > seen[k].get('bet_date', ''):
+                seen[k] = p
+        picks = sorted(seen.values(), key=lambda x: x.get('race_time', '') or x.get('bet_date', ''))
+        # Build CSV
+        csv_lines = ['Date,Race Time,Course,Horse,Trainer,Jockey,Odds,EW Fraction,Bet Type,Score,Grade,Outcome,Finish Position,Winner,Places Paid']
+        UNIT = 1.0
+        total_stake = total_return = 0.0
+        for p in picks:
+            oc = (p.get('outcome') or '').lower()
+            if oc in ('won',): oc = 'win'
+            elif oc in ('lost',): oc = 'loss'
+            odds = float(p.get('odds', 0))
+            ef = float(p.get('ew_fraction') or 0.25)
+            if oc == 'win':
+                total_stake += UNIT; total_return += UNIT * odds
+            elif oc == 'placed':
+                total_stake += UNIT; total_return += (UNIT/2) * (1 + (odds-1) * ef)
+            elif oc == 'loss':
+                total_stake += UNIT
+            race_time = (p.get('race_time') or '')[:16].replace('T', ' ')
+            row = ','.join([
+                p.get('bet_date', ''),
+                race_time,
+                '"' + (p.get('course') or '').replace('"', '""') + '"',
+                '"' + (p.get('horse') or '').replace('"', '""') + '"',
+                '"' + (p.get('trainer') or '').replace('"', '""') + '"',
+                '"' + (p.get('jockey') or '').replace('"', '""') + '"',
+                str(odds),
+                str(ef),
+                p.get('bet_type', 'Each Way'),
+                str(float(p.get('comprehensive_score', 0))),
+                p.get('confidence_grade', ''),
+                oc or 'pending',
+                str(p.get('finish_position', '')),
+                '"' + (p.get('winner_horse') or '').replace('"', '""') + '"',
+                str(p.get('number_of_places', '')),
+            ])
+            csv_lines.append(row)
+        profit = total_return - total_stake
+        roi_pct = round((profit / total_stake * 100) if total_stake > 0 else 0, 1)
+        csv_lines.append('')
+        csv_lines.append(f'SUMMARY,Settled: {len([p for p in picks if (p.get("outcome") or "").lower() in ("win","won","placed","place","loss","lost")])},Stake: {total_stake:.2f},Return: {total_return:.2f},Profit: {profit:.2f},ROI: {roi_pct}%')
+        csv_headers = dict(headers)
+        csv_headers['Content-Type'] = 'text/csv'
+        csv_headers['Content-Disposition'] = 'attachment; filename="BetBudAI_ROI_Data.csv"'
+        return {
+            'statusCode': 200,
+            'headers': csv_headers,
+            'body': '\n'.join(csv_lines)
+        }
+    except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': headers,
+            'body': json.dumps({'success': False, 'error': str(e)})
+        }
 
 
 
@@ -1843,6 +1992,22 @@ def check_today_results(headers):
 
 
 
+    # ── 1pm gate: sync with picks page — hide today's unsettled picks before gate ──
+
+    now_utc = datetime.utcnow()
+
+    GATE_HOUR = 12  # 12:00 UTC = 13:00 BST
+
+    if now_utc.hour < GATE_HOUR:
+
+        settled = ('win', 'won', 'loss', 'lost', 'placed', 'place')
+
+        picks = [p for p in picks if (p.get('outcome') or '').lower() in settled]
+
+        print(f"Pre-gate filter: kept {len(picks)} settled picks (hiding pending before 1pm BST)")
+
+
+
     # Filter: race must be TODAY (excludes yesterday's races stored with today's bet_date)
 
     picks = [item for item in picks if str(item.get('race_time', '')).startswith(today)]
@@ -1871,13 +2036,11 @@ def check_today_results(headers):
 
     picks = list(seen_races.values())
 
-    # Sort by score and keep top 5
+    # Sort by race_time for display (top-N cap applied at pick selection time, not here)
 
-    picks.sort(key=lambda x: float(x.get('comprehensive_score') or x.get('analysis_score') or 0), reverse=True)
+    picks.sort(key=lambda x: x.get('race_time', ''))
 
-    picks = picks[:5]
-
-    print(f"After dedup + top-5 filter: {len(picks)} picks")
+    print(f"After dedup: {len(picks)} picks")
 
 
 
@@ -2729,6 +2892,41 @@ def trigger_workflow(headers):
 
 
 
+def _get_ew_terms(market_name, n_runners):
+    """Return (num_places, ew_fraction) based on UK standard EW terms.
+    Rules:
+      ≤4 runners  → win only (0 places, fraction 0)
+      5-7 runners → 1/4 odds, 1st & 2nd
+      8+ non-hcap → 1/5 odds, 1st-3rd
+      8-15 hcap   → 1/4 odds, 1st-3rd
+      16+ hcap    → 1/4 odds, 1st-4th
+    """
+    mn = (market_name or '').lower()
+    is_hcap = any(kw in mn for kw in ('handicap', 'hcap', ' h '))
+    if n_runners <= 4:
+        return (0, 0)
+    elif n_runners <= 7:
+        return (2, 0.25)
+    elif is_hcap:
+        if n_runners >= 16:
+            return (4, 0.25)
+        else:
+            return (3, 0.25)
+    else:
+        return (3, 0.20)
+
+
+def _get_ew_places(cat_market, runners_book):
+    """Return number of EW places paid (0 = win only)."""
+    active = sum(1 for r in runners_book if r.get('status') != 'REMOVED')
+    market_name = (cat_market or {}).get('marketName', '') or ''
+    if not market_name:
+        desc = (cat_market or {}).get('description', {}) or {}
+        market_name = desc.get('marketType', '') or ''
+    places, _ = _get_ew_terms(market_name, active)
+    return places
+
+
 def auto_record_pending_results(headers):
 
     """
@@ -2974,13 +3172,15 @@ def auto_record_pending_results(headers):
 
             runner_names = {}
 
+            cat_market = {}
+
             try:
 
                 cat_resp = bf_post('listMarketCatalogue', {
 
                     'filter': {'marketIds': [market_id]},
 
-                    'marketProjection': ['RUNNER_DESCRIPTION'],
+                    'marketProjection': ['RUNNER_DESCRIPTION', 'MARKET_DESCRIPTION'],
 
                 })
 
@@ -2993,6 +3193,12 @@ def auto_record_pending_results(headers):
             except Exception as ce:
 
                 print(f'Catalogue fetch failed for {market_id}: {ce}')
+
+
+
+            num_places = _get_ew_places(cat_market, runners_book)
+
+            print(f'  {market_id}: EW places = {num_places} (active runners: {sum(1 for r in runners_book if r.get("status") != "REMOVED")})')
 
 
 
@@ -3038,11 +3244,11 @@ def auto_record_pending_results(headers):
 
                     outcome = 'win'
 
-                elif finish in (2, 3):
+                elif 2 <= finish <= num_places:
 
                     outcome = 'placed'
 
-                elif sel_status in ('LOSER', 'REMOVED') or finish > 3:
+                elif sel_status in ('LOSER', 'REMOVED') or finish > num_places:
 
                     outcome = 'loss'
 
@@ -3060,7 +3266,7 @@ def auto_record_pending_results(headers):
 
                     Key={'bet_id': pick['bet_id'], 'bet_date': pick['bet_date']},
 
-                    UpdateExpression='SET outcome = :o, finish_position = :f, winner_horse = :w, result_recorded_at = :t',
+                    UpdateExpression='SET outcome = :o, finish_position = :f, winner_horse = :w, result_recorded_at = :t, number_of_places = :np',
 
                     ExpressionAttributeValues={
 
@@ -3071,6 +3277,8 @@ def auto_record_pending_results(headers):
                         ':w': winner_name,
 
                         ':t': now_utc.isoformat() + 'Z',
+
+                        ':np': num_places,
 
                     }
 
@@ -3164,7 +3372,7 @@ def auto_record_pending_results(headers):
 
                     },
 
-                    'marketProjection': ['RUNNER_DESCRIPTION', 'MARKET_START_TIME'],
+                    'marketProjection': ['RUNNER_DESCRIPTION', 'MARKET_START_TIME', 'MARKET_DESCRIPTION'],
 
                     'maxResults': '5',
 
@@ -3236,6 +3444,12 @@ def auto_record_pending_results(headers):
 
 
 
+                num_places_n = _get_ew_places(cat_resp[0] if cat_resp else {}, runners_b)
+
+                print(f'  {found_market_id} (by name): EW places = {num_places_n} (active runners: {sum(1 for r in runners_b if r.get("status") != "REMOVED")})')
+
+
+
                 for entry in race_entries:
 
                     pick = entry['pick']
@@ -3272,11 +3486,11 @@ def auto_record_pending_results(headers):
 
                         outcome = 'win'
 
-                    elif finish_n in (2, 3):
+                    elif 2 <= finish_n <= num_places_n:
 
                         outcome = 'placed'
 
-                    elif sel_status_n in ('LOSER', 'REMOVED') or finish_n > 3:
+                    elif sel_status_n in ('LOSER', 'REMOVED') or finish_n > num_places_n:
 
                         outcome = 'loss'
 
@@ -3292,13 +3506,15 @@ def auto_record_pending_results(headers):
 
                         Key={'bet_id': pick['bet_id'], 'bet_date': pick['bet_date']},
 
-                        UpdateExpression='SET outcome = :o, finish_position = :f, winner_horse = :w, market_id = :m, result_recorded_at = :t',
+                        UpdateExpression='SET outcome = :o, finish_position = :f, winner_horse = :w, market_id = :m, result_recorded_at = :t, number_of_places = :np',
 
                         ExpressionAttributeValues={
 
                             ':o': outcome, ':f': finish_n, ':w': winner_name_n,
 
                             ':m': found_market_id, ':t': now_utc.isoformat() + 'Z',
+
+                            ':np': num_places_n,
 
                         }
 
@@ -3411,6 +3627,8 @@ _SCORE_WEIGHTS = {
     'class_up': 4, 'trip_new': 2, 'going_unproven': 2, 'draw_poor': 1,
 
     'layoff': 1, 'pace_doubt': 1, 'rivals_close': 2, 'drift': 1, 'short_price': 1,
+
+    'trainer_track': 1, 'trainer_cold': 1, 'trainer_multiple': 1, 'current_form_no_wins': 1,
 
 }
 
@@ -3560,7 +3778,29 @@ def _score_fav(fav, all_horses_sorted):
 
 
 
-    total = sum(_SCORE_WEIGHTS[f] for f in flags)
+    # --- Current form – no wins (+1) ---
+
+    form_str = str(fav.get('form') or '')
+
+    form_digits = []
+
+    for ch in form_str.replace('-', '').replace('/', ''):
+
+        if ch.isdigit(): form_digits.append(int(ch))
+
+        elif ch.upper() in ('U', 'F', 'P', 'R'): form_digits.append(99)
+
+    last_4 = form_digits[-4:] if len(form_digits) >= 4 else form_digits
+
+    if last_4 and all(pos >= 2 for pos in last_4):
+
+        flags['current_form_no_wins'] = True
+
+        details.append(f'No wins in last 4 races — 2nd or worse throughout')
+
+
+
+    total = sum(_SCORE_WEIGHTS[f] for f in flags if f in _SCORE_WEIGHTS)
 
     return total, flags, details
 
@@ -3570,7 +3810,11 @@ def _score_fav(fav, all_horses_sorted):
 
 def _verdict(score):
 
-    if score >= 9:
+    if score >= 13:
+
+        return 'STRONG LAY CANDIDATE'
+
+    elif score >= 9:
 
         return 'STRONG LAY'
 
@@ -3578,7 +3822,7 @@ def _verdict(score):
 
         return 'CAUTION'
 
-    return 'LEAVE ALONE'
+    return 'DO NOT SHOW'
 
 
 
@@ -3834,6 +4078,10 @@ def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
 
                 local_mins = lh * 60 + lm
 
+                best_diff = 999
+
+                best_winner = None
+
                 for (c_key, t_key), w_name in winner_map.items():
 
                     if c_key != course_key:
@@ -3842,17 +4090,23 @@ def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
 
                     wh, wm = map(int, t_key.split(':'))
 
-                    if abs((wh * 60 + wm) - local_mins) <= 15:
+                    diff = abs((wh * 60 + wm) - local_mins)
 
-                        fav_outcome = (
+                    if diff < best_diff:
 
-                            'win' if w_name.strip().lower() == fav_name.strip().lower()
+                        best_diff = diff
 
-                            else 'loss'
+                        best_winner = w_name.strip()
 
-                        )
+                if best_winner and best_diff <= 10:
 
-                        break
+                    fav_outcome = (
+
+                        'win' if best_winner.lower() == fav_name.strip().lower()
+
+                        else 'loss'
+
+                    )
 
             except Exception:
 
@@ -3982,7 +4236,10 @@ def get_favs_run_lambda(headers, event):
 
         red_flag  = [r for r in all_results if r['lay_score'] >= 13]
 
-
+        # Lay win % — how often the favourite lost (settled races only)
+        settled   = [r for r in all_results if r.get('outcome') and r['outcome'].lower() in ('win','won','loss','lost')]
+        fav_lost  = [r for r in settled if r['outcome'].lower() in ('loss','lost')]
+        lay_win_pct = round(len(fav_lost) / len(settled) * 100, 1) if settled else None
 
         return {
 
@@ -3996,7 +4253,8 @@ def get_favs_run_lambda(headers, event):
 
                 'generated': datetime.now().isoformat(),
 
-                'summary':   {'total': len(all_results), 'caution': len(caution), 'strong': len(strong), 'red_flag': len(red_flag)},
+                'summary':   {'total': len(all_results), 'caution': len(caution), 'strong': len(strong), 'red_flag': len(red_flag),
+                              'settled': len(settled), 'fav_lost': len(fav_lost), 'lay_win_pct': lay_win_pct},
 
                 'races':     all_results,
 
@@ -4209,3 +4467,126 @@ def apply_learning_lambda(headers, event):
     except Exception as e:
         return {'statusCode': 500, 'headers': headers,
                 'body': json.dumps({'success': False, 'error': str(e)})}
+
+
+# ── Admin helpers ─────────────────────────────────────────────────────────────
+
+ADMIN_DEFAULT_WEIGHTS = {
+    'recent_win': 30, 'total_wins': 10, 'form': 15, 'form_score': 15,
+    'going_suitability': 20, 'course_performance': 15, 'cd_bonus': 10,
+    'trainer_strike_rate': 10, 'meeting_focus_trainer': 8, 'jockey_quality': 12,
+    'jockey_course_bonus': 5, 'jockey_hot_form': 5, 'database_history': 15,
+    'age_bonus': 10, 'deep_form': 12, 'consistency': 8, 'sweet_spot': 8,
+    'market_leader': 18, 'small_field_bonus': 7, 'large_field_penalty': -8,
+    'weight_penalty': -5, 'draw_bias': 5, 'distance_suitability': 8,
+    'short_form_improvement': 8, 'trainer_hot_form': 5, 'pace_profile': 6,
+    'track_handedness': 5, 'track_pattern_bonus': 5, 'price_steam': 6,
+    'bounce_back': 5, 'novice_penalty': -5, 'heavy_going_penalty': -10,
+    'aw_low_class_penalty': -5, 'aw_evening_penalty': -3, 'irish_handicap_penalty': -5,
+    'unknown_trainer_penalty': -8, 'claiming_jockey': -3, 'favorite_correction': 5,
+    'unexposed_bonus': 5, 'cheltenham_festival': 15, 'meeting_focus': 8,
+    'official_rating_bonus': 8, 'optimal_odds': 10, 'class_drop_bonus': 8,
+}
+
+ADMIN_DEFAULT_CONFIG = {
+    'min_confidence': 78, 'min_confidence_hcap': 85, 'min_confidence_norace': 75,
+    'target_picks': 3, 'elite_threshold': 95, 'strong_threshold': 90,
+    'good_threshold': 80, 'fair_threshold': 65, 'risky_threshold': 50,
+    'score_cap': 110,
+}
+
+
+def _check_admin_token(event):
+    """Validate x-admin-token header. Returns user email or None."""
+    try:
+        token = (event.get('headers') or {}).get('x-admin-token', '')
+        if not token:
+            return None
+        item = subscribers_table.get_item(Key={'email': f'__session__{token}'}).get('Item')
+        if not item:
+            return None
+        expires = item.get('expires_at', '')
+        if expires and datetime.utcnow().isoformat() + 'Z' > expires:
+            return None
+        return item.get('user_email')
+    except Exception as e:
+        print(f'_check_admin_token error: {e}')
+        return None
+
+
+def admin_get_config(headers, event):
+    user = _check_admin_token(event)
+    if not user:
+        return {'statusCode': 403, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Admin access required'})}
+    try:
+        weights_item = table.get_item(Key={'bet_id': 'SYSTEM_WEIGHTS', 'bet_date': 'CONFIG'}).get('Item', {})
+        config_item  = table.get_item(Key={'bet_id': 'SYSTEM_CONFIG',  'bet_date': 'CONFIG'}).get('Item', {})
+        weights = {k: float(v) for k, v in weights_item.get('weights', {}).items()} if weights_item else {}
+        config  = {k: float(v) for k, v in config_item.get('config',   {}).items()} if config_item else {}
+        return {'statusCode': 200, 'headers': headers, 'body': json.dumps({
+            'success': True,
+            'weights': weights or ADMIN_DEFAULT_WEIGHTS,
+            'config':  config  or ADMIN_DEFAULT_CONFIG,
+            'default_weights': ADMIN_DEFAULT_WEIGHTS,
+            'default_config':  ADMIN_DEFAULT_CONFIG,
+            'weights_saved_at': weights_item.get('updated_at', ''),
+            'config_saved_at':  config_item.get('updated_at', ''),
+        })}
+    except Exception as e:
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': str(e)})}
+
+
+def admin_save_config(headers, event):
+    user = _check_admin_token(event)
+    if not user:
+        return {'statusCode': 403, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Admin access required'})}
+    try:
+        body = json.loads(event.get('body') or '{}')
+        now  = datetime.utcnow().isoformat() + 'Z'
+        if 'weights' in body:
+            table.put_item(Item={
+                'bet_id': 'SYSTEM_WEIGHTS', 'bet_date': 'CONFIG',
+                'weights': {k: Decimal(str(v)) for k, v in body['weights'].items()},
+                'updated_at': now, 'updated_by': user, 'source': 'admin_ui',
+            })
+        if 'config' in body:
+            table.put_item(Item={
+                'bet_id': 'SYSTEM_CONFIG', 'bet_date': 'CONFIG',
+                'config': {k: Decimal(str(v)) for k, v in body['config'].items()},
+                'updated_at': now, 'updated_by': user, 'source': 'admin_ui',
+            })
+        return {'statusCode': 200, 'headers': headers, 'body': json.dumps({'success': True, 'saved_at': now})}
+    except Exception as e:
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': str(e)})}
+
+
+def admin_get_subscribers(headers, event):
+    user = _check_admin_token(event)
+    if not user:
+        return {'statusCode': 403, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Admin access required'})}
+    try:
+        items = []
+        last_key = None
+        while True:
+            kwargs = {
+                'ProjectionExpression': 'email, username, full_name, #r, email_verified, active, joined_at, last_login, login_count',
+                'ExpressionAttributeNames': {'#r': 'role'},
+            }
+            if last_key:
+                kwargs['ExclusiveStartKey'] = last_key
+            resp = subscribers_table.scan(**kwargs)
+            items.extend(resp.get('Items', []))
+            last_key = resp.get('LastEvaluatedKey')
+            if not last_key:
+                break
+        items = [
+            {k: (int(v) if hasattr(v, 'real') else str(v) if not isinstance(v, (str, bool, type(None))) else v)
+             for k, v in i.items()}
+            for i in items
+            if not str(i.get('email','')).startswith('__session__')
+            and not str(i.get('email','')).startswith('u#')
+        ]
+        items.sort(key=lambda x: (x.get('last_login') or x.get('joined_at') or ''), reverse=True)
+        return {'statusCode': 200, 'headers': headers, 'body': json.dumps({'success': True, 'subscribers': items, 'count': len(items)})}
+    except Exception as e:
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': str(e)})}

@@ -279,10 +279,10 @@ def lambda_handler(event, context):
     for race_key, runners in sorted(races.items()):
         rt, course = race_key.split('|', 1)
 
-        # Find favourite — lowest decimal odds runner
+        # Find favourite — lowest decimal odds runner (skip odds<=0 = missing data)
         def _sort_odds(h):
             o = _odds_dec(h.get('odds') or h.get('decimal_odds'))
-            return o if o is not None else 99.0
+            return o if o is not None and o > 0 else 99.0
 
         runners_sorted = sorted(runners, key=_sort_odds)
         fav            = runners_sorted[0]
@@ -319,18 +319,23 @@ def lambda_handler(event, context):
         try:
             lh, lm       = map(int, local_hhmm.split(':'))
             local_mins   = lh * 60 + lm
+            best_diff    = 999
+            best_winner  = None
             for (c_key, t_key), w_name in winner_map.items():
                 if c_key != course_key:
                     continue
                 wh, wm = map(int, t_key.split(':'))
-                if abs((wh * 60 + wm) - local_mins) <= 15:
-                    winner_name = w_name.strip()
-                    fav_outcome = (
-                        'win'
-                        if _norm_horse(winner_name) == _norm_horse(fav_name)
-                        else 'loss'
-                    )
-                    break
+                diff = abs((wh * 60 + wm) - local_mins)
+                if diff < best_diff:
+                    best_diff = diff
+                    best_winner = w_name.strip()
+            if best_winner and best_diff <= 10:
+                winner_name = best_winner
+                fav_outcome = (
+                    'win'
+                    if _norm_horse(winner_name) == _norm_horse(fav_name)
+                    else 'loss'
+                )
         except Exception as ex:
             print(f'  [fav_results] matching error {course} {local_hhmm}: {ex}')
 
@@ -397,21 +402,26 @@ def lambda_handler(event, context):
                 try:
                     lh, lm = map(int, local_hhmm.split(':'))
                     local_mins = lh * 60 + lm
+                    best_diff = 999
+                    best_winner = None
                     for (c_key, t_key), w_name in extra_map.items():
                         if c_key != course_key:
                             continue
                         try:
                             wh, wm = map(int, t_key.split(':'))
-                            if abs((wh * 60 + wm) - local_mins) <= 15:
-                                winner_name = w_name.strip()
-                                fav_outcome = (
-                                    'win'
-                                    if _norm_horse(winner_name) == _norm_horse(fav_name)
-                                    else 'loss'
-                                )
-                                break
+                            diff = abs((wh * 60 + wm) - local_mins)
+                            if diff < best_diff:
+                                best_diff = diff
+                                best_winner = w_name.strip()
                         except ValueError:
                             pass
+                    if best_winner and best_diff <= 10:
+                        winner_name = best_winner
+                        fav_outcome = (
+                            'win'
+                            if _norm_horse(winner_name) == _norm_horse(fav_name)
+                            else 'loss'
+                        )
                 except Exception as ex:
                     print(f'  [fav_results] per-race match error {fav_name}: {ex}')
 

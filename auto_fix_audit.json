@@ -1741,5 +1741,1187 @@
       "STRONG ODDS BAND (3.0\u20135.0 dec): ROI=+27.3% over 62 picks \u2192 prioritise",
       "STRONG ODDS BAND (8.0\u201315.0 dec): ROI=+100.2% over 13 picks \u2192 prioritise"
     ]
+  },
+  {
+    "timestamp": "2026-04-08T09:02:04.440891",
+    "band_stats": {
+      "short_odds": {
+        "wins": 14,
+        "total": 25,
+        "profit": 24.980000000000004,
+        "stake": 250.0,
+        "roi": 10.0,
+        "win_rate": 56.0
+      },
+      "losing_band": {
+        "wins": 17,
+        "total": 62,
+        "profit": 169.38999999999993,
+        "stake": 620.0,
+        "roi": 27.3,
+        "win_rate": 27.4
+      },
+      "sweet_spot": {
+        "wins": 5,
+        "total": 35,
+        "profit": -52.05,
+        "stake": 350.0,
+        "roi": -14.9,
+        "win_rate": 14.3
+      },
+      "upper_range": {
+        "wins": 4,
+        "total": 13,
+        "profit": 130.2,
+        "stake": 130.0,
+        "roi": 100.2,
+        "win_rate": 30.8
+      },
+      "longshot": {
+        "wins": 1,
+        "total": 2,
+        "profit": -6.0,
+        "stake": 20.0,
+        "roi": -30.0,
+        "win_rate": 50.0
+      }
+    },
+    "score_stats": {
+      "80": {
+        "total": 20,
+        "wins": 3,
+        "roi": -14.8,
+        "win_rate": 15.0
+      },
+      "85": {
+        "total": 27,
+        "wins": 7,
+        "roi": 1.2,
+        "win_rate": 25.9
+      },
+      "90": {
+        "total": 19,
+        "wins": 5,
+        "roi": -8.3,
+        "win_rate": 26.3
+      },
+      "75": {
+        "total": 7,
+        "wins": 1,
+        "roi": -33.0,
+        "win_rate": 14.3
+      },
+      "110": {
+        "total": 3,
+        "wins": 2,
+        "roi": 641.3,
+        "win_rate": 66.7
+      },
+      "105": {
+        "total": 12,
+        "wins": 4,
+        "roi": 29.3,
+        "win_rate": 33.3
+      },
+      "95": {
+        "total": 14,
+        "wins": 6,
+        "roi": 9.6,
+        "win_rate": 42.9
+      },
+      "115": {
+        "total": 6,
+        "wins": 3,
+        "roi": 39.8,
+        "win_rate": 50.0
+      },
+      "100": {
+        "total": 15,
+        "wins": 3,
+        "roi": 17.9,
+        "win_rate": 20.0
+      },
+      "130": {
+        "total": 5,
+        "wins": 1,
+        "roi": -9.6,
+        "win_rate": 20.0
+      },
+      "120": {
+        "total": 4,
+        "wins": 3,
+        "roi": 117.7,
+        "win_rate": 75.0
+      },
+      "70": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "60": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "125": {
+        "total": 1,
+        "wins": 0,
+        "roi": -60.0,
+        "win_rate": 0.0
+      },
+      "145": {
+        "total": 1,
+        "wins": 1,
+        "roi": 97.5,
+        "win_rate": 100.0
+      },
+      "135": {
+        "total": 1,
+        "wins": 0,
+        "roi": -60.0,
+        "win_rate": 0.0
+      }
+    },
+    "actions": [
+      "STRONG ODDS BAND (3.0\u20135.0 dec): ROI=+27.3% over 62 picks \u2192 prioritise",
+      "STRONG ODDS BAND (8.0\u201315.0 dec): ROI=+100.2% over 13 picks \u2192 prioritise"
+    ]
+  },
+  {
+    "timestamp": "2026-04-08T09:02:59.866697",
+    "band_stats": {
+      "short_odds": {
+        "wins": 14,
+        "total": 25,
+        "profit": 24.980000000000004,
+        "stake": 250.0,
+        "roi": 10.0,
+        "win_rate": 56.0
+      },
+      "losing_band": {
+        "wins": 17,
+        "total": 62,
+        "profit": 169.38999999999993,
+        "stake": 620.0,
+        "roi": 27.3,
+        "win_rate": 27.4
+      },
+      "sweet_spot": {
+        "wins": 5,
+        "total": 35,
+        "profit": -52.05,
+        "stake": 350.0,
+        "roi": -14.9,
+        "win_rate": 14.3
+      },
+      "upper_range": {
+        "wins": 4,
+        "total": 13,
+        "profit": 130.2,
+        "stake": 130.0,
+        "roi": 100.2,
+        "win_rate": 30.8
+      },
+      "longshot": {
+        "wins": 1,
+        "total": 2,
+        "profit": -6.0,
+        "stake": 20.0,
+        "roi": -30.0,
+        "win_rate": 50.0
+      }
+    },
+    "score_stats": {
+      "80": {
+        "total": 20,
+        "wins": 3,
+        "roi": -14.8,
+        "win_rate": 15.0
+      },
+      "85": {
+        "total": 27,
+        "wins": 7,
+        "roi": 1.2,
+        "win_rate": 25.9
+      },
+      "90": {
+        "total": 19,
+        "wins": 5,
+        "roi": -8.3,
+        "win_rate": 26.3
+      },
+      "75": {
+        "total": 7,
+        "wins": 1,
+        "roi": -33.0,
+        "win_rate": 14.3
+      },
+      "110": {
+        "total": 3,
+        "wins": 2,
+        "roi": 641.3,
+        "win_rate": 66.7
+      },
+      "105": {
+        "total": 12,
+        "wins": 4,
+        "roi": 29.3,
+        "win_rate": 33.3
+      },
+      "95": {
+        "total": 14,
+        "wins": 6,
+        "roi": 9.6,
+        "win_rate": 42.9
+      },
+      "115": {
+        "total": 6,
+        "wins": 3,
+        "roi": 39.8,
+        "win_rate": 50.0
+      },
+      "100": {
+        "total": 15,
+        "wins": 3,
+        "roi": 17.9,
+        "win_rate": 20.0
+      },
+      "130": {
+        "total": 5,
+        "wins": 1,
+        "roi": -9.6,
+        "win_rate": 20.0
+      },
+      "120": {
+        "total": 4,
+        "wins": 3,
+        "roi": 117.7,
+        "win_rate": 75.0
+      },
+      "70": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "60": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "125": {
+        "total": 1,
+        "wins": 0,
+        "roi": -60.0,
+        "win_rate": 0.0
+      },
+      "145": {
+        "total": 1,
+        "wins": 1,
+        "roi": 97.5,
+        "win_rate": 100.0
+      },
+      "135": {
+        "total": 1,
+        "wins": 0,
+        "roi": -60.0,
+        "win_rate": 0.0
+      }
+    },
+    "actions": [
+      "STRONG ODDS BAND (3.0\u20135.0 dec): ROI=+27.3% over 62 picks \u2192 prioritise",
+      "STRONG ODDS BAND (8.0\u201315.0 dec): ROI=+100.2% over 13 picks \u2192 prioritise"
+    ]
+  },
+  {
+    "timestamp": "2026-04-08T19:01:43.005639",
+    "band_stats": {
+      "short_odds": {
+        "wins": 14,
+        "total": 25,
+        "profit": 24.980000000000004,
+        "stake": 250.0,
+        "roi": 10.0,
+        "win_rate": 56.0
+      },
+      "losing_band": {
+        "wins": 17,
+        "total": 62,
+        "profit": 169.38999999999993,
+        "stake": 620.0,
+        "roi": 27.3,
+        "win_rate": 27.4
+      },
+      "sweet_spot": {
+        "wins": 5,
+        "total": 37,
+        "profit": -64.05,
+        "stake": 370.0,
+        "roi": -17.3,
+        "win_rate": 13.5
+      },
+      "upper_range": {
+        "wins": 4,
+        "total": 13,
+        "profit": 130.2,
+        "stake": 130.0,
+        "roi": 100.2,
+        "win_rate": 30.8
+      },
+      "longshot": {
+        "wins": 1,
+        "total": 2,
+        "profit": -6.0,
+        "stake": 20.0,
+        "roi": -30.0,
+        "win_rate": 50.0
+      }
+    },
+    "score_stats": {
+      "80": {
+        "total": 20,
+        "wins": 3,
+        "roi": -14.8,
+        "win_rate": 15.0
+      },
+      "85": {
+        "total": 27,
+        "wins": 7,
+        "roi": 1.2,
+        "win_rate": 25.9
+      },
+      "90": {
+        "total": 19,
+        "wins": 5,
+        "roi": -8.3,
+        "win_rate": 26.3
+      },
+      "75": {
+        "total": 7,
+        "wins": 1,
+        "roi": -33.0,
+        "win_rate": 14.3
+      },
+      "110": {
+        "total": 4,
+        "wins": 2,
+        "roi": 466.0,
+        "win_rate": 50.0
+      },
+      "105": {
+        "total": 12,
+        "wins": 4,
+        "roi": 29.3,
+        "win_rate": 33.3
+      },
+      "95": {
+        "total": 14,
+        "wins": 6,
+        "roi": 9.6,
+        "win_rate": 42.9
+      },
+      "115": {
+        "total": 6,
+        "wins": 3,
+        "roi": 39.8,
+        "win_rate": 50.0
+      },
+      "100": {
+        "total": 15,
+        "wins": 3,
+        "roi": 17.9,
+        "win_rate": 20.0
+      },
+      "130": {
+        "total": 5,
+        "wins": 1,
+        "roi": -9.6,
+        "win_rate": 20.0
+      },
+      "120": {
+        "total": 5,
+        "wins": 3,
+        "roi": 82.2,
+        "win_rate": 60.0
+      },
+      "70": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "60": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "125": {
+        "total": 1,
+        "wins": 0,
+        "roi": -60.0,
+        "win_rate": 0.0
+      },
+      "145": {
+        "total": 1,
+        "wins": 1,
+        "roi": 97.5,
+        "win_rate": 100.0
+      },
+      "135": {
+        "total": 1,
+        "wins": 0,
+        "roi": -60.0,
+        "win_rate": 0.0
+      }
+    },
+    "actions": [
+      "STRONG ODDS BAND (3.0\u20135.0 dec): ROI=+27.3% over 62 picks \u2192 prioritise",
+      "LOSING ODDS BAND (5.0\u20138.0 dec / 4/1\u20137/1): ROI=-17.3% over 37 picks \u2192 avoid or block unless score\u226595",
+      "STRONG ODDS BAND (8.0\u201315.0 dec): ROI=+100.2% over 13 picks \u2192 prioritise"
+    ]
+  },
+  {
+    "timestamp": "2026-04-08T23:00:28.912036",
+    "band_stats": {
+      "short_odds": {
+        "wins": 14,
+        "total": 25,
+        "profit": 24.980000000000004,
+        "stake": 250.0,
+        "roi": 10.0,
+        "win_rate": 56.0
+      },
+      "losing_band": {
+        "wins": 17,
+        "total": 62,
+        "profit": 169.38999999999993,
+        "stake": 620.0,
+        "roi": 27.3,
+        "win_rate": 27.4
+      },
+      "sweet_spot": {
+        "wins": 5,
+        "total": 37,
+        "profit": -64.05,
+        "stake": 370.0,
+        "roi": -17.3,
+        "win_rate": 13.5
+      },
+      "upper_range": {
+        "wins": 4,
+        "total": 13,
+        "profit": 130.2,
+        "stake": 130.0,
+        "roi": 100.2,
+        "win_rate": 30.8
+      },
+      "longshot": {
+        "wins": 1,
+        "total": 2,
+        "profit": -6.0,
+        "stake": 20.0,
+        "roi": -30.0,
+        "win_rate": 50.0
+      }
+    },
+    "score_stats": {
+      "80": {
+        "total": 20,
+        "wins": 3,
+        "roi": -14.8,
+        "win_rate": 15.0
+      },
+      "85": {
+        "total": 27,
+        "wins": 7,
+        "roi": 1.2,
+        "win_rate": 25.9
+      },
+      "90": {
+        "total": 19,
+        "wins": 5,
+        "roi": -8.3,
+        "win_rate": 26.3
+      },
+      "75": {
+        "total": 7,
+        "wins": 1,
+        "roi": -33.0,
+        "win_rate": 14.3
+      },
+      "110": {
+        "total": 4,
+        "wins": 2,
+        "roi": 466.0,
+        "win_rate": 50.0
+      },
+      "105": {
+        "total": 12,
+        "wins": 4,
+        "roi": 29.3,
+        "win_rate": 33.3
+      },
+      "95": {
+        "total": 14,
+        "wins": 6,
+        "roi": 9.6,
+        "win_rate": 42.9
+      },
+      "115": {
+        "total": 6,
+        "wins": 3,
+        "roi": 39.8,
+        "win_rate": 50.0
+      },
+      "100": {
+        "total": 15,
+        "wins": 3,
+        "roi": 17.9,
+        "win_rate": 20.0
+      },
+      "130": {
+        "total": 5,
+        "wins": 1,
+        "roi": -9.6,
+        "win_rate": 20.0
+      },
+      "120": {
+        "total": 5,
+        "wins": 3,
+        "roi": 82.2,
+        "win_rate": 60.0
+      },
+      "70": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "60": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "125": {
+        "total": 1,
+        "wins": 0,
+        "roi": -60.0,
+        "win_rate": 0.0
+      },
+      "145": {
+        "total": 1,
+        "wins": 1,
+        "roi": 97.5,
+        "win_rate": 100.0
+      },
+      "135": {
+        "total": 1,
+        "wins": 0,
+        "roi": -60.0,
+        "win_rate": 0.0
+      }
+    },
+    "actions": [
+      "STRONG ODDS BAND (3.0\u20135.0 dec): ROI=+27.3% over 62 picks \u2192 prioritise",
+      "LOSING ODDS BAND (5.0\u20138.0 dec / 4/1\u20137/1): ROI=-17.3% over 37 picks \u2192 avoid or block unless score\u226595",
+      "STRONG ODDS BAND (8.0\u201315.0 dec): ROI=+100.2% over 13 picks \u2192 prioritise"
+    ]
+  },
+  {
+    "timestamp": "2026-04-08T23:01:22.684586",
+    "band_stats": {
+      "short_odds": {
+        "wins": 14,
+        "total": 25,
+        "profit": 24.980000000000004,
+        "stake": 250.0,
+        "roi": 10.0,
+        "win_rate": 56.0
+      },
+      "losing_band": {
+        "wins": 17,
+        "total": 62,
+        "profit": 169.38999999999993,
+        "stake": 620.0,
+        "roi": 27.3,
+        "win_rate": 27.4
+      },
+      "sweet_spot": {
+        "wins": 5,
+        "total": 37,
+        "profit": -64.05,
+        "stake": 370.0,
+        "roi": -17.3,
+        "win_rate": 13.5
+      },
+      "upper_range": {
+        "wins": 4,
+        "total": 13,
+        "profit": 130.2,
+        "stake": 130.0,
+        "roi": 100.2,
+        "win_rate": 30.8
+      },
+      "longshot": {
+        "wins": 1,
+        "total": 2,
+        "profit": -6.0,
+        "stake": 20.0,
+        "roi": -30.0,
+        "win_rate": 50.0
+      }
+    },
+    "score_stats": {
+      "80": {
+        "total": 20,
+        "wins": 3,
+        "roi": -14.8,
+        "win_rate": 15.0
+      },
+      "85": {
+        "total": 27,
+        "wins": 7,
+        "roi": 1.2,
+        "win_rate": 25.9
+      },
+      "90": {
+        "total": 19,
+        "wins": 5,
+        "roi": -8.3,
+        "win_rate": 26.3
+      },
+      "75": {
+        "total": 7,
+        "wins": 1,
+        "roi": -33.0,
+        "win_rate": 14.3
+      },
+      "110": {
+        "total": 4,
+        "wins": 2,
+        "roi": 466.0,
+        "win_rate": 50.0
+      },
+      "105": {
+        "total": 12,
+        "wins": 4,
+        "roi": 29.3,
+        "win_rate": 33.3
+      },
+      "95": {
+        "total": 14,
+        "wins": 6,
+        "roi": 9.6,
+        "win_rate": 42.9
+      },
+      "115": {
+        "total": 6,
+        "wins": 3,
+        "roi": 39.8,
+        "win_rate": 50.0
+      },
+      "100": {
+        "total": 15,
+        "wins": 3,
+        "roi": 17.9,
+        "win_rate": 20.0
+      },
+      "130": {
+        "total": 5,
+        "wins": 1,
+        "roi": -9.6,
+        "win_rate": 20.0
+      },
+      "120": {
+        "total": 5,
+        "wins": 3,
+        "roi": 82.2,
+        "win_rate": 60.0
+      },
+      "70": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "60": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "125": {
+        "total": 1,
+        "wins": 0,
+        "roi": -60.0,
+        "win_rate": 0.0
+      },
+      "145": {
+        "total": 1,
+        "wins": 1,
+        "roi": 97.5,
+        "win_rate": 100.0
+      },
+      "135": {
+        "total": 1,
+        "wins": 0,
+        "roi": -60.0,
+        "win_rate": 0.0
+      }
+    },
+    "actions": [
+      "STRONG ODDS BAND (3.0\u20135.0 dec): ROI=+27.3% over 62 picks \u2192 prioritise",
+      "LOSING ODDS BAND (5.0\u20138.0 dec / 4/1\u20137/1): ROI=-17.3% over 37 picks \u2192 avoid or block unless score\u226595",
+      "STRONG ODDS BAND (8.0\u201315.0 dec): ROI=+100.2% over 13 picks \u2192 prioritise"
+    ]
+  },
+  {
+    "timestamp": "2026-04-09T19:01:29.166905",
+    "band_stats": {
+      "short_odds": {
+        "wins": 14,
+        "total": 25,
+        "profit": 24.980000000000004,
+        "stake": 250.0,
+        "roi": 10.0,
+        "win_rate": 56.0
+      },
+      "losing_band": {
+        "wins": 17,
+        "total": 62,
+        "profit": 176.88999999999993,
+        "stake": 620.0,
+        "roi": 28.5,
+        "win_rate": 27.4
+      },
+      "sweet_spot": {
+        "wins": 5,
+        "total": 37,
+        "profit": -70.05,
+        "stake": 370.0,
+        "roi": -18.9,
+        "win_rate": 13.5
+      },
+      "upper_range": {
+        "wins": 4,
+        "total": 13,
+        "profit": 130.2,
+        "stake": 130.0,
+        "roi": 100.2,
+        "win_rate": 30.8
+      },
+      "longshot": {
+        "wins": 1,
+        "total": 2,
+        "profit": -6.0,
+        "stake": 20.0,
+        "roi": -30.0,
+        "win_rate": 50.0
+      }
+    },
+    "score_stats": {
+      "80": {
+        "total": 20,
+        "wins": 3,
+        "roi": -14.8,
+        "win_rate": 15.0
+      },
+      "85": {
+        "total": 25,
+        "wins": 6,
+        "roi": 1.3,
+        "win_rate": 24.0
+      },
+      "90": {
+        "total": 19,
+        "wins": 5,
+        "roi": -8.3,
+        "win_rate": 26.3
+      },
+      "75": {
+        "total": 7,
+        "wins": 1,
+        "roi": -33.0,
+        "win_rate": 14.3
+      },
+      "110": {
+        "total": 4,
+        "wins": 2,
+        "roi": 466.0,
+        "win_rate": 50.0
+      },
+      "105": {
+        "total": 12,
+        "wins": 4,
+        "roi": 29.3,
+        "win_rate": 33.3
+      },
+      "95": {
+        "total": 14,
+        "wins": 6,
+        "roi": 9.6,
+        "win_rate": 42.9
+      },
+      "115": {
+        "total": 6,
+        "wins": 3,
+        "roi": 39.8,
+        "win_rate": 50.0
+      },
+      "100": {
+        "total": 15,
+        "wins": 3,
+        "roi": 13.9,
+        "win_rate": 20.0
+      },
+      "130": {
+        "total": 5,
+        "wins": 1,
+        "roi": -9.6,
+        "win_rate": 20.0
+      },
+      "120": {
+        "total": 5,
+        "wins": 3,
+        "roi": 82.2,
+        "win_rate": 60.0
+      },
+      "145": {
+        "total": 2,
+        "wins": 1,
+        "roi": 18.8,
+        "win_rate": 50.0
+      },
+      "125": {
+        "total": 2,
+        "wins": 1,
+        "roi": 37.5,
+        "win_rate": 50.0
+      },
+      "70": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "60": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "135": {
+        "total": 1,
+        "wins": 0,
+        "roi": -60.0,
+        "win_rate": 0.0
+      }
+    },
+    "actions": [
+      "STRONG ODDS BAND (3.0\u20135.0 dec): ROI=+28.5% over 62 picks \u2192 prioritise",
+      "LOSING ODDS BAND (5.0\u20138.0 dec / 4/1\u20137/1): ROI=-18.9% over 37 picks \u2192 avoid or block unless score\u226595",
+      "STRONG ODDS BAND (8.0\u201315.0 dec): ROI=+100.2% over 13 picks \u2192 prioritise"
+    ]
+  },
+  {
+    "timestamp": "2026-04-09T23:00:27.688757",
+    "band_stats": {
+      "short_odds": {
+        "wins": 14,
+        "total": 25,
+        "profit": 24.980000000000004,
+        "stake": 250.0,
+        "roi": 10.0,
+        "win_rate": 56.0
+      },
+      "losing_band": {
+        "wins": 17,
+        "total": 62,
+        "profit": 176.88999999999993,
+        "stake": 620.0,
+        "roi": 28.5,
+        "win_rate": 27.4
+      },
+      "sweet_spot": {
+        "wins": 5,
+        "total": 37,
+        "profit": -70.05,
+        "stake": 370.0,
+        "roi": -18.9,
+        "win_rate": 13.5
+      },
+      "upper_range": {
+        "wins": 4,
+        "total": 13,
+        "profit": 130.2,
+        "stake": 130.0,
+        "roi": 100.2,
+        "win_rate": 30.8
+      },
+      "longshot": {
+        "wins": 1,
+        "total": 2,
+        "profit": -6.0,
+        "stake": 20.0,
+        "roi": -30.0,
+        "win_rate": 50.0
+      }
+    },
+    "score_stats": {
+      "80": {
+        "total": 20,
+        "wins": 3,
+        "roi": -14.8,
+        "win_rate": 15.0
+      },
+      "85": {
+        "total": 25,
+        "wins": 6,
+        "roi": 1.3,
+        "win_rate": 24.0
+      },
+      "90": {
+        "total": 19,
+        "wins": 5,
+        "roi": -8.3,
+        "win_rate": 26.3
+      },
+      "75": {
+        "total": 7,
+        "wins": 1,
+        "roi": -33.0,
+        "win_rate": 14.3
+      },
+      "110": {
+        "total": 4,
+        "wins": 2,
+        "roi": 466.0,
+        "win_rate": 50.0
+      },
+      "105": {
+        "total": 12,
+        "wins": 4,
+        "roi": 29.3,
+        "win_rate": 33.3
+      },
+      "95": {
+        "total": 14,
+        "wins": 6,
+        "roi": 9.6,
+        "win_rate": 42.9
+      },
+      "115": {
+        "total": 6,
+        "wins": 3,
+        "roi": 39.8,
+        "win_rate": 50.0
+      },
+      "100": {
+        "total": 15,
+        "wins": 3,
+        "roi": 13.9,
+        "win_rate": 20.0
+      },
+      "130": {
+        "total": 5,
+        "wins": 1,
+        "roi": -9.6,
+        "win_rate": 20.0
+      },
+      "120": {
+        "total": 5,
+        "wins": 3,
+        "roi": 82.2,
+        "win_rate": 60.0
+      },
+      "145": {
+        "total": 2,
+        "wins": 1,
+        "roi": 18.8,
+        "win_rate": 50.0
+      },
+      "125": {
+        "total": 2,
+        "wins": 1,
+        "roi": 37.5,
+        "win_rate": 50.0
+      },
+      "70": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "60": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "135": {
+        "total": 1,
+        "wins": 0,
+        "roi": -60.0,
+        "win_rate": 0.0
+      }
+    },
+    "actions": [
+      "STRONG ODDS BAND (3.0\u20135.0 dec): ROI=+28.5% over 62 picks \u2192 prioritise",
+      "LOSING ODDS BAND (5.0\u20138.0 dec / 4/1\u20137/1): ROI=-18.9% over 37 picks \u2192 avoid or block unless score\u226595",
+      "STRONG ODDS BAND (8.0\u201315.0 dec): ROI=+100.2% over 13 picks \u2192 prioritise"
+    ]
+  },
+  {
+    "timestamp": "2026-04-09T23:01:25.964099",
+    "band_stats": {
+      "short_odds": {
+        "wins": 14,
+        "total": 25,
+        "profit": 24.980000000000004,
+        "stake": 250.0,
+        "roi": 10.0,
+        "win_rate": 56.0
+      },
+      "losing_band": {
+        "wins": 17,
+        "total": 62,
+        "profit": 176.88999999999993,
+        "stake": 620.0,
+        "roi": 28.5,
+        "win_rate": 27.4
+      },
+      "sweet_spot": {
+        "wins": 5,
+        "total": 37,
+        "profit": -70.05,
+        "stake": 370.0,
+        "roi": -18.9,
+        "win_rate": 13.5
+      },
+      "upper_range": {
+        "wins": 4,
+        "total": 13,
+        "profit": 130.2,
+        "stake": 130.0,
+        "roi": 100.2,
+        "win_rate": 30.8
+      },
+      "longshot": {
+        "wins": 1,
+        "total": 2,
+        "profit": -6.0,
+        "stake": 20.0,
+        "roi": -30.0,
+        "win_rate": 50.0
+      }
+    },
+    "score_stats": {
+      "80": {
+        "total": 20,
+        "wins": 3,
+        "roi": -14.8,
+        "win_rate": 15.0
+      },
+      "85": {
+        "total": 25,
+        "wins": 6,
+        "roi": 1.3,
+        "win_rate": 24.0
+      },
+      "90": {
+        "total": 19,
+        "wins": 5,
+        "roi": -8.3,
+        "win_rate": 26.3
+      },
+      "75": {
+        "total": 7,
+        "wins": 1,
+        "roi": -33.0,
+        "win_rate": 14.3
+      },
+      "110": {
+        "total": 4,
+        "wins": 2,
+        "roi": 466.0,
+        "win_rate": 50.0
+      },
+      "105": {
+        "total": 12,
+        "wins": 4,
+        "roi": 29.3,
+        "win_rate": 33.3
+      },
+      "95": {
+        "total": 14,
+        "wins": 6,
+        "roi": 9.6,
+        "win_rate": 42.9
+      },
+      "115": {
+        "total": 6,
+        "wins": 3,
+        "roi": 39.8,
+        "win_rate": 50.0
+      },
+      "100": {
+        "total": 15,
+        "wins": 3,
+        "roi": 13.9,
+        "win_rate": 20.0
+      },
+      "130": {
+        "total": 5,
+        "wins": 1,
+        "roi": -9.6,
+        "win_rate": 20.0
+      },
+      "120": {
+        "total": 5,
+        "wins": 3,
+        "roi": 82.2,
+        "win_rate": 60.0
+      },
+      "145": {
+        "total": 2,
+        "wins": 1,
+        "roi": 18.8,
+        "win_rate": 50.0
+      },
+      "125": {
+        "total": 2,
+        "wins": 1,
+        "roi": 37.5,
+        "win_rate": 50.0
+      },
+      "70": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "60": {
+        "total": 1,
+        "wins": 1,
+        "roi": 0.0,
+        "win_rate": 100.0
+      },
+      "135": {
+        "total": 1,
+        "wins": 0,
+        "roi": -60.0,
+        "win_rate": 0.0
+      }
+    },
+    "actions": [
+      "STRONG ODDS BAND (3.0\u20135.0 dec): ROI=+28.5% over 62 picks \u2192 prioritise",
+      "LOSING ODDS BAND (5.0\u20138.0 dec / 4/1\u20137/1): ROI=-18.9% over 37 picks \u2192 avoid or block unless score\u226595",
+      "STRONG ODDS BAND (8.0\u201315.0 dec): ROI=+100.2% over 13 picks \u2192 prioritise"
+    ]
   }
 ]

@@ -590,9 +590,7 @@ def get_yesterday_results():
                 seen_races[race_key] = pick
         picks = list(seen_races.values())
 
-        # Sort by score desc, keep top 5, then re-sort by race time for display
-        picks.sort(key=lambda x: float(x.get('comprehensive_score') or x.get('analysis_score') or 0), reverse=True)
-        picks = picks[:5]
+        # Sort by race_time for display (top-N cap applied at pick selection time, not here)
         picks.sort(key=lambda x: x.get('race_time', ''))
 
         # Calculate result analysis for each pick
@@ -1408,10 +1406,16 @@ def get_favs_run():
         caution = sum(1 for r in all_results if r['lay_score'] >= 4)
         strong  = sum(1 for r in all_results if r['lay_score'] >= 9)
 
+        # Lay win % — how often the favourite lost (settled races only)
+        settled  = [r for r in all_results if r.get('outcome') and r['outcome'].lower() in ('win','won','loss','lost')]
+        fav_lost = [r for r in settled if r['outcome'].lower() in ('loss','lost')]
+        lay_win_pct = round(len(fav_lost) / len(settled) * 100, 1) if settled else None
+
         return jsonify({
             'success':    True,
             'generated':  datetime.now().isoformat(),
-            'summary': {'total': total, 'caution': caution, 'strong': strong},
+            'summary': {'total': total, 'caution': caution, 'strong': strong,
+                        'settled': len(settled), 'fav_lost': len(fav_lost), 'lay_win_pct': lay_win_pct},
             'races':      all_results,
         })
     except Exception as e:
