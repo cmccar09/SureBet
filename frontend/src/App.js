@@ -2620,8 +2620,8 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
       {!isAuthenticated && (
       <div style={{ marginBottom: '24px' }}>
         <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-          <span style={{ fontSize: '15px', fontWeight: '800', color: 'white' }}>Choose Your Plan</span>
-          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)', marginLeft: '8px' }}>Sign up free, upgrade anytime</span>
+          <span style={{ fontSize: '16px', fontWeight: '800', color: 'white' }}>⚡ Unlock Your Edge</span>
+          <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', marginLeft: '8px' }}>Sign up free, upgrade anytime</span>
         </div>
         <div style={{ display: 'flex', gap: '10px', maxWidth: '700px', margin: '0 auto', flexWrap: 'wrap', justifyContent: 'center' }}>
           {/* Free */}
@@ -2633,24 +2633,25 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.6' }}>2 picks/day · Basic info</div>
           </div>
           {/* Premium */}
-          <div style={{ flex: '1 1 180px', maxWidth: '220px', background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.06))', border: '2px solid rgba(99,102,241,0.35)', borderRadius: '10px', padding: '12px 14px', position: 'relative' }}>
-            <div style={{ position: 'absolute', top: '-9px', right: '10px', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', borderRadius: '10px', padding: '2px 8px', fontSize: '8px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Popular</div>
+          <div style={{ flex: '1 1 180px', maxWidth: '220px', background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))', border: '2px solid rgba(99,102,241,0.5)', borderRadius: '10px', padding: '12px 14px', position: 'relative', boxShadow: '0 0 20px rgba(99,102,241,0.15)' }}>
+            <div style={{ position: 'absolute', top: '-9px', right: '10px', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', borderRadius: '10px', padding: '2px 8px', fontSize: '8px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px' }}>⭐ Popular</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
               <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', color: '#818cf8' }}>Premium</span>
               <span style={{ fontSize: '18px', fontWeight: '900', color: 'white' }}>€19.99<span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>/mo</span></span>
             </div>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.6' }}>All picks · Full analysis · ROI</div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', lineHeight: '1.6' }}>🎯 All picks · Full analysis · ROI</div>
           </div>
           {/* VIP Rollers */}
-          <div style={{ flex: '1 1 180px', maxWidth: '220px', background: 'linear-gradient(135deg, rgba(245,158,11,0.08), rgba(251,191,36,0.04))', border: '2px solid rgba(245,158,11,0.3)', borderRadius: '10px', padding: '12px 14px' }}>
+          <div style={{ flex: '1 1 180px', maxWidth: '220px', background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(251,191,36,0.06))', border: '2px solid rgba(245,158,11,0.45)', borderRadius: '10px', padding: '12px 14px', position: 'relative', boxShadow: '0 0 20px rgba(245,158,11,0.1)' }}>
+            <div style={{ position: 'absolute', top: '-9px', right: '10px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', borderRadius: '10px', padding: '2px 8px', fontSize: '8px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🔥 Best Value</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', color: '#fbbf24' }}>VIP Rollers</span>
+              <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', color: '#fbbf24' }}>👑 VIP Rollers</span>
               <span style={{ fontSize: '18px', fontWeight: '900', color: 'white' }}>€99<span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>/mo</span></span>
             </div>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.6' }}>Everything + field data · Priority</div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', lineHeight: '1.6' }}>🏆 Everything + field data · Priority</div>
           </div>
         </div>
-        <div style={{ textAlign: 'center', fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '8px' }}>Powered by Stripe · Cancel anytime · EUR</div>
+        <div style={{ textAlign: 'center', fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '8px' }}>🔒 Powered by Stripe · Cancel anytime · EUR</div>
       </div>
       )}
 
