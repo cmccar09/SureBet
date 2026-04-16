@@ -2839,9 +2839,9 @@ def get_major_race_analysis(headers):
 
 
 def run_major_race_analysis(headers, event):
-    """POST /api/major-race-analysis/run — scrape ante-post data & score horses for upcoming major races.
+    """POST /api/major-race-analysis/run — fetch Betfair ante-post odds & score horses for upcoming major races.
     Admin-only. Designed to run weekly via EventBridge or manual trigger."""
-    import re as _re
+    import urllib.parse as _up
     import urllib.request as _ur
 
     # Admin auth check
@@ -2853,17 +2853,9 @@ def run_major_race_analysis(headers, event):
         if not sess or sess.get('role') != 'admin':
             return {'statusCode': 403, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Admin auth required'})}
     else:
-        # Allow EventBridge trigger (no token)
         source = event.get('source', '')
         if source not in ('aws.events', 'scheduled-major-analysis'):
             return {'statusCode': 403, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Admin auth required'})}
-
-    SL_HEADERS = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Accept-Language': 'en-GB,en;q=0.5',
-        'Referer': 'https://www.sportinglife.com/',
-    }
 
     # Major races calendar (same as frontend)
     MAJOR_RACES = [
@@ -2892,193 +2884,290 @@ def run_major_race_analysis(headers, event):
     ]
 
     today_str = datetime.utcnow().strftime('%Y-%m-%d')
-    upcoming = [r for r in MAJOR_RACES if r['date'] > today_str]
+    upcoming = [r for r in MAJOR_RACES if r['date'] >= today_str]
 
-    # ── Fetch ante-post markets from Sporting Life ────────────────────────────
-    def _sl_fetch(url):
+    # ── Authenticate to Betfair ───────────────────────────────────────────────
+    sm = boto3.client('secretsmanager', region_name='eu-west-1')
+    creds = json.loads(sm.get_secret_value(SecretId='betfair-credentials')['SecretString'])
+    app_key = creds['app_key']
+    BF_BASE = 'https://api.betfair.com/exchange/betting/rest/v1.0'
+
+    session_token = None
+    try:
+        login_data = _up.urlencode(
+            {'username': creds['username'], 'password': creds['password']}
+        ).encode('utf-8')
+        login_req = _ur.Request(
+            'https://identitysso.betfair.com/api/login',
+            data=login_data,
+            headers={'X-Application': app_key, 'Content-Type': 'application/x-www-form-urlencoded', 'Accept': 'application/json'},
+            method='POST'
+        )
+        with _ur.urlopen(login_req, timeout=10) as r:
+            result = json.loads(r.read())
+            session_token = result.get('sessionToken') or result.get('token')
+    except Exception as e:
+        print(f'[major-analysis] Betfair login error: {e}')
+        session_token = creds.get('session_token', '')
+
+    if not session_token:
+        return {
+            'statusCode': 500, 'headers': headers,
+            'body': json.dumps({'success': False, 'error': 'Could not authenticate to Betfair'})
+        }
+
+    bf_hdrs = {
+        'X-Application': app_key,
+        'X-Authentication': session_token,
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+    }
+
+    def bf_post(endpoint, payload):
+        data = json.dumps(payload).encode('utf-8')
+        req = _ur.Request(f'{BF_BASE}/{endpoint}/', data=data, headers=bf_hdrs, method='POST')
+        with _ur.urlopen(req, timeout=20) as r:
+            return json.loads(r.read())
+
+    print(f'[major-analysis] Betfair authenticated, fetching ante-post markets...')
+
+    # ── Fetch ante-post + regular WIN markets ─────────────────────────────────
+    # Betfair uses "ANTEPOST_WIN" for ante-post markets (no venue set).
+    # Regular "WIN" markets appear closer to race day (1-2 days out) with full venue/runner metadata.
+    all_bf_markets = []
+    for mtype in ['ANTEPOST_WIN', 'WIN']:
         try:
-            req = _ur.Request(url, headers=SL_HEADERS)
-            with _ur.urlopen(req, timeout=20) as resp:
-                return resp.read().decode('utf-8', errors='replace')
+            markets = bf_post('listMarketCatalogue', {
+                'filter': {
+                    'eventTypeIds': ['7'],
+                    'marketTypeCodes': [mtype],
+                    'marketStartTime': {
+                        'from': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                        'to': (datetime.utcnow() + timedelta(days=200)).strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    },
+                },
+                'maxResults': 1000,
+                'marketProjection': ['RUNNER_METADATA', 'EVENT', 'MARKET_START_TIME', 'COMPETITION', 'MARKET_DESCRIPTION'],
+            })
+            print(f'[major-analysis] Betfair {mtype}: {len(markets)} markets found')
+            all_bf_markets.extend(markets)
         except Exception as e:
-            print(f'[major-analysis] SL fetch error for {url}: {e}')
-            return None
+            print(f'[major-analysis] Betfair {mtype} fetch error: {e}')
 
-    def _parse_ante_post(html, race_name):
-        """Parse ante-post betting page or racecard for horse names and odds."""
-        horses = []
-        if not html:
-            return horses
+    # ── Match Betfair markets to our major races ──────────────────────────────
+    def _norm(s):
+        return s.lower().strip().replace("'", '').replace('.', '').replace('-', ' ')
 
-        # Try __NEXT_DATA__ JSON first (most reliable)
-        m = _re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, _re.DOTALL)
-        if m:
+    # Build keyword aliases for matching (Betfair uses shortened names)
+    RACE_ALIASES = {
+        'scottish grand national': ['scottish grand national'],
+        'punchestown champion chase': ['champion chase'],
+        'punchestown gold cup': ['gold cup'],
+        'punchestown champion hurdle': ['champion hurdle'],
+        'world series hurdle': ['champion stayers hurdle', 'world series hurdle', 'stayers hurdle'],
+        '2000 guineas': ['2000 guineas'],
+        '1000 guineas': ['1000 guineas'],
+        'chester vase': ['chester vase', 'chester cup'],
+        'dante stakes': ['dante stakes', 'dante'],
+        'musidora stakes': ['musidora stakes', 'musidora'],
+        'coronation cup': ['coronation cup'],
+        'the oaks': ['the oaks', 'oaks'],
+        'the derby': ['the derby', 'derby'],
+        'queen anne stakes': ['queen anne'],
+        "prince of wales's stakes": ['prince of wales'],
+        'ascot gold cup': ['gold cup', 'royal ascot gold cup'],
+        'eclipse stakes': ['eclipse stakes', 'eclipse'],
+        'king george vi & queen elizabeth stakes': ['king george'],
+        'sussex stakes': ['sussex stakes', 'sussex'],
+        'juddmonte international': ['juddmonte international', 'juddmonte'],
+        'st leger': ['st leger'],
+        'qipco champion stakes': ['champion stakes', 'qipco champion'],
+        'lockinge stakes': ['lockinge'],
+    }
+
+    def _match_market(race, market):
+        """Check if a Betfair market matches our major race."""
+        market_name = _norm(market.get('marketName', ''))
+        market_start = market.get('marketStartTime', '')
+        race_name_lower = _norm(race['name'])
+
+        # For ANTEPOST_WIN: no venue, match by name keywords + approximate date (±3 days)
+        desc = market.get('description', {})
+        is_antepost = desc.get('marketType') == 'ANTEPOST_WIN' if desc else 'antepost' in market.get('marketId', '').lower()
+
+        # Get aliases for this race
+        aliases = RACE_ALIASES.get(race_name_lower, [race_name_lower])
+
+        # Check if market name matches any alias
+        name_match = False
+        for alias in aliases:
+            alias_words = [w for w in alias.split() if len(w) > 2]
+            hits = sum(1 for w in alias_words if w in market_name)
+            # Require ALL key words to match to avoid cross-contamination
+            # e.g. "1000 guineas" must not match "2000 guineas"
+            if alias_words and hits >= len(alias_words):
+                name_match = True
+                break
+
+        if not name_match:
+            return False
+
+        # Date match: for ante-post, allow ±3 day margin (Betfair dates may differ)
+        if market_start:
             try:
-                nd = json.loads(m.group(1))
-                # Ante-post markets
-                markets = nd.get('props', {}).get('pageProps', {}).get('markets', [])
-                for mkt in markets:
-                    selections = mkt.get('selections', [])
-                    for sel in selections:
-                        name = sel.get('name', '').strip()
-                        odds_str = sel.get('odds', '')
-                        if not name:
-                            continue
-                        odds_dec = None
-                        if '/' in str(odds_str):
-                            try:
-                                num, den = odds_str.split('/')
-                                odds_dec = round(float(num) / float(den) + 1, 2)
-                            except Exception:
-                                pass
-                        horses.append({'name': name, 'odds': odds_dec, 'odds_display': str(odds_str)})
+                market_date = datetime.strptime(market_start[:10], '%Y-%m-%d')
+                race_date = datetime.strptime(race['date'], '%Y-%m-%d')
+                if abs((market_date - race_date).days) > 3:
+                    # But for ambiguous names like "Gold Cup" or "Champion Chase",
+                    # reject if date is far off to avoid mixing up different festivals
+                    return False
+            except Exception:
+                pass
 
-                # Also check racecard format (rides list)
-                if not horses:
-                    rides = nd.get('props', {}).get('pageProps', {}).get('race', {}).get('rides', [])
-                    for ride in rides:
-                        horse = ride.get('horse', {})
-                        name = horse.get('name', '').strip()
-                        if not name:
-                            continue
-                        # Get trainer, jockey, form
-                        trainer = ride.get('trainer', {}).get('name', '')
-                        jockey = ride.get('jockey', {}).get('name', '')
-                        form_str = horse.get('form', '')
-                        prev_results = horse.get('previous_results', [])
-                        horses.append({
-                            'name': name,
-                            'odds': None,
-                            'odds_display': '',
-                            'trainer': trainer,
-                            'jockey': jockey,
-                            'form': form_str,
-                            'runs': len(prev_results),
-                            'wins': sum(1 for r in prev_results if r.get('position') == 1),
-                        })
-            except Exception as e:
-                print(f'[major-analysis] JSON parse error for {race_name}: {e}')
+        return True
 
-        # Fallback: regex parse for horse names and odds
-        if not horses:
-            for m2 in _re.finditer(r'data-testid="runner-name"[^>]*>([^<]+)', html):
-                name = m2.group(1).strip()
-                if name:
-                    horses.append({'name': name, 'odds': None, 'odds_display': ''})
-
-        return horses
-
-    def _score_major_race_horse(horse, all_horses, race):
-        """Score a horse for a major race based on available ante-post data.
-        Returns a score 0-100 and list of factors."""
+    # ── Score a horse ─────────────────────────────────────────────────────────
+    def _score_horse(horse, all_horses, race):
         score = 0
         factors = []
-
-        # 1. Market position (odds-based) — lower odds = higher score
         odds = horse.get('odds')
+
+        # 1. Market position (30pts max)
         if odds and odds > 0:
             if odds <= 3.0:
-                score += 30
-                factors.append('Market favourite — strong market support')
+                score += 30; factors.append(f'Market favourite @ {odds:.2f} — strong support')
             elif odds <= 5.0:
-                score += 24
-                factors.append('Well-backed — top of the market')
+                score += 24; factors.append(f'Well-backed @ {odds:.2f}')
             elif odds <= 8.0:
-                score += 18
-                factors.append('Solid market position')
+                score += 18; factors.append(f'Solid market position @ {odds:.2f}')
             elif odds <= 15.0:
-                score += 12
-                factors.append('Mid-market — each-way contender')
+                score += 12; factors.append(f'Mid-market @ {odds:.2f} — each-way contender')
             elif odds <= 25.0:
-                score += 6
-                factors.append('Outsider — needs things to fall right')
+                score += 6; factors.append(f'Outsider @ {odds:.2f}')
+            else:
+                score += 2; factors.append(f'Big price @ {odds:.2f}')
 
-        # 2. Recent form (from racecard data if available)
-        wins = horse.get('wins', 0)
-        runs = horse.get('runs', 0)
-        form_str = horse.get('form', '')
-        if wins and wins >= 3:
-            score += 15
-            factors.append(f'{wins} career wins — proven at the highest level')
-        elif wins and wins >= 1:
-            score += 10
-            factors.append(f'{wins} win(s) from {runs} runs')
+        # 2. Betfair market liquidity signal (totalMatched)
+        matched = horse.get('totalMatched', 0)
+        if matched > 10000:
+            score += 10; factors.append(f'Heavy market interest (£{matched:,.0f} matched)')
+        elif matched > 2000:
+            score += 6; factors.append(f'Good market liquidity (£{matched:,.0f} matched)')
+        elif matched > 500:
+            score += 3; factors.append(f'Some market activity (£{matched:,.0f} matched)')
 
-        if form_str:
-            recent = form_str.replace('-', '')[-5:]  # last 5 runs
-            recent_wins = recent.count('1')
-            recent_places = sum(1 for c in recent if c in '123')
-            if recent_wins >= 2:
-                score += 12
-                factors.append(f'Excellent recent form — {recent_wins} wins in last 5')
-            elif recent_places >= 3:
-                score += 8
-                factors.append(f'Consistent — {recent_places} placings in last 5')
-
-        # 3. Grade of race vs horse's record
-        grade = race.get('grade', '')
-        if grade == 'G1' and wins and wins >= 2:
-            score += 10
-            factors.append('Multiple winner stepping into Group 1 — proven quality')
-
-        # 4. Trainer quality (well-known flat/NH names)
-        trainer = (horse.get('trainer') or '').lower()
-        top_flat = ['aidan obrien', 'charlie appleby', 'john gosden', 'william haggas', 'andrew balding', 'roger varian', 'karl burke']
+        # 3. Trainer quality (10pts)
+        trainer = _norm(horse.get('trainer', ''))
+        top_flat = ['aidan o brien', 'charlie appleby', 'john gosden', 'william haggas', 'andrew balding', 'roger varian', 'karl burke']
         top_nh = ['willie mullins', 'gordon elliott', 'henry de bromhead', 'nicky henderson', 'paul nicholls', 'dan skelton', 'olly murphy']
         top_trainers = top_flat if race.get('type') == 'Flat' else top_nh
         if any(t in trainer for t in top_trainers):
-            score += 10
-            factors.append(f'Trained by {horse.get("trainer", "")} — elite yard')
+            score += 10; factors.append(f'Elite trainer: {horse.get("trainer", "")}')
 
-        # 5. Market position rank bonus
+        # 4. Grade bonus (10pts)
+        grade = race.get('grade', '')
+        if grade == 'G1':
+            score += 5; factors.append('Group 1 — highest level')
+        elif grade == 'G2':
+            score += 3; factors.append('Group 2')
+
+        # 5. Market rank bonus (8pts)
         sorted_by_odds = sorted([h for h in all_horses if h.get('odds')], key=lambda h: h['odds'])
         for i, h in enumerate(sorted_by_odds):
             if h['name'] == horse['name']:
                 if i == 0:
-                    score += 8
-                    factors.append('Shortest price in the market')
+                    score += 8; factors.append('Shortest price in the market')
                 elif i == 1:
-                    score += 5
-                    factors.append('Second favourite')
+                    score += 5; factors.append('Second favourite')
                 elif i == 2:
-                    score += 3
-                    factors.append('Third in the betting')
+                    score += 3; factors.append('Third in the betting')
                 break
+
+        # 6. Lay/back spread tightness (good indicator of certainty)
+        spread = horse.get('spread')
+        if spread is not None and spread < 0.5:
+            score += 5; factors.append('Tight spread — market confident')
 
         return min(score, 100), factors
 
     # ── Process each upcoming major race ──────────────────────────────────────
     analysed = []
-    for race in upcoming[:15]:  # Limit to next 15 races to stay within Lambda timeout
+    used_market_ids = set()  # prevent same market being used for multiple races
+    for race in upcoming[:15]:
         race_key = f"{race['date']}__{race['name'].replace(' ', '_')}"
-        meeting_slug = race['meeting'].lower().replace(' ', '-')
-        race_name_slug = race['name'].lower().replace(' ', '-').replace("'", '').replace('.', '')
 
-        # Try Sporting Life ante-post page
-        ante_post_url = f"https://www.sportinglife.com/racing/ante-post/{meeting_slug}/{race_name_slug}"
-        print(f"[major-analysis] Fetching: {ante_post_url}")
-        html = _sl_fetch(ante_post_url)
-        horses = _parse_ante_post(html, race['name'])
+        # Find matching Betfair market(s), preferring unused ones
+        matched_markets = [m for m in all_bf_markets if _match_market(race, m) and m['marketId'] not in used_market_ids]
+        print(f'[major-analysis] {race["name"]} ({race["meeting"]}) -> {len(matched_markets)} Betfair market(s) matched')
 
-        # If no horses found via ante-post, try the racecard URL (closer to race day)
-        if not horses:
-            racecard_url = f"https://www.sportinglife.com/racing/racecards/{race['date']}/{meeting_slug}"
-            print(f"[major-analysis] Trying racecard: {racecard_url}")
-            html2 = _sl_fetch(racecard_url)
-            if html2:
-                # Find individual race links
-                for m3 in _re.finditer(r'href="(/racing/racecards/[^"]+)"', html2):
-                    rc_path = m3.group(1)
-                    if race_name_slug[:15] in rc_path.lower().replace('-', ' ').replace("'", ''):
-                        rc_html = _sl_fetch(f"https://www.sportinglife.com{rc_path}")
-                        horses = _parse_ante_post(rc_html, race['name'])
-                        if horses:
-                            break
+        horses = []
+        if matched_markets:
+            # Use only the first (best) matched market
+            best_market = matched_markets[0]
+            market_ids = [best_market['marketId']]
+            used_market_ids.add(best_market['marketId'])
+            try:
+                books = bf_post('listMarketBook', {
+                    'marketIds': market_ids,
+                    'priceProjection': {'priceData': ['EX_BEST_OFFERS']},
+                })
+            except Exception as e:
+                print(f'[major-analysis] Betfair odds fetch error for {race["name"]}: {e}')
+                books = []
+
+            # Build runner map from catalogue
+            runner_map = {}
+            for runner in best_market.get('runners', []):
+                    sid = runner['selectionId']
+                    meta = runner.get('metadata', {})
+                    runner_map[sid] = {
+                        'name': runner['runnerName'],
+                        'trainer': meta.get('TRAINER_NAME', ''),
+                        'jockey': meta.get('JOCKEY_NAME', ''),
+                        'form': meta.get('FORM', ''),
+                    }
+
+            # Merge with live odds
+            for book in books:
+                for runner in book.get('runners', []):
+                    sid = runner['selectionId']
+                    if runner.get('status') != 'ACTIVE':
+                        continue
+                    info = runner_map.get(sid, {'name': f'Selection {sid}'})
+                    back = runner.get('ex', {}).get('availableToBack', [])
+                    lay = runner.get('ex', {}).get('availableToLay', [])
+                    best_back = back[0]['price'] if back else None
+                    best_lay = lay[0]['price'] if lay else None
+                    spread = round(best_lay - best_back, 2) if best_back and best_lay else None
+
+                    # Fractional odds display
+                    frac = ''
+                    if best_back:
+                        dec_minus = best_back - 1
+                        # Common fractions lookup
+                        common = {0.5:'1/2', 1.0:'1/1', 2.0:'2/1', 3.0:'3/1', 4.0:'4/1', 5.0:'5/1',
+                                  6.0:'6/1', 7.0:'7/1', 8.0:'8/1', 9.0:'9/1', 10.0:'10/1', 11.0:'11/1',
+                                  12.0:'12/1', 14.0:'14/1', 16.0:'16/1', 20.0:'20/1', 25.0:'25/1',
+                                  33.0:'33/1', 40.0:'40/1', 50.0:'50/1', 66.0:'66/1', 100.0:'100/1',
+                                  0.25:'1/4', 0.33:'1/3', 1.5:'3/2', 2.5:'5/2', 3.5:'7/2', 4.5:'9/2',
+                                  5.5:'11/2', 6.5:'13/2', 7.5:'15/2'}
+                        frac = common.get(dec_minus, f'{dec_minus:.1f}/1')
+
+                    horses.append({
+                        'name': info['name'],
+                        'odds': best_back,
+                        'odds_display': frac,
+                        'trainer': info.get('trainer', ''),
+                        'jockey': info.get('jockey', ''),
+                        'form': info.get('form', ''),
+                        'totalMatched': runner.get('totalMatched', 0),
+                        'spread': spread,
+                    })
 
         # Score all horses
         scored_horses = []
         for h in horses:
-            score, factors = _score_major_race_horse(h, horses, race)
+            score, factors = _score_horse(h, horses, race)
             scored_horses.append({
                 'name': h['name'],
                 'odds': h.get('odds'),
@@ -3088,11 +3177,11 @@ def run_major_race_analysis(headers, event):
                 'form': h.get('form', ''),
                 'score': score,
                 'factors': factors,
+                'totalMatched': h.get('totalMatched', 0),
             })
 
         scored_horses.sort(key=lambda h: h['score'], reverse=True)
 
-        # Pick top 3 contenders
         top3 = scored_horses[:3]
         pick = scored_horses[0] if scored_horses else None
 
@@ -3112,16 +3201,17 @@ def run_major_race_analysis(headers, event):
             'top_pick': pick['name'] if pick else None,
             'top_pick_score': pick['score'] if pick else 0,
             'top_pick_odds': pick.get('odds_display', '') if pick else '',
+            'top_pick_odds_decimal': pick.get('odds') if pick else None,
             'top_pick_factors': pick['factors'] if pick else [],
             'top3': top3,
-            'all_runners': scored_horses[:10],  # Store top 10 for display
+            'all_runners': scored_horses[:10],
             'confidence': 'HIGH' if pick and pick['score'] >= 50 else 'MEDIUM' if pick and pick['score'] >= 30 else 'LOW' if pick else 'NO DATA',
         }
 
         # Store in DynamoDB
         try:
             table.put_item(Item=json.loads(json.dumps(analysis), parse_float=Decimal))
-            print(f"[major-analysis] Stored: {race['name']} -> {pick['name'] if pick else 'NO PICK'} (score: {pick['score'] if pick else 0})")
+            print(f"[major-analysis] Stored: {race['name']} -> {pick['name'] if pick else 'NO PICK'} @ {pick.get('odds') if pick else 'N/A'} (score: {pick['score'] if pick else 0})")
         except Exception as e:
             print(f"[major-analysis] DynamoDB error for {race['name']}: {e}")
 
