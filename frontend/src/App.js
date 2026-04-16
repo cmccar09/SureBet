@@ -427,9 +427,9 @@ function App() {
           { key:'home',      label:'Home',             emoji:'\ud83c\udfe0', sub:'About & sign in',     gated: false },
           { key:'picks',     label:"Today's Picks",    emoji:'\ud83c\udfaf', sub:'AI selections',       gated: true  },
           { key:'yesterday', label:'Latest Results',   emoji:'\ud83d\udcca', sub:'Today & yesterday',   gated: true  },
-          { key:'laythe',    label:'VIP',              emoji:'\ud83d\udc51', sub:'Lay the Fav & more',  gated: true  },
+          { key:'laythe',    label:'VIP Rollers',      emoji:'\ud83d\udc51', sub:'Lay the Fav & more',  gated: true  },
           { key:'majors',    label:'Major Races',      emoji:'\ud83c\udfc6', sub:'Group 1 calendar',    gated: true  },
-          { key:'pricing',  label:'Upgrade',        emoji:'\ud83d\ude80', sub:'Premium & VIP',     gated: true  },
+          { key:'pricing',  label:'Upgrade',        emoji:'\ud83d\ude80', sub:'Premium & VIP Rollers',     gated: true  },
           ...(isAdmin ? [{ key:'admin', label:'Admin', emoji:'\u2699\ufe0f', sub:'System controls', gated: true, admin: true }] : []),
         ].map(tab => {
           const locked = (tab.gated && !isAuthenticated) || (isFreeUser && PAID_TABS.includes(tab.key));
@@ -476,7 +476,7 @@ function App() {
         {paymentSuccess && (
           <div style={{ background:'linear-gradient(135deg,rgba(52,211,153,0.2),rgba(16,185,129,0.15))', border:'1.5px solid rgba(52,211,153,0.5)', borderRadius:'12px', padding:'16px 20px', textAlign:'center', marginBottom:'16px' }}>
             <div style={{ fontSize:'20px', marginBottom:'4px' }}>🎉</div>
-            <div style={{ fontSize:'16px', fontWeight:'800', color:'#34d399' }}>Welcome to {paymentSuccess === 'vip' ? 'VIP' : 'Premium'}!</div>
+            <div style={{ fontSize:'16px', fontWeight:'800', color:'#34d399' }}>Welcome to {paymentSuccess === 'vip' ? 'VIP Rollers' : 'Premium'}!</div>
             <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.7)', marginTop:'4px' }}>Your subscription is now active. Enjoy full access to all picks!</div>
           </div>
         )}
@@ -926,7 +926,7 @@ function DailyPicksView({ isFreeUser, onUpgrade }) {
               <div style={{ background:'linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1))', border:'1.5px solid rgba(139,92,246,0.35)', borderRadius:'12px', padding:'24px 20px', textAlign:'center' }}>
                 <div style={{ fontSize:'20px', marginBottom:'8px' }}>🔒</div>
                 <div style={{ fontSize:'16px', fontWeight:'800', color:'white', marginBottom:'6px' }}>+{hiddenCount} more pick{hiddenCount > 1 ? 's' : ''} available</div>
-                <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.6)', marginBottom:'12px' }}>Upgrade to Premium or VIP to see all picks</div>
+                <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.6)', marginBottom:'12px' }}>Upgrade to Premium or VIP Rollers to see all picks</div>
                 <div onClick={onUpgrade} style={{ display:'inline-block', background:'linear-gradient(135deg,#7c3aed,#5b21b6)', color:'white', borderRadius:'8px', padding:'8px 24px', fontSize:'13px', fontWeight:'700', cursor:'pointer' }}>Upgrade Now</div>
               </div>
             )}
@@ -1029,7 +1029,7 @@ function PricingView({ authUser, onSuccess }) {
       {isActive && currentTier !== 'free' && (
         <div style={{ background: 'rgba(52,211,153,0.12)', border: '1px solid rgba(52,211,153,0.35)', borderRadius: '10px', padding: '14px 18px', textAlign: 'center', marginBottom: '24px' }}>
           <span style={{ color: '#34d399', fontWeight: '700', fontSize: '14px' }}>
-            ✓ You're on the {currentTier === 'vip' ? 'VIP' : 'Premium'} plan
+            ✓ You're on the {currentTier === 'vip' ? 'VIP Rollers' : 'Premium'} plan
           </span>
           {subStatus?.subscription_status === 'canceling' && (
             <span style={{ color: '#fbbf24', fontSize: '13px', marginLeft: '12px' }}>(cancels at period end)</span>
@@ -1056,7 +1056,7 @@ function PricingView({ authUser, onSuccess }) {
             <li>✓ 2 picks per day</li>
             <li>✓ Basic race info</li>
             <li style={{ color: 'rgba(255,255,255,0.3)' }}>✗ Full pick analysis</li>
-            <li style={{ color: 'rgba(255,255,255,0.3)' }}>✗ VIP insights</li>
+            <li style={{ color: 'rgba(255,255,255,0.3)' }}>✗ VIP Rollers insights</li>
           </ul>
           <div style={{ background: 'rgba(255,255,255,0.08)', borderRadius: '10px', padding: '10px', textAlign: 'center', color: 'rgba(255,255,255,0.4)', fontWeight: '700', fontSize: '14px' }}>
             {currentTier === 'free' ? 'Current Plan' : '—'}
@@ -1076,7 +1076,7 @@ function PricingView({ authUser, onSuccess }) {
             <li>✓ Full enhanced analysis</li>
             <li>✓ Yesterday's results &amp; ROI</li>
             <li>✓ Lay the Favourite strategy</li>
-            <li style={{ color: 'rgba(255,255,255,0.3)' }}>✗ VIP race intel &amp; field data</li>
+            <li style={{ color: 'rgba(255,255,255,0.3)' }}>✗ VIP Rollers race intel &amp; field data</li>
           </ul>
           {currentTier === 'premium' && isActive ? (
             <div style={{ background: 'rgba(52,211,153,0.15)', borderRadius: '10px', padding: '10px', textAlign: 'center', color: '#34d399', fontWeight: '700', fontSize: '14px' }}>
@@ -1092,7 +1092,7 @@ function PricingView({ authUser, onSuccess }) {
 
         {/* VIP TIER */}
         <div style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(251,191,36,0.06))', border: '2px solid rgba(245,158,11,0.35)', borderRadius: '16px', padding: '28px 24px', position: 'relative' }}>
-          <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#fbbf24', fontWeight: '700', marginBottom: '8px' }}>VIP</div>
+          <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#fbbf24', fontWeight: '700', marginBottom: '8px' }}>VIP Rollers</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '16px' }}>
             <span style={{ fontSize: '36px', fontWeight: '900', color: 'white' }}>€99</span>
             <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>/month</span>
@@ -1111,7 +1111,7 @@ function PricingView({ authUser, onSuccess }) {
           ) : (
             <button onClick={() => handleSubscribe('vip')} disabled={!!loading}
               style={{ width: '100%', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', borderRadius: '10px', padding: '12px', color: 'white', fontSize: '15px', fontWeight: '800', cursor: loading ? 'wait' : 'pointer', opacity: loading === 'premium' ? 0.5 : 1 }}>
-              {loading === 'vip' ? 'Redirecting to Stripe...' : 'Subscribe to VIP'}
+              {loading === 'vip' ? 'Redirecting to Stripe...' : 'Subscribe to VIP Rollers'}
             </button>
           )}
         </div>
@@ -2255,8 +2255,8 @@ function LayTheFavView() {
 
       {/* Header */}
       <div style={{ background:'linear-gradient(135deg,rgba(217,119,6,0.25) 0%,rgba(180,83,9,0.18) 100%)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:'14px', padding: isMobile ? '16px 14px' : '24px 28px', marginBottom:'24px' }}>
-        <div style={{ fontSize:'11px', letterSpacing:'2px', textTransform:'uppercase', color:'rgba(255,255,255,0.4)', marginBottom:'6px' }}>VIP · Lay the Fav analysis</div>
-        <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'4px' }}>👑 VIP — Lay the Fav</div>
+        <div style={{ fontSize:'11px', letterSpacing:'2px', textTransform:'uppercase', color:'rgba(255,255,255,0.4)', marginBottom:'6px' }}>VIP Rollers · Lay the Fav analysis</div>
+        <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'4px' }}>👑 VIP Rollers — Lay the Fav</div>
         <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.55)', marginBottom:'18px' }}>Identifies short-price favourites with structural vulnerabilities — favourites to avoid backing.</div>
 
         {/* Score legend */}
@@ -2778,7 +2778,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
               <li>✓ 2 picks per day</li>
               <li>✓ Basic race info</li>
               <li style={{ color: 'rgba(255,255,255,0.3)' }}>✗ Full pick analysis</li>
-              <li style={{ color: 'rgba(255,255,255,0.3)' }}>✗ VIP insights</li>
+              <li style={{ color: 'rgba(255,255,255,0.3)' }}>✗ VIP Rollers insights</li>
             </ul>
           </div>
 
@@ -2798,9 +2798,9 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
             </ul>
           </div>
 
-          {/* VIP */}
+          {/* VIP ROLLERS */}
           <div style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(251,191,36,0.06))', border: '2px solid rgba(245,158,11,0.35)', borderRadius: '14px', padding: '22px 20px' }}>
-            <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#fbbf24', fontWeight: '700', marginBottom: '6px' }}>VIP</div>
+            <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#fbbf24', fontWeight: '700', marginBottom: '6px' }}>VIP Rollers</div>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '12px' }}>
               <span style={{ fontSize: '32px', fontWeight: '900', color: 'white' }}>€99</span>
               <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>/month</span>
