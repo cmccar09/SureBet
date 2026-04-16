@@ -1534,18 +1534,15 @@ def register_subscriber(headers, event):
             return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Disposable or test email addresses are not accepted.'})}
 
         if len(address) < 10:
-            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Please enter your full address (street, city and postcode).'})}
+            pass  # Address is optional — no longer required for registration
         addr_words = [w for w in address.split() if len(w) > 1]
         if len(addr_words) < 3:
-            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Address looks incomplete — please include street, city and postcode.'})}
+            pass  # Address is optional
         addr_clean = address.replace(' ', '')
         if addr_clean:
-            from collections import Counter
-            max_freq = max(Counter(addr_clean.lower()).values())
-            if max_freq / len(addr_clean) > 0.65:
-                return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Address does not look real — please enter your actual home address.'})}
+            pass  # Address is optional
         if re.match(r'^(asdf|qwerty|zxcv|abcd|1234|test|fake|none|null|xxx)', address, re.IGNORECASE):
-            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Address does not look real — please enter your actual home address.'})}
+            pass  # Address is optional
         try:
             age = int(age)
             if age < 18 or age > 120:
