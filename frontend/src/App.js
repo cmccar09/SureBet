@@ -2466,7 +2466,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated }) {
         <h2 style={{ fontSize: isMobile ? '26px' : '42px', fontWeight: '900', margin: '0 0 16px', lineHeight: 1.15, color: 'white' }}>
           Stop guessing. Start winning.<br/>
           <span style={{ background: 'linear-gradient(135deg,#34d399,#059669)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            {roiLoading ? '…' : roi !== null ? `+${roi}% ROI — backed by data, powered by AI.` : 'AI-powered edge.'}
+            {roiLoading ? '…' : roi !== null ? `+${roi}% ROI — Built for winners. Powered by AI.` : 'AI-powered edge.'}
           </span>
         </h2>
         {/* ── VS comparison banner ── */}
