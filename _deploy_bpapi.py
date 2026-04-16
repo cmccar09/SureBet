@@ -8,6 +8,7 @@ import shutil
 FUNCTION_NAME = 'BettingPicksAPI'
 REGION        = 'eu-west-1'
 SRC_FILE      = os.path.join('_lambda_build', '_bpapi_patched.py')
+STRIPE_DIR    = os.path.join('_lambda_build', 'stripe_layer')
 
 # Read patched source
 with open(SRC_FILE, 'r', encoding='utf-8') as f:
@@ -19,6 +20,15 @@ with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as zf:
     info = zipfile.ZipInfo('lambda_function.py')
     info.compress_type = zipfile.ZIP_DEFLATED
     zf.writestr(info, source.encode('utf-8'))
+
+    # Bundle stripe package
+    if os.path.isdir(STRIPE_DIR):
+        for root, dirs, files in os.walk(STRIPE_DIR):
+            for fname in files:
+                full = os.path.join(root, fname)
+                arcname = os.path.relpath(full, STRIPE_DIR)
+                zf.write(full, arcname)
+        print(f"Bundled stripe from {STRIPE_DIR}")
 buf.seek(0)
 zip_bytes = buf.read()
 print(f"Zip size: {len(zip_bytes):,} bytes")

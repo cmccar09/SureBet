@@ -1681,6 +1681,10 @@ def create_checkout_session(headers, event):
     POST /api/create-checkout-session  { "email": "...", "tier": "premium"|"vip" }
     """
     try:
+        if not stripe or 'NOT_CONFIGURED' in (os.environ.get('STRIPE_SECRET_KEY') or ''):
+            return {'statusCode': 503, 'headers': headers,
+                    'body': json.dumps({'error': 'Payments coming soon! Stripe is not yet configured.'})}
+
         body = json.loads(event.get('body') or '{}')
         email = (body.get('email') or '').strip().lower()
         tier  = (body.get('tier') or '').strip().lower()
@@ -1916,6 +1920,10 @@ def create_customer_portal(headers, event):
     POST /api/customer-portal  { "email": "..." }
     """
     try:
+        if not stripe or 'NOT_CONFIGURED' in (os.environ.get('STRIPE_SECRET_KEY') or ''):
+            return {'statusCode': 503, 'headers': headers,
+                    'body': json.dumps({'error': 'Payments coming soon! Stripe is not yet configured.'})}
+
         body = json.loads(event.get('body') or '{}')
         email = (body.get('email') or '').strip().lower()
         if not email:
