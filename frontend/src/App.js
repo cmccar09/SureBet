@@ -1315,29 +1315,25 @@ function YesterdayResultsView({ isFreeUser }) {
             </div>
             {/* Bottom row: ROI spanning full width */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:'10px' }}>
-              <div style={{ background: cumulRoiVal === null ? 'rgba(99,102,241,0.1)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${cumulRoiVal === null ? 'rgba(99,102,241,0.3)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding: isMobile ? '10px 12px' : '14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px' }}>
-                <div>
-                  <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'3px' }}>Return on Investment</div>
-                  <div style={{ fontSize: isMobile ? '22px' : '30px', fontWeight:'900', color: cumulRoiVal === null ? '#818cf8' : cumulRoiVal >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>
+              <div style={{ background: cumulRoiVal === null ? 'rgba(99,102,241,0.1)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${cumulRoiVal === null ? 'rgba(99,102,241,0.3)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding: isMobile ? '16px' : '24px 20px', textAlign:'center' }}>
+                  <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'6px' }}>Return on Investment</div>
+                  <div style={{ fontSize: isMobile ? '32px' : '42px', fontWeight:'900', color: cumulRoiVal === null ? '#818cf8' : cumulRoiVal >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>
                     {cumulRoiVal === null ? '—' : `${cumulRoiVal >= 0 ? '+' : ''}${cumulRoiVal.toFixed(1)}%`}
                   </div>
-                  <div style={{ fontSize:'9px', color:'rgba(255,255,255,0.4)', marginTop:'4px', fontWeight:'500' }}>
+                  <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)', marginTop:'8px', fontWeight:'500' }}>
                     {cumulRoiVal === null ? 'Loading…' : `Since 22 Mar · ${cumulSettled} settled`}
                   </div>
-                  {cumulRoiVal !== null ? (
-                    <div style={{ fontSize: isMobile ? '10px' : '11px', color:'rgba(255,255,255,0.45)', marginTop:'2px' }}>
+                  {cumulRoiVal !== null && (
+                    <div style={{ fontSize: isMobile ? '11px' : '12px', color:'rgba(255,255,255,0.5)', marginTop:'4px' }}>
                       Every €1 → <span style={{ color: cumulRoiVal >= 0 ? '#34d399' : '#f87171', fontWeight:'700' }}>€{(1 + cumulRoiVal / 100).toFixed(2)}</span> back · {cumulRoiVal >= 0 ? 'profit' : 'loss'} €{Math.abs(cumulRoiVal / 100).toFixed(2)}/bet
                     </div>
-                  ) : (
-                    <div style={{ fontSize:'9px', color:'rgba(255,255,255,0.3)', marginTop:'2px', fontStyle:'italic' }}>£1 flat stake per pick</div>
                   )}
                   <a
                     href={API_BASE_URL + '/api/results/export-csv'}
                     download="BetBudAI_ROI_Data.csv"
-                    style={{ display:'inline-block', marginTop:'6px', fontSize: isMobile ? '10px' : '11px', color:'#60a5fa', textDecoration:'underline', cursor:'pointer', fontWeight:'600' }}
-                  >📥 Download full data (CSV)</a>
-                </div>
-                <div style={{ fontSize: isMobile ? '22px' : '32px' }}>💰</div>
+                    style={{ display:'inline-block', marginTop:'16px', padding: isMobile ? '12px 28px' : '14px 36px', background:'linear-gradient(135deg,#3b82f6,#2563eb)', color:'white', borderRadius:'10px', fontSize: isMobile ? '14px' : '15px', fontWeight:'700', textDecoration:'none', cursor:'pointer', boxShadow:'0 2px 8px rgba(37,99,235,0.3)', transition:'all 0.2s' }}
+                  >📥 Download Full ROI Data (CSV)</a>
+                  <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.3)', marginTop:'8px' }}>Every pick logged pre-race · fully transparent</div>
               </div>
             </div>
           </div>

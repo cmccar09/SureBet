@@ -10,7 +10,10 @@ import boto3
 from datetime import datetime, timedelta
 from decimal import Decimal
 import hashlib, os, base64, re
-import stripe
+try:
+    import stripe
+except ImportError:
+    stripe = None  # Stripe layer not yet deployed; payment routes will fail gracefully
 
 # Initialize DynamoDB
 dynamodb = boto3.resource('dynamodb', region_name='eu-west-1')
@@ -22,7 +25,8 @@ SENDER_EMAIL    = 'charles.mccarthy@gmail.com'
 SITE_URL        = 'https://www.betbudai.com'
 
 # ── Stripe configuration ────────────────────────────────────────────────────
-stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
+if stripe:
+    stripe.api_key = os.environ.get('STRIPE_SECRET_KEY', '')
 STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
 STRIPE_PRICE_PREMIUM = os.environ.get('STRIPE_PRICE_PREMIUM', '')   # price_xxx for €19.99/mo
 STRIPE_PRICE_VIP     = os.environ.get('STRIPE_PRICE_VIP', '')       # price_xxx for €99/mo
@@ -118,6 +122,8 @@ def lambda_handler(event, context):
             return create_customer_portal(headers, event)
         elif 'cancel-subscription' in path and method == 'POST':
             return cancel_subscription(headers, event)
+        elif 'results/export-csv' in path:
+            return export_roi_csv(headers)
         elif 'results/cumulative-roi' in path:
             return get_cumulative_roi(headers)
         elif 'results/yesterday' in path:
@@ -636,6 +642,121 @@ def get_cumulative_roi(headers):
             })
         }
     except Exception as e:
+        return {
+            'statusCode': 500,
+            'headers': headers,
+            'body': json.dumps({'success': False, 'error': str(e)})
+        }
+
+
+def export_roi_csv(headers):
+    """Export all settled UI picks as CSV for ROI verification."""
+    from boto3.dynamodb.conditions import Key, Attr
+    from datetime import date as _date, timedelta
+    from concurrent.futures import ThreadPoolExecutor
+    CUMULATIVE_ROI_START = '2026-03-22'
+    try:
+        start_d = _date.fromisoformat(CUMULATIVE_ROI_START)
+        today_d = _date.today()
+        dates = [(start_d + timedelta(days=i)).isoformat()
+                 for i in range((today_d - start_d).days + 1)]
+
+        def _query_date(d):
+            items = []
+            kwargs = {
+                'KeyConditionExpression': Key('bet_date').eq(d),
+                'FilterExpression': Attr('show_in_ui').eq(True),
+                'ProjectionExpression': 'bet_date, bet_id, horse, course, race_time, show_in_ui, is_learning_pick, outcome, sp_odds, odds, ew_fraction, bet_type, comprehensive_score, finish_position, winner_horse, number_of_places, confidence_grade, jockey, trainer',
+            }
+            while True:
+                resp = table.query(**kwargs)
+                items.extend(resp.get('Items', []))
+                if 'LastEvaluatedKey' not in resp:
+                    break
+                kwargs['ExclusiveStartKey'] = resp['LastEvaluatedKey']
+            return items
+
+        all_items = []
+        with ThreadPoolExecutor(max_workers=10) as ex:
+            for batch in ex.map(_query_date, dates):
+                all_items.extend(batch)
+
+        picks = [decimal_to_float(i) for i in all_items]
+        picks = [p for p in picks
+                 if p.get('horse') and p.get('horse') != 'Unknown'
+                 and p.get('course') and p.get('course') != 'Unknown'
+                 and not p.get('is_learning_pick', False)]
+
+        # Deduplicate by race identity (course + race_time)
+        seen = {}
+        for p in picks:
+            k = (p.get('course', ''), p.get('race_time', ''))
+            if k not in seen or p.get('bet_date', '') > seen[k].get('bet_date', ''):
+                seen[k] = p
+        picks = sorted(seen.values(), key=lambda x: x.get('race_time', '') or x.get('bet_date', ''))
+
+        # Build CSV
+        csv_lines = ['Date,Race Time,Course,Horse,Trainer,Jockey,Odds,SP Odds,EW Fraction,Bet Type,Score,Grade,Outcome,Finish Position,Winner,Places Paid']
+        UNIT = 1.0
+        total_stake = total_return = 0.0
+        settled_count = 0
+
+        for p in picks:
+            oc = (p.get('outcome') or '').lower()
+            if oc in ('won',): oc = 'win'
+            elif oc in ('lost',): oc = 'loss'
+
+            odds = _settlement_odds(p)
+            sp_odds = float(p.get('sp_odds') or 0)
+            pre_odds = float(p.get('odds') or 0)
+            ef = float(p.get('ew_fraction') or 0.25)
+
+            if oc == 'win':
+                settled_count += 1; total_stake += UNIT; total_return += UNIT * odds
+            elif oc in ('placed', 'place'):
+                oc = 'placed'
+                settled_count += 1; total_stake += UNIT
+                total_return += (UNIT / 2) * (1 + (odds - 1) * ef)
+            elif oc == 'loss':
+                settled_count += 1; total_stake += UNIT
+
+            race_time = (p.get('race_time') or '')[:16].replace('T', ' ')
+            row = ','.join([
+                p.get('bet_date', ''),
+                race_time,
+                '"' + (p.get('course') or '').replace('"', '""') + '"',
+                '"' + (p.get('horse') or '').replace('"', '""') + '"',
+                '"' + (p.get('trainer') or '').replace('"', '""') + '"',
+                '"' + (p.get('jockey') or '').replace('"', '""') + '"',
+                str(pre_odds),
+                str(sp_odds),
+                str(ef),
+                p.get('bet_type', 'Each Way'),
+                str(float(p.get('comprehensive_score', 0))),
+                p.get('confidence_grade', ''),
+                oc or 'pending',
+                str(p.get('finish_position', '')),
+                '"' + (p.get('winner_horse') or '').replace('"', '""') + '"',
+                str(p.get('number_of_places', '')),
+            ])
+            csv_lines.append(row)
+
+        profit = total_return - total_stake
+        roi_pct = round((profit / total_stake * 100) if total_stake > 0 else 0, 1)
+        csv_lines.append('')
+        csv_lines.append(f'SUMMARY,Settled: {settled_count},Stake: {total_stake:.2f},Return: {total_return:.2f},Profit: {profit:.2f},ROI: {roi_pct}%')
+
+        csv_headers = dict(headers)
+        csv_headers['Content-Type'] = 'text/csv'
+        csv_headers['Content-Disposition'] = 'attachment; filename="BetBudAI_ROI_Data.csv"'
+        return {
+            'statusCode': 200,
+            'headers': csv_headers,
+            'body': '\n'.join(csv_lines)
+        }
+    except Exception as e:
+        print(f'export_roi_csv error: {e}')
+        import traceback; traceback.print_exc()
         return {
             'statusCode': 500,
             'headers': headers,
