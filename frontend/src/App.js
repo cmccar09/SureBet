@@ -429,7 +429,6 @@ function App() {
           { key:'yesterday', label:'Latest Results',   emoji:'\ud83d\udcca', sub:'Today & yesterday',   gated: true  },
           { key:'laythe',    label:'VIP',              emoji:'\ud83d\udc51', sub:'Lay the Fav & more',  gated: true  },
           { key:'majors',    label:'Major Races',      emoji:'\ud83c\udfc6', sub:'Group 1 calendar',    gated: true  },
-          ...(isFreeUser ? [{ key:'pricing', label:'Upgrade', emoji:'\ud83d\ude80', sub:'Premium & VIP', gated: false }] : []),
           ...(isAdmin ? [{ key:'admin', label:'Admin', emoji:'\u2699\ufe0f', sub:'System controls', gated: true, admin: true }] : []),
         ].map(tab => {
           const locked = (tab.gated && !isAuthenticated) || (isFreeUser && PAID_TABS.includes(tab.key));
@@ -442,8 +441,6 @@ function App() {
                   ? (isActive ? 'linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%)' : 'rgba(124,58,237,0.18)')
                   : tab.key==='laythe'
                     ? (isActive ? 'linear-gradient(135deg,#d97706 0%,#b45309 100%)' : 'rgba(217,119,6,0.18)')
-                    : tab.key==='pricing'
-                      ? (isActive ? 'linear-gradient(135deg,#7c3aed 0%,#6366f1 100%)' : 'linear-gradient(135deg,rgba(124,58,237,0.25),rgba(99,102,241,0.2))')
                     : (isActive ? 'linear-gradient(135deg,#059669 0%,#047857 100%)' : 'rgba(255,255,255,0.12)'),
               border: locked
                 ? '2px solid rgba(255,255,255,0.1)'
@@ -451,8 +448,6 @@ function App() {
                   ? (isActive ? '2px solid #a78bfa' : '2px solid rgba(167,139,250,0.4)')
                   : tab.key==='laythe'
                     ? (isActive ? '2px solid #f59e0b' : '2px solid rgba(245,158,11,0.4)')
-                    : tab.key==='pricing'
-                      ? '2px solid rgba(124,58,237,0.5)'
                     : (isActive ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.25)'),
               borderRadius:'10px', color: locked ? 'rgba(255,255,255,0.3)' : 'white',
               cursor: locked ? 'not-allowed' : 'pointer',
@@ -484,10 +479,9 @@ function App() {
           ? <HomePageView onAuthSuccess={handleAuthSuccess} isAuthenticated={isAuthenticated} />
           : !isAuthenticated
             ? <HomePageView onAuthSuccess={handleAuthSuccess} isAuthenticated={isAuthenticated} />
-            : page==='picks'      ? <DailyPicksView isFreeUser={isFreeUser} onUpgrade={() => setPage('pricing')} />
+            : page==='picks'      ? <DailyPicksView isFreeUser={isFreeUser} onUpgrade={() => setPage('picks')} />
             : page==='yesterday'  ? <YesterdayResultsView isFreeUser={isFreeUser} />
             : page==='laythe'     ? <LayTheFavView />
-            : page==='pricing'    ? <PricingView authUser={authUser} onSuccess={(updatedUser) => { handleAuthSuccess(updatedUser); setPage('picks'); }} />
             : page==='admin' && isAdmin ? <AdminView authUser={authUser} />
             : <MajorRacesView />}
       </main>
@@ -2527,46 +2521,6 @@ function HomePageView({ onAuthSuccess, isAuthenticated }) {
               <span style={{ color: 'rgba(255,255,255,0.5)', fontSize: '12px' }}>{p.label}</span>
             </div>
           ))}
-        </div>
-      </div>
-
-      {/* ── 3-TIER PLAN CARDS ─────────────────────────────────────────── */}
-      <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3,1fr)', gap:'16px', marginBottom:'36px' }}>
-        {/* Core (Free) */}
-        <div style={{ background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'16px', padding:'28px 20px', textAlign:'center' }}>
-          <div style={{ fontSize:'36px', marginBottom:'10px' }}>🏇</div>
-          <div style={{ fontSize:'18px', fontWeight:'800', color:'white', marginBottom:'4px' }}>Core</div>
-          <div style={{ fontSize:'13px', color:'#34d399', fontWeight:'700', marginBottom:'14px' }}>Free</div>
-          <ul style={{ listStyle:'none', padding:0, margin:0, fontSize:'13px', color:'rgba(255,255,255,0.6)', lineHeight:'2' }}>
-            <li>✅ 2 AI picks per day</li>
-            <li>✅ Live ROI tracker</li>
-            <li>✅ Results history</li>
-          </ul>
-        </div>
-        {/* Premium */}
-        <div style={{ background:'linear-gradient(135deg,rgba(5,150,105,0.12) 0%,rgba(4,120,87,0.08) 100%)', border:'1px solid rgba(52,211,153,0.3)', borderRadius:'16px', padding:'28px 20px', textAlign:'center', position:'relative' }}>
-          <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#059669,#047857)', color:'white', fontSize:'10px', fontWeight:'800', letterSpacing:'1px', textTransform:'uppercase', padding:'4px 14px', borderRadius:'20px' }}>Most Popular</div>
-          <div style={{ fontSize:'36px', marginBottom:'10px' }}>⭐</div>
-          <div style={{ fontSize:'18px', fontWeight:'800', color:'white', marginBottom:'4px' }}>Premium</div>
-          <div style={{ fontSize:'13px', color:'#34d399', fontWeight:'700', marginBottom:'14px' }}>€19.99/month</div>
-          <ul style={{ listStyle:'none', padding:0, margin:0, fontSize:'13px', color:'rgba(255,255,255,0.6)', lineHeight:'2' }}>
-            <li>✅ All daily AI picks (5+)</li>
-            <li>✅ Full results &amp; stats</li>
-            <li>✅ Enhanced analysis</li>
-          </ul>
-        </div>
-        {/* VIP */}
-        <div style={{ background:'linear-gradient(135deg,rgba(217,119,6,0.12) 0%,rgba(180,83,9,0.08) 100%)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:'16px', padding:'28px 20px', textAlign:'center', position:'relative' }}>
-          <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#d97706,#b45309)', color:'white', fontSize:'10px', fontWeight:'800', letterSpacing:'1px', textTransform:'uppercase', padding:'4px 14px', borderRadius:'20px' }}>Full Access</div>
-          <div style={{ fontSize:'36px', marginBottom:'10px' }}>👑</div>
-          <div style={{ fontSize:'18px', fontWeight:'800', color:'white', marginBottom:'4px' }}>VIP</div>
-          <div style={{ fontSize:'13px', color:'#f59e0b', fontWeight:'700', marginBottom:'14px' }}>€99/month</div>
-          <ul style={{ listStyle:'none', padding:0, margin:0, fontSize:'13px', color:'rgba(255,255,255,0.6)', lineHeight:'2' }}>
-            <li>✅ Everything in Premium</li>
-            <li>✅ Lay the Fav strategy</li>
-            <li>✅ Race intel &amp; full field data</li>
-            <li>✅ Priority support</li>
-          </ul>
         </div>
       </div>
 
