@@ -1328,12 +1328,27 @@ function YesterdayResultsView({ isFreeUser }) {
                       Every €1 → <span style={{ color: cumulRoiVal >= 0 ? '#34d399' : '#f87171', fontWeight:'700' }}>€{(1 + cumulRoiVal / 100).toFixed(2)}</span> back · {cumulRoiVal >= 0 ? 'profit' : 'loss'} €{Math.abs(cumulRoiVal / 100).toFixed(2)}/bet
                     </div>
                   )}
-                  <a
-                    href={API_BASE_URL + '/api/results/export-csv'}
-                    download="BetBudAI_ROI_Data.csv"
-                    style={{ display:'inline-block', marginTop:'16px', padding: isMobile ? '12px 28px' : '14px 36px', background:'linear-gradient(135deg,#3b82f6,#2563eb)', color:'white', borderRadius:'10px', fontSize: isMobile ? '14px' : '15px', fontWeight:'700', textDecoration:'none', cursor:'pointer', boxShadow:'0 2px 8px rgba(37,99,235,0.3)', transition:'all 0.2s' }}
-                  >📥 Download Full ROI Data (CSV)</a>
-                  <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.3)', marginTop:'8px' }}>Every pick logged pre-race · fully transparent</div>
+                  <button
+                    onClick={() => {
+                      const btn = document.getElementById('csv-download-btn');
+                      if (btn) btn.textContent = '⏳ Downloading...';
+                      fetch(API_BASE_URL + '/api/results/export-csv')
+                        .then(r => r.text())
+                        .then(csv => {
+                          const blob = new Blob([csv], { type: 'text/csv' });
+                          const url = URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url; a.download = 'BetBudAI_ROI_Data.csv'; a.click();
+                          URL.revokeObjectURL(url);
+                          if (btn) btn.textContent = '✅ Downloaded!';
+                          setTimeout(() => { if (btn) btn.textContent = '📥 Download Full ROI Data (CSV)'; }, 3000);
+                        })
+                        .catch(() => { if (btn) btn.textContent = '❌ Failed — try again'; setTimeout(() => { if (btn) btn.textContent = '📥 Download Full ROI Data (CSV)'; }, 3000); });
+                    }}
+                    id="csv-download-btn"
+                    style={{ display:'block', margin:'16px auto 0', padding: isMobile ? '14px 32px' : '16px 44px', background:'linear-gradient(135deg,#3b82f6,#2563eb)', color:'white', border:'none', borderRadius:'12px', fontSize: isMobile ? '15px' : '16px', fontWeight:'800', cursor:'pointer', boxShadow:'0 4px 14px rgba(37,99,235,0.35)', transition:'all 0.2s', letterSpacing:'0.3px' }}
+                  >📥 Download Full ROI Data (CSV)</button>
+                  <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.35)', marginTop:'10px' }}>Every pick logged pre-race · fully transparent · prove the ROI is real</div>
               </div>
             </div>
           </div>
