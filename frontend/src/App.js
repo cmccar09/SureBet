@@ -1315,40 +1315,48 @@ function YesterdayResultsView({ isFreeUser }) {
             </div>
             {/* Bottom row: ROI spanning full width */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:'10px' }}>
-              <div style={{ background: cumulRoiVal === null ? 'rgba(99,102,241,0.1)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${cumulRoiVal === null ? 'rgba(99,102,241,0.3)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding: isMobile ? '16px' : '24px 20px', textAlign:'center' }}>
-                  <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'6px' }}>Return on Investment</div>
-                  <div style={{ fontSize: isMobile ? '32px' : '42px', fontWeight:'900', color: cumulRoiVal === null ? '#818cf8' : cumulRoiVal >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>
-                    {cumulRoiVal === null ? '—' : `${cumulRoiVal >= 0 ? '+' : ''}${cumulRoiVal.toFixed(1)}%`}
-                  </div>
-                  <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)', marginTop:'8px', fontWeight:'500' }}>
-                    {cumulRoiVal === null ? 'Loading…' : `Since 22 Mar · ${cumulSettled} settled`}
-                  </div>
-                  {cumulRoiVal !== null && (
-                    <div style={{ fontSize: isMobile ? '11px' : '12px', color:'rgba(255,255,255,0.5)', marginTop:'4px' }}>
-                      Every €1 → <span style={{ color: cumulRoiVal >= 0 ? '#34d399' : '#f87171', fontWeight:'700' }}>€{(1 + cumulRoiVal / 100).toFixed(2)}</span> back · {cumulRoiVal >= 0 ? 'profit' : 'loss'} €{Math.abs(cumulRoiVal / 100).toFixed(2)}/bet
+              <div style={{ background: cumulRoiVal === null ? 'rgba(99,102,241,0.1)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${cumulRoiVal === null ? 'rgba(99,102,241,0.3)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding: isMobile ? '16px' : '24px 20px' }}>
+                <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', alignItems:'center', gap: isMobile ? '16px' : '0' }}>
+                  {/* Left section: ROI stats */}
+                  <div style={{ flex:1, textAlign: isMobile ? 'center' : 'left' }}>
+                    <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'6px' }}>Return on Investment</div>
+                    <div style={{ fontSize: isMobile ? '32px' : '42px', fontWeight:'900', color: cumulRoiVal === null ? '#818cf8' : cumulRoiVal >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>
+                      {cumulRoiVal === null ? '—' : `${cumulRoiVal >= 0 ? '+' : ''}${cumulRoiVal.toFixed(1)}%`}
                     </div>
-                  )}
-                  <button
-                    onClick={() => {
-                      const btn = document.getElementById('csv-download-btn');
-                      if (btn) btn.textContent = '⏳ Downloading...';
-                      fetch(API_BASE_URL + '/api/results/export-csv')
-                        .then(r => r.text())
-                        .then(csv => {
-                          const blob = new Blob([csv], { type: 'text/csv' });
-                          const url = URL.createObjectURL(blob);
-                          const a = document.createElement('a');
-                          a.href = url; a.download = 'BetBudAI_ROI_Data.csv'; a.click();
-                          URL.revokeObjectURL(url);
-                          if (btn) btn.textContent = '✅ Downloaded!';
-                          setTimeout(() => { if (btn) btn.textContent = '📥 Download Full ROI Data (CSV)'; }, 3000);
-                        })
-                        .catch(() => { if (btn) btn.textContent = '❌ Failed — try again'; setTimeout(() => { if (btn) btn.textContent = '📥 Download Full ROI Data (CSV)'; }, 3000); });
-                    }}
-                    id="csv-download-btn"
-                    style={{ display:'block', margin:'16px auto 0', padding: isMobile ? '14px 32px' : '16px 44px', background:'linear-gradient(135deg,#3b82f6,#2563eb)', color:'white', border:'none', borderRadius:'12px', fontSize: isMobile ? '15px' : '16px', fontWeight:'800', cursor:'pointer', boxShadow:'0 4px 14px rgba(37,99,235,0.35)', transition:'all 0.2s', letterSpacing:'0.3px' }}
-                  >📥 Download Full ROI Data (CSV)</button>
-                  <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.35)', marginTop:'10px' }}>Every pick logged pre-race · fully transparent · prove the ROI is real</div>
+                    <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)', marginTop:'8px', fontWeight:'500' }}>
+                      {cumulRoiVal === null ? 'Loading…' : `Since 22 Mar · ${cumulSettled} settled`}
+                    </div>
+                    {cumulRoiVal !== null && (
+                      <div style={{ fontSize: isMobile ? '11px' : '12px', color:'rgba(255,255,255,0.5)', marginTop:'4px' }}>
+                        Every €1 → <span style={{ color: cumulRoiVal >= 0 ? '#34d399' : '#f87171', fontWeight:'700' }}>€{(1 + cumulRoiVal / 100).toFixed(2)}</span> back · {cumulRoiVal >= 0 ? 'profit' : 'loss'} €{Math.abs(cumulRoiVal / 100).toFixed(2)}/bet
+                      </div>
+                    )}
+                  </div>
+                  {/* Right section: Download button */}
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'8px' }}>
+                    <button
+                      onClick={() => {
+                        const btn = document.getElementById('csv-download-btn');
+                        if (btn) btn.textContent = '⏳ Downloading...';
+                        fetch(API_BASE_URL + '/api/results/export-csv')
+                          .then(r => r.text())
+                          .then(csv => {
+                            const blob = new Blob([csv], { type: 'text/csv' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url; a.download = 'BetBudAI_ROI_Data.csv'; a.click();
+                            URL.revokeObjectURL(url);
+                            if (btn) btn.textContent = '✅ Downloaded!';
+                            setTimeout(() => { if (btn) btn.textContent = '📥 Download CSV'; }, 3000);
+                          })
+                          .catch(() => { if (btn) btn.textContent = '❌ Failed'; setTimeout(() => { if (btn) btn.textContent = '📥 Download CSV'; }, 3000); });
+                      }}
+                      id="csv-download-btn"
+                      style={{ padding:'10px 20px', background:'linear-gradient(135deg,#3b82f6,#2563eb)', color:'white', border:'none', borderRadius:'8px', fontSize:'13px', fontWeight:'700', cursor:'pointer', boxShadow:'0 3px 10px rgba(37,99,235,0.3)', transition:'all 0.2s', letterSpacing:'0.3px', whiteSpace:'nowrap' }}
+                    >📥 Download CSV</button>
+                    <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.35)', textAlign:'center', maxWidth:'160px', lineHeight:'1.3' }}>Every pick logged pre-race · fully transparent</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
