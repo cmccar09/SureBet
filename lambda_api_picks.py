@@ -136,6 +136,10 @@ def lambda_handler(event, context):
             return get_yesterday_picks(headers)
         elif 'picks/today' in path:
             return get_today_picks(headers)
+        elif 'major-race-analysis/run' in path and method == 'POST':
+            return run_major_race_analysis(headers, event)
+        elif 'major-race-analysis' in path and method == 'GET':
+            return get_major_race_analysis(headers)
         elif 'workflow/run' in path or 'workflow' in path:
             return trigger_workflow(headers)
         elif 'picks' in path:

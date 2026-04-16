@@ -1954,6 +1954,24 @@ function YesterdayResultsView({ isFreeUser }) {
 function MajorRacesView() {
   const [filter,   setFilter]   = useState('all');
   const [showPast, setShowPast] = useState(false);
+  const [analyses, setAnalyses] = useState({});
+  const [analysisLoading, setAnalysisLoading] = useState(true);
+  const [expandedRace, setExpandedRace] = useState(null);
+
+  // Fetch early-bird analyses
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/major-race-analysis`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.success && d.analyses) {
+          const map = {};
+          d.analyses.forEach(a => { map[a.bet_id] = a; });
+          setAnalyses(map);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setAnalysisLoading(false));
+  }, []);
 
   const filtered = MAJOR_RACES.filter(r => {
     if (!showPast && isPast(r.date)) return false;
@@ -2030,7 +2048,12 @@ function MajorRacesView() {
               }
             </div>
             <div style={{ padding:'12px 16px', display:'flex', flexDirection:'column', gap:'10px' }}>
-              {races.map((race, i) => (
+              {races.map((race, i) => {
+                const raceKey = `${race.date}__${race.name.replace(/ /g, '_')}`;
+                const analysis = analyses[raceKey];
+                const isExpanded = expandedRace === raceKey;
+                const confColour = { HIGH: '#34d399', MEDIUM: '#fbbf24', LOW: '#f87171', 'NO DATA': 'rgba(255,255,255,0.3)' };
+                return (
                 <div key={i} style={{
                   background: race.highlight && !past ? 'linear-gradient(135deg,rgba(217,119,6,0.12) 0%,rgba(255,255,255,0.08) 100%)' : 'rgba(255,255,255,0.05)',
                   border:     race.highlight && !past ? '1px solid rgba(217,119,6,0.4)' : '1px solid rgba(255,255,255,0.1)',
@@ -2057,10 +2080,73 @@ function MajorRacesView() {
                         {race.purse && <span>{race.purse}</span>}
                       </div>
                       {race.notes && <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.65)', lineHeight:'1.5' }}>{race.notes}</div>}
+
+                      {/* ── Early Bird AI Pick ────────────────────────── */}
+                      {!past && analysis && analysis.top_pick && (
+                        <div style={{ marginTop:'10px', background:'linear-gradient(135deg,rgba(99,102,241,0.12),rgba(129,140,248,0.08))', border:'1px solid rgba(129,140,248,0.3)', borderRadius:'8px', padding:'10px 14px' }}>
+                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'8px' }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                              <span style={{ fontSize:'14px' }}>🐴</span>
+                              <div>
+                                <div style={{ fontSize:'11px', color:'#a5b4fc', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'700' }}>Early Bird AI Pick</div>
+                                <div style={{ fontSize:'15px', fontWeight:'800', color:'white', marginTop:'2px' }}>{analysis.top_pick}
+                                  {analysis.top_pick_odds && <span style={{ fontSize:'12px', fontWeight:'600', color:'#a5b4fc', marginLeft:'8px' }}>{analysis.top_pick_odds}</span>}
+                                </div>
+                              </div>
+                            </div>
+                            <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                              <span style={{ background: `${confColour[analysis.confidence] || confColour['NO DATA']}22`, border:`1px solid ${confColour[analysis.confidence] || confColour['NO DATA']}55`, color: confColour[analysis.confidence] || confColour['NO DATA'], padding:'3px 10px', borderRadius:'6px', fontSize:'11px', fontWeight:'700' }}>
+                                {analysis.confidence}
+                              </span>
+                              <button onClick={() => setExpandedRace(isExpanded ? null : raceKey)} style={{ background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.15)', borderRadius:'6px', color:'rgba(255,255,255,0.6)', fontSize:'11px', padding:'3px 10px', cursor:'pointer' }}>
+                                {isExpanded ? '▲ Less' : '▼ More'}
+                              </button>
+                            </div>
+                          </div>
+                          {analysis.top_pick_factors && analysis.top_pick_factors.length > 0 && (
+                            <div style={{ display:'flex', gap:'6px', flexWrap:'wrap', marginTop:'6px' }}>
+                              {analysis.top_pick_factors.slice(0, 3).map((f, fi) => (
+                                <span key={fi} style={{ background:'rgba(129,140,248,0.15)', border:'1px solid rgba(129,140,248,0.25)', color:'#c7d2fe', padding:'2px 8px', borderRadius:'4px', fontSize:'10px' }}>{f}</span>
+                              ))}
+                            </div>
+                          )}
+                          {isExpanded && analysis.top3 && (
+                            <div style={{ marginTop:'10px', borderTop:'1px solid rgba(129,140,248,0.15)', paddingTop:'10px' }}>
+                              <div style={{ fontSize:'11px', color:'#a5b4fc', fontWeight:'700', marginBottom:'8px', textTransform:'uppercase', letterSpacing:'0.5px' }}>Top Contenders</div>
+                              {analysis.top3.map((h, hi) => (
+                                <div key={hi} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'6px 10px', background: hi === 0 ? 'rgba(129,140,248,0.1)' : 'transparent', borderRadius:'6px', marginBottom:'4px' }}>
+                                  <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                                    <span style={{ fontSize:'14px', fontWeight:'800', color: hi === 0 ? '#818cf8' : hi === 1 ? '#a5b4fc' : 'rgba(255,255,255,0.4)', width:'20px' }}>{hi + 1}.</span>
+                                    <div>
+                                      <span style={{ fontSize:'13px', fontWeight:'700', color:'white' }}>{h.name}</span>
+                                      {h.trainer && <span style={{ fontSize:'11px', color:'rgba(255,255,255,0.4)', marginLeft:'8px' }}>{h.trainer}</span>}
+                                    </div>
+                                  </div>
+                                  <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                                    {h.odds_display && <span style={{ fontSize:'12px', color:'#a5b4fc', fontWeight:'600' }}>{h.odds_display}</span>}
+                                    <div style={{ background:'rgba(129,140,248,0.2)', borderRadius:'4px', padding:'2px 8px', fontSize:'11px', fontWeight:'700', color:'#818cf8', minWidth:'32px', textAlign:'center' }}>{h.score}</div>
+                                  </div>
+                                </div>
+                              ))}
+                              {analysis.total_horses > 0 && (
+                                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.3)', marginTop:'6px' }}>
+                                  {analysis.total_horses} runners analysed · Updated {new Date(analysis.analysed_at).toLocaleDateString('en-GB', { day:'numeric', month:'short' })} · {analysis.days_to_race} days to race
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      {!past && !analysis && !analysisLoading && !isPast(race.date) && daysUntil(race.date) && (
+                        <div style={{ marginTop:'8px', fontSize:'11px', color:'rgba(255,255,255,0.3)', fontStyle:'italic' }}>
+                          🔮 Early bird analysis coming soon
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
         );
@@ -2792,6 +2878,9 @@ function AdminView({ authUser }) {
   const [losspicks, setLosspicks]         = useState(null);
   const [lossLoading, setLossLoading]    = useState(false);
 
+  const [majorRunning, setMajorRunning] = useState(false);
+  const [majorMsg, setMajorMsg]         = useState(null);
+
   const adminToken = authUser?.admin_token;
 
   useEffect(() => {
@@ -2927,6 +3016,7 @@ function AdminView({ authUser }) {
         <button style={sectionBtnStyle('weights')} onClick={() => setActiveSection('weights')}>⚖️ Scoring Weights</button>
         <button style={sectionBtnStyle('lossanalysis')} onClick={() => { setActiveSection('lossanalysis'); if (!losspicks) loadLossPicks(); }}>🔍 Loss Analysis</button>
         <button style={sectionBtnStyle('subscribers')} onClick={() => { setActiveSection('subscribers'); if (!subscribers) loadSubscribers(); }}>👥 Subscribers</button>
+        <button style={sectionBtnStyle('majoranalysis')} onClick={() => setActiveSection('majoranalysis')}>🏆 Major Races AI</button>
       </div>
 
       {/* ─── Score Thresholds ─── */}
@@ -3087,6 +3177,48 @@ function AdminView({ authUser }) {
               </>
             );
           })()}
+        </div>
+      )}
+
+      {activeSection === 'majoranalysis' && (
+        <div>
+          <div style={{ fontSize:'16px', fontWeight:'700', color:'#e2e8f0', marginBottom:'16px' }}>🏆 Major Races AI Analysis</div>
+          <p style={{ fontSize:'13px', color:'rgba(255,255,255,0.55)', marginBottom:'16px' }}>
+            Run the early-bird analysis for all upcoming major races. This scrapes ante-post markets from Sporting Life, scores each horse, and picks the top contender per race. Designed to run weekly.
+          </p>
+          <button
+            disabled={majorRunning}
+            onClick={() => {
+              setMajorRunning(true);
+              setMajorMsg(null);
+              fetch(`${API_BASE_URL}/api/major-race-analysis/run`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': adminToken },
+              })
+                .then(r => r.json())
+                .then(d => {
+                  if (d.success) {
+                    setMajorMsg({ ok: true, text: `✅ ${d.message}. Refresh the Major Races page to see results.` });
+                  } else {
+                    setMajorMsg({ ok: false, text: `❌ ${d.error || 'Analysis failed'}` });
+                  }
+                })
+                .catch(e => setMajorMsg({ ok: false, text: `❌ Network error: ${e.message}` }))
+                .finally(() => setMajorRunning(false));
+            }}
+            style={{
+              padding:'12px 28px', borderRadius:'10px', border:'none', cursor: majorRunning ? 'not-allowed' : 'pointer',
+              background: majorRunning ? 'rgba(124,58,237,0.3)' : 'linear-gradient(135deg,#7c3aed,#6366f1)',
+              color:'white', fontSize:'14px', fontWeight:'700', transition:'all 0.2s',
+            }}
+          >
+            {majorRunning ? '⏳ Running analysis…' : '🚀 Run Weekly Analysis Now'}
+          </button>
+          {majorMsg && (
+            <div style={{ marginTop:'16px', padding:'12px 16px', borderRadius:'8px', background: majorMsg.ok ? 'rgba(52,211,153,0.12)' : 'rgba(248,113,113,0.12)', border: `1px solid ${majorMsg.ok ? 'rgba(52,211,153,0.4)' : 'rgba(248,113,113,0.4)'}`, color: majorMsg.ok ? '#34d399' : '#f87171', fontSize:'14px' }}>
+              {majorMsg.text}
+            </div>
+          )}
         </div>
       )}
     </div>

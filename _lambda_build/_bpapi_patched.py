@@ -136,6 +136,10 @@ def lambda_handler(event, context):
             return get_yesterday_picks(headers)
         elif 'picks/today' in path:
             return get_today_picks(headers)
+        elif 'major-race-analysis/run' in path and method == 'POST':
+            return run_major_race_analysis(headers, event)
+        elif 'major-race-analysis' in path and method == 'GET':
+            return get_major_race_analysis(headers)
         elif 'workflow/run' in path or 'workflow' in path:
             return trigger_workflow(headers)
         elif 'picks' in path:
@@ -2814,6 +2818,324 @@ def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
             'outcome':       fav_outcome,
         })
     return results
+
+
+def get_major_race_analysis(headers):
+    """GET /api/major-race-analysis — return all stored early-bird predictions."""
+    try:
+        from boto3.dynamodb.conditions import Key as DKey
+        resp = table.query(
+            KeyConditionExpression=DKey('bet_date').eq('MAJOR_ANALYSIS')
+        )
+        items = [decimal_to_float(it) for it in resp.get('Items', [])]
+        return {
+            'statusCode': 200,
+            'headers': headers,
+            'body': json.dumps({'success': True, 'analyses': items}, default=str)
+        }
+    except Exception as e:
+        print(f'get_major_race_analysis error: {e}')
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': str(e)})}
+
+
+def run_major_race_analysis(headers, event):
+    """POST /api/major-race-analysis/run — scrape ante-post data & score horses for upcoming major races.
+    Admin-only. Designed to run weekly via EventBridge or manual trigger."""
+    import re as _re
+    import urllib.request as _ur
+
+    # Admin auth check
+    raw_headers = event.get('headers', {})
+    admin_token = raw_headers.get('x-admin-token', '')
+    if admin_token:
+        sess_key = f'__session__{admin_token}'
+        sess = subscribers_table.get_item(Key={'email': sess_key}).get('Item')
+        if not sess or sess.get('role') != 'admin':
+            return {'statusCode': 403, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Admin auth required'})}
+    else:
+        # Allow EventBridge trigger (no token)
+        source = event.get('source', '')
+        if source not in ('aws.events', 'scheduled-major-analysis'):
+            return {'statusCode': 403, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Admin auth required'})}
+
+    SL_HEADERS = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'en-GB,en;q=0.5',
+        'Referer': 'https://www.sportinglife.com/',
+    }
+
+    # Major races calendar (same as frontend)
+    MAJOR_RACES = [
+        {'date': '2026-04-18', 'meeting': 'Ayr', 'name': 'Scottish Grand National', 'type': 'NH', 'grade': 'G3'},
+        {'date': '2026-04-29', 'meeting': 'Punchestown', 'name': 'Punchestown Champion Chase', 'type': 'NH', 'grade': 'G1'},
+        {'date': '2026-04-30', 'meeting': 'Punchestown', 'name': 'Punchestown Gold Cup', 'type': 'NH', 'grade': 'G1'},
+        {'date': '2026-05-01', 'meeting': 'Punchestown', 'name': 'Punchestown Champion Hurdle', 'type': 'NH', 'grade': 'G1'},
+        {'date': '2026-05-01', 'meeting': 'Punchestown', 'name': 'World Series Hurdle', 'type': 'NH', 'grade': 'G1'},
+        {'date': '2026-05-02', 'meeting': 'Newmarket', 'name': '2000 Guineas', 'type': 'Flat', 'grade': 'G1'},
+        {'date': '2026-05-03', 'meeting': 'Newmarket', 'name': '1000 Guineas', 'type': 'Flat', 'grade': 'G1'},
+        {'date': '2026-05-08', 'meeting': 'Chester', 'name': 'Chester Vase', 'type': 'Flat', 'grade': 'G3'},
+        {'date': '2026-05-14', 'meeting': 'York', 'name': 'Dante Stakes', 'type': 'Flat', 'grade': 'G2'},
+        {'date': '2026-05-15', 'meeting': 'York', 'name': 'Musidora Stakes', 'type': 'Flat', 'grade': 'G3'},
+        {'date': '2026-06-05', 'meeting': 'Epsom', 'name': 'Coronation Cup', 'type': 'Flat', 'grade': 'G1'},
+        {'date': '2026-06-05', 'meeting': 'Epsom', 'name': 'The Oaks', 'type': 'Flat', 'grade': 'G1'},
+        {'date': '2026-06-06', 'meeting': 'Epsom', 'name': 'The Derby', 'type': 'Flat', 'grade': 'G1'},
+        {'date': '2026-06-16', 'meeting': 'Royal Ascot', 'name': 'Queen Anne Stakes', 'type': 'Flat', 'grade': 'G1'},
+        {'date': '2026-06-17', 'meeting': 'Royal Ascot', 'name': "Prince of Wales's Stakes", 'type': 'Flat', 'grade': 'G1'},
+        {'date': '2026-06-18', 'meeting': 'Royal Ascot', 'name': 'Ascot Gold Cup', 'type': 'Flat', 'grade': 'G1'},
+        {'date': '2026-07-09', 'meeting': 'Sandown', 'name': 'Eclipse Stakes', 'type': 'Flat', 'grade': 'G1'},
+        {'date': '2026-07-25', 'meeting': 'Ascot', 'name': 'King George VI & Queen Elizabeth Stakes', 'type': 'Flat', 'grade': 'G1'},
+        {'date': '2026-07-29', 'meeting': 'Goodwood', 'name': 'Sussex Stakes', 'type': 'Flat', 'grade': 'G1'},
+        {'date': '2026-08-20', 'meeting': 'York', 'name': 'Juddmonte International', 'type': 'Flat', 'grade': 'G1'},
+        {'date': '2026-09-12', 'meeting': 'Doncaster', 'name': 'St Leger', 'type': 'Flat', 'grade': 'G1'},
+        {'date': '2026-10-17', 'meeting': 'Ascot', 'name': 'QIPCO Champion Stakes', 'type': 'Flat', 'grade': 'G1'},
+    ]
+
+    today_str = datetime.utcnow().strftime('%Y-%m-%d')
+    upcoming = [r for r in MAJOR_RACES if r['date'] > today_str]
+
+    # ── Fetch ante-post markets from Sporting Life ────────────────────────────
+    def _sl_fetch(url):
+        try:
+            req = _ur.Request(url, headers=SL_HEADERS)
+            with _ur.urlopen(req, timeout=20) as resp:
+                return resp.read().decode('utf-8', errors='replace')
+        except Exception as e:
+            print(f'[major-analysis] SL fetch error for {url}: {e}')
+            return None
+
+    def _parse_ante_post(html, race_name):
+        """Parse ante-post betting page or racecard for horse names and odds."""
+        horses = []
+        if not html:
+            return horses
+
+        # Try __NEXT_DATA__ JSON first (most reliable)
+        m = _re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', html, _re.DOTALL)
+        if m:
+            try:
+                nd = json.loads(m.group(1))
+                # Ante-post markets
+                markets = nd.get('props', {}).get('pageProps', {}).get('markets', [])
+                for mkt in markets:
+                    selections = mkt.get('selections', [])
+                    for sel in selections:
+                        name = sel.get('name', '').strip()
+                        odds_str = sel.get('odds', '')
+                        if not name:
+                            continue
+                        odds_dec = None
+                        if '/' in str(odds_str):
+                            try:
+                                num, den = odds_str.split('/')
+                                odds_dec = round(float(num) / float(den) + 1, 2)
+                            except Exception:
+                                pass
+                        horses.append({'name': name, 'odds': odds_dec, 'odds_display': str(odds_str)})
+
+                # Also check racecard format (rides list)
+                if not horses:
+                    rides = nd.get('props', {}).get('pageProps', {}).get('race', {}).get('rides', [])
+                    for ride in rides:
+                        horse = ride.get('horse', {})
+                        name = horse.get('name', '').strip()
+                        if not name:
+                            continue
+                        # Get trainer, jockey, form
+                        trainer = ride.get('trainer', {}).get('name', '')
+                        jockey = ride.get('jockey', {}).get('name', '')
+                        form_str = horse.get('form', '')
+                        prev_results = horse.get('previous_results', [])
+                        horses.append({
+                            'name': name,
+                            'odds': None,
+                            'odds_display': '',
+                            'trainer': trainer,
+                            'jockey': jockey,
+                            'form': form_str,
+                            'runs': len(prev_results),
+                            'wins': sum(1 for r in prev_results if r.get('position') == 1),
+                        })
+            except Exception as e:
+                print(f'[major-analysis] JSON parse error for {race_name}: {e}')
+
+        # Fallback: regex parse for horse names and odds
+        if not horses:
+            for m2 in _re.finditer(r'data-testid="runner-name"[^>]*>([^<]+)', html):
+                name = m2.group(1).strip()
+                if name:
+                    horses.append({'name': name, 'odds': None, 'odds_display': ''})
+
+        return horses
+
+    def _score_major_race_horse(horse, all_horses, race):
+        """Score a horse for a major race based on available ante-post data.
+        Returns a score 0-100 and list of factors."""
+        score = 0
+        factors = []
+
+        # 1. Market position (odds-based) — lower odds = higher score
+        odds = horse.get('odds')
+        if odds and odds > 0:
+            if odds <= 3.0:
+                score += 30
+                factors.append('Market favourite — strong market support')
+            elif odds <= 5.0:
+                score += 24
+                factors.append('Well-backed — top of the market')
+            elif odds <= 8.0:
+                score += 18
+                factors.append('Solid market position')
+            elif odds <= 15.0:
+                score += 12
+                factors.append('Mid-market — each-way contender')
+            elif odds <= 25.0:
+                score += 6
+                factors.append('Outsider — needs things to fall right')
+
+        # 2. Recent form (from racecard data if available)
+        wins = horse.get('wins', 0)
+        runs = horse.get('runs', 0)
+        form_str = horse.get('form', '')
+        if wins and wins >= 3:
+            score += 15
+            factors.append(f'{wins} career wins — proven at the highest level')
+        elif wins and wins >= 1:
+            score += 10
+            factors.append(f'{wins} win(s) from {runs} runs')
+
+        if form_str:
+            recent = form_str.replace('-', '')[-5:]  # last 5 runs
+            recent_wins = recent.count('1')
+            recent_places = sum(1 for c in recent if c in '123')
+            if recent_wins >= 2:
+                score += 12
+                factors.append(f'Excellent recent form — {recent_wins} wins in last 5')
+            elif recent_places >= 3:
+                score += 8
+                factors.append(f'Consistent — {recent_places} placings in last 5')
+
+        # 3. Grade of race vs horse's record
+        grade = race.get('grade', '')
+        if grade == 'G1' and wins and wins >= 2:
+            score += 10
+            factors.append('Multiple winner stepping into Group 1 — proven quality')
+
+        # 4. Trainer quality (well-known flat/NH names)
+        trainer = (horse.get('trainer') or '').lower()
+        top_flat = ['aidan obrien', 'charlie appleby', 'john gosden', 'william haggas', 'andrew balding', 'roger varian', 'karl burke']
+        top_nh = ['willie mullins', 'gordon elliott', 'henry de bromhead', 'nicky henderson', 'paul nicholls', 'dan skelton', 'olly murphy']
+        top_trainers = top_flat if race.get('type') == 'Flat' else top_nh
+        if any(t in trainer for t in top_trainers):
+            score += 10
+            factors.append(f'Trained by {horse.get("trainer", "")} — elite yard')
+
+        # 5. Market position rank bonus
+        sorted_by_odds = sorted([h for h in all_horses if h.get('odds')], key=lambda h: h['odds'])
+        for i, h in enumerate(sorted_by_odds):
+            if h['name'] == horse['name']:
+                if i == 0:
+                    score += 8
+                    factors.append('Shortest price in the market')
+                elif i == 1:
+                    score += 5
+                    factors.append('Second favourite')
+                elif i == 2:
+                    score += 3
+                    factors.append('Third in the betting')
+                break
+
+        return min(score, 100), factors
+
+    # ── Process each upcoming major race ──────────────────────────────────────
+    analysed = []
+    for race in upcoming[:15]:  # Limit to next 15 races to stay within Lambda timeout
+        race_key = f"{race['date']}__{race['name'].replace(' ', '_')}"
+        meeting_slug = race['meeting'].lower().replace(' ', '-')
+        race_name_slug = race['name'].lower().replace(' ', '-').replace("'", '').replace('.', '')
+
+        # Try Sporting Life ante-post page
+        ante_post_url = f"https://www.sportinglife.com/racing/ante-post/{meeting_slug}/{race_name_slug}"
+        print(f"[major-analysis] Fetching: {ante_post_url}")
+        html = _sl_fetch(ante_post_url)
+        horses = _parse_ante_post(html, race['name'])
+
+        # If no horses found via ante-post, try the racecard URL (closer to race day)
+        if not horses:
+            racecard_url = f"https://www.sportinglife.com/racing/racecards/{race['date']}/{meeting_slug}"
+            print(f"[major-analysis] Trying racecard: {racecard_url}")
+            html2 = _sl_fetch(racecard_url)
+            if html2:
+                # Find individual race links
+                for m3 in _re.finditer(r'href="(/racing/racecards/[^"]+)"', html2):
+                    rc_path = m3.group(1)
+                    if race_name_slug[:15] in rc_path.lower().replace('-', ' ').replace("'", ''):
+                        rc_html = _sl_fetch(f"https://www.sportinglife.com{rc_path}")
+                        horses = _parse_ante_post(rc_html, race['name'])
+                        if horses:
+                            break
+
+        # Score all horses
+        scored_horses = []
+        for h in horses:
+            score, factors = _score_major_race_horse(h, horses, race)
+            scored_horses.append({
+                'name': h['name'],
+                'odds': h.get('odds'),
+                'odds_display': h.get('odds_display', ''),
+                'trainer': h.get('trainer', ''),
+                'jockey': h.get('jockey', ''),
+                'form': h.get('form', ''),
+                'score': score,
+                'factors': factors,
+            })
+
+        scored_horses.sort(key=lambda h: h['score'], reverse=True)
+
+        # Pick top 3 contenders
+        top3 = scored_horses[:3]
+        pick = scored_horses[0] if scored_horses else None
+
+        days_to_race = max(0, (datetime.strptime(race['date'], '%Y-%m-%d') - datetime.utcnow()).days)
+
+        analysis = {
+            'bet_date': 'MAJOR_ANALYSIS',
+            'bet_id': race_key,
+            'race_name': race['name'],
+            'race_date': race['date'],
+            'meeting': race['meeting'],
+            'grade': race.get('grade', ''),
+            'type': race.get('type', ''),
+            'days_to_race': days_to_race,
+            'analysed_at': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+            'total_horses': len(scored_horses),
+            'top_pick': pick['name'] if pick else None,
+            'top_pick_score': pick['score'] if pick else 0,
+            'top_pick_odds': pick.get('odds_display', '') if pick else '',
+            'top_pick_factors': pick['factors'] if pick else [],
+            'top3': top3,
+            'all_runners': scored_horses[:10],  # Store top 10 for display
+            'confidence': 'HIGH' if pick and pick['score'] >= 50 else 'MEDIUM' if pick and pick['score'] >= 30 else 'LOW' if pick else 'NO DATA',
+        }
+
+        # Store in DynamoDB
+        try:
+            table.put_item(Item=json.loads(json.dumps(analysis), parse_float=Decimal))
+            print(f"[major-analysis] Stored: {race['name']} -> {pick['name'] if pick else 'NO PICK'} (score: {pick['score'] if pick else 0})")
+        except Exception as e:
+            print(f"[major-analysis] DynamoDB error for {race['name']}: {e}")
+
+        analysed.append(analysis)
+
+    return {
+        'statusCode': 200,
+        'headers': headers,
+        'body': json.dumps({
+            'success': True,
+            'message': f'Analysed {len(analysed)} major races',
+            'analysed': analysed,
+        }, default=str)
+    }
 
 
 def get_favs_run_lambda(headers, event):
