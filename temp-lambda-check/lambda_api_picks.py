@@ -27,7 +27,7 @@ def lambda_handler(event, context):
     # CORS headers
     headers = {
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key',
+        'Access-Control-Allow-Headers': 'Content-Type,X-Amz-Date,Authorization,X-Api-Key,x-admin-token',
         'Access-Control-Allow-Methods': 'GET,OPTIONS',
         'Content-Type': 'application/json'
     }
