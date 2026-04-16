@@ -145,6 +145,15 @@ LAMBDAS = [
         'bundle' : ['learning_engine.py'],
         'env'    : {'LEARNING_DAYS_BACK': '7'},
     },
+    {
+        'name'   : 'surebet-major-analysis',
+        'handler': 'sf_major_analysis.lambda_handler',
+        'src'    : 'sf_major_analysis.py',
+        'timeout': 300,
+        'memory' : 256,
+        'bundle' : [],
+        'env'    : {},
+    },
 ]
 
 # ── State machine definitions ─────────────────────────────────────────────────
@@ -152,7 +161,8 @@ STATE_MACHINES = [
     {'name': 'SureBet-Morning',  'file': 'morning_sm.json'},
     {'name': 'SureBet-Refresh',  'file': 'refresh_sm.json'},
     {'name': 'SureBet-Evening',  'file': 'evening_sm.json'},
-    {'name': 'SureBet-Learning', 'file': 'learning_sm.json'},
+    {'name': 'SureBet-Learning',        'file': 'learning_sm.json'},
+    {'name': 'SureBet-Major-Analysis',  'file': 'major_analysis_sm.json'},
 ]
 
 # ── EventBridge schedules ─────────────────────────────────────────────────────
@@ -199,6 +209,12 @@ SCHEDULES = [
         'cron'          : 'cron(0 21 * * ? *)',
         'state_machine' : 'SureBet-Learning',
         'description'   : 'SureBet nightly learning cycle — 21:00 UTC',
+    },
+    {
+        'rule_name'     : 'SureBet-MajorAnalysis-Schedule',
+        'cron'          : 'cron(0 7 ? * MON *)',
+        'state_machine' : 'SureBet-Major-Analysis',
+        'description'   : 'SureBet weekly major-race early-bird analysis — Monday 07:00 UTC',
     },
 ]
 
