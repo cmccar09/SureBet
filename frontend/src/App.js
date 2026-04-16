@@ -2754,6 +2754,71 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
       </div>
       )}
 
+      {/* ── PRICING PREVIEW (always visible) ─────────────────────────── */}
+      <div style={{ marginTop: '32px', marginBottom: '32px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <h2 style={{ fontSize: '24px', fontWeight: '900', color: 'white', marginBottom: '6px' }}>
+            {isAuthenticated ? 'Upgrade Your Plan' : 'Choose Your Plan'}
+          </h2>
+          <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)', maxWidth: '460px', margin: '0 auto' }}>
+            {isAuthenticated ? 'Unlock full access to AI-powered racing picks' : 'Sign up free, then upgrade anytime for full access'}
+          </p>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', maxWidth: '700px', margin: '0 auto' }}>
+
+          {/* FREE */}
+          <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '14px', padding: '22px 20px' }}>
+            <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1.5px', color: 'rgba(255,255,255,0.45)', fontWeight: '700', marginBottom: '6px' }}>Free</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '32px', fontWeight: '900', color: 'white' }}>€0</span>
+              <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>/month</span>
+            </div>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.65)', lineHeight: '2' }}>
+              <li>✓ 2 picks per day</li>
+              <li>✓ Basic race info</li>
+              <li style={{ color: 'rgba(255,255,255,0.3)' }}>✗ Full pick analysis</li>
+              <li style={{ color: 'rgba(255,255,255,0.3)' }}>✗ VIP insights</li>
+            </ul>
+          </div>
+
+          {/* PREMIUM */}
+          <div style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08))', border: '2px solid rgba(99,102,241,0.4)', borderRadius: '14px', padding: '22px 20px', position: 'relative' }}>
+            <div style={{ position: 'absolute', top: '-11px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', borderRadius: '20px', padding: '3px 14px', fontSize: '10px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '1px' }}>Most Popular</div>
+            <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#818cf8', fontWeight: '700', marginBottom: '6px' }}>Premium</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '32px', fontWeight: '900', color: 'white' }}>€19.99</span>
+              <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>/month</span>
+            </div>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.65)', lineHeight: '2' }}>
+              <li>✓ All daily picks (5+ per day)</li>
+              <li>✓ Full enhanced analysis</li>
+              <li>✓ Yesterday's results &amp; ROI</li>
+              <li>✓ Lay the Favourite strategy</li>
+            </ul>
+          </div>
+
+          {/* VIP */}
+          <div style={{ background: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(251,191,36,0.06))', border: '2px solid rgba(245,158,11,0.35)', borderRadius: '14px', padding: '22px 20px' }}>
+            <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#fbbf24', fontWeight: '700', marginBottom: '6px' }}>VIP</div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '32px', fontWeight: '900', color: 'white' }}>€99</span>
+              <span style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)' }}>/month</span>
+            </div>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13px', color: 'rgba(255,255,255,0.65)', lineHeight: '2' }}>
+              <li>✓ Everything in Premium</li>
+              <li>✓ Race intel &amp; full field data</li>
+              <li>✓ Score breakdowns</li>
+              <li>✓ Priority support</li>
+            </ul>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '11px', color: 'rgba(255,255,255,0.35)', lineHeight: '1.8' }}>
+          Payments securely processed by Stripe · Cancel anytime · All prices in EUR
+        </div>
+      </div>
+
       {/* Responsible gambling footer */}
       <div style={{ textAlign: 'center', padding: '0 0 24px', color: 'rgba(255,255,255,0.25)', fontSize: '12px', lineHeight: '1.6' }}>
         BetBudAI provides data analysis for informational purposes only and does not constitute financial or betting advice.<br />
