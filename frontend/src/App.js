@@ -429,6 +429,7 @@ function App() {
           { key:'yesterday', label:'Latest Results',   emoji:'\ud83d\udcca', sub:'Today & yesterday',   gated: true  },
           { key:'laythe',    label:'VIP',              emoji:'\ud83d\udc51', sub:'Lay the Fav & more',  gated: true  },
           { key:'majors',    label:'Major Races',      emoji:'\ud83c\udfc6', sub:'Group 1 calendar',    gated: true  },
+          { key:'pricing',  label:'Upgrade',        emoji:'\ud83d\ude80', sub:'Premium & VIP',     gated: true  },
           ...(isAdmin ? [{ key:'admin', label:'Admin', emoji:'\u2699\ufe0f', sub:'System controls', gated: true, admin: true }] : []),
         ].map(tab => {
           const locked = (tab.gated && !isAuthenticated) || (isFreeUser && PAID_TABS.includes(tab.key));
@@ -441,6 +442,8 @@ function App() {
                   ? (isActive ? 'linear-gradient(135deg,#7c3aed 0%,#5b21b6 100%)' : 'rgba(124,58,237,0.18)')
                   : tab.key==='laythe'
                     ? (isActive ? 'linear-gradient(135deg,#d97706 0%,#b45309 100%)' : 'rgba(217,119,6,0.18)')
+                    : tab.key==='pricing'
+                      ? (isActive ? 'linear-gradient(135deg,#6366f1 0%,#7c3aed 100%)' : 'rgba(99,102,241,0.18)')
                     : (isActive ? 'linear-gradient(135deg,#059669 0%,#047857 100%)' : 'rgba(255,255,255,0.12)'),
               border: locked
                 ? '2px solid rgba(255,255,255,0.1)'
@@ -448,6 +451,8 @@ function App() {
                   ? (isActive ? '2px solid #a78bfa' : '2px solid rgba(167,139,250,0.4)')
                   : tab.key==='laythe'
                     ? (isActive ? '2px solid #f59e0b' : '2px solid rgba(245,158,11,0.4)')
+                    : tab.key==='pricing'
+                      ? (isActive ? '2px solid #818cf8' : '2px solid rgba(129,140,248,0.4)')
                     : (isActive ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.25)'),
               borderRadius:'10px', color: locked ? 'rgba(255,255,255,0.3)' : 'white',
               cursor: locked ? 'not-allowed' : 'pointer',
@@ -476,12 +481,13 @@ function App() {
           </div>
         )}
         {page==='home'
-          ? <HomePageView onAuthSuccess={handleAuthSuccess} isAuthenticated={isAuthenticated} />
+          ? <HomePageView onAuthSuccess={handleAuthSuccess} isAuthenticated={isAuthenticated} authUser={authUser} />
           : !isAuthenticated
-            ? <HomePageView onAuthSuccess={handleAuthSuccess} isAuthenticated={isAuthenticated} />
+            ? <HomePageView onAuthSuccess={handleAuthSuccess} isAuthenticated={isAuthenticated} authUser={authUser} />
             : page==='picks'      ? <DailyPicksView isFreeUser={isFreeUser} onUpgrade={() => setPage('picks')} />
             : page==='yesterday'  ? <YesterdayResultsView isFreeUser={isFreeUser} />
             : page==='laythe'     ? <LayTheFavView />
+            : page==='pricing'   ? <PricingView authUser={authUser} />
             : page==='admin' && isAdmin ? <AdminView authUser={authUser} />
             : <MajorRacesView />}
       </main>
@@ -2402,7 +2408,7 @@ function LayTheFavView() {
   );
 }
 
-function HomePageView({ onAuthSuccess, isAuthenticated }) {
+function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
   const [roi, setRoi]         = useState(null);
   const [settled, setSettled] = useState(null);
   const [roiLoading, setRoiLoading] = useState(true);
@@ -2612,10 +2618,12 @@ function HomePageView({ onAuthSuccess, isAuthenticated }) {
 
       {/* ── AUTH SECTION ──────────────────────────────────────────────── */}
       {isAuthenticated ? (
-        <div style={{ textAlign: 'center', padding: '40px 24px', background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(52,211,153,0.25)', borderRadius: '16px', marginBottom: '40px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
-          <h3 style={{ color: '#34d399', fontSize: '22px', fontWeight: '800', margin: '0 0 8px' }}>You're signed in!</h3>
-          <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '15px', margin: 0 }}>Use the tabs above to access today's picks, results and more.</p>
+        <div style={{ marginBottom: '40px' }}>
+          <div style={{ textAlign: 'center', padding: '24px 24px 16px', background: 'rgba(5,150,105,0.08)', border: '1px solid rgba(52,211,153,0.25)', borderRadius: '16px', marginBottom: '24px' }}>
+            <h3 style={{ color: '#34d399', fontSize: '20px', fontWeight: '800', margin: '0 0 6px' }}>✅ You're signed in!</h3>
+            <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', margin: 0 }}>Use the tabs above to access today's picks, results and more.</p>
+          </div>
+          <PricingView authUser={authUser} />
         </div>
       ) : (
       <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', padding: isMobile ? '24px 16px' : '36px 32px', marginBottom: '40px' }}>
