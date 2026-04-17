@@ -289,7 +289,7 @@ function toFractional(decimal) {
 // ---- App ----
 function App() {
   const [page, setPage] = useState('home');
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 600);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
 
   // ── Authentication state ──────────────────────────────────────────────────
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -375,7 +375,7 @@ function App() {
   };
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 600);
+    const onResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -393,8 +393,8 @@ function App() {
         <h1>BetBudAI.com</h1>
         <p style={{ fontSize: '14px', opacity: 0.8, margin: '4px 0 0' }}>AI-powered racing analysis · UK &amp; Ireland</p>
         {isAuthenticated && (
-          <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '13px', color: '#34d399', fontWeight: '600' }}>
+          <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12px', color: '#34d399', fontWeight: '600' }}>
               ✓ Signed in as <strong>{authUser?.username || authUser?.email}</strong>
             </span>
             <button onClick={handleLogout} style={{
@@ -422,7 +422,7 @@ function App() {
         </div>
       )}
 
-      <div style={{ display:'flex', justifyContent:'center', gap:'12px', marginBottom:'32px', flexWrap:'wrap' }}>
+      <div style={{ display:'flex', justifyContent: isMobile ? 'flex-start' : 'center', gap: isMobile ? '8px' : '12px', marginBottom: isMobile ? '20px' : '32px', flexWrap: isMobile ? 'nowrap' : 'wrap', overflowX: isMobile ? 'auto' : 'visible', WebkitOverflowScrolling: 'touch', padding: isMobile ? '0 8px 8px' : '0', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
         {[
           { key:'home',      label:'Home',             emoji:'\ud83c\udfe0', sub:'About & sign in',     gated: false },
           { key:'picks',     label:"Today's Picks",    emoji:'\ud83c\udfaf', sub:'AI selections',       gated: true  },
@@ -451,17 +451,17 @@ function App() {
                     : (isActive ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.25)'),
               borderRadius:'10px', color: locked ? 'rgba(255,255,255,0.3)' : 'white',
               cursor: locked ? 'not-allowed' : 'pointer',
-              padding: isMobile ? '10px 12px' : '12px 24px',
-              minWidth: isMobile ? 0 : '140px',
-              flex: isMobile ? '0 0 calc(50% - 6px)' : undefined,
+              padding: isMobile ? '8px 10px' : '12px 24px',
+              minWidth: isMobile ? 'auto' : '140px',
+              flex: isMobile ? '0 0 auto' : undefined,
               textAlign:'center', transition:'all 0.2s', opacity: locked ? 0.5 : 1,
             }}>
-              <div style={{ fontSize:'16px', fontWeight:'700' }}>
+              <div style={{ fontSize: isMobile ? '13px' : '16px', fontWeight:'700', whiteSpace:'nowrap' }}>
                 {locked ? '🔒' : tab.emoji} {tab.label}
               </div>
-              <div style={{ fontSize:'11px', opacity:0.75, marginTop:'2px' }}>
+              {!isMobile && <div style={{ fontSize:'11px', opacity:0.75, marginTop:'2px' }}>
                 {locked ? (isAuthenticated ? 'Upgrade to access' : 'Sign in to access') : tab.sub}
-              </div>
+              </div>}
             </button>
           );
         })}
@@ -611,7 +611,7 @@ function DailyPicksView({ isFreeUser, onUpgrade }) {
   const [expandedPick,  setExpandedPick]  = useState(null);
   const [expandedField, setExpandedField] = useState(null);
   const [raceFields,    setRaceFields]    = useState({});
-  const [isMobile,      setIsMobile]      = useState(typeof window !== 'undefined' && window.innerWidth < 600);
+  const [isMobile,      setIsMobile]      = useState(typeof window !== 'undefined' && window.innerWidth < 768);
   const [now,           setNow]           = useState(new Date());
   const [analysisStatus, setAnalysisStatus] = useState(null);
   const [analysisPending, setAnalysisPending] = useState(false);
@@ -625,7 +625,7 @@ function DailyPicksView({ isFreeUser, onUpgrade }) {
   }, []);
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 600);
+    const onResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -728,9 +728,7 @@ function DailyPicksView({ isFreeUser, onUpgrade }) {
     <div>
       <div style={{ background:'linear-gradient(135deg,#047857 0%,#065f46 100%)', borderRadius:'12px', padding: isMobile ? '16px 14px' : '24px 28px', marginBottom:'24px', color:'white', display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'12px' }}>
         <div>
-          <div style={{ fontSize:'13px', textTransform:'uppercase', letterSpacing:'1px', opacity:0.75 }}>Today's Picks — Best Bet From Each Race</div>
-          <div style={{ fontSize:'22px', fontWeight:'800', marginTop:'4px' }}>{today}</div>
-          {lastUpdated && <div style={{ fontSize:'12px', opacity:0.65, marginTop:'4px' }}>Last updated {lastUpdated} \u00b7 Data refreshes 12:00, 14:00, 16:00, 18:00 \u00b7 Page auto-reloads every 30 min</div>}
+          <div style={{ fontSize:'22px', fontWeight:'800' }}>{today}</div>
         </div>
         <button onClick={loadPicks} style={{ background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.35)', borderRadius:'8px', color:'white', padding:'8px 18px', cursor:'pointer', fontSize:'13px', fontWeight:'600' }}>
           Refresh
@@ -747,7 +745,7 @@ function DailyPicksView({ isFreeUser, onUpgrade }) {
               <div style={{ fontSize: isMobile ? '28px' : '38px' }}>💰</div>
               <div>
                 <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: '700', marginBottom: '4px' }}>Return on Investment</div>
-                <div style={{ fontSize: isMobile ? '30px' : '40px', fontWeight: '900', color: rv === null ? '#818cf8' : rv >= 0 ? '#34d399' : '#f87171', lineHeight: 1 }}>
+                <div style={{ fontSize: isMobile ? '26px' : '40px', fontWeight: '900', color: rv === null ? '#818cf8' : rv >= 0 ? '#34d399' : '#f87171', lineHeight: 1 }}>
                   {rv === null ? 'Loading…' : `${rv >= 0 ? '+' : ''}${rv.toFixed(1)}%`}
                 </div>
                 <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', marginTop: '4px' }}>
@@ -1123,7 +1121,7 @@ function PricingView({ authUser, onSuccess }) {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', maxWidth: '700px', margin: '0 auto' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', maxWidth: '700px', margin: '0 auto', padding: '0 8px' }}>
 
         {/* FREE TIER */}
         <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: '16px', padding: '28px 24px', position: 'relative' }}>
@@ -1210,12 +1208,12 @@ function YesterdayResultsView({ isFreeUser }) {
   const [results, setResults]         = useState(null);
   const [loading, setLoading]         = useState(true);
   const [error, setError]             = useState(null);
-  const [isMobile, setIsMobile]       = useState(typeof window !== 'undefined' && window.innerWidth < 600);
+  const [isMobile, setIsMobile]       = useState(typeof window !== 'undefined' && window.innerWidth < 768);
   const [cumulRoi, setCumulRoi]         = useState(null);
   const [layData,  setLayData]          = useState(null);
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 600);
+    const onResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -1395,25 +1393,62 @@ function YesterdayResultsView({ isFreeUser }) {
             </div>
             {/* Bottom row: ROI spanning full width */}
             <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:'10px' }}>
-              <div style={{ background: cumulRoiVal === null ? 'rgba(99,102,241,0.1)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border:`1.5px solid ${cumulRoiVal === null ? 'rgba(99,102,241,0.3)' : cumulRoiVal >= 0 ? 'rgba(16,185,129,0.4)' : 'rgba(239,68,68,0.35)'}`, borderRadius:'12px', padding: isMobile ? '16px' : '24px 20px' }}>
-                <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', alignItems:'center', gap: isMobile ? '16px' : '0' }}>
-                  {/* Left section: ROI stats */}
-                  <div style={{ flex:1, textAlign: isMobile ? 'center' : 'left' }}>
-                    <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1px', fontWeight:'600', marginBottom:'6px' }}>Return on Investment</div>
-                    <div style={{ fontSize: isMobile ? '32px' : '42px', fontWeight:'900', color: cumulRoiVal === null ? '#818cf8' : cumulRoiVal >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>
-                      {cumulRoiVal === null ? '—' : `${cumulRoiVal >= 0 ? '+' : ''}${cumulRoiVal.toFixed(1)}%`}
+              <div style={{
+                background: cumulRoiVal === null
+                  ? 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(99,102,241,0.05))'
+                  : cumulRoiVal >= 0
+                    ? 'linear-gradient(135deg, rgba(5,150,105,0.25) 0%, rgba(16,185,129,0.12) 50%, rgba(4,120,87,0.2) 100%)'
+                    : 'linear-gradient(135deg, rgba(239,68,68,0.2), rgba(185,28,28,0.1))',
+                border: `2px solid ${cumulRoiVal === null ? 'rgba(99,102,241,0.3)' : cumulRoiVal >= 0 ? 'rgba(52,211,153,0.5)' : 'rgba(239,68,68,0.4)'}`,
+                borderRadius:'16px',
+                padding: isMobile ? '20px 16px' : '28px 32px',
+                boxShadow: cumulRoiVal >= 0
+                  ? '0 0 40px rgba(52,211,153,0.15), 0 0 80px rgba(52,211,153,0.05), inset 0 1px 0 rgba(255,255,255,0.05)'
+                  : '0 4px 20px rgba(0,0,0,0.2)',
+                position: 'relative',
+                overflow: 'hidden',
+              }}>
+                {/* Subtle shine overlay */}
+                <div style={{ position:'absolute', top:0, left:0, right:0, height:'1px', background:'linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent)' }} />
+                <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', alignItems:'center', gap: isMobile ? '20px' : '0' }}>
+                  {/* Left: emoji + ROI */}
+                  <div style={{ flex:1, display:'flex', alignItems: isMobile ? 'center' : 'flex-start', gap: isMobile ? '16px' : '20px', flexDirection: isMobile ? 'column' : 'row', textAlign: isMobile ? 'center' : 'left' }}>
+                    <div style={{ fontSize: isMobile ? '36px' : '48px', lineHeight:1, filter:'drop-shadow(0 2px 8px rgba(0,0,0,0.3))' }}>💰</div>
+                    <div>
+                      <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', letterSpacing:'1.5px', fontWeight:'700', marginBottom:'6px' }}>Return on Investment</div>
+                      <div style={{
+                        fontSize: isMobile ? '38px' : '56px',
+                        fontWeight:'900',
+                        color: cumulRoiVal === null ? '#818cf8' : cumulRoiVal >= 0 ? '#34d399' : '#f87171',
+                        lineHeight:1,
+                        textShadow: cumulRoiVal >= 0 ? '0 0 30px rgba(52,211,153,0.4), 0 0 60px rgba(52,211,153,0.15)' : 'none',
+                        letterSpacing:'-1px',
+                      }}>
+                        {cumulRoiVal === null ? '—' : `${cumulRoiVal >= 0 ? '+' : ''}${cumulRoiVal.toFixed(1)}%`}
+                      </div>
+                      <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.45)', marginTop:'8px', fontWeight:'500' }}>
+                        {cumulRoiVal === null ? 'Loading…' : `Since 22 Mar · ${cumulSettled} settled`}
+                      </div>
                     </div>
-                    <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)', marginTop:'8px', fontWeight:'500' }}>
-                      {cumulRoiVal === null ? 'Loading…' : `Since 22 Mar · ${cumulSettled} settled`}
-                    </div>
+                  </div>
+                  {/* Right: impact stat + download */}
+                  <div style={{ display:'flex', flexDirection:'column', alignItems: isMobile ? 'center' : 'flex-end', gap:'14px' }}>
                     {cumulRoiVal !== null && (
-                      <div style={{ fontSize: isMobile ? '11px' : '12px', color:'rgba(255,255,255,0.5)', marginTop:'4px' }}>
-                        Every €1 → <span style={{ color: cumulRoiVal >= 0 ? '#34d399' : '#f87171', fontWeight:'700' }}>€{(1 + cumulRoiVal / 100).toFixed(2)}</span> back · {cumulRoiVal >= 0 ? 'profit' : 'loss'} €{Math.abs(cumulRoiVal / 100).toFixed(2)}/bet
+                      <div style={{
+                        background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '12px',
+                        padding: isMobile ? '12px 20px' : '14px 24px',
+                        textAlign: 'center',
+                        maxWidth: '260px',
+                      }}>
+                        <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.7)', lineHeight:'1.5' }}>
+                          Across all bets, every <span style={{ color:'white', fontWeight:'800' }}>€1</span> staked returned
+                          <span style={{ color: cumulRoiVal >= 0 ? '#34d399' : '#f87171', fontWeight:'800', fontSize:'15px' }}> €{(1 + cumulRoiVal / 100).toFixed(2)}</span> on average
+                          — a {cumulRoiVal >= 0 ? 'profit' : 'loss'} of <span style={{ color: cumulRoiVal >= 0 ? '#34d399' : '#f87171', fontWeight:'800' }}>€{Math.abs(cumulRoiVal / 100).toFixed(2)}</span> per bet
+                        </div>
                       </div>
                     )}
-                  </div>
-                  {/* Right section: Download button */}
-                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'8px' }}>
                     <button
                       onClick={() => {
                         const btn = document.getElementById('csv-download-btn');
@@ -1904,132 +1939,6 @@ function YesterdayResultsView({ isFreeUser }) {
 
       {/* ── Loss / Placed Analysis ─ moved to Admin page ─────── */}
 
-      {/* ── Strong Lay Possibilities ─────────────────────────────── */}
-            {layData && (() => {
-        const VC = {
-          RED:    { fg:'#f87171', bg:'rgba(248,113,113,0.12)', border:'rgba(248,113,113,0.35)' },
-          AMBER:  { fg:'#f97316', bg:'rgba(249,115,22,0.12)',  border:'rgba(249,115,22,0.35)'  },
-          YELLOW: { fg:'#fbbf24', bg:'rgba(251,191,36,0.10)',  border:'rgba(251,191,36,0.35)'  },
-          GREEN:  { fg:'#34d399', bg:'rgba(52,211,153,0.10)',  border:'rgba(52,211,153,0.3)'   },
-        };
-        const FLAG_LABELS = {
-          class_up:'Class', trip_new:'Trip', going_unproven:'Going', draw_poor:'Draw',
-          layoff:'Layoff', pace_doubt:'Pace', rivals_close:'Rivals', drift:'Drift',
-          short_price:'Price', trainer_track:'Trainer@Track', trainer_cold:'TrainerCold', trainer_multiple:'MultiRunner',
-        };
-        const FLAG_COLOURS = {
-          class_up:'#c084fc', trip_new:'#6ee7b7', going_unproven:'#34d399', draw_poor:'#fbbf24',
-          layoff:'#fca5a5', pace_doubt:'#93c5fd', rivals_close:'#60a5fa', drift:'#fcd34d',
-          short_price:'#a78bfa', trainer_track:'#a5b4fc', trainer_cold:'#818cf8', trainer_multiple:'#e879f9',
-        };
-        const caution = (layData.races || [])
-          .filter(r => r.lay_score >= 4)
-          .sort((a,b) => b.lay_score - a.lay_score);
-        const genTime = layData.generated
-          ? new Date(layData.generated).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})
-          : '';
-        const settled  = caution.filter(r => r.outcome);
-        const favLost  = settled.filter(r => !['win','won'].includes((r.outcome||'').toLowerCase())).length;
-        const favWon   = settled.filter(r =>  ['win','won'].includes((r.outcome||'').toLowerCase())).length;
-        return (
-          <div style={{ marginTop:'36px' }}>
-            {/* Section header */}
-            <div style={{ background:'linear-gradient(135deg,rgba(185,28,28,0.22) 0%,rgba(127,29,29,0.15) 100%)', border:'1px solid rgba(239,68,68,0.3)', borderRadius:'12px', padding:'18px 22px', marginBottom:'14px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'12px' }}>
-              <div>
-                <div style={{ fontSize:'10px', letterSpacing:'2px', textTransform:'uppercase', color:'rgba(255,255,255,0.4)', marginBottom:'4px' }}>Lay Analysis · Vulnerable Favourites</div>
-                <div style={{ fontSize:'17px', fontWeight:'800', color:'white', marginBottom:'2px' }}>🚨 Suspect Favourites Today</div>
-                <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)' }}>
-                  {caution.length} flagged of {(layData.races||[]).length} analysed
-                  {genTime && <span> · {genTime}</span>}
-                  {settled.length > 0 && <span style={{marginLeft:'10px'}}>· <b style={{color:'#34d399'}}>{favLost} lay wins</b> / <b style={{color:'#f87171'}}>{favWon} fav won</b> ({settled.length} settled)</span>}
-                </div>
-              </div>
-              <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
-                {[{r:'4–9',l:'Caution',c:'#fbbf24'},{r:'10–12',l:'Strong Lay',c:'#f97316'},{r:'13+',l:'Red Flag',c:'#f87171'}].map(x=>(
-                  <div key={x.r} style={{display:'flex',alignItems:'center',gap:'4px',background:'rgba(255,255,255,0.06)',borderRadius:'6px',padding:'4px 9px',fontSize:'10px',color:'rgba(255,255,255,0.65)'}}>
-                    <span style={{background:x.c,width:'6px',height:'6px',borderRadius:'50%',display:'inline-block'}}/>
-                    <b style={{color:x.c}}>{x.r}</b>&nbsp;{x.l}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Summary list */}
-            {caution.length === 0 ? (
-              <div style={{ textAlign:'center', padding:'28px', color:'rgba(255,255,255,0.4)', background:'rgba(255,255,255,0.04)', borderRadius:'10px', fontSize:'13px' }}>
-                No vulnerable favourites today (threshold: 4+).
-              </div>
-            ) : (
-              <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
-                {caution.map((r, i) => {
-                  const vc      = VC[r.verdict_colour] || VC.GREEN;
-                  const oc      = (r.outcome || '').toLowerCase();
-                  const hasResult = !!r.outcome;
-                  const favWon  = hasResult && ['win','won'].includes(oc);
-                  return (
-                    <div key={i} style={{ background:'rgba(22,27,34,0.95)', border:`1px solid ${vc.border}`, borderLeft:`4px solid ${vc.fg}`, borderRadius:'9px', padding:'10px 14px', display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' }}>
-                      {/* Time + Course */}
-                      <div style={{ minWidth:'88px' }}>
-                        <div style={{ fontSize:'13px', fontWeight:'800', color:'#58a6ff' }}>{fmtUtcTime(r.race_time)}</div>
-                        <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.5)', marginTop:'1px' }}>{r.course}</div>
-                      </div>
-
-                      {/* Horse name + odds */}
-                      <div style={{ flex:1, minWidth:'120px' }}>
-                        <div style={{ fontSize:'14px', fontWeight:'800', color:'white' }}>{r.favourite}</div>
-                        <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)', marginTop:'2px' }}>
-                          @ <b style={{color:'#e6edf3'}}>{r.fav_odds?.toFixed(2)}</b>
-                          {r.runners && <span style={{marginLeft:'8px'}}>{r.runners} runners</span>}
-                          {r.our_pick && <span style={{ marginLeft:'8px', color:'#58a6ff', fontWeight:'700' }}>⚡ Our pick</span>}
-                        </div>
-                      </div>
-
-                      {/* Flags pill row */}
-                      <div style={{ display:'flex', flexWrap:'wrap', gap:'3px', flex:'1 1 160px' }}>
-                        {(r.flags||[]).map(f => (
-                          <span key={f} style={{ background:'rgba(255,255,255,0.07)', color: FLAG_COLOURS[f] || '#94a3b8', border:`1px solid ${FLAG_COLOURS[f] || '#94a3b8'}44`, borderRadius:'4px', padding:'1px 6px', fontSize:'10px', fontWeight:'600' }}>
-                            {FLAG_LABELS[f] || f}
-                          </span>
-                        ))}
-                      </div>
-
-                      {/* Score */}
-                      <div style={{ textAlign:'center', minWidth:'44px' }}>
-                        <div style={{ fontSize:'22px', fontWeight:'900', lineHeight:1, color:vc.fg }}>{r.lay_score}</div>
-                        <div style={{ fontSize:'9px', color:'rgba(255,255,255,0.35)' }}>/ 18</div>
-                      </div>
-
-                      {/* Verdict badge */}
-                      <div style={{ minWidth:'80px', textAlign:'center' }}>
-                        <span style={{ background:vc.bg, color:vc.fg, border:`1px solid ${vc.border}`, borderRadius:'5px', padding:'3px 8px', fontSize:'10px', fontWeight:'700', textTransform:'uppercase', whiteSpace:'nowrap' }}>
-                          {r.verdict}
-                        </span>
-                      </div>
-
-                      {/* Result */}
-                      <div style={{ minWidth:'90px', textAlign:'center' }}>
-                        {hasResult ? (
-                          <span style={{
-                            background: favWon ? 'rgba(248,113,113,0.18)' : 'rgba(52,211,153,0.18)',
-                            color:       favWon ? '#f87171' : '#34d399',
-                            border:     `1px solid ${favWon ? 'rgba(248,113,113,0.5)' : 'rgba(52,211,153,0.5)'}`,
-                            borderRadius:'5px', padding:'3px 10px', fontSize:'11px', fontWeight:'800', whiteSpace:'nowrap',
-                          }}>
-                            {favWon ? '✗ FAV WON' : '✓ FAV LOST'}
-                          </span>
-                        ) : (
-                          <span style={{ fontSize:'10px', color:'rgba(255,255,255,0.3)', fontStyle:'italic' }}>Pending</span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        );
-      })()}
-
       <div style={{ marginTop:'16px', padding:'14px 18px', background:'rgba(255,255,255,0.06)', borderRadius:'10px', color:'rgba(255,255,255,0.45)', fontSize:'12px', textAlign:'center', lineHeight:'1.6' }}>
         Results are recorded after each race. Pending picks update as results come in. · Always bet responsibly.
       </div>
@@ -2043,6 +1952,13 @@ function MajorRacesView() {
   const [analyses, setAnalyses] = useState({});
   const [analysisLoading, setAnalysisLoading] = useState(true);
   const [expandedRace, setExpandedRace] = useState(null);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   // Fetch early-bird analyses
   useEffect(() => {
@@ -2079,20 +1995,20 @@ function MajorRacesView() {
 
   return (
     <div>
-      <div style={{ background:'linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#1e1b4b 100%)', border:'2px solid #818cf8', borderRadius:'12px', padding:'24px 28px', marginBottom:'24px', color:'white' }}>
+      <div style={{ background:'linear-gradient(135deg,#1e1b4b 0%,#312e81 50%,#1e1b4b 100%)', border:'2px solid #818cf8', borderRadius:'12px', padding: isMobile ? '16px 14px' : '24px 28px', marginBottom:'24px', color:'white' }}>
         <div style={{ fontSize:'11px', textTransform:'uppercase', letterSpacing:'1.5px', color:'#a5b4fc', marginBottom:'6px' }}>2026 Major Race Calendar</div>
-        <div style={{ fontSize:'24px', fontWeight:'800', marginBottom:'8px' }}>Group 1 &amp; Feature Races</div>
+        <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight:'800', marginBottom:'8px' }}>Group 1 &amp; Feature Races</div>
         <div style={{ fontSize:'14px', color:'rgba(255,255,255,0.75)', marginBottom: nextRace ? '16px' : '0' }}>
           {upcomingCount} upcoming major races \u00b7 UK &amp; Ireland
         </div>
         {nextRace && (
-          <div style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:'8px', padding:'12px 16px', display:'inline-flex', gap:'20px', flexWrap:'wrap', alignItems:'center' }}>
+          <div style={{ background:'rgba(255,255,255,0.1)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:'8px', padding: isMobile ? '10px 12px' : '12px 16px', display: isMobile ? 'flex' : 'inline-flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '10px' : '20px', flexWrap:'wrap', alignItems: isMobile ? 'stretch' : 'center' }}>
             <div>
               <div style={{ fontSize:'10px', color:'#a5b4fc', textTransform:'uppercase', letterSpacing:'1px' }}>Next Major Race</div>
               <div style={{ fontSize:'16px', fontWeight:'800', marginTop:'2px' }}>{nextRace.name}</div>
               <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.75)' }}>{nextRace.meeting} \u00b7 {formatDate(nextRace.date)}</div>
             </div>
-            <div style={{ background:'#818cf8', borderRadius:'8px', padding:'8px 18px', fontSize:'20px', fontWeight:'800', minWidth:'100px', textAlign:'center' }}>{daysUntil(nextRace.date)}</div>
+            <div style={{ background:'#818cf8', borderRadius:'8px', padding: isMobile ? '6px 14px' : '8px 18px', fontSize: isMobile ? '16px' : '20px', fontWeight:'800', minWidth: isMobile ? 'auto' : '100px', textAlign:'center' }}>{daysUntil(nextRace.date)}</div>
           </div>
         )}
       </div>
@@ -2123,17 +2039,17 @@ function MajorRacesView() {
         const col  = meetingColour(meeting);
         return (
           <div key={date + '__' + meeting} style={{ background: past ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.08)', borderRadius:'12px', marginBottom:'20px', overflow:'hidden', opacity: past ? 0.65 : 1 }}>
-            <div style={{ background: past ? '#374151' : col, padding:'14px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'8px' }}>
+            <div style={{ background: past ? '#374151' : col, padding: isMobile ? '10px 14px' : '14px 20px', display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'8px' }}>
               <div>
-                <span style={{ fontSize:'18px', fontWeight:'800', color:'white' }}>{meeting}</span>
-                <span style={{ fontSize:'13px', color:'rgba(255,255,255,0.8)', marginLeft:'12px' }}>{formatDate(date)}</span>
+                <span style={{ fontSize: isMobile ? '15px' : '18px', fontWeight:'800', color:'white' }}>{meeting}</span>
+                <span style={{ fontSize: isMobile ? '12px' : '13px', color:'rgba(255,255,255,0.8)', marginLeft: isMobile ? '8px' : '12px' }}>{formatDate(date)}</span>
               </div>
               {past
                 ? <span style={{ background:'rgba(0,0,0,0.25)', color:'white', padding:'4px 12px', borderRadius:'6px', fontSize:'12px', fontWeight:'600' }}>Complete</span>
                 : <span style={{ background:'rgba(255,255,255,0.25)', color:'white', padding:'4px 14px', borderRadius:'6px', fontSize:'13px', fontWeight:'800' }}>{daysUntil(date)}</span>
               }
             </div>
-            <div style={{ padding:'12px 16px', display:'flex', flexDirection:'column', gap:'10px' }}>
+            <div style={{ padding: isMobile ? '10px 12px' : '12px 16px', display:'flex', flexDirection:'column', gap:'10px' }}>
               {races.map((race, i) => {
                 const raceKey = `${race.date}__${race.name.replace(/ /g, '_')}`;
                 const analysis = analyses[raceKey];
@@ -2254,10 +2170,10 @@ function LayTheFavView() {
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState(null);
   const [filter, setFilter] = useState('all'); // all | caution | strong
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 600);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 600);
+    const onResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -2444,6 +2360,37 @@ function LayTheFavView() {
       {races.length > 0 && (
         <div style={{ marginTop:'24px' }}>
           <div style={{ fontSize:'11px', textTransform:'uppercase', letterSpacing:'1px', color:'rgba(255,255,255,0.35)', marginBottom:'10px' }}>Summary Table</div>
+          {isMobile ? (
+            /* Mobile: card layout */
+            <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+              {[...races].sort((a,b) => (a.race_time||'') < (b.race_time||'') ? -1 : 1).map((r, i) => {
+                const vc = VERDICT_COLOURS[r.verdict_colour] || VERDICT_COLOURS.GREEN;
+                const past = isPast(r);
+                const favWon = past && r.outcome && ['win','won'].includes(r.outcome.toLowerCase());
+                const favLost = past && r.outcome && !['win','won'].includes(r.outcome.toLowerCase());
+                return (
+                  <div key={i} style={{ background:'rgba(22,27,34,0.95)', border:'1px solid rgba(255,255,255,0.1)', borderLeft:`3px solid ${vc.fg}`, borderRadius:'8px', padding:'10px 12px', opacity: past ? 1 : 0.5 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'6px' }}>
+                      <span style={{ fontSize:'13px', color:'#58a6ff', fontWeight:'700' }}>{fmtUtcTime(r.race_time)}</span>
+                      <span style={{ fontSize:'12px', color:'rgba(255,255,255,0.8)' }}>{r.course}</span>
+                      <span style={{ fontSize:'14px', fontWeight:'800', color:vc.fg }}>{r.lay_score}</span>
+                    </div>
+                    <div style={{ fontSize:'13px', color:'white', fontWeight:'600', marginBottom:'4px' }}>{r.favourite} <span style={{ color:'rgba(255,255,255,0.5)', fontWeight:'400' }}>@ {r.fav_odds?.toFixed(2)}</span></div>
+                    <div style={{ display:'flex', gap:'6px', alignItems:'center', flexWrap:'wrap' }}>
+                      <span style={{ background:vc.bg, color:vc.fg, border:`1px solid ${vc.border}`, borderRadius:'4px', padding:'2px 8px', fontSize:'11px', fontWeight:'700' }}>{r.verdict}</span>
+                      {!past
+                        ? <span style={{ color:'rgba(255,255,255,0.25)', fontSize:'11px' }}>⏳ Pending</span>
+                        : favLost
+                          ? <span style={{ color:'#34d399', fontWeight:'800', fontSize:'11px' }}>✓ FAV LOST</span>
+                          : favWon
+                            ? <span style={{ color:'#f87171', fontWeight:'800', fontSize:'11px' }}>✗ FAV WON</span>
+                            : <span style={{ color:'rgba(255,255,255,0.25)', fontSize:'11px' }}>—</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
           <div style={{ overflowX:'auto' }}>
             <table style={{ width:'100%', borderCollapse:'collapse', background:'rgba(22,27,34,0.95)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:'8px', overflow:'hidden' }}>
               <thead>
@@ -2482,6 +2429,7 @@ function LayTheFavView() {
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
     </div>
@@ -2493,7 +2441,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
   const [settled, setSettled] = useState(null);
   const [roiLoading, setRoiLoading] = useState(true);
   const [authMode, setAuthMode] = useState('login'); // 'register' | 'login'
-  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 600);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
 
   const [form, setForm] = useState({
     fullName: '', email: '', age: '',
@@ -2515,7 +2463,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
   }, []);
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 600);
+    const onResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -2663,7 +2611,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
           {/* Them */}
           <div style={{ flex: 1, background: 'rgba(255,255,255,0.04)', padding: isMobile ? '14px 16px' : '18px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: '10px', fontWeight: '700', letterSpacing: '1.5px', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)', marginBottom: '4px' }}>Best tipsters in the world</div>
-            <div style={{ fontSize: isMobile ? '34px' : '42px', fontWeight: '900', color: '#fbbf24', lineHeight: 1 }}>+10%</div>
+            <div style={{ fontSize: isMobile ? '28px' : '42px', fontWeight: '900', color: '#fbbf24', lineHeight: 1 }}>+10%</div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', marginTop: '3px' }}>Industry benchmark</div>
           </div>
           {/* Divider */}
@@ -2673,7 +2621,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
           {/* Us */}
           <div style={{ flex: 1, background: 'linear-gradient(135deg,rgba(5,150,105,0.22) 0%,rgba(4,120,87,0.18) 100%)', padding: isMobile ? '14px 16px' : '18px 20px', textAlign: 'center' }}>
             <div style={{ fontSize: '10px', fontWeight: '700', letterSpacing: '1.5px', textTransform: 'uppercase', color: '#34d399', marginBottom: '4px' }}>BetBudAI · Live Verified</div>
-            <div style={{ fontSize: isMobile ? '34px' : '42px', fontWeight: '900', color: '#34d399', lineHeight: 1, textShadow: '0 0 20px rgba(52,211,153,0.4)' }}>
+            <div style={{ fontSize: isMobile ? '28px' : '42px', fontWeight: '900', color: '#34d399', lineHeight: 1, textShadow: '0 0 20px rgba(52,211,153,0.4)' }}>
               {roiLoading ? '…' : roi !== null ? `+${roi}%` : '—'}
             </div>
             <div style={{ fontSize: '11px', color: 'rgba(52,211,153,0.75)', marginTop: '3px' }}>{roiLoading ? '…' : settled ?? '—'} races · no cherry-picking</div>
@@ -2703,32 +2651,35 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
           <span style={{ fontSize: '16px', fontWeight: '800', color: 'white' }}>⚡ Unlock Your Edge</span>
           <span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', marginLeft: '8px' }}>Sign up free, upgrade anytime</span>
         </div>
-        <div style={{ display: 'flex', gap: '10px', maxWidth: '700px', margin: '0 auto', flexWrap: 'wrap', justifyContent: 'center' }}>
+        <div style={{ display: 'flex', gap: '10px', maxWidth: '700px', margin: '0 auto', flexWrap: 'wrap', justifyContent: 'center', padding: '0 8px' }}>
           {/* Free */}
-          <div style={{ flex: '1 1 180px', maxWidth: '220px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px 14px' }}>
+          <div style={{ flex: '1 1 180px', maxWidth: isMobile ? '100%' : '220px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', padding: '12px 14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
               <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', color: 'rgba(255,255,255,0.4)' }}>Free</span>
               <span style={{ fontSize: '18px', fontWeight: '900', color: 'white' }}>€0</span>
             </div>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.6' }}>2 picks/day · Basic info</div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.5)', lineHeight: '1.6', marginBottom: '8px' }}>2 picks/day · Basic info</div>
+            <button onClick={() => { setAuthMode('register'); setFormError(''); }} style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '6px', padding: '6px', color: 'rgba(255,255,255,0.6)', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>Sign Up Free</button>
           </div>
           {/* Premium */}
-          <div style={{ flex: '1 1 180px', maxWidth: '220px', background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))', border: '2px solid rgba(99,102,241,0.5)', borderRadius: '10px', padding: '12px 14px', position: 'relative', boxShadow: '0 0 20px rgba(99,102,241,0.15)' }}>
+          <div style={{ flex: '1 1 180px', maxWidth: isMobile ? '100%' : '220px', background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))', border: '2px solid rgba(99,102,241,0.5)', borderRadius: '10px', padding: '12px 14px', position: 'relative', boxShadow: '0 0 20px rgba(99,102,241,0.15)' }}>
             <div style={{ position: 'absolute', top: '-9px', right: '10px', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', borderRadius: '10px', padding: '2px 8px', fontSize: '8px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px' }}>⭐ Popular</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
               <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', color: '#818cf8' }}>Premium</span>
               <span style={{ fontSize: '18px', fontWeight: '900', color: 'white' }}>€19.99<span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>/mo</span></span>
             </div>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', lineHeight: '1.6' }}>🎯 All picks · Full analysis · ROI</div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', lineHeight: '1.6', marginBottom: '8px' }}>🎯 All picks · Full analysis · ROI</div>
+            <button onClick={() => { setAuthMode('register'); setFormError(''); }} style={{ width: '100%', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', border: 'none', borderRadius: '6px', padding: '7px', color: 'white', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}>Sign Up → Subscribe</button>
           </div>
           {/* VIP Rollers */}
-          <div style={{ flex: '1 1 180px', maxWidth: '220px', background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(251,191,36,0.06))', border: '2px solid rgba(245,158,11,0.45)', borderRadius: '10px', padding: '12px 14px', position: 'relative', boxShadow: '0 0 20px rgba(245,158,11,0.1)' }}>
+          <div style={{ flex: '1 1 180px', maxWidth: isMobile ? '100%' : '220px', background: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(251,191,36,0.06))', border: '2px solid rgba(245,158,11,0.45)', borderRadius: '10px', padding: '12px 14px', position: 'relative', boxShadow: '0 0 20px rgba(245,158,11,0.1)' }}>
             <div style={{ position: 'absolute', top: '-9px', right: '10px', background: 'linear-gradient(135deg, #f59e0b, #d97706)', borderRadius: '10px', padding: '2px 8px', fontSize: '8px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px' }}>🔥 Best Value</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
               <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', color: '#fbbf24' }}>👑 VIP Rollers</span>
               <span style={{ fontSize: '18px', fontWeight: '900', color: 'white' }}>€99<span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>/mo</span></span>
             </div>
-            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', lineHeight: '1.6' }}>🏆 Everything + field data · Priority</div>
+            <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', lineHeight: '1.6', marginBottom: '8px' }}>🏆 Everything + field data · Priority</div>
+            <button onClick={() => { setAuthMode('register'); setFormError(''); }} style={{ width: '100%', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', borderRadius: '6px', padding: '7px', color: 'white', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}>Sign Up → Subscribe</button>
           </div>
         </div>
         <div style={{ textAlign: 'center', fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '8px' }}>🔒 Powered by Stripe · Cancel anytime · EUR</div>
@@ -2800,7 +2751,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', textAlign: 'center', margin: '0 0 28px' }}>Get access to today's picks, live Return on Investment tracking and full results history.</p>
 
         <form onSubmit={handleSubmit} noValidate autoComplete="off">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: '18px', marginBottom: '18px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit,minmax(240px,1fr))', gap: '14px', marginBottom: '18px' }}>
 
             <div style={fieldStyle}>
               <label style={labelStyle}>Full Name</label>
@@ -3062,7 +3013,7 @@ function AdminView({ authUser }) {
       headers: { 'x-admin-token': adminToken }
     })
       .then(r => r.json())
-      .then(data => { if (data.success) setSubscribers(data.subscribers); })
+      .then(data => { if (data.success) setSubscribers(data.users || data.subscribers || []); })
       .catch(e => console.error('Subscribers load error', e));
   };
 
@@ -3232,10 +3183,12 @@ function AdminView({ authUser }) {
             const thirtyAgo  = new Date(now - 30 * 86400000).toISOString();
             const active7    = subscribers.filter(u => (u.last_login || '') >= sevenAgo).length;
             const active30   = subscribers.filter(u => (u.last_login || '') >= thirtyAgo).length;
-            const fmtDate = s => {
+            const fmtDate = (s, isLogin) => {
               if (!s) return '—';
               try {
                 const d = new Date(s);
+                const diffMin = Math.floor((now - d) / 60000);
+                if (isLogin && diffMin < 15) return '🟢 Active';
                 const diff = Math.floor((now - d) / 86400000);
                 if (diff === 0) return 'Today';
                 if (diff === 1) return 'Yesterday';
@@ -3266,7 +3219,7 @@ function AdminView({ authUser }) {
                   <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'12px' }}>
                     <thead>
                       <tr style={{ borderBottom:'1px solid rgba(255,255,255,0.15)', color:'rgba(255,255,255,0.45)', textAlign:'left' }}>
-                        {['Username','Email','Verified','Role','Logins','Last Login','Joined'].map(h => (
+                        {['Username','Email','Verified','Role','Logins','Last Login','Last IP','Joined'].map(h => (
                           <th key={h} style={{ padding:'8px 10px', fontWeight:'700', whiteSpace:'nowrap' }}>{h}</th>
                         ))}
                       </tr>
@@ -3291,9 +3244,10 @@ function AdminView({ authUser }) {
                             <td style={{ padding:'8px 10px', color:'rgba(255,255,255,0.55)', textAlign:'center' }}>{u.login_count || 0}</td>
                             <td style={{ padding:'8px 10px', whiteSpace:'nowrap' }}>
                               <span style={{ color: isRecent ? '#34d399' : 'rgba(255,255,255,0.4)', fontWeight: isRecent ? '600' : '400' }}>
-                                {fmtDate(u.last_login)}
+                                {fmtDate(u.last_login, true)}
                               </span>
                             </td>
+                            <td style={{ padding:'8px 10px', color:'rgba(255,255,255,0.45)', whiteSpace:'nowrap', fontFamily:'monospace', fontSize:'11px' }}>{u.last_ip || '—'}</td>
                             <td style={{ padding:'8px 10px', color:'rgba(255,255,255,0.35)', whiteSpace:'nowrap' }}>{fmtDate(u.joined_at)}</td>
                           </tr>
                         );

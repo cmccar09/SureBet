@@ -2004,6 +2004,23 @@ def login_subscriber(headers, event):
         if not item or not _verify_password(password, item.get('password_hash', '')):
             return {'statusCode': 401, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Invalid email/username or password.'})}
 
+        # Track login activity
+        try:
+            source_ip = (event.get('requestContext', {}).get('identity', {}).get('sourceIp')
+                         or event.get('headers', {}).get('X-Forwarded-For', '').split(',')[0].strip()
+                         or 'unknown')
+            subscribers_table.update_item(
+                Key={'email': identifier},
+                UpdateExpression='SET last_login = :now, last_ip = :ip ADD login_count :one',
+                ExpressionAttributeValues={
+                    ':now': datetime.utcnow().isoformat() + 'Z',
+                    ':ip':  source_ip,
+                    ':one': 1,
+                }
+            )
+        except Exception as track_err:
+            print(f'login tracking error: {track_err}')
+
         role = item.get('role', 'free')
         subscription_tier = item.get('subscription_tier', 'free')
         # If user has an active paid subscription, reflect that in role
