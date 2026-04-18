@@ -327,7 +327,7 @@ def apply_cheltenham_scoring(horse_data, race_name=''):
     return bonus_points, cheltenham_reasons
 
 
-def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course_winners_today=0, field_weights=None, meeting_context=None, n_runners=0):
+def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=3.80, course_winners_today=0, field_weights=None, meeting_context=None, n_runners=0):
     """
     Comprehensive scoring system for horses
     Returns score and breakdown
@@ -356,23 +356,25 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     # Giving full sweet_spot points to 3.0–4.9 was actively rewarding known-losing odds bands.
     # Fix: 3.0–4.9 now scores 0pts (neutral), 5.0–8.0 gets full pts, 8.0–9.0 partial.
     sweet_spot_pts = 0
-    if 5.0 <= odds <= 8.0:
-        # PROVEN BEST range: 4/1–7/1, +£25.20 P&L (Feb 2026 data) — full sweet spot
-        sweet_spot_pts = int(weights['sweet_spot'])
-        reasons.append(f"Sweet spot 5-8 (PROVEN best range): {sweet_spot_pts}pts")
-    elif 8.0 < odds <= 9.0:
-        # Broad sweet spot tail — slight reduction
-        sweet_spot_pts = int(weights['sweet_spot'] * 0.75)
-        reasons.append(f"Good odds range (8-9): {sweet_spot_pts}pts")
+    # REBALANCED 2026-04-17: 7-day actuals show 2-3 odds = 50% SR (best),
+    # 3-5 = 36% (solid), 5-8 = 11% (worst!). Previous weighting was inverted.
+    # Flatten curve: reward shorter odds more, reduce 5-8 bonus.
+    if 2.0 <= odds < 3.0:
+        # BEST performing range: 50% SR in last 7 days
+        sweet_spot_pts = int(weights['sweet_spot'] * 0.85)
+        reasons.append(f"Strong odds range (2-3, highest SR): {sweet_spot_pts}pts")
     elif 3.0 <= odds < 5.0:
-        # KNOWN LOSING RANGE (2/1–4/1): -£11.95 P&L historical data — neutral, no bonus
-        # No points added but no penalty either; other signals may still justify a pick.
-        sweet_spot_pts = 0
-        reasons.append(f"⚠️ Caution: 3-5 odds range (historically losing band, 2/1-4/1): 0pts")
-    elif 2.0 <= odds < 3.0:
-        # Partial points for short odds
-        sweet_spot_pts = int(weights['sweet_spot'] * 0.6)
-        reasons.append(f"Short odds (2-3): {sweet_spot_pts}pts")
+        # SOLID range: 36% SR in last 7 days — was wrongly flagged as losing band
+        sweet_spot_pts = int(weights['sweet_spot'] * 0.5)
+        reasons.append(f"Mid-range odds (3-5): {sweet_spot_pts}pts")
+    elif 5.0 <= odds <= 8.0:
+        # VALUE range: 11% SR but higher payouts — reduced from full bonus
+        sweet_spot_pts = int(weights['sweet_spot'] * 0.65)
+        reasons.append(f"Value odds range (5-8): {sweet_spot_pts}pts")
+    elif 8.0 < odds <= 9.0:
+        # Broad value tail
+        sweet_spot_pts = int(weights['sweet_spot'] * 0.5)
+        reasons.append(f"Good odds range (8-9): {sweet_spot_pts}pts")
     elif 1.5 <= odds < 2.0:
         # Lower points for very short odds
         sweet_spot_pts = int(weights['sweet_spot'] * 0.4)
@@ -462,9 +464,11 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['recent_win'] = 0
     
-    # Total wins
+    # Total wins — CAPPED at 4 wins worth (32pts max)
+    # LESSON 2026-04-17: Marty McFly got 40pts (5×8) from total_wins alone, came 9th/9.
+    # Past wins in different conditions shouldn't dominate the score.
     win_pts_each = int(weights['total_wins'])
-    win_points = wins * win_pts_each
+    win_points = min(wins * win_pts_each, win_pts_each * 4)  # Cap at 4 wins
     score += win_points
     breakdown['total_wins'] = win_points
     if wins > 0:
@@ -538,7 +542,28 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     # A horse that can't handle soft simply has little chance; proven soft-ground performers
     # get a significant edge over rivals who prefer quicker ground.
     base_going_pts = int(weights.get('going_suitability', 14))
-    
+    _going_uncertain = False   # default: assume official going unless overridden below
+
+    # ── OurHub going override: if race has confirmed going from OurHub API, inject it
+    #    into going_data so the downstream logic treats it as official (no halving).
+    _ourhub_going = horse_data.get('_race_ourhub_going', '')
+    if _ourhub_going and course not in going_data:
+        # Only override if we have NO going data for this course at all
+        going_data[course] = {
+            'going': _ourhub_going,
+            'adjustment': 0,
+            'source': 'ourhub_official',
+            'surface': 'all-weather' if 'Standard' in _ourhub_going else 'turf',
+        }
+        reasons.append(f"📡 Going from OurHub API: {_ourhub_going}")
+    elif _ourhub_going and course in going_data:
+        # We have going data but it's estimated — upgrade to official if OurHub confirms
+        _existing_source = going_data[course].get('source', 'official')
+        if _existing_source in ('weather_api', 'unavailable'):
+            going_data[course]['going'] = _ourhub_going
+            going_data[course]['source'] = 'ourhub_official'
+            reasons.append(f"📡 Going upgraded via OurHub: {_ourhub_going} (was estimated)")
+
     if course in going_data:
         going_info = going_data[course]
         going_adjustment = going_info.get('adjustment', 0)
@@ -546,8 +571,21 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         is_soft_ground = 'Heavy' in going_description or 'Soft' in going_description
         is_extreme = abs(going_adjustment) >= 5  # Heavy/Soft or very firm
         is_all_weather = going_info.get('surface', '') == 'all-weather' or 'Standard' in going_description
+
+        # GOING CONFIDENCE GATE (2026-04-06): When going is inferred from weather rather than
+        # officially declared by the track, it is uncertain — halve all going-based bonuses and
+        # penalties to reflect that the actual conditions may differ from the estimate.
+        # source='official' → confirmed declaration → full weight
+        # source='weather_api' → inferred, not official → halve (uncertain / awaiting inspection)
+        # source='unavailable' → no data → halve (worst case — treat as uncertain)
+        _going_source = going_info.get('source', 'official')
+        _going_uncertain = _going_source in ('weather_api', 'unavailable')
+        if _going_uncertain:
+            # Halve base_going_pts so ALL downstream paths (bonus & every penalty) are reduced by 50%.
+            # This single change propagates to going_suitability_pts, aw_penalty, and extreme penalties.
+            base_going_pts = base_going_pts // 2
+            reasons.append(f"⚠️ Going estimated (not official declaration) — going signals halved")
         
-        # Double weight in extreme conditions (absolutely critical discriminator)
         # LESSON 2026-03-20: Kalista Love & Spit Spot had going_suitability=32pts (35% of total score).
         # Capped at 10pts max (reduced from 16, 2026-03-30): loss analysis shows winners consistently
         # had 0 or negative going scores yet still won — over-weighting going misleads selection.
@@ -646,6 +684,8 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     _is_heavy_going = str(_going_info_heavy.get('going', '')).startswith('Heavy')
     if _is_heavy_going:
         heavy_penalty = int(weights.get('heavy_going_penalty', 12))
+        if _going_uncertain:
+            heavy_penalty = heavy_penalty // 2   # inferred heavy going — uncertainty halves the surcharge
         score -= heavy_penalty
         breakdown['heavy_going_penalty'] = -heavy_penalty
         reasons.append(f"Heavy going (unpredictable, field evens out): -{heavy_penalty}pts")
@@ -996,7 +1036,27 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
             is_elite_jockey = True
 
     if not is_elite_jockey:
-        breakdown['jockey_quality'] = 0
+        # 2026-04-13: OurHub integration — use real jockey win rate for unlisted jockeys
+        _oh_jwr = horse_data.get('ourhub_jockey_win_rate', 0)
+        _oh_jruns = horse_data.get('ourhub_jockey_runs', 0)
+        if _oh_jwr and _oh_jruns >= 10 and jockey_name:
+            if _oh_jwr >= 18:
+                jq_pts = int(weights.get('jockey_tier2', 6))
+                score += jq_pts
+                breakdown['jockey_quality'] = jq_pts
+                reasons.append(f"📡 OurHub: {jockey_name} {_oh_jwr:.0f}% win rate ({_oh_jruns} runs): +{jq_pts}pts")
+            elif _oh_jwr >= 10:
+                jq_pts = int(weights.get('jockey_tier2', 6)) // 2
+                if jq_pts > 0:
+                    score += jq_pts
+                    breakdown['jockey_quality'] = jq_pts
+                    reasons.append(f"📡 OurHub: {jockey_name} {_oh_jwr:.0f}% win rate ({_oh_jruns} runs): +{jq_pts}pts")
+                else:
+                    breakdown['jockey_quality'] = 0
+            else:
+                breakdown['jockey_quality'] = 0
+        else:
+            breakdown['jockey_quality'] = 0
     
     # 11. NOVICE RACE PENALTY (NEW - Lesson from Ascot 13:15)
     novice_penalty = 0
@@ -1098,11 +1158,35 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     # 11d. UNKNOWN TRAINER PENALTY (2026-03-25)
     # LESSON: Brian Toomey, D M Simcock, K Woollacott — not in any trainer tier.
     # Horses from unlisted trainers score via form/odds only; reliability is lower.
+    # 2026-04-13: OurHub integration — if we have real trainer win-rate data, use it
+    # instead of blindly penalising. >20% win rate = award T2-equivalent bonus,
+    # >12% = no penalty, otherwise keep the penalty.
     if trainer and trainer_tier == 0 and trainer_bonus == 0:
-        _utp = int(weights.get('unknown_trainer_penalty', 8))
-        score -= _utp
-        breakdown['unknown_trainer_penalty'] = -_utp
-        reasons.append(f"Unknown trainer tier ({trainer}): -{_utp}pts")
+        _oh_twr = horse_data.get('ourhub_trainer_win_rate', 0)
+        _oh_truns = horse_data.get('ourhub_trainer_runs', 0)
+        if _oh_twr and _oh_truns >= 10:
+            # Enough data from OurHub to make a call
+            if _oh_twr >= 20:
+                # Strong trainer — give T2-equivalent bonus instead of penalty
+                _oh_bonus = int(weights.get('trainer_tier2', 8))
+                score += _oh_bonus
+                breakdown['unknown_trainer_penalty'] = _oh_bonus
+                reasons.append(f"📡 OurHub: {trainer} {_oh_twr:.0f}% win rate ({_oh_truns} runs): +{_oh_bonus}pts")
+            elif _oh_twr >= 12:
+                # Decent trainer — no penalty
+                breakdown['unknown_trainer_penalty'] = 0
+                reasons.append(f"📡 OurHub: {trainer} {_oh_twr:.0f}% win rate ({_oh_truns} runs) — penalty waived")
+            else:
+                # Low win rate — keep penalty
+                _utp = int(weights.get('unknown_trainer_penalty', 8))
+                score -= _utp
+                breakdown['unknown_trainer_penalty'] = -_utp
+                reasons.append(f"📡 OurHub: {trainer} {_oh_twr:.0f}% win rate ({_oh_truns} runs): -{_utp}pts")
+        else:
+            _utp = int(weights.get('unknown_trainer_penalty', 8))
+            score -= _utp
+            breakdown['unknown_trainer_penalty'] = -_utp
+            reasons.append(f"Unknown trainer tier ({trainer}): -{_utp}pts")
     else:
         breakdown['unknown_trainer_penalty'] = 0
 
@@ -1569,7 +1653,14 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         breakdown['large_field_penalty'] = 0
 
     # SMALL FIELD TACTICAL BONUS (2026-04-07)
-    # Pro workflow: small fields (6 runners) = high predictability, selected ahead of large ones.
+    # PROFESSIONAL WORKFLOW LESSON: Pro explicitly selects Ascot 3:45 (6 runners) BECAUSE
+    # small fields have high predictability — fewer variables, form reads more reliably,
+    # pace dynamics clearer, class/quality differences more decisive.
+    # Source: Modern Pace Handicapping — "race shape determines winners more in large fields
+    # than small ones; small fields reward handicapping accuracy."
+    # 4-6 runners: highest predictability window — tactical races, class tells.
+    # 7-8 runners: moderate boost — field still manageable.
+    # Requires the pick NOT to be in a bumper/NHF (shallow form pool).
     _sf_market = str(horse_data.get('race_name', horse_data.get('market_name', ''))).lower()
     _is_nh_sf  = any(x in _sf_market for x in ['hurdle', 'chase', 'nhf', 'bumper', 'national hunt'])
     if not _is_nh_sf:
@@ -1587,6 +1678,8 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
             breakdown['small_field_bonus'] = 0
     else:
         breakdown['small_field_bonus'] = 0
+
+    # 15. DRAW BIAS — UK/Irish track-specific stall advantage/disadvantage
     # Source: well-documented published draw statistics for UK/Irish flat tracks.
     # Only applies to flat races where stall draw is meaningful.
     # NH racing (hurdles/chases/bumpers) has no meaningful draw bias.
@@ -1614,6 +1707,9 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         _is_sprint_draw = _dist_f <= 7   # sprints most affected by draw
 
         # ── EXTREME low-draw bias (very tight tracks) ─────────────────────
+        # Chester: hairpin bends, stall 1 worth multiple lengths. Zero disadvantage
+        #          is acceptable up to stall 8; anything 9+ rapidly worse.
+        # Pontefract: tight left-hand oval with uphill finish. Low draw critical.
         if _course_l in {'chester', 'pontefract'}:
             if _draw_low:
                 _draw_bias_pts = 10
@@ -1623,6 +1719,8 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
                 reasons.append(f"High draw disadvantage at {course} (stall {_draw_num}/{n_runners}): {_draw_bias_pts}pts")
 
         # ── Standard LOW-draw bias ────────────────────────────────────────
+        # AW round tracks: inside rail saves ground. Sprint distances especially.
+        # Carlisle, York, Hamilton: low-draw advantage on sprint tracks.
         elif _course_l in {'wolverhampton', 'lingfield', 'lingfield park', 'kempton', 'kempton park',
                            'chelmsford', 'chelmsford city', 'southwell', 'york', 'carlisle',
                            'hamilton', 'thirsk', 'leicester', 'chepstow', 'naas', 'dundalk'}:
@@ -1634,8 +1732,12 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
                 reasons.append(f"High draw disadvantage at {course} sprint (stall {_draw_num}/{n_runners}): {_draw_bias_pts}pts")
 
         # ── HIGH-draw bias ────────────────────────────────────────────────
+        # Ascot straight (5-6f): stands-side rail (high stalls) overwhelmingly favoured
+        #   in fields of 12+. Rowley Mile Newmarket: stands side (high draw) in 6f+ races.
+        # Beverley: high draw advantage on stiff uphill finish.
         elif _course_l in {'ascot', 'newmarket', 'beverley', 'curragh'}:
             if _draw_high:
+                # More important in larger fields
                 _hd_bonus = 8 if n_runners >= 12 else 5
                 _draw_bias_pts = _hd_bonus
                 reasons.append(f"High draw advantage at {course} (stall {_draw_num}/{n_runners}, stands side): +{_draw_bias_pts}pts")
@@ -1650,6 +1752,12 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         breakdown['draw_bias'] = 0
 
     # 16. TRACK HANDEDNESS PREFERENCE
+    # Some horses consistently run better on left-handed tracks vs right-handed.
+    # Detected from form_runs course history if available.
+    # UK left-handed: Ascot, Cheltenham, Goodwood, Epsom, Lingfield, Kempton,
+    #   Sandown, Windsor, Chepstow, Exeter, Hereford, Newbury, Nottingham
+    # UK right-handed: Newmarket, York, Doncaster, Chester, Haydock, Pontefract,
+    #   Carlisle, Hamilton, Beverley, Catterick, Newcastle, Ripon, Leeds
     _LEFT_HANDED  = {'ascot', 'cheltenham', 'goodwood', 'epsom', 'lingfield', 'lingfield park',
                      'kempton', 'kempton park', 'sandown', 'sandown park', 'windsor', 'chepstow',
                      'exeter', 'hereford', 'newbury', 'nottingham', 'leicester', 'brighton',
@@ -1683,6 +1791,7 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
             else:
                 _runs_opp += 1
                 if _fr_won: _wins_opp += 1
+        # Only reward if horse has meaningful history on both types
         if _runs_same >= 2 and _runs_opp >= 2:
             _sr_same = _wins_same / _runs_same
             _sr_opp  = _wins_opp  / _runs_opp
@@ -1710,7 +1819,10 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     # 17. PACE PROFILE — DISTANCE SPECIALISATION
     # Source: Modern Pace Handicapping — horses have metabolic specialisations for
     # distance ranges. Sprinters (≤7f) lack stamina for middle distances; stayers
-    # (12f+) lack the pace for sprints. Out-of-range = structural risk.
+    # (12f+) lack the pace for sprints. Out-of-range selections carry structural risk.
+    # We proxy "running style" from career distance history: if a horse's proven winning
+    # distance average diverges significantly from today's trip, apply a pace discount.
+    # Data required: form_runs (position + distance_f per run).
     _pr_runs = horse_data.get('form_runs', [])
     _win_dists = []
     _all_dists  = []
@@ -1721,6 +1833,7 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
             if _pr.get('position') == 1:
                 _win_dists.append(float(_d))
 
+    # Re-parse today's distance (furlongs) from market_name — same source as section 15
     import re as _re_pace
     _pace_dist_match = _re_pace.search(
         r'(\d+(?:\.\d+)?)f',
@@ -1732,18 +1845,25 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     if _today_dist_pace and _win_dists and len(_all_dists) >= 3:
         _avg_win_dist = sum(_win_dists) / len(_win_dists)
         _dist_gap = _today_dist_pace - _avg_win_dist
+
+        # STAMINA CONCERN: stepping up 4+ furlongs beyond proven winning distance.
+        # Example: sprinter that wins at 5-6f asks to stay 10f — metabolically wrong.
         if _dist_gap >= 4.0:
             _pace_pts = -6
             reasons.append(
                 f"Stamina concern: avg win dist {_avg_win_dist:.1f}f, today {_today_dist_pace:.0f}f "
                 f"(+{_dist_gap:.0f}f step-up beyond proven zone): {_pace_pts}pts"
             )
+        # PACE CONCERN: dropping 4+ furlongs below proven winning distance.
+        # Example: stayer that wins at 12-16f racing over 8f — pace demands are alien.
         elif _dist_gap <= -4.0:
             _pace_pts = -4
             reasons.append(
                 f"Pace concern: avg win dist {_avg_win_dist:.1f}f, today {_today_dist_pace:.0f}f "
                 f"({abs(_dist_gap):.0f}f below specialisation): {_pace_pts}pts"
             )
+        # PROVEN ZONE: within 1f of average winning distance — horse knows this trip.
+        # Small bonus for proven stamina at exactly today's distance range.
         elif abs(_dist_gap) <= 1.0:
             _pace_pts = 4
             reasons.append(
@@ -1773,6 +1893,18 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['trainer_hot_form'] = 0
         breakdown['jockey_hot_form']  = 0
+
+    # ── GENERAL SCORE CAP: 120pts ────────────────────────────────────────────
+    # LESSON 2026-04-17: Marty McFly scored 145 (9th of 9), Solar Pass 142 (5th of 6).
+    # UPDATED 2026-04-18: Backtest shows score 110-120 has 60% WR vs 120+ at 28.6%.
+    # Raising cap 110→120 preserves the high-WR 110-120 signal while still capping
+    # runaway 130+ scores that give false confidence.
+    GENERAL_CAP = 120
+    if score > GENERAL_CAP:
+        cap_reduction = score - GENERAL_CAP
+        score = GENERAL_CAP
+        breakdown['score_cap'] = -cap_reduction
+        reasons.append(f"Score capped at {GENERAL_CAP}pts (was {score + cap_reduction:.0f}): -{cap_reduction:.0f}pts")
 
     return score, breakdown, reasons
 
@@ -1825,11 +1957,11 @@ def get_comprehensive_pick(race_data, course_stats=None, meeting_context=None):
     Get best pick from race using comprehensive analysis
     SKIP RACE if multiple horses score 85+ (too close to call)
     
-    course_stats: {'avg_winner_odds': 4.65, 'winners_today': 4}
+    course_stats: {'avg_winner_odds': 3.80, 'winners_today': 4}
     Returns: best_pick dict or None if race should be skipped
     """
     if course_stats is None:
-        course_stats = {'avg_winner_odds': 4.65, 'winners_today': 0}
+        course_stats = {'avg_winner_odds': 3.80, 'winners_today': 0}
     
     course = race_data.get('venue') or race_data.get('course')
     runners = race_data.get('runners', [])
@@ -1860,7 +1992,7 @@ def get_comprehensive_pick(race_data, course_stats=None, meeting_context=None):
         score, breakdown, reasons = analyze_horse_comprehensive(
             runner, 
             course,
-            avg_winner_odds=course_stats.get('avg_winner_odds', 4.65),
+            avg_winner_odds=course_stats.get('avg_winner_odds', 3.80),
             course_winners_today=course_stats.get('winners_today', 0),
             meeting_context=meeting_context
         )
@@ -2014,7 +2146,7 @@ if __name__ == "__main__":
     if wolv_19:
         # Wolverhampton stats from today
         wolverhampton_stats = {
-            'avg_winner_odds': 4.65,  # Average of 10 winners today
+            'avg_winner_odds': 3.80,  # Average of 10 winners today
             'winners_today': 4  # 4/4 Wolverhampton today
         }
         

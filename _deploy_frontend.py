@@ -3,16 +3,26 @@ import boto3
 import zipfile
 import io
 import os
+import subprocess
 import urllib.request
 
 APP_ID  = 'd2hmpykfsdweob'
 BRANCH  = 'main'
 REGION  = 'eu-west-1'
-BUILD_DIR = os.path.join(os.path.dirname(__file__), 'frontend', 'build')
+FRONTEND_DIR = os.path.join(os.path.dirname(__file__), 'frontend')
+BUILD_DIR = os.path.join(FRONTEND_DIR, 'build')
+
+# Always rebuild from source before deploying
+print("Running npm run build...")
+result = subprocess.run(['npm', 'run', 'build'], cwd=FRONTEND_DIR, shell=True, capture_output=True, text=True)
+if result.returncode != 0:
+    print(result.stderr[-2000:] if result.stderr else 'No stderr')
+    raise SystemExit(f"ERROR: npm run build failed (exit {result.returncode})")
+print("Build complete.")
 
 print(f"Build dir: {BUILD_DIR}")
 if not os.path.isdir(BUILD_DIR):
-    raise SystemExit(f"ERROR: {BUILD_DIR} not found — run npm run build first")
+    raise SystemExit(f"ERROR: {BUILD_DIR} not found — build failed")
 
 # 1. Zip the build folder
 print("Zipping build artefacts...")

@@ -72,6 +72,7 @@ LAMBDAS = [
             'weather_going_inference.py',
             'betfair_odds_fetcher.py',
             'ourhub_enricher.py',
+            'trainer_form_stats.py',
         ],
         'optional_bundle': [
             'track_daily_insights.py',
@@ -395,7 +396,7 @@ def _build_zip(lf_config):
         pip_deps = lf_config.get('pip_deps', [])
         # requests is needed by betfair_odds_fetcher and form_enricher
         if any(f in lf_config.get('bundle', []) + [lf_config['src']]
-               for f in ['betfair_odds_fetcher.py', 'form_enricher.py', 'sf_betfair_fetch.py']):
+               for f in ['betfair_odds_fetcher.py', 'form_enricher.py', 'sf_betfair_fetch.py', 'ourhub_enricher.py']):
             pip_deps = list(set(pip_deps + ['requests']))
 
         if pip_deps:

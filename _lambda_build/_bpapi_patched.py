@@ -254,8 +254,8 @@ def get_today_picks(headers):
     # Filter out greyhounds - only show horses (accept both 'horses' and 'Horse Racing')
     horse_items = [item for item in items if item.get('sport', 'horses') in ['horses', 'Horse Racing', 'horse racing']]
     
-    # CRITICAL: Only show items explicitly marked for UI display
-    horse_items = [item for item in horse_items if item.get('show_in_ui') == True]
+    # CRITICAL: Only ranked UI picks OR dropped picks
+    horse_items = [item for item in horse_items if (item.get('show_in_ui') == True and int(item.get('pick_rank', 0)) > 0) or item.get('is_dropped') == True]
     
     # Filter to System A only: picks with stake <= 10 (excludes learning_workflow picks)
     # System A = Comprehensive scoring system with £5-6 stakes (actual bets)
@@ -590,6 +590,7 @@ def get_cumulative_roi(headers):
             and p.get('horse') and p.get('horse') != 'Unknown'
             and p.get('show_in_ui') is True
             and not p.get('is_learning_pick', False)
+            and not p.get('is_dropped', False)
         ]
 
         # Deduplicate by race identity (course + race_time), keep most-recently dated record
@@ -788,8 +789,8 @@ def check_yesterday_results(headers):
 
     all_picks = [decimal_to_float(item) for item in all_picks]
     
-    # Filter for UI picks only - keep others in database for learning
-    picks = [item for item in all_picks if item.get('show_in_ui') == True]
+    # Filter for UI picks only — exclude dropped picks
+    picks = [item for item in all_picks if item.get('show_in_ui') == True and not item.get('is_dropped', False)]
     
     # Normalize outcome values for frontend compatibility
     # Database uses: 'won', 'WON', 'lost', 'LOST'
@@ -1002,7 +1003,7 @@ def check_yesterday_results(headers):
     }
 
 def check_today_results(headers):
-    """Check results for today's UI picks only (show_in_ui=True)"""
+    """Check results for today's UI picks only (show_in_ui=True, plus dropped picks)"""
     from boto3.dynamodb.conditions import Key
     today = datetime.now().strftime('%Y-%m-%d')
     
@@ -1020,8 +1021,12 @@ def check_today_results(headers):
     all_picks = [decimal_to_float(item) for item in all_picks]
     print(f"Total picks retrieved (paginated): {len(all_picks)}")
 
-    # Filter for UI picks only - keep others in database for learning
-    picks = [item for item in all_picks if item.get('show_in_ui') == True]
+    # Filter for ranked UI picks AND dropped picks — keep others for learning
+    # pick_rank > 0 is the authoritative filter: ensures rank-0 records with
+    # show_in_ui=True (from legacy/buggy refreshes) are excluded.
+    picks = [item for item in all_picks
+             if (item.get('show_in_ui') == True and int(item.get('pick_rank', 0)) > 0)
+             or item.get('is_dropped') == True]
 
     # Filter: race must be TODAY (excludes yesterday's races stored with today's bet_date)
     picks = [item for item in picks if str(item.get('race_time', '')).startswith(today)]
@@ -2568,7 +2573,8 @@ def apply_learning_lambda(headers, event):
             import base64
             body = base64.b64decode(body).decode('utf-8')
         data = json.loads(body) if body else {}
-        target_date = data.get('date') or (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        # Support date passed directly in payload (Step Functions) or in body (API Gateway)
+        target_date = data.get('date') or event.get('date') or (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
 
         # Fetch all records for the date
         resp = table.query(KeyConditionExpression=Key('bet_date').eq(target_date))
@@ -2780,12 +2786,10 @@ def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
         fav_outcome = None
         if winner_map:
             import re as _re2
-            date_part = rt[:10] if len(rt) >= 10 else target_date_str
-            utc_hhmm  = rt[11:16] if len(rt) >= 16 else ''
-            local_hhmm = _utc_to_local_hhmm(utc_hhmm, date_part)
+            race_hhmm = rt[11:16] if len(rt) >= 16 else ''
             course_key = course.lower().replace('-', ' ').strip()
             try:
-                lh, lm = map(int, local_hhmm.split(':'))
+                lh, lm = map(int, race_hhmm.split(':'))
                 local_mins = lh * 60 + lm
                 best_diff = 999
                 best_winner = None
@@ -2815,8 +2819,7 @@ def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
                     'win' if winner_name.strip().lower() == fav_name.strip().lower()
                     else 'loss'
                 )
-            else:
-                fav_outcome = fav.get('outcome') or None
+            # else: leave fav_outcome as None — race hasn't been settled yet
 
         results.append({
             'date':          target_date_str,

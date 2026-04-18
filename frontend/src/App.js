@@ -385,7 +385,7 @@ function App() {
   const isPremium = authUser?.role === 'premium' || authUser?.role === 'vip' || authUser?.role === 'admin';
   const isVip = authUser?.role === 'vip' || authUser?.role === 'admin';
   const GATED_TABS = ['picks', 'yesterday', 'laythe', 'majors', 'admin', 'pricing'];
-  const PAID_TABS = [];
+  const PAID_TABS = ['picks5', 'yesterday', 'laythe', 'majors'];
 
   return (
     <div className="App">
@@ -426,6 +426,7 @@ function App() {
         {[
           { key:'home',      label:'Home',             emoji:'\ud83c\udfe0', sub:'About & sign in',     gated: false },
           { key:'picks',     label:"Today's Picks",    emoji:'\ud83c\udfaf', sub:'AI selections',       gated: true  },
+          { key:'picks5',    label:'Top 5 Picks',       emoji:'\ud83c\udfc6', sub:'All 5 daily picks',    gated: true  },
           { key:'yesterday', label:'Latest Results',   emoji:'\ud83d\udcca', sub:'Today & yesterday',   gated: true  },
           { key:'laythe',    label:'VIP Rollers',      emoji:'\ud83d\udc51', sub:'Lay the Fav & more',  gated: true  },
           { key:'majors',    label:'Major Races',      emoji:'\ud83c\udfc6', sub:'Group 1 calendar',    gated: true  },
@@ -479,7 +480,8 @@ function App() {
           ? <HomePageView onAuthSuccess={handleAuthSuccess} isAuthenticated={isAuthenticated} authUser={authUser} />
           : !isAuthenticated
             ? <HomePageView onAuthSuccess={handleAuthSuccess} isAuthenticated={isAuthenticated} authUser={authUser} />
-            : page==='picks'      ? <DailyPicksView isFreeUser={isFreeUser} onUpgrade={() => setPage('picks')} />
+            : page==='picks'      ? <DailyPicksView isFreeUser={isFreeUser} onUpgrade={() => setPage('picks')} authUser={authUser} />
+            : page==='picks5'     ? <Top5PicksView />
             : page==='yesterday'  ? <YesterdayResultsView isFreeUser={isFreeUser} />
             : page==='laythe'     ? <LayTheFavView />
             : page==='admin' && isAdmin ? <AdminView authUser={authUser} />
@@ -603,333 +605,273 @@ const SCORE_LABELS = {
   cheltenham_festival:     'Cheltenham Festival',
 };
 
-function DailyPicksView({ isFreeUser, onUpgrade }) {
-  const [picks, setPicks]                 = useState([]);
-  const [loading, setLoading]             = useState(true);
-  const [error, setError]                 = useState(null);
-  const [lastUpdated, setLastUpdated]     = useState(null);
-  const [expandedPick,  setExpandedPick]  = useState(null);
-  const [expandedField, setExpandedField] = useState(null);
-  const [raceFields,    setRaceFields]    = useState({});
-  const [isMobile,      setIsMobile]      = useState(typeof window !== 'undefined' && window.innerWidth < 768);
-  const [now,           setNow]           = useState(new Date());
-  const [analysisStatus, setAnalysisStatus] = useState(null);
-  const [analysisPending, setAnalysisPending] = useState(false);
-  const [pendingReason,   setPendingReason]   = useState('');
-  const [cumulRoi,        setCumulRoi]         = useState(null);
+function DailyPicksView({ isFreeUser, onUpgrade, authUser }) {
+  const [allPicks, setAllPicks] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
+  const [cumulRoi, setCumulRoi] = useState(null);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+  const [now, setNow]           = useState(new Date());
+  const [upgradeLoading, setUpgradeLoading] = useState(null);
+  const [upgradeError, setUpgradeError]     = useState(null);
 
-  // Tick every 60 s so "Analysed X ago" stays current without a page reload
-  useEffect(() => {
-    const ticker = setInterval(() => setNow(new Date()), 60000);
-    return () => clearInterval(ticker);
-  }, []);
-
-  useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
-
-  const formatRaceTime = rt => {
-    if (!rt) return { date: '', time: '' };
-    // US format: MM/DD/YYYY HH:MM:SS
-    const m = rt.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
-    if (m) {
-      // US-format times are stored as UTC — append Z so JS treats as UTC, then display in Dublin
-      const d = new Date(`${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}T${m[4].padStart(2,'0')}:${m[5]}:00Z`);
-      const tz = { timeZone: 'Europe/Dublin' };
-      return {
-        date: d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', ...tz }),
-        time: d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hour12: false, ...tz }),
-      };
-    }
-    // ISO format — bare strings have no tz, treat as UTC; display in Dublin (BST = UTC+1)
-    const isoM = rt.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
-    if (isoM) {
-      const [, datePart] = isoM;
-      try {
-        const d = new Date(rt.endsWith('Z') || rt.includes('+') ? rt : rt + 'Z');
-        const tz = { timeZone: 'Europe/Dublin' };
-        return {
-          date: d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', ...tz }),
-          time: d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hour12: false, ...tz }),
-        };
-      } catch { return { date: datePart, time: rt.substring(11, 16) }; }
-    }
-    return { date: rt.substring(0,10), time: rt.substring(11,16) };
+  const doSubscribe = async (tier) => {
+    if (!authUser?.email) return;
+    setUpgradeLoading(tier); setUpgradeError(null);
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: authUser.email, tier })
+      });
+      const data = await res.json();
+      if (data.url) { window.location.href = data.url; }
+      else { setUpgradeError(data.error || 'Checkout failed'); setUpgradeLoading(null); }
+    } catch (e) { setUpgradeError('Network error'); setUpgradeLoading(null); }
   };
 
-  useEffect(() => {
-    loadPicks();
-    // Auto-refresh every 30 min when within 12:00-18:00 window
-    const interval = setInterval(() => {
-      const h = new Date().getHours();
-      if (h >= 12 && h <= 18) loadPicks();
-    }, 30 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(t); }, []);
+  useEffect(() => { const h = () => setIsMobile(window.innerWidth < 768); window.addEventListener('resize', h); return () => window.removeEventListener('resize', h); }, []);
+  useEffect(() => { loadPicks(); const iv = setInterval(() => { const h = new Date().getHours(); if (h >= 12 && h <= 18) loadPicks(); }, 30*60*1000); return () => clearInterval(iv); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const loadPicks = async () => {
     setLoading(true); setError(null);
     try {
       const [res, roiRes] = await Promise.all([
-        fetch(API_BASE_URL + '/api/picks/today'),
+        fetch(API_BASE_URL + '/api/results/today'),
         fetch(API_BASE_URL + '/api/results/cumulative-roi'),
       ]);
       const data = await res.json();
       const roiData = await roiRes.json().catch(() => null);
       if (roiData?.success) setCumulRoi(roiData);
       if (data.success) {
-        const sorted = (data.picks || [])
-          .filter(p => p.show_in_ui !== false)
-          .sort((a,b) => (a.race_time||'').localeCompare(b.race_time||''));
-        setPicks(sorted);
-        setRaceFields(data.race_fields || {});
-        setLastUpdated(new Date().toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' }));
-        if (data.analysis_status) setAnalysisStatus(data.analysis_status);
-        // Health-check gate: API returns empty picks with analysis_pending=true when not ready
-        setAnalysisPending(!!data.analysis_pending);
-        setPendingReason(data.pending_reason || '');
-      } else {
-        setError(data.error || 'Failed to load picks');
-      }
-    } catch (err) {
-      setError('Network error: ' + err.message);
-    } finally {
-      setLoading(false);
-    }
+        const picks = (data.picks || []).filter(p => p.show_in_ui !== false);
+        // Sort by score descending so the same top 2 are deterministic all day
+        picks.sort((a, b) => parseFloat(b.comprehensive_score || b.score || 0) - parseFloat(a.comprehensive_score || a.score || 0));
+        setAllPicks(picks);
+      } else setError(data.error || 'Failed to load picks');
+    } catch (err) { setError('Network error: ' + err.message); }
+    finally { setLoading(false); }
   };
+
+  // Free tier: top 2 picks only, remove once race is over
+  const MAX_FREE_PICKS = 2;
+  const top2 = allPicks.slice(0, MAX_FREE_PICKS);
+  const visiblePicks = top2.filter(pick => {
+    if (!pick.race_time) return true;
+    try {
+      const rt = new Date(pick.race_time.endsWith('Z') || pick.race_time.includes('+') ? pick.race_time : pick.race_time + 'Z');
+      return rt > now; // hide once race_time has passed
+    } catch { return true; }
+  });
+  const hiddenCount = Math.max(0, allPicks.length - MAX_FREE_PICKS);
 
   const today = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 
   const tierInfo = score => {
     const s = parseFloat(score || 0);
-    if (s >= 95) return { bg: '#d97706', label: 'ELITE'  };
+    if (s >= 95) return { bg: '#d97706', label: 'ELITE' };
     if (s >= 90) return { bg: '#059669', label: 'STRONG' };
-    if (s >= 80) return { bg: '#3b82f6', label: 'GOOD'   };
-    return             { bg: '#0891b2', label: 'VALUE'  };
+    if (s >= 80) return { bg: '#3b82f6', label: 'GOOD' };
+    return { bg: '#0891b2', label: 'VALUE' };
   };
 
-  if (loading) return (
-    <div style={{ textAlign:'center', padding:'60px 20px', color:'white' }}>
-      <div style={{ fontSize:'18px', opacity:0.8 }}>Loading today's picks...</div>
-    </div>
-  );
+  const formatRaceTime = rt => {
+    if (!rt) return { date: '', time: '' };
+    try {
+      const d = new Date(rt.endsWith('Z') || rt.includes('+') ? rt : rt + 'Z');
+      const tz = { timeZone: 'Europe/Dublin' };
+      return {
+        date: d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', ...tz }),
+        time: d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hour12: false, ...tz }),
+      };
+    } catch { return { date: rt.substring(0,10), time: rt.substring(11,16) }; }
+  };
 
-  if (error) return (
-    <div style={{ background:'rgba(239,68,68,0.15)', border:'1px solid #ef4444', borderRadius:'10px', padding:'24px', color:'white', textAlign:'center' }}>
-      <div style={{ fontWeight:'700', marginBottom:'6px' }}>Error loading picks</div>
-      <div style={{ fontSize:'13px', opacity:0.8, marginBottom:'16px' }}>{error}</div>
-      <button onClick={loadPicks} style={{ background:'#059669', border:'none', borderRadius:'6px', color:'white', padding:'8px 20px', cursor:'pointer', fontWeight:'700' }}>Retry</button>
+  const bettingWindow = (pick) => {
+    if (!pick.race_time) return { label: 'Anytime Today', desc: 'Long price — odds stable', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.4)', color: '#60a5fa' };
+    try {
+      const raceDate = new Date(pick.race_time.endsWith('Z') || pick.race_time.includes('+') ? pick.race_time : pick.race_time + 'Z');
+      const minsToRace = (raceDate - now) / 60000;
+      if (minsToRace < 0) return { label: 'Race Complete', desc: 'Check results', bg: 'rgba(107,114,128,0.12)', border: 'rgba(107,114,128,0.4)', color: '#9ca3af' };
+      if (minsToRace < 15) return { label: '🔥 Bet Now', desc: 'Race imminent', bg: 'rgba(239,68,68,0.15)', border: 'rgba(239,68,68,0.5)', color: '#ef4444' };
+      if (minsToRace < 120) return { label: '⏰ 1-2hrs Before', desc: 'Price stable until near off', bg: 'rgba(234,179,8,0.12)', border: 'rgba(234,179,8,0.4)', color: '#eab308' };
+      return { label: '🏦 Anytime Today', desc: 'Long price — odds stable', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.4)', color: '#60a5fa' };
+    } catch { return { label: 'Anytime Today', desc: '', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.4)', color: '#60a5fa' }; }
+  };
+
+  if (loading) return <div style={{ textAlign:'center', padding:'60px 20px', color:'white' }}><div style={{ fontSize:'18px', opacity:0.8 }}>Loading today's picks...</div></div>;
+  if (error) return <div style={{ background:'rgba(239,68,68,0.15)', border:'1px solid #ef4444', borderRadius:'10px', padding:'24px', textAlign:'center', color:'white' }}><div style={{ fontWeight:'700', marginBottom:'6px' }}>Error loading picks</div><div style={{ fontSize:'13px', opacity:0.8, marginBottom:'16px' }}>{error}</div><button onClick={loadPicks} style={{ background:'#059669', border:'none', borderRadius:'6px', color:'white', padding:'8px 20px', cursor:'pointer', fontWeight:'700' }}>Retry</button></div>;
+
+  // Don't reveal picks until 1pm Dublin time — selections may change as new info arrives
+  const dublinHour = parseInt(now.toLocaleString('en-GB', { hour:'numeric', hour12:false, timeZone:'Europe/Dublin' }));
+  if (dublinHour < 13) return (
+    <div style={{ textAlign:'center', padding:'60px 20px' }}>
+      <div style={{ fontSize:'48px', marginBottom:'16px' }}>🐎</div>
+      <div style={{ fontSize:'20px', fontWeight:'800', color:'white', marginBottom:'8px' }}>Today's Picks</div>
+      <div style={{ fontSize:'15px', color:'rgba(255,255,255,0.7)', lineHeight:'1.7' }}>Picks are finalised and published at <strong style={{ color:'#34d399' }}>1:00pm</strong> daily.</div>
+      <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.45)', marginTop:'12px' }}>Our AI is analysing today's races, odds, going and form data.<br/>Check back after 1pm for your selections.</div>
     </div>
   );
 
   return (
     <div>
-      <div style={{ background:'linear-gradient(135deg,#047857 0%,#065f46 100%)', borderRadius:'12px', padding: isMobile ? '16px 14px' : '24px 28px', marginBottom:'24px', color:'white', display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'12px' }}>
+      {/* Header */}
+      <div style={{ background:'linear-gradient(135deg,#1e3a5f 0%,#047857 100%)', border:'2px solid #10b981', borderRadius:'14px', padding: isMobile ? '16px 14px' : '22px 28px', marginBottom:'20px', color:'white', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <div>
-          <div style={{ fontSize:'22px', fontWeight:'800' }}>{today}</div>
+          <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight:'900' }}>{today}</div>
         </div>
-        <button onClick={loadPicks} style={{ background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.35)', borderRadius:'8px', color:'white', padding:'8px 18px', cursor:'pointer', fontSize:'13px', fontWeight:'600' }}>
-          Refresh
-        </button>
+        <button onClick={loadPicks} style={{ background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.4)', borderRadius:'8px', color:'white', padding:'8px 18px', cursor:'pointer', fontSize:'13px', fontWeight:'600' }}>Refresh</button>
       </div>
 
-      {(() => {
-        const rv  = cumulRoi?.success ? (cumulRoi.roi ?? 0) : null;
-        const rs  = cumulRoi?.success ? (cumulRoi.settled || 0) : null;
-        const pos = rv === null || rv >= 0;
+      {/* ROI */}
+      {cumulRoi?.success && (() => {
+        const rv = cumulRoi.roi ?? 0; const rs = cumulRoi.settled || 0;
         return (
-          <div style={{ background: rv === null ? 'rgba(99,102,241,0.12)' : rv >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border: `1.5px solid ${rv === null ? 'rgba(99,102,241,0.35)' : rv >= 0 ? 'rgba(16,185,129,0.45)' : 'rgba(239,68,68,0.4)'}`, borderRadius: '14px', padding: isMobile ? '14px 16px' : '18px 24px', marginBottom: '20px', display: 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent: 'space-between', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '14px' : '20px' }}>
+          <div style={{ background: rv >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border: `1.5px solid ${rv >= 0 ? 'rgba(16,185,129,0.45)' : 'rgba(239,68,68,0.4)'}`, borderRadius:'14px', padding: isMobile ? '14px 16px' : '18px 24px', marginBottom:'20px', display:'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent:'space-between', gap:'12px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap: isMobile ? '14px' : '20px' }}>
               <div style={{ fontSize: isMobile ? '28px' : '38px' }}>💰</div>
               <div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', textTransform: 'uppercase', letterSpacing: '1.2px', fontWeight: '700', marginBottom: '4px' }}>Return on Investment</div>
-                <div style={{ fontSize: isMobile ? '26px' : '40px', fontWeight: '900', color: rv === null ? '#818cf8' : rv >= 0 ? '#34d399' : '#f87171', lineHeight: 1 }}>
-                  {rv === null ? 'Loading…' : `${rv >= 0 ? '+' : ''}${rv.toFixed(1)}%`}
-                </div>
-                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', marginTop: '4px' }}>
-                  {rv === null ? 'Fetching performance data…' : `Since 22 Mar · ${rs} settled`}
-                </div>
+                <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1.2px', fontWeight:'700', marginBottom:'4px' }}>Return on Investment</div>
+                <div style={{ fontSize: isMobile ? '26px' : '40px', fontWeight:'900', color: rv >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>{rv >= 0 ? '+' : ''}{rv.toFixed(1)}%</div>
+                <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)', marginTop:'4px' }}>Since 22 Mar · {rs} settled</div>
               </div>
             </div>
-            <div style={{ textAlign: isMobile ? 'left' : 'right', maxWidth: isMobile ? '100%' : '240px' }}>
-              {rv !== null ? (
-                <div style={{ fontSize: isMobile ? '12px' : '13px', color: 'rgba(255,255,255,0.55)', lineHeight: '1.6' }}>
-                  Across all bets, every €1 staked returned <span style={{ color: rv >= 0 ? '#34d399' : '#f87171', fontWeight:'700' }}>€{(1 + rv / 100).toFixed(2)}</span> on average — a {rv >= 0 ? 'profit' : 'loss'} of <span style={{ color: rv >= 0 ? '#34d399' : '#f87171', fontWeight:'700' }}>€{Math.abs(rv / 100).toFixed(2)}</span> per bet
-                </div>
-              ) : (
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', lineHeight: '1.5' }}>£1 flat stake per pick</div>
-              )}
+            <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
+              <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.55)', lineHeight:'1.6' }}>
+                Across all bets, every €1 staked returned <span style={{ color: rv >= 0 ? '#34d399' : '#f87171', fontWeight:'700' }}>€{(1 + rv / 100).toFixed(2)}</span> on average — a {rv >= 0 ? 'profit' : 'loss'} of <span style={{ color: rv >= 0 ? '#34d399' : '#f87171', fontWeight:'700' }}>€{Math.abs(rv / 100).toFixed(2)}</span> per bet
+              </div>
+              <div style={{ marginTop:'8px' }}>
+                <span onClick={() => { fetch(API_BASE_URL + '/api/results/export-csv').then(r => r.text()).then(csv => { const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'BetBudAI_ROI_Data.csv'; a.click(); URL.revokeObjectURL(url); }).catch(() => {}); }}
+                  style={{ cursor:'pointer', fontSize:'12px', fontWeight:'700', color:'white', background:'linear-gradient(135deg,#059669,#047857)', border:'none', borderRadius:'8px', padding:'8px 18px', display:'inline-flex', alignItems:'center', gap:'6px' }}>
+                  📥 Download Full History CSV
+                </span>
+              </div>
             </div>
           </div>
         );
       })()}
 
-
-
-      {picks.length === 0 ? (
-        analysisPending ? (
-          /* ── Analysis still running ─────────────────────────────────────── */
-          <div style={{ background:'rgba(251,191,36,0.12)', border:'1px solid rgba(251,191,36,0.45)', borderRadius:'12px', padding:'32px 24px', textAlign:'center', color:'rgba(255,255,255,0.9)' }}>
-            <div style={{ fontSize:'28px', marginBottom:'8px' }}>⏳</div>
-            <div style={{ fontSize:'17px', fontWeight:'800', color:'#fbbf24', marginBottom:'8px' }}>Picks Confirmed at 1pm</div>
-            <div style={{ fontSize:'13px', opacity:0.85, marginBottom:'12px' }}>
-              The morning analysis runs from 10am but picks are held until 1pm so going conditions and flags have a chance to finalise before we commit.
-            </div>
-            {pendingReason && (
-              <div style={{ fontSize:'12px', background:'rgba(0,0,0,0.25)', borderRadius:'8px', padding:'8px 14px', display:'inline-block', color:'#fde68a' }}>
-                {pendingReason}
-              </div>
-            )}
-            <div style={{ fontSize:'11px', opacity:0.6, marginTop:'12px' }}>
-              Analysis runs from 10:00 — picks published at 13:00 · Page auto-reloads every 30 min
-            </div>
-          </div>
-        ) : (
+      {/* Picks */}
+      {visiblePicks.length === 0 ? (
         <div style={{ background:'rgba(255,255,255,0.08)', borderRadius:'12px', padding:'48px 24px', textAlign:'center', color:'rgba(255,255,255,0.7)' }}>
-          <div style={{ fontSize:'18px', fontWeight:'700', color:'white', marginBottom:'8px' }}>No picks yet today</div>
-          <div style={{ fontSize:'14px' }}>The model scores every horse in today's races and selects the 3 highest-confidence winners — one per race.<br/>Odds are fetched at 12:00, 14:00, 16:00 and 18:00 daily.<br/>Check the <strong>Top Naps</strong> tab for best picks across the next 5 days.</div>
+          <div style={{ fontSize:'18px', fontWeight:'700', color:'white', marginBottom:'8px' }}>{allPicks.length > 0 ? "Today's free picks have finished" : 'No picks yet today'}</div>
+          <div style={{ fontSize:'14px' }}>{allPicks.length > 0 ? 'Upgrade to Top 5 Picks for full daily coverage including results.' : 'Picks are published daily at 1pm. Check back then.'}</div>
         </div>
-        )
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
-          {(() => {
-            const sorted = [...picks].sort((a, b) => {
-              const norm = s => { const m = (s||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/); return m ? `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}T${m[4].padStart(2,'0')}:${m[5]}` : (s||''); };
-              return norm(a.race_time).localeCompare(norm(b.race_time));
-            });
-            const morningPicks  = sorted.filter(p => p.pick_type !== 'intraday');
-            const intradayPicks = sorted.filter(p => p.pick_type === 'intraday');
-            const allPicks = [...morningPicks, ...intradayPicks];
-            const visiblePicks = isFreeUser ? allPicks.slice(0, 2) : allPicks;
-            const hiddenCount = allPicks.length - visiblePicks.length;
-            return (<>
-            {visiblePicks.map((pick, idx) => {
-            const tier = tierInfo(pick.score);
-            const rank = parseInt(pick.pick_rank || (idx+1));
-            const isIntraday = pick.pick_type === 'intraday';
-            const rankLabels = {1:'#1 Best Bet', 2:'#2 Best Bet', 3:'#3 Best Bet'};
-            const rankColors = {1:'#d97706', 2:'#6b7280', 3:'#92400e'};
-            const intradayColor = '#7c3aed';
+          {visiblePicks.map((pick, idx) => {
+            const tier = tierInfo(pick.comprehensive_score || pick.score);
+            const rank = idx + 1;
+            const rankColors = { 1:'#d97706', 2:'#6b7280' };
+            const ft = formatRaceTime(pick.race_time);
+            const bw = bettingWindow(pick);
             return (
-              <div key={idx} style={{ background:'white', borderRadius:'12px', padding: isMobile ? '14px 12px' : '20px 22px', borderLeft:`5px solid ${isIntraday ? intradayColor : (rankColors[rank]||tier.bg)}`, boxShadow:'0 2px 12px rgba(0,0,0,0.1)' }}>
-                {isIntraday && (
-                  <div style={{ marginBottom:'10px', display:'flex', alignItems:'center', gap:'8px' }}>
-                    <span style={{ background:intradayColor, color:'white', borderRadius:'6px', padding:'4px 12px', fontSize:'11px', fontWeight:'800', textTransform:'uppercase', letterSpacing:'0.5px' }}>
-                      ⚡ Intraday Pick
-                    </span>
-                    <span style={{ fontSize:'11px', color:'#6b7280' }}>Added during the day</span>
-                  </div>
-                )}
+              <div key={idx} style={{ background:'white', borderRadius:'12px', padding: isMobile ? '14px 12px' : '20px 22px', borderLeft:`5px solid ${rankColors[rank] || tier.bg}`, boxShadow:'0 2px 12px rgba(0,0,0,0.1)' }}>
                 <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'8px' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                    <div style={{ background: isIntraday ? intradayColor : (rankColors[rank]||tier.bg), color:'white', borderRadius:'8px', padding:'6px 10px', textAlign:'center', minWidth:'44px', flexShrink:0 }}>
-                      <div style={{ fontSize:'18px', fontWeight:'900' }}>{isIntraday ? '⚡' : `#${rank}`}</div>
-                      <div style={{ fontSize:'9px', fontWeight:'700', opacity:0.85, textTransform:'uppercase', lineHeight:'1' }}>{isIntraday ? 'Live' : 'Pick'}</div>
+                    <div style={{ background: rankColors[rank] || tier.bg, color:'white', borderRadius:'8px', padding:'6px 10px', textAlign:'center', minWidth:'44px' }}>
+                      <div style={{ fontSize:'18px', fontWeight:'900' }}>#{rank}</div>
+                      <div style={{ fontSize:'9px', fontWeight:'700', opacity:0.85, textTransform:'uppercase', lineHeight:'1' }}>Pick</div>
                     </div>
                     <div>
-                      <div style={{ fontSize: isMobile ? '17px' : '20px', fontWeight:'800', color:'#111' }}>{pick.horse || pick.horse_name || 'Unknown'}</div>
+                      <div style={{ fontSize: isMobile ? '17px' : '20px', fontWeight:'800', color:'#111' }}>{pick.horse || 'Unknown'}</div>
                       <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', marginTop:'6px', alignItems:'center' }}>
-                        {(pick.course || pick.venue) && (
-                          <span style={{ background:'#1e3a5f', color:'white', padding:'3px 10px', borderRadius:'6px', fontSize:'12px', fontWeight:'700' }}>
-                            {pick.course || pick.venue}
-                          </span>
-                        )}
-                        {pick.race_time && (() => {
-                          const { date, time } = formatRaceTime(pick.race_time);
-                          return (
-                            <>
-                              <span style={{ background:'#f3f4f6', color:'#374151', padding:'3px 10px', borderRadius:'6px', fontSize:'12px', fontWeight:'600' }}>
-                                {date}
-                              </span>
-                              <span style={{ background:'#ecfdf5', color:'#065f46', padding:'3px 10px', borderRadius:'6px', fontSize:'12px', fontWeight:'700', border:'1px solid #a7f3d0' }}>
-                                {time}
-                              </span>
-                            </>
-                          );
-                        })()}
-                        {pick.race_name && <span style={{ color:'#6b7280', fontSize:'12px' }}>{pick.race_name}</span>}
+                        {pick.course && <span style={{ background:'#1e3a5f', color:'white', padding:'3px 10px', borderRadius:'6px', fontSize:'12px', fontWeight:'700' }}>{pick.course}</span>}
+                        {ft.date && <span style={{ background:'#f3f4f6', color:'#374151', padding:'3px 10px', borderRadius:'6px', fontSize:'12px', fontWeight:'600' }}>{ft.date}</span>}
+                        {ft.time && <span style={{ background:'#ecfdf5', color:'#065f46', padding:'3px 10px', borderRadius:'6px', fontSize:'12px', fontWeight:'700', border:'1px solid #a7f3d0' }}>{ft.time}</span>}
                       </div>
                     </div>
                   </div>
-                  <div style={{ display:'flex', gap:'8px', flexWrap:'wrap', alignItems:'center' }}>
+                  <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
                     {pick.odds && (
                       <div style={{ textAlign:'center' }}>
-                        <div style={{ background:'#1e3a5f', color:'white', padding: isMobile ? '4px 10px' : '5px 14px', borderRadius:'8px', fontWeight:'900', fontSize: isMobile ? '18px' : '22px', letterSpacing:'0.5px' }}>{toFractional(pick.odds)}</div>
+                        <div style={{ background:'#1e3a5f', color:'white', padding:'5px 14px', borderRadius:'8px', fontWeight:'900', fontSize:'22px' }}>{toFractional(pick.odds)}</div>
                         <div style={{ fontSize:'10px', color:'#6b7280', marginTop:'2px', fontWeight:'600' }}>ODDS</div>
                       </div>
                     )}
-                    <div style={{ textAlign:'center' }}>
-                      <span style={{ background:tier.bg, color:'white', padding:'5px 12px', borderRadius:'8px', fontSize:'12px', fontWeight:'700', display:'block' }}>
-                        {tier.label}
-                      </span>
-                      {pick.score && (
-                        <div
-                          onClick={() => setExpandedPick(expandedPick === idx ? null : idx)}
-                          style={{ fontSize:'11px', color:'#1d4ed8', marginTop:'4px', fontWeight:'700', cursor:'pointer', userSelect:'none', display:'flex', alignItems:'center', justifyContent:'center', gap:'3px' }}
-                        >
-                          Score: {parseFloat(pick.score).toFixed(0)} {expandedPick === idx ? '\u25b2' : '\u25bc'}
-                        </div>
-                      )}
-                    </div>
+                    <span style={{ background: tier.bg, color:'white', padding:'5px 12px', borderRadius:'8px', fontSize:'12px', fontWeight:'700' }}>{tier.label}</span>
                   </div>
                 </div>
-                {/* Trainer / Jockey / Form row */}
-                {/* Optimal bet timing badge */}
-                {(() => {
-                  const bw = bettingWindow(pick, now);
-                  return (
-                    <div style={{ marginTop:'10px', display:'inline-flex', alignItems:'center', gap:'6px', background:bw.bg, border:`1px solid ${bw.border}`, borderRadius:'7px', padding:'5px 12px' }}>
-                      <span style={{ fontSize:'13px', fontWeight:'800', color:bw.color }}>{bw.label}</span>
-                      <span style={{ fontSize:'11px', color:'#6b7280' }}>— {bw.desc}</span>
-                    </div>
-                  );
-                })()}
+                {/* Betting window */}
+                <div style={{ marginTop:'10px', display:'inline-flex', alignItems:'center', gap:'6px', background: bw.bg, border:`1px solid ${bw.border}`, borderRadius:'7px', padding:'5px 12px' }}>
+                  <span style={{ fontSize:'13px', fontWeight:'800', color: bw.color }}>{bw.label}</span>
+                  <span style={{ fontSize:'11px', color:'#6b7280' }}>— {bw.desc}</span>
+                </div>
+                {/* Trainer / Jockey / Form */}
                 <div style={{ fontSize:'13px', color:'#374151', marginTop:'12px', display:'flex', gap:'18px', flexWrap:'wrap', alignItems:'center' }}>
-                  {pick.trainer  && <span><strong>Trainer:</strong> {pick.trainer}</span>}
-                  {pick.jockey   && <span><strong>Jockey:</strong> {pick.jockey}</span>}
-                  {pick.form     && <span style={{ background:'#f3f4f6', borderRadius:'5px', padding:'2px 8px', fontFamily:'monospace', fontWeight:'700', color:'#1e3a5f', letterSpacing:'1px' }}>Form: {pick.form}</span>}
-                  {pick.score_gap > 0 && (
-                    <span style={{ background:'#f0fdf4', border:'1px solid #86efac', borderRadius:'5px', padding:'2px 8px', fontSize:'12px', color:'#166534', fontWeight:'700' }}>
-                      +{parseFloat(pick.score_gap).toFixed(0)}pt clear of field
-                    </span>
-                  )}
-
+                  {pick.trainer && <span><strong>Trainer:</strong> {pick.trainer}</span>}
+                  {pick.jockey && <span><strong>Jockey:</strong> {pick.jockey}</span>}
+                  {pick.form && <span style={{ background:'#f3f4f6', borderRadius:'5px', padding:'2px 8px', fontFamily:'monospace', fontWeight:'700', color:'#1e3a5f', letterSpacing:'1px' }}>Form: {pick.form}</span>}
+                  {pick.score_gap > 0 && <span style={{ background:'#f0fdf4', border:'1px solid #86efac', borderRadius:'5px', padding:'2px 8px', fontSize:'12px', color:'#166534', fontWeight:'700' }}>+{parseFloat(pick.score_gap).toFixed(0)}pt clear of field</span>}
                 </div>
                 {/* Score badge */}
                 {(() => {
-                  const score = parseFloat(pick.score || pick.comprehensive_score || 0);
+                  const score = parseFloat(pick.comprehensive_score || pick.score || 0);
                   if (!score) return null;
                   return (
-                    <div style={{ marginTop:'10px', padding:'10px 14px', background: `${tier.bg}18`, borderRadius:'8px', borderLeft:`3px solid ${tier.bg}` }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
-                        <span style={{ background:tier.bg, color:'white', borderRadius:'5px', padding:'2px 9px', fontSize:'11px', fontWeight:'800', letterSpacing:'0.5px' }}>{tier.label}</span>
-                        <span style={{ fontSize:'12px', fontWeight:'700', color:'#1e3a5f' }}>Score: {score.toFixed(0)}</span>
-                      </div>
+                    <div style={{ marginTop:'10px', padding:'10px 14px', background:`${tier.bg}18`, borderRadius:'8px', borderLeft:`3px solid ${tier.bg}` }}>
+                      <span style={{ background: tier.bg, color:'white', borderRadius:'5px', padding:'2px 9px', fontSize:'11px', fontWeight:'800' }}>{tier.label}</span>
+                      <span style={{ fontSize:'12px', fontWeight:'700', color:'#1e3a5f', marginLeft:'8px' }}>Score: {score.toFixed(0)}</span>
                     </div>
                   );
                 })()}
-                {/* Race Intel, Full Field & Breakdown — moved to VIP/Admin */}
               </div>
             );
-            })}
-            {hiddenCount > 0 && (
-              <div style={{ background:'linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1))', border:'1.5px solid rgba(139,92,246,0.35)', borderRadius:'12px', padding:'24px 20px', textAlign:'center' }}>
-                <div style={{ fontSize:'20px', marginBottom:'8px' }}>🔒</div>
-                <div style={{ fontSize:'16px', fontWeight:'800', color:'white', marginBottom:'6px' }}>+{hiddenCount} more pick{hiddenCount > 1 ? 's' : ''} available</div>
-                <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.6)', marginBottom:'12px' }}>Upgrade to Premium or VIP Rollers to see all picks</div>
-                <div onClick={onUpgrade} style={{ display:'inline-block', background:'linear-gradient(135deg,#7c3aed,#5b21b6)', color:'white', borderRadius:'8px', padding:'8px 24px', fontSize:'13px', fontWeight:'700', cursor:'pointer' }}>Upgrade Now</div>
+          })}
+          {/* Upgrade banner — two tiers */}
+          {hiddenCount > 0 && (
+              <div style={{ marginTop:'8px' }}>
+                <div style={{ textAlign:'center', marginBottom:'14px' }}>
+                  <div style={{ fontSize:'20px', marginBottom:'6px' }}>🔒</div>
+                  <div style={{ fontSize:'16px', fontWeight:'800', color:'white', marginBottom:'4px' }}>+{hiddenCount} more pick{hiddenCount > 1 ? 's' : ''} available</div>
+                  <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.55)' }}>Unlock everything with Premium or VIP</div>
+                </div>
+                {upgradeError && <div style={{ background:'rgba(239,68,68,0.15)', border:'1px solid rgba(239,68,68,0.4)', borderRadius:'8px', padding:'8px', textAlign:'center', marginBottom:'10px', color:'#f87171', fontSize:'12px' }}>{upgradeError}</div>}
+                <div style={{ display:'flex', gap:'10px', flexWrap:'wrap', justifyContent:'center' }}>
+                  {/* PREMIUM */}
+                  <div style={{ flex:'1 1 160px', maxWidth:'260px', background:'linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.1))', border:'2px solid rgba(99,102,241,0.5)', borderRadius:'14px', padding:'18px 16px', position:'relative' }}>
+                    <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#6366f1,#7c3aed)', borderRadius:'12px', padding:'2px 12px', fontSize:'9px', fontWeight:'800', color:'white', textTransform:'uppercase', letterSpacing:'0.5px', whiteSpace:'nowrap' }}>Most Popular</div>
+                    <div style={{ fontSize:'12px', fontWeight:'700', textTransform:'uppercase', letterSpacing:'1px', color:'#818cf8', marginBottom:'4px', textAlign:'center' }}>Premium</div>
+                    <div style={{ textAlign:'center', marginBottom:'10px' }}><span style={{ fontSize:'26px', fontWeight:'900', color:'white' }}>€29</span><span style={{ fontSize:'12px', color:'rgba(255,255,255,0.4)' }}>/mo</span></div>
+                    <ul style={{ listStyle:'none', padding:0, margin:'0 0 14px', fontSize:'12px', color:'rgba(255,255,255,0.7)', lineHeight:'1.9' }}>
+                      <li>✓ All 5 daily picks</li>
+                      <li>✓ Full AI analysis &amp; scores</li>
+                      <li>✓ Yesterday's results &amp; ROI</li>
+                      <li>✓ Lay the Favourite strategy</li>
+                      <li>✓ Major races coverage</li>
+                    </ul>
+                    <button onClick={() => doSubscribe('premium')} disabled={!!upgradeLoading}
+                      style={{ width:'100%', background:'linear-gradient(135deg,#6366f1,#7c3aed)', border:'none', borderRadius:'8px', padding:'10px', color:'white', fontSize:'13px', fontWeight:'800', cursor:upgradeLoading?'wait':'pointer', opacity:upgradeLoading==='vip'?0.5:1 }}>
+                      {upgradeLoading==='premium' ? 'Redirecting...' : 'Get Premium'}
+                    </button>
+                  </div>
+                  {/* VIP ROLLERS */}
+                  <div style={{ flex:'1 1 160px', maxWidth:'260px', background:'linear-gradient(135deg,rgba(245,158,11,0.12),rgba(251,191,36,0.06))', border:'2px solid rgba(245,158,11,0.45)', borderRadius:'14px', padding:'18px 16px', position:'relative' }}>
+                    <div style={{ position:'absolute', top:'-10px', left:'50%', transform:'translateX(-50%)', background:'linear-gradient(135deg,#f59e0b,#d97706)', borderRadius:'12px', padding:'2px 12px', fontSize:'9px', fontWeight:'800', color:'white', textTransform:'uppercase', letterSpacing:'0.5px', whiteSpace:'nowrap' }}>Best Value</div>
+                    <div style={{ fontSize:'12px', fontWeight:'700', textTransform:'uppercase', letterSpacing:'1px', color:'#fbbf24', marginBottom:'4px', textAlign:'center' }}>👑 VIP Rollers</div>
+                    <div style={{ textAlign:'center', marginBottom:'10px' }}><span style={{ fontSize:'26px', fontWeight:'900', color:'white' }}>€99</span><span style={{ fontSize:'12px', color:'rgba(255,255,255,0.4)' }}>/mo</span></div>
+                    <ul style={{ listStyle:'none', padding:0, margin:'0 0 14px', fontSize:'12px', color:'rgba(255,255,255,0.7)', lineHeight:'1.9' }}>
+                      <li>✓ Everything in Premium</li>
+                      <li>✓ Full field data &amp; score breakdowns</li>
+                      <li>✓ Race intel &amp; market analysis</li>
+                      <li>✓ Priority support</li>
+                      <li>✓ Early access to new features</li>
+                    </ul>
+                    <button onClick={() => doSubscribe('vip')} disabled={!!upgradeLoading}
+                      style={{ width:'100%', background:'linear-gradient(135deg,#f59e0b,#d97706)', border:'none', borderRadius:'8px', padding:'10px', color:'white', fontSize:'13px', fontWeight:'800', cursor:upgradeLoading?'wait':'pointer', opacity:upgradeLoading==='premium'?0.5:1 }}>
+                      {upgradeLoading==='vip' ? 'Redirecting...' : 'Get VIP Rollers'}
+                    </button>
+                  </div>
+                </div>
+                <div style={{ textAlign:'center', fontSize:'10px', color:'rgba(255,255,255,0.3)', marginTop:'10px' }}>Powered by Stripe · Cancel anytime</div>
               </div>
-            )}
-            </>);
-          })()}
+          )}
         </div>
       )}
 
       <div style={{ marginTop:'28px', padding:'16px 20px', background:'rgba(255,255,255,0.07)', borderRadius:'10px', color:'rgba(255,255,255,0.6)', fontSize:'12px', textAlign:'center', lineHeight:'1.6' }}>
         Picks generated by AI analysis of Betfair odds, form, trainer &amp; jockey stats, going suitability and market movement.<br/>
-        Model self-learns daily from race results · Top picks from all races over the next 5 days · Always bet responsibly.
+        Model self-learns daily from race results · Always bet responsibly.
       </div>
     </div>
   );
@@ -961,7 +903,7 @@ function UpgradeCards({ authUser }) {
       const data = await res.json();
       if (data.url) { window.location.href = data.url; }
       else { setError(data.error || 'Failed to start checkout'); setLoading(null); }
-    } catch { setError('Network error. Please try again.'); setLoading(null); }
+    } catch (e) { setError('Network error. Please try again.'); setLoading(null); }
   };
 
   const currentTier = subStatus?.subscription_tier || authUser?.subscription_tier || 'free';
@@ -973,7 +915,7 @@ function UpgradeCards({ authUser }) {
         <span style={{ fontSize: '16px', fontWeight: '800', color: 'white' }}>⚡ Upgrade Your Plan</span>
       </div>
       {error && (
-        <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '10px 14px', textAlign: 'center', marginBottom: '12px', color: '#f87171', fontSize: '13px' }}>{error}</div>
+        <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '10px', textAlign: 'center', marginBottom: '12px', color: '#f87171', fontSize: '13px' }}>{error}</div>
       )}
       <div style={{ display: 'flex', gap: '12px', maxWidth: '700px', margin: '0 auto', flexWrap: 'wrap', justifyContent: 'center' }}>
         {/* Free */}
@@ -989,14 +931,14 @@ function UpgradeCards({ authUser }) {
         <div style={{ flex: '1 1 200px', maxWidth: '220px', background: 'linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.1))', border: '2px solid rgba(99,102,241,0.5)', borderRadius: '12px', padding: '16px', textAlign: 'center', position: 'relative', boxShadow: '0 0 25px rgba(99,102,241,0.15)' }}>
           <div style={{ position: 'absolute', top: '-10px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', borderRadius: '12px', padding: '2px 12px', fontSize: '9px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px' }}>⭐ Popular</div>
           <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', color: '#818cf8', marginBottom: '4px' }}>Premium</div>
-          <div style={{ fontSize: '24px', fontWeight: '900', color: 'white', marginBottom: '8px' }}>€19.99<span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>/mo</span></div>
+          <div style={{ fontSize: '24px', fontWeight: '900', color: 'white', marginBottom: '8px' }}>€29<span style={{ fontSize: '12px', color: 'rgba(255,255,255,0.4)' }}>/mo</span></div>
           <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', lineHeight: '1.7', marginBottom: '10px' }}>🎯 All picks · Full analysis · ROI</div>
           {currentTier === 'premium' && isActive ? (
             <div style={{ background: 'rgba(52,211,153,0.15)', borderRadius: '8px', padding: '8px', fontSize: '12px', fontWeight: '700', color: '#34d399' }}>✓ Current Plan</div>
           ) : (
             <button onClick={() => handleSubscribe('premium')} disabled={!!loading}
               style={{ width: '100%', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', border: 'none', borderRadius: '8px', padding: '9px', color: 'white', fontSize: '13px', fontWeight: '800', cursor: loading ? 'wait' : 'pointer', opacity: loading === 'vip' ? 0.5 : 1 }}>
-              {loading === 'premium' ? 'Redirecting...' : 'Subscribe to Premium'}
+              {loading === 'premium' ? 'Redirecting...' : 'Subscribe — €29/mo'}
             </button>
           )}
         </div>
@@ -1011,12 +953,102 @@ function UpgradeCards({ authUser }) {
           ) : (
             <button onClick={() => handleSubscribe('vip')} disabled={!!loading}
               style={{ width: '100%', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', borderRadius: '8px', padding: '9px', color: 'white', fontSize: '13px', fontWeight: '800', cursor: loading ? 'wait' : 'pointer', opacity: loading === 'premium' ? 0.5 : 1 }}>
-              {loading === 'vip' ? 'Redirecting...' : 'Subscribe to VIP Rollers'}
+              {loading === 'vip' ? 'Redirecting...' : 'Subscribe — €99/mo'}
             </button>
           )}
         </div>
       </div>
-      <div style={{ textAlign: 'center', fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '10px' }}>🔒 Powered by Stripe · Cancel anytime · EUR</div>
+      <div style={{ textAlign: 'center', fontSize: '10px', color: 'rgba(255,255,255,0.3)', marginTop: '10px' }}>Powered by Stripe · Cancel anytime</div>
+      <RevolutPayOption authUser={authUser} compact />
+    </div>
+  );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// REVOLUT / BANK TRANSFER PAYMENT OPTION
+// ════════════════════════════════════════════════════════════════════════════
+function RevolutPayOption({ authUser, compact }) {
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(null);
+  const IBAN = 'IE28REVO99036089671785';
+  const IBAN_DISPLAY = 'IE28 REVO 9903 6089 6717 85';
+  const BIC = 'REVOIE23';
+  const REF = authUser?.username || authUser?.email || 'your-username';
+
+  const copyText = (text, label) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(label);
+      setTimeout(() => setCopied(null), 2000);
+    }).catch(() => {});
+  };
+
+  if (compact && !expanded) {
+    return (
+      <div style={{ textAlign: 'center', marginTop: '10px' }}>
+        <span onClick={() => setExpanded(true)} style={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', textDecoration: 'underline', textDecorationStyle: 'dotted' }}>
+          💶 Or pay via Revolut / Bank Transfer
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: compact ? '12px' : '28px', maxWidth: '520px', marginLeft: 'auto', marginRight: 'auto' }}>
+      {!compact && (
+        <div style={{ textAlign: 'center', marginBottom: '14px' }}>
+          <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+            <span style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
+            <span>or pay via Revolut / Bank Transfer</span>
+            <span style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.1)' }} />
+          </div>
+        </div>
+      )}
+      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: compact ? '14px 16px' : '20px 24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          <span style={{ fontSize: compact ? '14px' : '16px', fontWeight: '800', color: 'white' }}>💶 Bank Transfer</span>
+          <span style={{ fontSize: '10px', background: 'rgba(52,211,153,0.15)', color: '#34d399', borderRadius: '6px', padding: '2px 8px', fontWeight: '700' }}>No fees</span>
+        </div>
+        <div style={{ display: 'grid', gap: '8px', fontSize: compact ? '12px' : '13px' }}>
+          {/* IBAN */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '8px 12px' }}>
+            <div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>IBAN</div>
+              <div style={{ color: 'white', fontWeight: '700', fontFamily: 'monospace', fontSize: compact ? '12px' : '14px' }}>{IBAN_DISPLAY}</div>
+            </div>
+            <span onClick={() => copyText(IBAN, 'iban')} style={{ cursor: 'pointer', padding: '4px 10px', borderRadius: '6px', background: copied === 'iban' ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.08)', color: copied === 'iban' ? '#34d399' : 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: '600', transition: 'all 0.2s' }}>
+              {copied === 'iban' ? '✓ Copied' : 'Copy'}
+            </span>
+          </div>
+          {/* BIC */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '8px 12px' }}>
+            <div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>BIC / SWIFT</div>
+              <div style={{ color: 'white', fontWeight: '700', fontFamily: 'monospace' }}>{BIC}</div>
+            </div>
+            <span onClick={() => copyText(BIC, 'bic')} style={{ cursor: 'pointer', padding: '4px 10px', borderRadius: '6px', background: copied === 'bic' ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.08)', color: copied === 'bic' ? '#34d399' : 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: '600', transition: 'all 0.2s' }}>
+              {copied === 'bic' ? '✓ Copied' : 'Copy'}
+            </span>
+          </div>
+          {/* Beneficiary */}
+          <div style={{ background: 'rgba(255,255,255,0.04)', borderRadius: '8px', padding: '8px 12px' }}>
+            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Beneficiary</div>
+            <div style={{ color: 'white', fontWeight: '700' }}>BetBudAI</div>
+          </div>
+          {/* Reference */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(139,92,246,0.05))', border: '1px solid rgba(99,102,241,0.3)', borderRadius: '8px', padding: '8px 12px' }}>
+            <div>
+              <div style={{ color: '#818cf8', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Reference (important!)</div>
+              <div style={{ color: 'white', fontWeight: '700', fontFamily: 'monospace' }}>{REF}</div>
+            </div>
+            <span onClick={() => copyText(REF, 'ref')} style={{ cursor: 'pointer', padding: '4px 10px', borderRadius: '6px', background: copied === 'ref' ? 'rgba(52,211,153,0.2)' : 'rgba(255,255,255,0.08)', color: copied === 'ref' ? '#34d399' : 'rgba(255,255,255,0.5)', fontSize: '11px', fontWeight: '600', transition: 'all 0.2s' }}>
+              {copied === 'ref' ? '✓ Copied' : 'Copy'}
+            </span>
+          </div>
+        </div>
+        <div style={{ marginTop: '10px', fontSize: '11px', color: 'rgba(255,255,255,0.4)', lineHeight: '1.6' }}>
+          ⚡ Revolut-to-Revolut transfers are instant · Include your <strong style={{ color: 'rgba(255,255,255,0.6)' }}>username as reference</strong> so we can activate your account · €29/mo Premium · €99/mo VIP
+        </div>
+      </div>
     </div>
   );
 }
@@ -1025,7 +1057,7 @@ function UpgradeCards({ authUser }) {
 // PRICING / SUBSCRIPTION VIEW
 // ════════════════════════════════════════════════════════════════════════════
 function PricingView({ authUser, onSuccess }) {
-  const [loading, setLoading] = useState(null); // null | 'premium' | 'vip'
+  const [loading, setLoading] = useState(null);
   const [error, setError] = useState(null);
   const [subStatus, setSubStatus] = useState(null);
   const [portalLoading, setPortalLoading] = useState(false);
@@ -1044,8 +1076,7 @@ function PricingView({ authUser, onSuccess }) {
   }, [authUser?.email]);
 
   const handleSubscribe = async (tier) => {
-    setLoading(tier);
-    setError(null);
+    setLoading(tier); setError(null);
     try {
       const res = await fetch(`${API_BASE_URL}/api/create-checkout-session`, {
         method: 'POST',
@@ -1053,16 +1084,9 @@ function PricingView({ authUser, onSuccess }) {
         body: JSON.stringify({ email: authUser.email, tier })
       });
       const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        setError(data.error || 'Failed to start checkout');
-        setLoading(null);
-      }
-    } catch (e) {
-      setError('Network error. Please try again.');
-      setLoading(null);
-    }
+      if (data.url) { window.location.href = data.url; }
+      else { setError(data.error || 'Failed to start checkout'); setLoading(null); }
+    } catch (e) { setError('Network error. Please try again.'); setLoading(null); }
   };
 
   const handleManageSubscription = async () => {
@@ -1074,12 +1098,8 @@ function PricingView({ authUser, onSuccess }) {
         body: JSON.stringify({ email: authUser.email })
       });
       const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (e) {
-      setError('Failed to open subscription management');
-    }
+      if (data.url) { window.location.href = data.url; }
+    } catch (e) { setError('Failed to open subscription management'); }
     setPortalLoading(false);
   };
 
@@ -1146,7 +1166,7 @@ function PricingView({ authUser, onSuccess }) {
           <div style={{ position: 'absolute', top: '-12px', left: '50%', transform: 'translateX(-50%)', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', borderRadius: '20px', padding: '4px 16px', fontSize: '11px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '1px' }}>Most Popular</div>
           <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '1.5px', color: '#818cf8', fontWeight: '700', marginBottom: '8px' }}>Premium</div>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginBottom: '16px' }}>
-            <span style={{ fontSize: '36px', fontWeight: '900', color: 'white' }}>€19.99</span>
+            <span style={{ fontSize: '36px', fontWeight: '900', color: 'white' }}>€29</span>
             <span style={{ fontSize: '14px', color: 'rgba(255,255,255,0.5)' }}>/month</span>
           </div>
           <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', fontSize: '14px', color: 'rgba(255,255,255,0.7)', lineHeight: '2' }}>
@@ -1163,7 +1183,7 @@ function PricingView({ authUser, onSuccess }) {
           ) : (
             <button onClick={() => handleSubscribe('premium')} disabled={!!loading}
               style={{ width: '100%', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', border: 'none', borderRadius: '10px', padding: '12px', color: 'white', fontSize: '15px', fontWeight: '800', cursor: loading ? 'wait' : 'pointer', opacity: loading === 'vip' ? 0.5 : 1 }}>
-              {loading === 'premium' ? 'Redirecting to Stripe...' : 'Subscribe to Premium'}
+              {loading === 'premium' ? 'Redirecting to checkout...' : 'Subscribe to Premium'}
             </button>
           )}
         </div>
@@ -1189,15 +1209,276 @@ function PricingView({ authUser, onSuccess }) {
           ) : (
             <button onClick={() => handleSubscribe('vip')} disabled={!!loading}
               style={{ width: '100%', background: 'linear-gradient(135deg, #f59e0b, #d97706)', border: 'none', borderRadius: '10px', padding: '12px', color: 'white', fontSize: '15px', fontWeight: '800', cursor: loading ? 'wait' : 'pointer', opacity: loading === 'premium' ? 0.5 : 1 }}>
-              {loading === 'vip' ? 'Redirecting to Stripe...' : 'Subscribe to VIP Rollers'}
+              {loading === 'vip' ? 'Redirecting to checkout...' : 'Subscribe to VIP Rollers'}
             </button>
           )}
         </div>
       </div>
 
       <div style={{ marginTop: '32px', textAlign: 'center', fontSize: '12px', color: 'rgba(255,255,255,0.4)', lineHeight: '1.8' }}>
-        Payments securely processed by Stripe · Cancel anytime from your account<br/>
+        Payments securely processed by Stripe · Cancel anytime<br/>
         Subscriptions renew monthly · All prices in EUR
+      </div>
+
+      <RevolutPayOption authUser={authUser} compact />
+    </div>
+  );
+}
+
+// ---- Top 5 Picks (paid) — standalone card view showing ALL today's picks ----
+function Top5PicksView() {
+  const [allPicks, setAllPicks] = useState([]);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState(null);
+  const [cumulRoi, setCumulRoi] = useState(null);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
+  const [now, setNow]           = useState(new Date());
+
+  useEffect(() => { const t = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(t); }, []);
+  useEffect(() => { const h = () => setIsMobile(window.innerWidth < 768); window.addEventListener('resize', h); return () => window.removeEventListener('resize', h); }, []);
+  useEffect(() => { loadPicks(); const iv = setInterval(() => { const h = new Date().getHours(); if (h >= 12 && h <= 18) loadPicks(); }, 30*60*1000); return () => clearInterval(iv); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadPicks = async () => {
+    setLoading(true); setError(null);
+    try {
+      const [res, roiRes] = await Promise.all([
+        fetch(API_BASE_URL + '/api/results/today'),
+        fetch(API_BASE_URL + '/api/results/cumulative-roi'),
+      ]);
+      const data = await res.json();
+      const roiData = await roiRes.json().catch(() => null);
+      if (roiData?.success) setCumulRoi(roiData);
+      if (data.success) {
+        const picks = (data.picks || []).filter(p => p.show_in_ui !== false);
+        picks.sort((a, b) => parseFloat(b.comprehensive_score || b.score || 0) - parseFloat(a.comprehensive_score || a.score || 0));
+        setAllPicks(picks);
+      } else setError(data.error || 'Failed to load picks');
+    } catch (err) { setError('Network error: ' + err.message); }
+    finally { setLoading(false); }
+  };
+
+  const today = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  const tierInfo = score => {
+    const s = parseFloat(score || 0);
+    if (s >= 95) return { bg:'#d97706', label:'ELITE' };
+    if (s >= 90) return { bg:'#059669', label:'STRONG' };
+    if (s >= 80) return { bg:'#3b82f6', label:'GOOD' };
+    return { bg:'#0891b2', label:'VALUE' };
+  };
+
+  const formatRaceTime = rt => {
+    if (!rt) return { date:'', time:'' };
+    try {
+      const d = new Date(rt.endsWith('Z') || rt.includes('+') ? rt : rt + 'Z');
+      const tz = { timeZone:'Europe/Dublin' };
+      return {
+        date: d.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short', year:'numeric', ...tz }),
+        time: d.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit', hour12:false, ...tz }),
+      };
+    } catch { return { date: rt.substring(0,10), time: rt.substring(11,16) }; }
+  };
+
+  const bettingWindow = (pick) => {
+    if (!pick.race_time) return { label:'Anytime Today', desc:'Long price — odds stable', bg:'rgba(59,130,246,0.12)', border:'rgba(59,130,246,0.4)', color:'#60a5fa' };
+    try {
+      const raceDate = new Date(pick.race_time.endsWith('Z') || pick.race_time.includes('+') ? pick.race_time : pick.race_time + 'Z');
+      const minsToRace = (raceDate - now) / 60000;
+      if (minsToRace < 0) return { label:'Race Complete', desc:'Check results', bg:'rgba(107,114,128,0.12)', border:'rgba(107,114,128,0.4)', color:'#9ca3af' };
+      if (minsToRace < 15) return { label:'🔥 Bet Now', desc:'Race imminent', bg:'rgba(239,68,68,0.15)', border:'rgba(239,68,68,0.5)', color:'#ef4444' };
+      if (minsToRace < 120) return { label:'⏰ 1-2hrs Before', desc:'Price stable until near off', bg:'rgba(234,179,8,0.12)', border:'rgba(234,179,8,0.4)', color:'#eab308' };
+      return { label:'🏦 Anytime Today', desc:'Long price — odds stable', bg:'rgba(59,130,246,0.12)', border:'rgba(59,130,246,0.4)', color:'#60a5fa' };
+    } catch { return { label:'Anytime Today', desc:'', bg:'rgba(59,130,246,0.12)', border:'rgba(59,130,246,0.4)', color:'#60a5fa' }; }
+  };
+
+  const normOutcome = p => { const oc = (p.outcome || '').toLowerCase(); if (oc === 'win' || oc === 'won') return 'WIN'; if (oc === 'placed') return 'PLACED'; if (oc === 'loss' || oc === 'lost') return 'LOSS'; return null; };
+  const outcomeStyle = o => {
+    if (o === 'WIN')    return { bg:'#059669', text:'WIN ✓' };
+    if (o === 'PLACED') return { bg:'#3b82f6', text:'PLACED' };
+    if (o === 'LOSS')   return { bg:'#ef4444', text:'LOSS ✗' };
+    return { bg:'#6b7280', text:'PENDING ⏳' };
+  };
+
+  if (loading) return <div style={{ textAlign:'center', padding:'60px 20px', color:'white' }}><div style={{ fontSize:'18px', opacity:0.8 }}>Loading all picks...</div></div>;
+  if (error) return <div style={{ background:'rgba(239,68,68,0.15)', border:'1px solid #ef4444', borderRadius:'10px', padding:'24px', textAlign:'center', color:'white' }}><div style={{ fontWeight:'700', marginBottom:'6px' }}>Error loading picks</div><div style={{ fontSize:'13px', opacity:0.8, marginBottom:'16px' }}>{error}</div><button onClick={loadPicks} style={{ background:'#059669', border:'none', borderRadius:'6px', color:'white', padding:'8px 20px', cursor:'pointer', fontWeight:'700' }}>Retry</button></div>;
+
+  // Don't reveal picks until 1pm Dublin time — selections may change as new info arrives
+  const dublinHour5 = parseInt(now.toLocaleString('en-GB', { hour:'numeric', hour12:false, timeZone:'Europe/Dublin' }));
+  if (dublinHour5 < 13) return (
+    <div style={{ textAlign:'center', padding:'60px 20px' }}>
+      <div style={{ fontSize:'48px', marginBottom:'16px' }}>🏆</div>
+      <div style={{ fontSize:'20px', fontWeight:'800', color:'white', marginBottom:'8px' }}>Top 5 Picks</div>
+      <div style={{ fontSize:'15px', color:'rgba(255,255,255,0.7)', lineHeight:'1.7' }}>All 5 picks are finalised and published at <strong style={{ color:'#a78bfa' }}>1:00pm</strong> daily.</div>
+      <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.45)', marginTop:'12px' }}>Our AI is analysing today's races, odds, going and form data.<br/>Check back after 1pm for your full selections.</div>
+    </div>
+  );
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ background:'linear-gradient(135deg,#1e3a5f 0%,#7c3aed 50%,#1e3a5f 100%)', border:'2px solid #a78bfa', borderRadius:'14px', padding: isMobile ? '16px 14px' : '22px 28px', marginBottom:'20px', color:'white', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+        <div>
+          <div style={{ fontSize:'13px', textTransform:'uppercase', letterSpacing:'1px', color:'#c4b5fd', opacity:0.9 }}>Premium · All Daily Picks</div>
+          <div style={{ fontSize: isMobile ? '20px' : '24px', fontWeight:'900', marginTop:'4px' }}>🏆 Top 5 Picks</div>
+          <div style={{ fontSize:'13px', opacity:0.75, marginTop:'4px' }}>{today}</div>
+        </div>
+        <button onClick={loadPicks} style={{ background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.4)', borderRadius:'8px', color:'white', padding:'8px 18px', cursor:'pointer', fontSize:'13px', fontWeight:'600' }}>Refresh</button>
+      </div>
+
+      {/* ROI */}
+      {cumulRoi?.success && (() => {
+        const rv = cumulRoi.roi ?? 0; const rs = cumulRoi.settled || 0;
+        return (
+          <div style={{ background: rv >= 0 ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.13)', border: `1.5px solid ${rv >= 0 ? 'rgba(16,185,129,0.45)' : 'rgba(239,68,68,0.4)'}`, borderRadius:'14px', padding: isMobile ? '14px 16px' : '18px 24px', marginBottom:'20px', display:'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', justifyContent:'space-between', gap:'12px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap: isMobile ? '14px' : '20px' }}>
+              <div style={{ fontSize: isMobile ? '28px' : '38px' }}>💰</div>
+              <div>
+                <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', letterSpacing:'1.2px', fontWeight:'700', marginBottom:'4px' }}>Return on Investment</div>
+                <div style={{ fontSize: isMobile ? '26px' : '40px', fontWeight:'900', color: rv >= 0 ? '#34d399' : '#f87171', lineHeight:1 }}>{rv >= 0 ? '+' : ''}{rv.toFixed(1)}%</div>
+                <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.45)', marginTop:'4px' }}>Since 22 Mar · {rs} settled</div>
+              </div>
+            </div>
+            <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
+              <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.55)', lineHeight:'1.6' }}>
+                Every €1 staked returned <span style={{ color: rv >= 0 ? '#34d399' : '#f87171', fontWeight:'700' }}>€{(1 + rv / 100).toFixed(2)}</span> on average
+              </div>
+              <div style={{ marginTop:'8px' }}>
+                <span onClick={() => { fetch(API_BASE_URL + '/api/results/export-csv').then(r => r.text()).then(csv => { const blob = new Blob([csv], { type: 'text/csv' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'BetBudAI_ROI_Data.csv'; a.click(); URL.revokeObjectURL(url); }).catch(() => {}); }}
+                  style={{ cursor:'pointer', fontSize:'12px', fontWeight:'700', color:'white', background:'linear-gradient(135deg,#059669,#047857)', border:'none', borderRadius:'8px', padding:'8px 18px', display:'inline-flex', alignItems:'center', gap:'6px' }}>
+                  📥 Download Full History CSV
+                </span>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Picks */}
+      {allPicks.length === 0 ? (
+        <div style={{ background:'rgba(255,255,255,0.08)', borderRadius:'12px', padding:'48px 24px', textAlign:'center', color:'rgba(255,255,255,0.7)' }}>
+          <div style={{ fontSize:'18px', fontWeight:'700', color:'white', marginBottom:'8px' }}>No picks yet today</div>
+          <div style={{ fontSize:'14px' }}>Today's 5 AI picks will appear here once the analysis completes at 1pm.</div>
+        </div>
+      ) : (() => {
+        const activePicks = allPicks.filter(p => !p.is_dropped);
+        const droppedPicks = allPicks.filter(p => p.is_dropped);
+        return (
+        <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
+          {activePicks.map((pick, idx) => {
+            const tier = tierInfo(pick.comprehensive_score || pick.score);
+            const rank = idx + 1;
+            const rankColors = { 1:'#d97706', 2:'#6b7280', 3:'#92400e', 4:'#0891b2', 5:'#7c3aed', 6:'#dc2626' };
+            const ft = formatRaceTime(pick.race_time);
+            const bw = bettingWindow(pick);
+            const outcome = normOutcome(pick);
+            const oc = outcomeStyle(outcome);
+            return (
+              <div key={idx} style={{ background:'white', borderRadius:'12px', padding: isMobile ? '14px 12px' : '20px 22px', borderLeft:`5px solid ${rankColors[rank] || tier.bg}`, boxShadow:'0 2px 12px rgba(0,0,0,0.1)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:'wrap', gap:'8px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                    <div style={{ background: rankColors[rank] || tier.bg, color:'white', borderRadius:'8px', padding:'6px 10px', textAlign:'center', minWidth:'44px' }}>
+                      <div style={{ fontSize:'18px', fontWeight:'900' }}>#{rank}</div>
+                      <div style={{ fontSize:'9px', fontWeight:'700', opacity:0.85, textTransform:'uppercase', lineHeight:'1' }}>Pick</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: isMobile ? '17px' : '20px', fontWeight:'800', color:'#111' }}>
+                        {pick.horse || 'Unknown'}
+                        {pick.is_hot_prospect && <span style={{ background:'linear-gradient(135deg,#dc2626,#f59e0b)', color:'white', fontSize:'10px', fontWeight:'800', padding:'2px 8px', borderRadius:'5px', marginLeft:'8px', verticalAlign:'middle', letterSpacing:'0.5px' }}>🔥 HOT PROSPECT</span>}
+                      </div>
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', marginTop:'6px', alignItems:'center' }}>
+                        {pick.course && <span style={{ background:'#1e3a5f', color:'white', padding:'3px 10px', borderRadius:'6px', fontSize:'12px', fontWeight:'700' }}>{pick.course}</span>}
+                        {ft.date && <span style={{ background:'#f3f4f6', color:'#374151', padding:'3px 10px', borderRadius:'6px', fontSize:'12px', fontWeight:'600' }}>{ft.date}</span>}
+                        {ft.time && <span style={{ background:'#ecfdf5', color:'#065f46', padding:'3px 10px', borderRadius:'6px', fontSize:'12px', fontWeight:'700', border:'1px solid #a7f3d0' }}>{ft.time}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
+                    {outcome && (
+                      <span style={{ background: oc.bg, color:'white', padding:'5px 12px', borderRadius:'8px', fontSize:'12px', fontWeight:'800' }}>{oc.text}</span>
+                    )}
+                    {pick.odds && (
+                      <div style={{ textAlign:'center' }}>
+                        <div style={{ background:'#1e3a5f', color:'white', padding:'5px 14px', borderRadius:'8px', fontWeight:'900', fontSize:'22px' }}>{toFractional(pick.odds)}</div>
+                        <div style={{ fontSize:'10px', color:'#6b7280', marginTop:'2px', fontWeight:'600' }}>ODDS</div>
+                      </div>
+                    )}
+                    <span style={{ background: tier.bg, color:'white', padding:'5px 12px', borderRadius:'8px', fontSize:'12px', fontWeight:'700' }}>{tier.label}</span>
+                  </div>
+                </div>
+                {/* Betting window */}
+                <div style={{ marginTop:'10px', display:'inline-flex', alignItems:'center', gap:'6px', background: bw.bg, border:`1px solid ${bw.border}`, borderRadius:'7px', padding:'5px 12px' }}>
+                  <span style={{ fontSize:'13px', fontWeight:'800', color: bw.color }}>{bw.label}</span>
+                  <span style={{ fontSize:'11px', color:'#6b7280' }}>— {bw.desc}</span>
+                </div>
+                {/* Trainer / Jockey / Form */}
+                <div style={{ fontSize:'13px', color:'#374151', marginTop:'12px', display:'flex', gap:'18px', flexWrap:'wrap', alignItems:'center' }}>
+                  {pick.trainer && <span><strong>Trainer:</strong> {pick.trainer}</span>}
+                  {pick.jockey && <span><strong>Jockey:</strong> {pick.jockey}</span>}
+                  {pick.form && <span style={{ background:'#f3f4f6', borderRadius:'5px', padding:'2px 8px', fontFamily:'monospace', fontWeight:'700', color:'#1e3a5f', letterSpacing:'1px' }}>Form: {pick.form}</span>}
+                  {pick.score_gap > 0 && <span style={{ background:'#f0fdf4', border:'1px solid #86efac', borderRadius:'5px', padding:'2px 8px', fontSize:'12px', color:'#166534', fontWeight:'700' }}>+{parseFloat(pick.score_gap).toFixed(0)}pt clear of field</span>}
+                </div>
+                {/* Score badge */}
+                {(() => {
+                  const score = parseFloat(pick.comprehensive_score || pick.score || 0);
+                  if (!score) return null;
+                  return (
+                    <div style={{ marginTop:'10px', padding:'10px 14px', background:`${tier.bg}18`, borderRadius:'8px', borderLeft:`3px solid ${tier.bg}` }}>
+                      <span style={{ background: tier.bg, color:'white', borderRadius:'5px', padding:'2px 9px', fontSize:'11px', fontWeight:'800' }}>{tier.label}</span>
+                      <span style={{ fontSize:'12px', fontWeight:'700', color:'#1e3a5f', marginLeft:'8px' }}>Score: {score.toFixed(0)}</span>
+                    </div>
+                  );
+                })()}
+                {/* Result analysis */}
+                {outcome && pick.result_analysis && (
+                  <div style={{ marginTop:'10px', padding:'10px 14px', background:'rgba(0,0,0,0.03)', borderRadius:'8px', fontSize:'12px', color:'#374151', lineHeight:'1.5' }}>
+                    <strong>Analysis:</strong> {pick.result_analysis}
+                    {pick.result_winner_name && pick.result_winner_name !== pick.horse && (
+                      <div style={{ marginTop:'4px', color:'#ef4444', fontWeight:'700' }}>Winner: {pick.result_winner_name}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {/* Dropped picks */}
+          {droppedPicks.length > 0 && (
+            <>
+              <div style={{ marginTop:'8px', padding:'10px 16px', background:'rgba(239,68,68,0.08)', border:'1px solid rgba(239,68,68,0.25)', borderRadius:'10px' }}>
+                <div style={{ fontSize:'13px', fontWeight:'700', color:'#f87171' }}>⚠ Selections Removed</div>
+                <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.55)', marginTop:'4px' }}>The following picks were dropped after re-analysis — odds or form changed unfavourably.</div>
+              </div>
+              {droppedPicks.map((pick, idx) => {
+                const ft = formatRaceTime(pick.race_time);
+                return (
+                  <div key={'dropped-'+idx} style={{ background:'#f3f4f6', borderRadius:'12px', padding: isMobile ? '12px 10px' : '16px 18px', borderLeft:'5px solid #9ca3af', boxShadow:'0 1px 6px rgba(0,0,0,0.06)', opacity:0.7 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:'8px' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                        <div style={{ background:'#9ca3af', color:'white', borderRadius:'8px', padding:'6px 10px', textAlign:'center', minWidth:'44px' }}>
+                          <div style={{ fontSize:'14px', fontWeight:'900' }}>✗</div>
+                          <div style={{ fontSize:'8px', fontWeight:'700', opacity:0.85, textTransform:'uppercase', lineHeight:'1' }}>Dropped</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: isMobile ? '15px' : '17px', fontWeight:'700', color:'#6b7280', textDecoration:'line-through' }}>{pick.horse || 'Unknown'}</div>
+                          <div style={{ display:'flex', flexWrap:'wrap', gap:'6px', marginTop:'4px', alignItems:'center' }}>
+                            {pick.course && <span style={{ background:'#d1d5db', color:'#374151', padding:'2px 8px', borderRadius:'5px', fontSize:'11px', fontWeight:'600' }}>{pick.course}</span>}
+                            {ft.time && <span style={{ background:'#e5e7eb', color:'#6b7280', padding:'2px 8px', borderRadius:'5px', fontSize:'11px', fontWeight:'600' }}>{ft.time}</span>}
+                          </div>
+                        </div>
+                      </div>
+                      <span style={{ background:'#ef4444', color:'white', padding:'4px 10px', borderRadius:'6px', fontSize:'11px', fontWeight:'800' }}>NO LONGER SELECTED</span>
+                    </div>
+                    <div style={{ marginTop:'8px', fontSize:'12px', color:'#9ca3af', fontStyle:'italic' }}>This pick was removed during live re-analysis — do not bet.</div>
+                  </div>
+                );
+              })}
+            </>
+          )}
+        </div>
+        );
+      })()}
+
+      <div style={{ marginTop:'28px', padding:'16px 20px', background:'rgba(255,255,255,0.07)', borderRadius:'10px', color:'rgba(255,255,255,0.6)', fontSize:'12px', textAlign:'center', lineHeight:'1.6' }}>
+        All daily picks · Results update automatically after each race · Always bet responsibly.
       </div>
     </div>
   );
@@ -1231,7 +1512,8 @@ function YesterdayResultsView({ isFreeUser }) {
       const [todayData, yestData, cumulData] = await Promise.all([todayRes.json(), yestRes.json(), cumulRes.json()]);
       if (cumulData.success) setCumulRoi(cumulData);
 
-      const todayPicks = (todayData.success ? todayData.picks || [] : []).map(p => ({ ...p, _dayLabel: 'Today' }));
+      const todayPicks = (todayData.success ? todayData.picks || [] : [])
+        .map(p => ({ ...p, _dayLabel: 'Today' }));
       const yestPicks  = (yestData.success  ? yestData.picks  || [] : []).map(p => ({ ...p, _dayLabel: 'Yesterday' }));
       // Deduplicate: same course + race_time[:16] => keep highest-scored version
       // Use course+time (not horse name) to handle name variants like apostrophes
@@ -1800,11 +2082,7 @@ function YesterdayResultsView({ isFreeUser }) {
               const course = (r.course || '').toLowerCase();
               if (hhmm && course) layMap[`${course}|${hhmm}`] = r.outcome;
             });
-          return [...picks].filter(p => {
-            if (!isFreeUser) return true;
-            const oc = (p.outcome || '').toLowerCase();
-            return ['win', 'won', 'loss', 'lost', 'placed', 'place'].includes(oc);
-          }).sort((a, b) => {
+          return [...picks].sort((a, b) => {
             const ta = a.race_time || ''; const tb = b.race_time || '';
             // ISO strings sort lexicographically; US format needs normalising
             const norm = s => { const m = s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/); return m ? `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}T${m[4].padStart(2,'0')}:${m[5]}` : s; };
@@ -1837,7 +2115,7 @@ function YesterdayResultsView({ isFreeUser }) {
               if (!hhmm || !course) return null;
               return layMap[`${course}|${hhmm}`] || null;
             })();
-            const layFavWon = layOutcome ? ['win','won'].includes(layOutcome.toLowerCase()) : null;
+            const layFavWon = layOutcome && ['win','won','loss','lost'].includes(layOutcome.toLowerCase()) ? ['win','won'].includes(layOutcome.toLowerCase()) : null;
 
             if (isMobile) return (
               /* ── Mobile card layout ── */
@@ -2236,12 +2514,11 @@ function LayTheFavView() {
     try { return new Date(r.race_time) < nowUtc; } catch { return false; }
   };
 
-  // Cards: only show races that have already started
+  // Cards: only show races score 4+ (0-3 are too weak to display)
   const filtered = races.filter(r =>
-    isPast(r) && (
+    isPast(r) && r.lay_score >= 4 && (
       filter === 'red'     ? r.lay_score >= 13 :
       filter === 'strong'  ? r.lay_score >= 9 :
-      filter === 'caution' ? r.lay_score >= 4 :
       true
     )
   );
@@ -2253,11 +2530,20 @@ function LayTheFavView() {
       <div style={{ background:'linear-gradient(135deg,rgba(217,119,6,0.25) 0%,rgba(180,83,9,0.18) 100%)', border:'1px solid rgba(245,158,11,0.3)', borderRadius:'14px', padding: isMobile ? '16px 14px' : '24px 28px', marginBottom:'24px' }}>
         <div style={{ fontSize:'11px', letterSpacing:'2px', textTransform:'uppercase', color:'rgba(255,255,255,0.4)', marginBottom:'6px' }}>VIP Rollers · Lay the Fav analysis</div>
         <div style={{ fontSize:'22px', fontWeight:'800', color:'white', marginBottom:'4px' }}>👑 VIP Rollers — Lay the Fav</div>
-        <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.55)', marginBottom:'18px' }}>Identifies short-price favourites with structural vulnerabilities — favourites to avoid backing.</div>
+        <div style={{ fontSize:'13px', color:'rgba(255,255,255,0.55)', marginBottom:'12px' }}>Identifies short-price favourites with structural vulnerabilities — favourites to avoid backing.</div>
+
+        {/* Exchange account notice */}
+        <div style={{ display:'flex', alignItems:'flex-start', gap:'10px', background:'rgba(251,191,36,0.08)', border:'1px solid rgba(251,191,36,0.25)', borderRadius:'10px', padding:'12px 16px', marginBottom:'18px' }}>
+          <span style={{ fontSize:'18px', flexShrink:0 }}>🔄</span>
+          <div>
+            <div style={{ fontSize:'13px', fontWeight:'700', color:'#fbbf24', marginBottom:'2px' }}>Bet Exchange Account Required</div>
+            <div style={{ fontSize:'12px', color:'rgba(255,255,255,0.55)', lineHeight:'1.5' }}>VIP Rollers is built around <strong style={{ color:'rgba(255,255,255,0.8)' }}>laying horses on the exchange</strong>, using a specialist strategy designed to profit when selections lose. You'll need an account with Betfair Exchange or similar to place lay bets.</div>
+          </div>
+        </div>
 
         {/* Score legend */}
         <div style={{ display:'flex', gap:'10px', flexWrap:'wrap', marginBottom:'18px' }}>
-          {[{score:'0–3', label:'Do Not Show', c:'#34d399'}, {score:'4–8', label:'Caution / Look', c:'#fbbf24'}, {score:'9–12', label:'Strong Lay', c:'#f97316'}, {score:'13+', label:'Strong Lay Candidate', c:'#f87171'}].map(l => (
+          {[{score:'4–8', label:'Caution / Look', c:'#fbbf24'}, {score:'9–12', label:'Strong Lay', c:'#f97316'}, {score:'13+', label:'Strong Lay Candidate', c:'#f87171'}].map(l => (
             <div key={l.score} style={{ display:'flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.06)', borderRadius:'8px', padding:'5px 12px', fontSize:'12px', color:'rgba(255,255,255,0.7)' }}>
               <span style={{ background:l.c, width:'8px', height:'8px', borderRadius:'50%', display:'inline-block' }} />
               <b style={{ color:l.c }}>{l.score}</b>&nbsp;{l.label}
@@ -2309,7 +2595,7 @@ function LayTheFavView() {
               <span style={{ fontWeight:'700', color:'white', fontSize: isMobile ? '13px' : '14px' }}>{r.course}</span>
               <span style={{ flex:1, fontSize:'12px', color:'rgba(255,255,255,0.45)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace: isMobile ? 'normal' : 'nowrap', minWidth:0 }}>{r.race_name}</span>
               {r.our_pick && <span style={{ background:'rgba(88,166,255,0.18)', color:'#58a6ff', border:'1px solid rgba(88,166,255,0.4)', borderRadius:'4px', padding:'2px 8px', fontSize:'11px', fontWeight:'700' }}>⚡ OUR PICK</span>}
-              {r.outcome && (() => {
+              {r.outcome && ['win','won','loss','lost'].includes(r.outcome.toLowerCase()) && (() => {
                 const oc = r.outcome.toLowerCase();
                 const favWon = ['win','won'].includes(oc);
                 return (
@@ -2440,7 +2726,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
   const [roi, setRoi]         = useState(null);
   const [settled, setSettled] = useState(null);
   const [roiLoading, setRoiLoading] = useState(true);
-  const [authMode, setAuthMode] = useState('login'); // 'register' | 'login'
+  const [authMode, setAuthMode] = useState('login'); // 'register' | 'login' | 'forgot' | 'reset'
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
 
   const [form, setForm] = useState({
@@ -2453,6 +2739,75 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
   const [loginForm, setLoginForm] = useState({ emailOrUser: '', password: '' });
   const [loginState, setLoginState] = useState('idle');
   const [loginError, setLoginError] = useState('');
+
+  // ── Forgot / Reset password state ──────────────────────────────────────
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotState, setForgotState] = useState('idle'); // idle | loading | sent | error
+  const [forgotError, setForgotError] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [resetForm, setResetForm] = useState({ password: '', confirmPassword: '' });
+  const [resetState, setResetState] = useState('idle'); // idle | loading | success | error
+  const [resetError, setResetError] = useState('');
+
+  // ── Handle ?reset=TOKEN URL param ──────────────────────────────────────
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const token = params.get('reset');
+    if (token) {
+      setResetToken(token);
+      setAuthMode('reset');
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
+
+  const handleForgotSubmit = async e => {
+    e.preventDefault();
+    setForgotError('');
+    if (!forgotEmail.trim()) return setForgotError('Please enter your email address.');
+    setForgotState('loading');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/forgot-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setForgotState('sent');
+      } else {
+        setForgotError(data.error || 'Something went wrong. Please try again.');
+        setForgotState('error');
+      }
+    } catch {
+      setForgotError('Network error. Please try again.');
+      setForgotState('error');
+    }
+  };
+
+  const handleResetSubmit = async e => {
+    e.preventDefault();
+    setResetError('');
+    if (!resetForm.password || resetForm.password.length < 8) return setResetError('Password must be at least 8 characters.');
+    if (resetForm.password !== resetForm.confirmPassword) return setResetError('Passwords do not match.');
+    setResetState('loading');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: resetToken, password: resetForm.password }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setResetState('success');
+      } else {
+        setResetError(data.error || 'Reset failed. The link may have expired.');
+        setResetState('error');
+      }
+    } catch {
+      setResetError('Network error. Please try again.');
+      setResetState('error');
+    }
+  };
 
   useEffect(() => {
     fetch(`${API_BASE_URL}/api/results/cumulative-roi`)
@@ -2666,7 +3021,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
             <div style={{ position: 'absolute', top: '-9px', right: '10px', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', borderRadius: '10px', padding: '2px 8px', fontSize: '8px', fontWeight: '800', color: 'white', textTransform: 'uppercase', letterSpacing: '0.5px' }}>⭐ Popular</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
               <span style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '1px', color: '#818cf8' }}>Premium</span>
-              <span style={{ fontSize: '18px', fontWeight: '900', color: 'white' }}>€19.99<span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>/mo</span></span>
+              <span style={{ fontSize: '18px', fontWeight: '900', color: 'white' }}>€29<span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>/mo</span></span>
             </div>
             <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.55)', lineHeight: '1.6', marginBottom: '8px' }}>🎯 All picks · Full analysis · ROI</div>
             <button onClick={() => { setAuthMode('register'); setFormError(''); }} style={{ width: '100%', background: 'linear-gradient(135deg, #6366f1, #7c3aed)', border: 'none', borderRadius: '6px', padding: '7px', color: 'white', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}>Sign Up → Subscribe</button>
@@ -2711,7 +3066,96 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
           ))}
         </div>
 
-        {authMode === 'login' ? (
+        {authMode === 'forgot' ? (
+          /* ── FORGOT PASSWORD FORM ───────────────────────────────────── */
+          forgotState === 'sent' ? (
+            <div style={{ textAlign: 'center', maxWidth: '420px', margin: '0 auto' }}>
+              <div style={{ fontSize: '48px', marginBottom: '12px' }}>📧</div>
+              <h3 style={{ color: '#34d399', fontSize: '20px', fontWeight: '800', margin: '0 0 12px' }}>Check Your Email</h3>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', lineHeight: '1.6', margin: '0 0 20px' }}>If an account exists for <strong style={{ color: 'white' }}>{forgotEmail}</strong>, we've sent a password reset link. Check your inbox (and spam folder).</p>
+              <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '12px', margin: '0 0 16px' }}>The link expires in 1 hour.</p>
+              <button type="button" onClick={() => { setAuthMode('login'); setForgotState('idle'); setForgotEmail(''); }} style={{ background: 'none', border: 'none', color: '#34d399', fontSize: '13px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>← Back to Sign In</button>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotSubmit} noValidate>
+              <h3 style={{ color: 'white', fontSize: '20px', fontWeight: '800', margin: '0 0 8px', textAlign: 'center' }}>Reset Your Password</h3>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', textAlign: 'center', margin: '0 0 24px' }}>Enter your email address and we'll send you a link to reset your password.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '420px', margin: '0 auto 20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label style={labelStyle}>Email Address</label>
+                  <input style={inputStyle} type="email" value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} placeholder="jane@example.com" autoComplete="email" required />
+                </div>
+              </div>
+              {forgotError && (
+                <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '12px 16px', color: '#f87171', fontSize: '14px', maxWidth: '420px', margin: '0 auto 18px' }}>
+                  ⚠ {forgotError}
+                </div>
+              )}
+              <div style={{ maxWidth: '420px', margin: '0 auto' }}>
+                <button type="submit" disabled={forgotState === 'loading'} style={{
+                  width: '100%', padding: '14px', borderRadius: '10px', border: 'none',
+                  cursor: forgotState === 'loading' ? 'not-allowed' : 'pointer',
+                  background: forgotState === 'loading' ? 'rgba(5,150,105,0.5)' : 'linear-gradient(135deg,#059669 0%,#047857 100%)',
+                  color: 'white', fontSize: '16px', fontWeight: '800', transition: 'all 0.2s',
+                }}>
+                  {forgotState === 'loading' ? '⏳ Sending…' : '📧 Send Reset Link'}
+                </button>
+              </div>
+              <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', marginTop: '16px', marginBottom: 0 }}>
+                Remember your password?{' '}
+                <button type="button" onClick={() => { setAuthMode('login'); setForgotError(''); }} style={{ background: 'none', border: 'none', color: '#34d399', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Sign in here</button>
+              </p>
+              <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', marginTop: '8px', marginBottom: 0 }}>
+                Need help? Contact us at{' '}
+                <a href="mailto:directorai@futuregenai.com" style={{ color: '#34d399', textDecoration: 'underline' }}>directorai@futuregenai.com</a>
+              </p>
+            </form>
+          )
+        ) : authMode === 'reset' ? (
+          /* ── RESET PASSWORD FORM ────────────────────────────────────── */
+          resetState === 'success' ? (
+            <div style={{ textAlign: 'center', maxWidth: '420px', margin: '0 auto' }}>
+              <div style={{ fontSize: '48px', marginBottom: '12px' }}>✅</div>
+              <h3 style={{ color: '#34d399', fontSize: '20px', fontWeight: '800', margin: '0 0 12px' }}>Password Reset!</h3>
+              <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '14px', margin: '0 0 20px' }}>Your password has been updated. You can now sign in with your new password.</p>
+              <button type="button" onClick={() => { setAuthMode('login'); setResetState('idle'); setResetForm({ password: '', confirmPassword: '' }); }} style={{
+                padding: '14px 32px', borderRadius: '10px', border: 'none', cursor: 'pointer',
+                background: 'linear-gradient(135deg,#059669 0%,#047857 100%)',
+                color: 'white', fontSize: '16px', fontWeight: '800',
+              }}>🔑 Sign In Now</button>
+            </div>
+          ) : (
+            <form onSubmit={handleResetSubmit} noValidate>
+              <h3 style={{ color: 'white', fontSize: '20px', fontWeight: '800', margin: '0 0 8px', textAlign: 'center' }}>Set New Password</h3>
+              <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '13px', textAlign: 'center', margin: '0 0 24px' }}>Enter your new password below.</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '420px', margin: '0 auto 20px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label style={labelStyle}>New Password</label>
+                  <input style={inputStyle} type="password" value={resetForm.password} onChange={e => setResetForm(p => ({ ...p, password: e.target.value }))} placeholder="Min. 8 characters" autoComplete="new-password" required />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <label style={labelStyle}>Confirm New Password</label>
+                  <input style={inputStyle} type="password" value={resetForm.confirmPassword} onChange={e => setResetForm(p => ({ ...p, confirmPassword: e.target.value }))} placeholder="Repeat password" autoComplete="new-password" required />
+                </div>
+              </div>
+              {resetError && (
+                <div style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: '8px', padding: '12px 16px', color: '#f87171', fontSize: '14px', maxWidth: '420px', margin: '0 auto 18px' }}>
+                  ⚠ {resetError}
+                </div>
+              )}
+              <div style={{ maxWidth: '420px', margin: '0 auto' }}>
+                <button type="submit" disabled={resetState === 'loading'} style={{
+                  width: '100%', padding: '14px', borderRadius: '10px', border: 'none',
+                  cursor: resetState === 'loading' ? 'not-allowed' : 'pointer',
+                  background: resetState === 'loading' ? 'rgba(5,150,105,0.5)' : 'linear-gradient(135deg,#059669 0%,#047857 100%)',
+                  color: 'white', fontSize: '16px', fontWeight: '800', transition: 'all 0.2s',
+                }}>
+                  {resetState === 'loading' ? '⏳ Resetting…' : '🔒 Set New Password'}
+                </button>
+              </div>
+            </form>
+          )
+        ) : authMode === 'login' ? (
           /* ── LOGIN FORM ─────────────────────────────────────────────── */
           <form onSubmit={handleLoginSubmit} noValidate autoComplete="on">
             <div style={{ display: 'flex', flexDirection: 'column', gap: '18px', maxWidth: '420px', margin: '0 auto 20px' }}>
@@ -2739,7 +3183,10 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
                 {loginState === 'loading' ? '⏳ Signing in…' : '🔑 Sign In'}
               </button>
             </div>
-            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', marginTop: '16px', marginBottom: 0 }}>
+            <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: '12px', textAlign: 'center', marginTop: '12px', marginBottom: '4px' }}>
+              <button type="button" onClick={() => { setAuthMode('forgot'); setForgotError(''); setForgotState('idle'); }} style={{ background: 'none', border: 'none', color: '#34d399', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Forgot your password?</button>
+            </p>
+            <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '12px', textAlign: 'center', marginTop: '4px', marginBottom: 0 }}>
               Don't have an account?{' '}
               <button type="button" onClick={() => setAuthMode('register')} style={{ background: 'none', border: 'none', color: '#34d399', fontSize: '12px', cursor: 'pointer', textDecoration: 'underline', padding: 0 }}>Create one — it's free</button>
             </p>
@@ -2827,7 +3274,8 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
       {/* Responsible gambling footer */}
       <div style={{ textAlign: 'center', padding: '0 0 24px', color: 'rgba(255,255,255,0.25)', fontSize: '12px', lineHeight: '1.6' }}>
         BetBudAI provides data analysis for informational purposes only and does not constitute financial or betting advice.<br />
-        Please gamble responsibly. Visit <a href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.4)' }}>BeGambleAware.org</a> for support.
+        Please gamble responsibly. Visit <a href="https://www.begambleaware.org" target="_blank" rel="noopener noreferrer" style={{ color: 'rgba(255,255,255,0.4)' }}>BeGambleAware.org</a> for support.<br />
+        Questions? Contact us at <a href="mailto:directorai@futuregenai.com" style={{ color: 'rgba(255,255,255,0.4)' }}>directorai@futuregenai.com</a>
       </div>
 
     </div>
@@ -3237,8 +3685,8 @@ function AdminView({ authUser }) {
                               </span>
                             </td>
                             <td style={{ padding:'8px 10px', whiteSpace:'nowrap' }}>
-                              <span style={{ color: u.role === 'admin' ? '#a78bfa' : 'rgba(255,255,255,0.35)', fontWeight: u.role === 'admin' ? '700' : '400' }}>
-                                {u.role === 'admin' ? '⚙️ Admin' : 'free'}
+                              <span style={{ color: u.role === 'admin' ? '#a78bfa' : u.role === 'vip' ? '#f59e0b' : u.role === 'premium' ? '#34d399' : 'rgba(255,255,255,0.35)', fontWeight: ['admin','vip','premium'].includes(u.role) ? '700' : '400' }}>
+                                {u.role === 'admin' ? '⚙️ Admin' : u.role === 'vip' ? '👑 VIP' : u.role === 'premium' ? '⭐ Premium' : 'free'}
                               </span>
                             </td>
                             <td style={{ padding:'8px 10px', color:'rgba(255,255,255,0.55)', textAlign:'center' }}>{u.login_count || 0}</td>
@@ -3628,3 +4076,4 @@ function AdminSliderRow({ label, desc, value, defaultValue, min, max, step, pena
 }
 
 export default App;
+

@@ -327,7 +327,7 @@ def apply_cheltenham_scoring(horse_data, race_name=''):
     return bonus_points, cheltenham_reasons
 
 
-def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course_winners_today=0, field_weights=None, meeting_context=None, n_runners=0):
+def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=3.80, course_winners_today=0, field_weights=None, meeting_context=None, n_runners=0):
     """
     Comprehensive scoring system for horses
     Returns score and breakdown
@@ -356,23 +356,25 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     # Giving full sweet_spot points to 3.0–4.9 was actively rewarding known-losing odds bands.
     # Fix: 3.0–4.9 now scores 0pts (neutral), 5.0–8.0 gets full pts, 8.0–9.0 partial.
     sweet_spot_pts = 0
-    if 5.0 <= odds <= 8.0:
-        # PROVEN BEST range: 4/1–7/1, +£25.20 P&L (Feb 2026 data) — full sweet spot
-        sweet_spot_pts = int(weights['sweet_spot'])
-        reasons.append(f"Sweet spot 5-8 (PROVEN best range): {sweet_spot_pts}pts")
-    elif 8.0 < odds <= 9.0:
-        # Broad sweet spot tail — slight reduction
-        sweet_spot_pts = int(weights['sweet_spot'] * 0.75)
-        reasons.append(f"Good odds range (8-9): {sweet_spot_pts}pts")
+    # REBALANCED 2026-04-17: 7-day actuals show 2-3 odds = 50% SR (best),
+    # 3-5 = 36% (solid), 5-8 = 11% (worst!). Previous weighting was inverted.
+    # Flatten curve: reward shorter odds more, reduce 5-8 bonus.
+    if 2.0 <= odds < 3.0:
+        # BEST performing range: 50% SR in last 7 days
+        sweet_spot_pts = int(weights['sweet_spot'] * 0.85)
+        reasons.append(f"Strong odds range (2-3, highest SR): {sweet_spot_pts}pts")
     elif 3.0 <= odds < 5.0:
-        # KNOWN LOSING RANGE (2/1–4/1): -£11.95 P&L historical data — neutral, no bonus
-        # No points added but no penalty either; other signals may still justify a pick.
-        sweet_spot_pts = 0
-        reasons.append(f"⚠️ Caution: 3-5 odds range (historically losing band, 2/1-4/1): 0pts")
-    elif 2.0 <= odds < 3.0:
-        # Partial points for short odds
-        sweet_spot_pts = int(weights['sweet_spot'] * 0.6)
-        reasons.append(f"Short odds (2-3): {sweet_spot_pts}pts")
+        # SOLID range: 36% SR in last 7 days — was wrongly flagged as losing band
+        sweet_spot_pts = int(weights['sweet_spot'] * 0.5)
+        reasons.append(f"Mid-range odds (3-5): {sweet_spot_pts}pts")
+    elif 5.0 <= odds <= 8.0:
+        # VALUE range: 11% SR but higher payouts — reduced from full bonus
+        sweet_spot_pts = int(weights['sweet_spot'] * 0.65)
+        reasons.append(f"Value odds range (5-8): {sweet_spot_pts}pts")
+    elif 8.0 < odds <= 9.0:
+        # Broad value tail
+        sweet_spot_pts = int(weights['sweet_spot'] * 0.5)
+        reasons.append(f"Good odds range (8-9): {sweet_spot_pts}pts")
     elif 1.5 <= odds < 2.0:
         # Lower points for very short odds
         sweet_spot_pts = int(weights['sweet_spot'] * 0.4)
@@ -462,9 +464,11 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
     else:
         breakdown['recent_win'] = 0
     
-    # Total wins
+    # Total wins — CAPPED at 4 wins worth (32pts max)
+    # LESSON 2026-04-17: Marty McFly got 40pts (5×8) from total_wins alone, came 9th/9.
+    # Past wins in different conditions shouldn't dominate the score.
     win_pts_each = int(weights['total_wins'])
-    win_points = wins * win_pts_each
+    win_points = min(wins * win_pts_each, win_pts_each * 4)  # Cap at 4 wins
     score += win_points
     breakdown['total_wins'] = win_points
     if wins > 0:
@@ -1890,6 +1894,18 @@ def analyze_horse_comprehensive(horse_data, course, avg_winner_odds=4.65, course
         breakdown['trainer_hot_form'] = 0
         breakdown['jockey_hot_form']  = 0
 
+    # ── GENERAL SCORE CAP: 120pts ────────────────────────────────────────────
+    # LESSON 2026-04-17: Marty McFly scored 145 (9th of 9), Solar Pass 142 (5th of 6).
+    # UPDATED 2026-04-18: Backtest shows score 110-120 has 60% WR vs 120+ at 28.6%.
+    # Raising cap 110→120 preserves the high-WR 110-120 signal while still capping
+    # runaway 130+ scores that give false confidence.
+    GENERAL_CAP = 120
+    if score > GENERAL_CAP:
+        cap_reduction = score - GENERAL_CAP
+        score = GENERAL_CAP
+        breakdown['score_cap'] = -cap_reduction
+        reasons.append(f"Score capped at {GENERAL_CAP}pts (was {score + cap_reduction:.0f}): -{cap_reduction:.0f}pts")
+
     return score, breakdown, reasons
 
 
@@ -1941,11 +1957,11 @@ def get_comprehensive_pick(race_data, course_stats=None, meeting_context=None):
     Get best pick from race using comprehensive analysis
     SKIP RACE if multiple horses score 85+ (too close to call)
     
-    course_stats: {'avg_winner_odds': 4.65, 'winners_today': 4}
+    course_stats: {'avg_winner_odds': 3.80, 'winners_today': 4}
     Returns: best_pick dict or None if race should be skipped
     """
     if course_stats is None:
-        course_stats = {'avg_winner_odds': 4.65, 'winners_today': 0}
+        course_stats = {'avg_winner_odds': 3.80, 'winners_today': 0}
     
     course = race_data.get('venue') or race_data.get('course')
     runners = race_data.get('runners', [])
@@ -1976,7 +1992,7 @@ def get_comprehensive_pick(race_data, course_stats=None, meeting_context=None):
         score, breakdown, reasons = analyze_horse_comprehensive(
             runner, 
             course,
-            avg_winner_odds=course_stats.get('avg_winner_odds', 4.65),
+            avg_winner_odds=course_stats.get('avg_winner_odds', 3.80),
             course_winners_today=course_stats.get('winners_today', 0),
             meeting_context=meeting_context
         )
@@ -2130,7 +2146,7 @@ if __name__ == "__main__":
     if wolv_19:
         # Wolverhampton stats from today
         wolverhampton_stats = {
-            'avg_winner_odds': 4.65,  # Average of 10 winners today
+            'avg_winner_odds': 3.80,  # Average of 10 winners today
             'winners_today': 4  # 4/4 Wolverhampton today
         }
         

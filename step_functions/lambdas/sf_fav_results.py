@@ -274,7 +274,7 @@ def lambda_handler(event, context):
 
     races_processed = 0
     favs_updated    = 0
-    unresolved_races = []   # (fav_name, fav_bet_id, local_hhmm, course_key)
+    unresolved_races = []   # (fav_name, fav_bet_id, race_hhmm, course_key)
 
     for race_key, runners in sorted(races.items()):
         rt, course = race_key.split('|', 1)
@@ -308,16 +308,14 @@ def lambda_handler(event, context):
                 continue
 
         # ── Resolve winner from SL winner_map ────────────────────────────────
-        utc_hhmm   = rt[11:16] if len(rt) >= 16 else ''
-        date_part  = rt[:10]   if len(rt) >= 10 else date_str
-        local_hhmm = _utc_to_local_hhmm(utc_hhmm, date_part)
+        race_hhmm  = rt[11:16] if len(rt) >= 16 else ''
         course_key = course.lower().replace('-', ' ').strip()
 
         winner_name  = None
         fav_outcome  = None
 
         try:
-            lh, lm       = map(int, local_hhmm.split(':'))
+            lh, lm       = map(int, race_hhmm.split(':'))
             local_mins   = lh * 60 + lm
             best_diff    = 999
             best_winner  = None
@@ -337,7 +335,7 @@ def lambda_handler(event, context):
                     else 'loss'
                 )
         except Exception as ex:
-            print(f'  [fav_results] matching error {course} {local_hhmm}: {ex}')
+            print(f'  [fav_results] matching error {course} {race_hhmm}: {ex}')
 
         # ── Fallback: check outcome='win' OR result_winner_name written by sl_results_fetcher ─
         if fav_outcome is None:
@@ -364,7 +362,7 @@ def lambda_handler(event, context):
 
         if fav_outcome is None:
             # Collect for per-race HTML scraping fallback (3rd tier)
-            unresolved_races.append((fav_name, fav_bet_id, local_hhmm, course_key))
+            unresolved_races.append((fav_name, fav_bet_id, race_hhmm, course_key))
             continue
 
         # ── Write fav_outcome + race_winner_name to DynamoDB ────────────────
@@ -395,12 +393,12 @@ def lambda_handler(event, context):
               f'at: {", ".join(sorted(unresolved_courses))}')
         extra_map = _fetch_per_race_winners(date_str, limit_courses=unresolved_courses)
 
-        for (fav_name, fav_bet_id, local_hhmm, course_key) in unresolved_races:
+        for (fav_name, fav_bet_id, race_hhmm, course_key) in unresolved_races:
             winner_name = None
             fav_outcome = None
-            if extra_map and local_hhmm:
+            if extra_map and race_hhmm:
                 try:
-                    lh, lm = map(int, local_hhmm.split(':'))
+                    lh, lm = map(int, race_hhmm.split(':'))
                     local_mins = lh * 60 + lm
                     best_diff = 999
                     best_winner = None
@@ -426,7 +424,7 @@ def lambda_handler(event, context):
                     print(f'  [fav_results] per-race match error {fav_name}: {ex}')
 
             if fav_outcome is None:
-                print(f'  [fav_results] Still unresolved: {fav_name} @ {course_key} {local_hhmm}')
+                print(f'  [fav_results] Still unresolved: {fav_name} @ {course_key} {race_hhmm}')
                 continue
 
             expr_vals = {':fo': fav_outcome}
@@ -442,7 +440,7 @@ def lambda_handler(event, context):
                 )
                 favs_updated += 1
                 result_label = '✓ FAV LOST (LAY WIN)' if fav_outcome == 'loss' else '✗ FAV WON'
-                print(f'  [fav_results] {result_label}: {fav_name} @ {course_key} {local_hhmm} '
+                print(f'  [fav_results] {result_label}: {fav_name} @ {course_key} {race_hhmm} '
                       f'(winner: {winner_name}) [per-race scrape]')
             except Exception as ex:
                 print(f'  [fav_results] DynamoDB write error for {fav_name}: {ex}')

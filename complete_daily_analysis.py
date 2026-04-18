@@ -48,7 +48,7 @@ except ImportError:
 db    = boto3.resource('dynamodb', region_name='eu-west-1')
 table = db.Table('SureBetBets')
 
-TARGET_PICKS   = 3      # 2026-04-05: 3 morning picks + 2 intraday slots reserved for afternoon additions.
+TARGET_PICKS   = 5      # 2026-04-17: Max 5 picks per day total (free users see top 2, paid see all 5).
                         # Intraday picks are added via /api/picks/intraday with pick_type='intraday'.
 MIN_CONFIDENCE        = 78    # Global floor (fallback only — race-type thresholds below take precedence)
 MIN_CONFIDENCE_HCAP   = 85   # 2026-04-06: Handicaps need higher conviction — handicapper designs
@@ -156,16 +156,19 @@ def tier_from_score(score):
 
 def _win_prob_pct(score: float) -> int:
     """Calibrated score-to-win-probability mapping.
-    Based on 14-day data: ~28-35% SR on show_in_ui picks overall.
-    Higher scores skew toward better-quality selections."""
-    if score >= 100: return 50
-    if score >= 95:  return 44
-    if score >= 90:  return 38
-    if score >= 85:  return 32
-    if score >= 80:  return 27
-    if score >= 75:  return 22
-    if score >= 70:  return 18
-    return 14
+    FIXED 2026-04-17: Must be monotonic (higher score = higher probability).
+    Based on actuals: 100+ ≈ 30-35% wins, 90-99 ≈ 25%, 80-89 ≈ 20%.
+    Capped at 38% — model cannot reliably claim >38% in any conditions."""
+    if score >= 130: return 38
+    if score >= 110: return 35
+    if score >= 100: return 32
+    if score >= 95:  return 28
+    if score >= 90:  return 25
+    if score >= 85:  return 22
+    if score >= 80:  return 19
+    if score >= 75:  return 16
+    if score >= 70:  return 14
+    return 12
 
 
 def _expected_value(win_prob_pct: int, decimal_odds: float) -> float:
@@ -256,14 +259,14 @@ def analyze_and_save_all():
     print("=" * 100 + "\n")
 
     today        = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-    avg_winner_odds = 4.65  # UK average winning SP
+    avg_winner_odds = 3.80  # RECALIBRATED 2026-04-17: shifted from 4.65 to centre of best-performing 2-5 range
 
     # ── CHECK EXISTING UI PICKS (intraday accumulation guard) ─────────────────
     # Each refresh only fetches FUTURE races, so previous picks are never overwritten.
     # Without this guard, 3 new picks are added per 2-hour refresh → 9+ picks/day.
     # Weekends have more racing cards → allow 8 picks; weekdays capped at 5.
     _dow = datetime.now(timezone.utc).weekday()  # 0=Mon … 6=Sun
-    MAX_DAILY_UI_PICKS = 8 if _dow >= 5 else 5   # Sat/Sun=8, Mon-Fri=5
+    MAX_DAILY_UI_PICKS = 5   # 2026-04-17: Hard cap — 5 picks/day every day (free see 2, paid see 5)
     from boto3.dynamodb.conditions import Key as _Key
     _existing_resp = table.query(KeyConditionExpression=_Key('bet_date').eq(today))
     _existing_items = _existing_resp.get('Items', [])
@@ -274,8 +277,79 @@ def analyze_and_save_all():
         _existing_items.extend(_existing_resp.get('Items', []))
     _existing_ui = [i for i in _existing_items if i.get('show_in_ui') is True]
     _existing_ui_count = len(_existing_ui)
-    _slots_remaining = max(0, MAX_DAILY_UI_PICKS - _existing_ui_count)
-    print(f"  Existing UI picks today: {_existing_ui_count} / {MAX_DAILY_UI_PICKS} "
+    now_utc = datetime.now(timezone.utc)
+    cutoff  = now_utc + timedelta(minutes=15)
+    # Count UI picks whose races are PAST or within the 15-min cutoff as "locked".
+    # These races won't appear in this analysis run, so their show_in_ui=True
+    # records persist untouched.  Only races AFTER the cutoff are truly
+    # re-analysable: this run's selection engine will overwrite them (promote or
+    # demote) so they don't consume a permanent slot.
+    _locked_ui = []
+    for _eui in _existing_ui:
+        _ert = _eui.get('race_time', '')
+        try:
+            _ert_dt = datetime.fromisoformat(_ert.replace('Z', '+00:00'))
+            if _ert_dt.astimezone(timezone.utc) <= cutoff:
+                _locked_ui.append(_eui)
+        except Exception:
+            _locked_ui.append(_eui)  # treat unparseable as past
+    _locked_count = len(_locked_ui)
+    _locked_ui_ids = {i['bet_id'] for i in _locked_ui}
+
+    # Build set of race identifiers from the CURRENT scrape so we only re-analyse
+    # picks whose race is actually in this scrape.  Picks from races not in the
+    # current scrape (e.g. different venue set, afternoon-only vs morning) are
+    # treated as locked — preserving them from accidental demotion/deletion.
+    # FIX 2026-04-18: Without this, a manual refresh that scrapes a different set of
+    # races than the morning run will demote/delete morning picks whose races aren't
+    # in the new scrape, even though those races are still in the future.
+    _current_scrape_races = set()
+    for _race in races:
+        _cs_course = (_race.get('course') or _race.get('venue') or '').lower().strip()
+        _cs_time = (_race.get('start_time') or '')[:16]  # '2026-04-18T13:20' precision
+        if _cs_course and _cs_time:
+            _current_scrape_races.add((_cs_course, _cs_time))
+
+    # Only track genuinely ranked picks (rank 1-5) as candidates for drop detection,
+    # AND only if their race appears in the current scrape's race list.
+    # Without the rank filter, every show_in_ui=True item (including previous drops)
+    # counts, causing exponential inflation across refreshes.
+    # Without the scrape-race filter, picks from a different scrape run get demoted
+    # simply because their race isn't in this run's data.
+    _reanalysable_ui_ids = set()
+    _preserved_ui_ids = set()  # picks kept because their race isn't in this scrape
+    for _eui in _existing_ui:
+        if _eui['bet_id'] in _locked_ui_ids:
+            continue
+        if int(_eui.get('pick_rank', 0)) <= 0:
+            continue
+        # Check if this pick's race is in the current scrape
+        _eui_course = (_eui.get('course') or _eui.get('venue') or '').lower().strip()
+        _eui_time = str(_eui.get('race_time', ''))[:16]
+        _race_in_scrape = (_eui_course, _eui_time) in _current_scrape_races
+        if not _race_in_scrape:
+            # Also try fuzzy match: course substring match at same time
+            _race_in_scrape = any(
+                _st == _eui_time and (_sc in _eui_course or _eui_course in _sc)
+                for _sc, _st in _current_scrape_races
+            )
+        if _race_in_scrape:
+            _reanalysable_ui_ids.add(_eui['bet_id'])
+        else:
+            _preserved_ui_ids.add(_eui['bet_id'])
+            _locked_ui_ids.add(_eui['bet_id'])  # treat as locked for slot counting
+            _locked_count += 1
+
+    if _preserved_ui_ids:
+        print(f"  Preserved {len(_preserved_ui_ids)} picks (race not in current scrape):")
+        for _pid in _preserved_ui_ids:
+            _pmatch = next((i for i in _existing_ui if i['bet_id'] == _pid), {})
+            print(f"    - {_pmatch.get('horse', _pid)} ({_pmatch.get('course', '?')} "
+                  f"{str(_pmatch.get('race_time', ''))[:16]})")
+
+    _slots_remaining = max(0, MAX_DAILY_UI_PICKS - _locked_count)
+    print(f"  Existing UI picks today: {_existing_ui_count} ({_locked_count} locked/past/preserved, "
+          f"{len(_reanalysable_ui_ids)} re-analysable) / {MAX_DAILY_UI_PICKS} "
           f"({_slots_remaining} slots remaining)")
     if _slots_remaining == 0:
         print(f"  Daily pick cap reached — new horses will be saved as learning data only")
@@ -291,16 +365,13 @@ def analyze_and_save_all():
     # Also track the best-scoring horse in each race.
     all_races_data = []  # [{venue, race_time, market_id, runners:[{item, score}], best_idx}]
 
-    now_utc = datetime.now(timezone.utc)
-    cutoff  = now_utc + timedelta(minutes=15)
-
     for race in races:
         # FIX 2026-04-04: betfair_odds_fetcher writes 'course' (not 'venue'). Read 'course' first,
         # fall back to 'venue' for backward compat. Without this every pick gets course=Unknown
         # which both excludes it from cumulative-ROI and breaks the results matcher.
         venue      = race.get('course') or race.get('venue') or 'Unknown'
         race_time  = race.get('start_time', '')
-        market_id  = race.get('marketId', '')
+        market_id  = race.get('market_id', race.get('marketId', ''))
         market_name = race.get('market_name', '')
         runners    = race.get('runners', [])
 
@@ -473,6 +544,7 @@ def analyze_and_save_all():
                 'score_breakdown':     breakdown,
                 'selection_reasons':   reasons,
                 'sport':               'horses',
+                'outcome':             'pending',
                 'market_id':           market_id,
                 'market_name':         market_name,
                 'selection_id':        runner.get('selectionId', 0),
@@ -729,30 +801,26 @@ def analyze_and_save_all():
             print(f"  [GATE-S8 WARNING] {r['best']['horse']} score={score:.0f}: "
                   f"1 undeclared runner missing but pick is market leader \u2014 allowing through.")
 
-        # S9 — Minimum odds gate (2026-04-06, refined 2026-04-07)
-        # LESSON: 2026-04-05 — all 3 morning picks (1.53, 1.73, 2.26) lost.
-        # Short-price horses at < 2.5 decimal require a >40% win rate to show positive EV.
-        # PROFESSIONAL WORKFLOW LESSON (2026-04-07): Pro bettor example uses Ascot 3:45 at 2.2
-        # (50% true prob → EV=+0.10) as a valid pick. Blanket 2.5 floor is too aggressive
-        # for ELITE-scored picks where our win_probability calibration suggests 44-50%+ SR.
-        # Rule: 2.0 absolute floor always; 2.0-2.5 allowed ONLY for score>=90 AND EV>0.
+        # S9 — Minimum odds gate (2026-04-06, refined 2026-04-07, relaxed 2026-04-17)
+        # LESSON 2026-04-17: Gold Star Hero (1.72, score 102) WON but was blocked by 2.0 floor.
+        # Galaxy Wonder (2.44, score 124) blocked by EV check (non-monotonic win_prob made EV<0).
+        # Fix: lower absolute floor to 1.5, allow 1.5-2.5 for score>=90 (no EV gate — our
+        # EV calculation is not reliable enough at short prices to be a hard gate).
         _min_odds = 2.5
         _best_odds = float(r['best'].get('odds', 99))
-        _wp_s9  = _win_prob_pct(score)
-        _ev_s9  = _expected_value(_wp_s9, _best_odds)
-        # Absolute floor: nothing below 2.0 regardless of score
-        if _best_odds < 2.0:
+        # Absolute floor: nothing below 1.5 regardless of score
+        if _best_odds < 1.5:
             print(f"  [GATE-S9 REJECTED] {r['best']['horse']} score={score:.0f}: "
-                  f"odds {_best_odds:.2f} below absolute floor (2.0) — unbeatable for any system")
+                  f"odds {_best_odds:.2f} below absolute floor (1.5) — unbeatable for any system")
             return False
-        # 2.0-2.5: allow ELITE picks with genuine positive EV
+        # 1.5-2.5: allow high-scoring picks (score >= 90)
         if _best_odds < _min_odds:
-            if score >= 90 and _ev_s9 > 0:
+            if score >= 90:
                 print(f"  [GATE-S9 ELITE] {r['best']['horse']} score={score:.0f}: "
-                      f"odds {_best_odds:.2f} below 2.5 but ELITE score + EV={_ev_s9:+.3f} — allowing")
+                      f"odds {_best_odds:.2f} below 2.5 but high score — allowing")
             else:
                 print(f"  [GATE-S9 REJECTED] {r['best']['horse']} score={score:.0f}: "
-                      f"odds {_best_odds:.2f} < {_min_odds:.2f} (needs score>=90 AND EV>0 to waive)")
+                      f"odds {_best_odds:.2f} < {_min_odds:.2f} (needs score>=90 to waive)")
                 return False
 
         # S10 — Irish NHF bumper short-priced favourite gate (2026-04-06)
@@ -824,6 +892,34 @@ def analyze_and_save_all():
                       f"no market backing. Pro workflow: skip this race type at 12+")
                 return False
 
+        # S13 — Odds ceiling gate (2026-04-18, backtest-driven)
+        # EVIDENCE: 144 horses Mar 22-Apr 17 backtest:
+        #   odds 2-3: 80% WR (+97.8% ROI)  |  odds 3-4: 42.1% (+40.2%)
+        #   odds 4-5: 30.8% (+34.9%)        |  odds 5-6: 20.8% (+9.3%)
+        #   odds 6-8: 0% WR (-100% ROI)     |  odds 10+: 0% WR
+        # Horses at 6+ odds have near-zero hit rate. Allow only if score >= 100
+        # AND market leader (captures rare legitimate longshot picks like Royal Velvet 9.2).
+        if _best_odds >= 6.0:
+            if score < 100 or ml == 0:
+                print(f"  [GATE-S13 REJECTED] {r['best']['horse']} score={score:.0f}: "
+                      f"odds {_best_odds:.2f} >= 6.0 — backtest shows 0% WR in 6-8 band. "
+                      f"Needs score>=100 AND market leader to override.")
+                return False
+            else:
+                print(f"  [GATE-S13 WARNING] {r['best']['horse']} score={score:.0f}: "
+                      f"odds {_best_odds:.2f} >= 6.0 but elite score + ML — allowing")
+
+        # S14 — Excessive score gap gate (2026-04-18, backtest-driven)
+        # EVIDENCE: score_gap 50+ has only 11.1% WR (1W of 9 picks).
+        # When the model scores one horse 50+ pts above the field, it's stacking
+        # bonuses (form+trainer+jockey+distance) that each add noise — false dominance.
+        # Gap 0-10: 50% WR, gap 30-50: 50% WR, gap 50+: 11.1% — clear red flag.
+        if score_gap >= 50 and score < 100:
+            print(f"  [GATE-S14 REJECTED] {r['best']['horse']} score={score:.0f}: "
+                  f"score_gap={score_gap:.0f} >= 50 — backtest shows 11% WR for huge gaps. "
+                  f"Score inflation indicator (stacked bonuses ≠ real edge).")
+            return False
+
         return True
 
     def _race_min_confidence(r):
@@ -844,58 +940,66 @@ def analyze_and_save_all():
         return MIN_CONFIDENCE_NORACE      # 75
 
     eligible = [r for r in all_races_data
-                if r['best']['score'] >= _race_min_confidence(r) and _passes_quality_gates(r)]
+                if r['best']['score'] >= _race_min_confidence(r)
+                and _passes_quality_gates(r)
+                and r.get('race_time', '')[:10] == today]  # exclude tomorrow's races
     eligible.sort(key=lambda r: r['best']['score'], reverse=True)
 
-    # ── DIVERSE PICK SELECTION (2026-03-30, enhanced 2026-04-07) ──────────────
-    # PROFESSIONAL WORKFLOW LESSON: Pro explicitly includes a "value play" (Leopardstown
-    # 5.0, EV=+0.90) alongside high-probability picks. Never an all-short-odds portfolio.
-    # Naively taking top-N by score often yields all picks in the same 3.5-5.0 odds band.
-    # Mix across three price tiers + guarantee one EV+ value play (Tier B or C):
-    #   Tier A: 2.0-3.9  (high-probability, lower payout)
-    #   Tier B: 4.0-7.9  (value sweet-spot — "Big value play" per pro workflow)
-    #   Tier C: 8.0+     (outsider/longshot)
-    # Rules: max 2 per tier, AND must include at least 1 Tier B/C if one exists with EV>0.
-    _tier_counts = {'A': 0, 'B': 0, 'C': 0}
-    def _odds_tier(odds):
-        if odds < 4.0:  return 'A'
-        if odds < 8.0:  return 'B'
-        return 'C'
+    # ── PICK SELECTION (2026-04-18 backtest-driven) ────────────────────────────
+    # EVIDENCE from 104 UI picks Mar 22-Apr 17:
+    #   odds 2-3: 80% WR  |  3-4: 42%  |  4-5: 31%  |  5-6: 21%  |  6+: 0%
+    #   Simulation "top score + odds < 4.0" → 61.9% WR, +116.7% ROI
+    # Strategy: sort by COMPOSITE score = raw_score + odds_preference_bonus.
+    # This shifts selection toward shorter-priced horses when scores are close,
+    # without ignoring a genuinely high-scoring longer-odds pick.
+    def _odds_preference_bonus(odds):
+        """Backtest-calibrated bonus: shorter prices win far more often."""
+        if odds < 3.0:  return 8   # 80% WR band — strongly prefer
+        if odds < 4.0:  return 4   # 42% WR band — moderately prefer
+        if odds < 5.0:  return 0   # 31% WR band — neutral
+        return -4                  # 21% WR and below — penalise
 
-    # Identify best EV+ value play (Tier B or C with positive expected value)
-    _value_plays = [
-        r for r in eligible
-        if _odds_tier(float(r['best']['odds'])) in ('B', 'C')
-        and float(r['best']['item'].get('expected_value', -1)) > 0
-    ]
-    _reserved_value = _value_plays[0] if _value_plays else None
+    def _selection_score(r):
+        raw = r['best']['score']
+        odds = float(r['best'].get('odds', 99))
+        return raw + _odds_preference_bonus(odds)
 
-    top_picks = []
-    # Reserve slot for value play first if available
-    if _reserved_value and _effective_target > 0:
-        top_picks.append(_reserved_value)
-        _tier_counts[_odds_tier(float(_reserved_value['best']['odds']))] += 1
+    eligible.sort(key=lambda r: _selection_score(r), reverse=True)
 
-    for r in eligible:
-        if len(top_picks) >= _effective_target:
-            break
-        if r is _reserved_value:
-            continue
-        tier = _odds_tier(float(r['best']['odds']))
-        if _tier_counts[tier] < 2:
-            top_picks.append(r)
-            _tier_counts[tier] += 1
-    # Top up greedily if still short
-    if len(top_picks) < _effective_target:
-        remaining = [r for r in eligible if r not in top_picks]
-        top_picks += remaining[:_effective_target - len(top_picks)]
+    top_picks = eligible[:_effective_target]
 
-    # Sort final picks: rank 1 = highest score among selected
-    top_picks.sort(key=lambda r: r['best']['score'], reverse=True)
+    # ── HOT PROSPECT BONUS SLOT ──────────────────────────────────────────────
+    # Allow a 6th pick ONLY if a genuinely exceptional candidate exists beyond
+    # the normal 5-pick cap. This pick appears only on the premium Top 5 page.
+    # Threshold: score >= 130 AND odds < 5.0 (the 80%/42% WR bands from backtest).
+    # Cap: max 6 total UI picks per day (5 normal + 1 hot prospect).
+    HOT_PROSPECT_SCORE    = 130
+    HOT_PROSPECT_MAX_ODDS = 5.0
+    _total_ui_with_locked = _locked_count + len(top_picks)
+    if _total_ui_with_locked >= MAX_DAILY_UI_PICKS and len(eligible) > _effective_target:
+        _hot = eligible[_effective_target]
+        _hot_score = _hot['best']['score']
+        _hot_odds  = float(_hot['best'].get('odds', 99))
+        if _hot_score >= HOT_PROSPECT_SCORE and _hot_odds < HOT_PROSPECT_MAX_ODDS:
+            top_picks.append(_hot)
+            print(f"  HOT PROSPECT added: {_hot['best']['horse']} "
+                  f"score={_hot_score:.0f} @{_hot_odds:.2f} "
+                  f"— exceptional pick, 6th slot activated")
+        else:
+            print(f"  No hot prospect: next eligible {_hot['best']['horse']} "
+                  f"score={_hot_score:.0f} @{_hot_odds:.2f} "
+                  f"— does not meet threshold (need score>=130, odds<5.0)")
 
-    # Build a set of bet_ids for the 3 winners
+    # Sort final picks: rank 1 = highest composite selection score
+    top_picks.sort(key=lambda r: _selection_score(r), reverse=True)
+
+    # Build a set of bet_ids for the top picks
     top_bet_ids = {r['best']['item']['bet_id']: rank
                    for rank, r in enumerate(top_picks, start=1)}
+    # Track which bet_id is the hot prospect (rank 6 = the bonus slot)
+    _hot_prospect_id = None
+    if len(top_picks) > MAX_DAILY_UI_PICKS:
+        _hot_prospect_id = top_picks[-1]['best']['item']['bet_id']
 
     print("\n" + "=" * 100)
     print(f"TOP {len(top_picks)} PICKS SELECTED")
@@ -936,11 +1040,15 @@ def analyze_and_save_all():
             rank  = top_bet_ids.get(bid, 0)
             is_ui = rank > 0
 
-            item['show_in_ui']          = is_ui
+            # Detect dropped picks — previously a ranked UI pick (1-5), now demoted
+            _is_dropped = (not is_ui and bid in _reanalysable_ui_ids)
+            item['show_in_ui']          = is_ui  # dropped picks are NOT show_in_ui
             item['recommended_bet']     = is_ui
-            item['is_learning_pick']    = not is_ui
+            item['is_learning_pick']    = not is_ui and not _is_dropped
             item['pick_rank']           = rank
-            item['pick_type']           = 'morning' if is_ui else 'learning'
+            item['is_hot_prospect']     = (bid == _hot_prospect_id) if _hot_prospect_id else False
+            item['is_dropped']          = _is_dropped
+            item['pick_type']           = 'dropped' if _is_dropped else ('morning' if is_ui else 'learning')
             item['race_analyzed_count'] = race_total
             if is_ui:
                 # Kelly Criterion stake sizing (half-Kelly, 100-unit bankroll):
@@ -966,6 +1074,9 @@ def analyze_and_save_all():
                     ui_promoted += 1
                     print(f"  >> PICK #{rank}: {item['horse']:28} @{float(item['odds']):5.2f}  "
                           f"Score:{r['score']:3.0f}  [{race_data['venue']}]")
+                elif _is_dropped:
+                    print(f"  ✗  DROPPED: {item['horse']:28} @{float(item['odds']):5.2f}  "
+                          f"Score:{r['score']:3.0f}  (was UI pick, now demoted)")
                 else:
                     print(f"  -  Learning: {item['horse']:28} @{float(item['odds']):5.2f}  "
                           f"Score:{r['score']:3.0f}")

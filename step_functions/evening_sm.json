@@ -137,7 +137,7 @@
             "http": { "method": "POST" }
           },
           "headers": { "content-type": "application/json" },
-          "body.$": "States.Format('{{\"date\":\"{}\"}}', $.date)"
+          "date.$": "$.date"
         }
       },
       "ResultSelector": {

@@ -108,6 +108,10 @@ def lambda_handler(event, context):
             return admin_get_subscribers(headers, event)
         elif 'login' in path and method == 'POST':
             return login_subscriber(headers, event)
+        elif 'forgot-password' in path and method == 'POST':
+            return forgot_password(headers, event)
+        elif 'reset-password' in path and method == 'POST':
+            return reset_password(headers, event)
         elif 'verify-email' in path:
             return verify_email_token(headers, event)
         elif 'register' in path and method == 'POST':
@@ -1631,6 +1635,127 @@ def _send_verification_email(email: str, full_name: str, token: str):
     )
 
 
+# ── Forgot / Reset password ─────────────────────────────────────────────────
+SUPPORT_EMAIL = 'directorai@futuregenai.com'
+
+def forgot_password(headers, event):
+    """POST /api/forgot-password — send a password reset link via email."""
+    try:
+        body = json.loads(event.get('body') or '{}')
+        email = (body.get('email') or '').strip().lower()
+
+        if not email or '@' not in email:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Please provide a valid email address.'})}
+
+        # Always return success to prevent email enumeration
+        item = subscribers_table.get_item(Key={'email': email}).get('Item')
+        if not item:
+            print(f'forgot_password: no account for {email} — returning success anyway')
+            return {'statusCode': 200, 'headers': headers, 'body': json.dumps({'success': True})}
+
+        # Generate reset token (URL-safe, 48 bytes = 64 chars)
+        token = secrets.token_urlsafe(48)
+        expires = (datetime.utcnow() + timedelta(hours=1)).isoformat() + 'Z'
+
+        # Store token reservation in subscribers table
+        subscribers_table.put_item(Item={
+            'email': f'rst#{token}',
+            'ref_email': email,
+            'expires_at': expires,
+            'created_at': datetime.utcnow().isoformat() + 'Z',
+        })
+
+        # Send reset email
+        reset_url = f'{SITE_URL}/?reset={token}'
+        first_name = (item.get('full_name') or '').split()[0] or 'there'
+        username = item.get('username', '')
+        html = f"""<!DOCTYPE html><html><body style="font-family:Arial,sans-serif;background:#0f172a;color:white;padding:40px;">
+<div style="max-width:560px;margin:0 auto;background:#1e293b;border-radius:16px;padding:40px;">
+  <h1 style="color:#34d399;margin:0 0 8px;">BetBudAI</h1>
+  <p style="color:rgba(255,255,255,0.5);margin:0 0 32px;font-size:13px;">AI-powered horse racing picks</p>
+  <h2 style="color:white;font-size:22px;margin:0 0 16px;">Hi {first_name}, reset your password</h2>
+  <p style="color:rgba(255,255,255,0.7);line-height:1.6;">We received a request to reset the password for your BetBudAI account{f' (username: <strong>{username}</strong>)' if username else ''}.</p>
+  <p style="color:rgba(255,255,255,0.7);line-height:1.6;">Click the button below to set a new password:</p>
+  <a href="{reset_url}" style="display:inline-block;margin:24px 0;padding:14px 32px;background:linear-gradient(135deg,#059669,#047857);color:white;text-decoration:none;border-radius:10px;font-weight:700;font-size:16px;">🔑 Reset My Password</a>
+  <p style="color:rgba(255,255,255,0.4);font-size:12px;">This link expires in 1 hour. If you didn't request a password reset, you can safely ignore this email.</p>
+  <hr style="border:none;border-top:1px solid rgba(255,255,255,0.1);margin:24px 0;"/>
+  <p style="color:rgba(255,255,255,0.3);font-size:11px;">Need help? Contact us at <a href="mailto:{SUPPORT_EMAIL}" style="color:#34d399;">{SUPPORT_EMAIL}</a></p>
+  <p style="color:rgba(255,255,255,0.3);font-size:11px;">BetBudAI &middot; <a href="{SITE_URL}" style="color:#34d399;">{SITE_URL}</a></p>
+</div></body></html>"""
+        text = f'Hi {first_name},\n\nReset your BetBudAI password by visiting:\n{reset_url}\n\nThis link expires in 1 hour.\n\nIf you didn\'t request this, ignore this email.\n\nNeed help? Contact {SUPPORT_EMAIL}'
+        ses_client.send_email(
+            Source=f'BetBudAI <{SENDER_EMAIL}>',
+            ReplyToAddresses=[SUPPORT_EMAIL],
+            Destination={'ToAddresses': [email]},
+            Message={
+                'Subject': {'Data': 'Reset your BetBudAI password', 'Charset': 'UTF-8'},
+                'Body': {
+                    'Html': {'Data': html, 'Charset': 'UTF-8'},
+                    'Text': {'Data': text, 'Charset': 'UTF-8'},
+                },
+            },
+        )
+        print(f'forgot_password: reset email sent to {email}')
+        return {'statusCode': 200, 'headers': headers, 'body': json.dumps({'success': True})}
+    except Exception as e:
+        print(f'forgot_password error: {e}')
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Something went wrong. Please try again later.'})}
+
+
+def reset_password(headers, event):
+    """POST /api/reset-password — validate token and set new password."""
+    try:
+        body = json.loads(event.get('body') or '{}')
+        token = (body.get('token') or '').strip()
+        password = body.get('password') or ''
+
+        if not token:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Reset token is missing.'})}
+        if not password or len(password) < 8:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Password must be at least 8 characters.'})}
+
+        # Look up token reservation
+        reservation = subscribers_table.get_item(Key={'email': f'rst#{token}'}).get('Item')
+        if not reservation:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Invalid or expired reset link. Please request a new one.'})}
+
+        # Check expiry
+        expires_at = reservation.get('expires_at', '')
+        if expires_at and datetime.utcnow().isoformat() + 'Z' > expires_at:
+            # Clean up expired token
+            try: subscribers_table.delete_item(Key={'email': f'rst#{token}'})
+            except: pass
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Reset link has expired. Please request a new one.'})}
+
+        ref_email = reservation['ref_email']
+
+        # Verify the user still exists
+        user = subscribers_table.get_item(Key={'email': ref_email}).get('Item')
+        if not user:
+            return {'statusCode': 400, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Account not found. Please contact support.'})}
+
+        # Update password
+        new_hash = _hash_password(password)
+        subscribers_table.update_item(
+            Key={'email': ref_email},
+            UpdateExpression='SET password_hash = :ph, password_reset_at = :now',
+            ExpressionAttributeValues={
+                ':ph': new_hash,
+                ':now': datetime.utcnow().isoformat() + 'Z',
+            }
+        )
+
+        # Delete the used token
+        try: subscribers_table.delete_item(Key={'email': f'rst#{token}'})
+        except: pass
+
+        print(f'reset_password: password updated for {ref_email}')
+        return {'statusCode': 200, 'headers': headers, 'body': json.dumps({'success': True})}
+    except Exception as e:
+        print(f'reset_password error: {e}')
+        return {'statusCode': 500, 'headers': headers, 'body': json.dumps({'success': False, 'error': 'Something went wrong. Please try again later.'})}
+
+
 def verify_email_token(headers, event):
     """GET /api/verify-email?token=xxx — mark account as verified."""
     try:
@@ -2072,7 +2197,7 @@ def auto_record_pending_results(headers):
     pending = []
     for date in [today, yesterday]:
         resp = table.scan(
-            FilterExpression=Attr('bet_date').eq(date) & Attr('outcome').eq('pending') & Attr('show_in_ui').eq(True)
+            FilterExpression=Attr('bet_date').eq(date) & (Attr('outcome').eq('pending') | Attr('outcome').not_exists() | Attr('outcome').eq(None)) & Attr('show_in_ui').eq(True)
         )
         pending.extend(decimal_to_float(item) for item in resp.get('Items', []))
 
@@ -2780,12 +2905,10 @@ def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
         fav_outcome = None
         if winner_map:
             import re as _re2
-            date_part = rt[:10] if len(rt) >= 10 else target_date_str
-            utc_hhmm  = rt[11:16] if len(rt) >= 16 else ''
-            local_hhmm = _utc_to_local_hhmm(utc_hhmm, date_part)
+            race_hhmm = rt[11:16] if len(rt) >= 16 else ''
             course_key = course.lower().replace('-', ' ').strip()
             try:
-                lh, lm = map(int, local_hhmm.split(':'))
+                lh, lm = map(int, race_hhmm.split(':'))
                 local_mins = lh * 60 + lm
                 best_diff = 999
                 best_winner = None
@@ -2815,8 +2938,7 @@ def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
                     'win' if winner_name.strip().lower() == fav_name.strip().lower()
                     else 'loss'
                 )
-            else:
-                fav_outcome = fav.get('outcome') or None
+            # else: leave fav_outcome as None — race hasn't been settled yet
 
         results.append({
             'date':          target_date_str,

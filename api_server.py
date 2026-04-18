@@ -1311,7 +1311,22 @@ def apply_learning():
             return jsonify({'success': True, 'message': 'No settled losses found — nothing to learn from', 'changes': {}})
 
         # Load current weights from DynamoDB
-        WEIGHT_MIN, WEIGHT_MAX, MAX_NUDGE = 2.0, 40.0, 1.5
+        # GUARDRAIL 2026-04-17: Per-weight bounds to prevent unchecked drift.
+        # Previous system allowed ±1.5/day with global [2,40] bounds, which
+        # drifted optimal_odds from 10→18.3 and recent_win from 16→30.
+        WEIGHT_BOUNDS = {
+            'optimal_odds':     (6, 14),
+            'recent_win':       (10, 22),
+            'total_wins':       (5, 12),
+            'sweet_spot':       (8, 16),
+            'consistency':      (3, 10),
+            'age_bonus':        (4, 10),
+            'going_suitability':(10, 22),
+            'trainer_reputation':(10, 20),
+            'cd_bonus':         (12, 24),
+            'jockey_quality':   (8, 16),
+        }
+        WEIGHT_MIN, WEIGHT_MAX, MAX_NUDGE = 2.0, 40.0, 1.0  # reduced MAX_NUDGE from 1.5 to 1.0
         try:
             wt_resp = table.get_item(Key={'bet_id': 'SYSTEM_WEIGHTS', 'bet_date': 'CONFIG'})
             raw_wt  = wt_resp.get('Item', {}).get('weights', {})
@@ -1348,7 +1363,9 @@ def apply_learning():
                     continue
                 nudge  = max(-MAX_NUDGE, min(MAX_NUDGE, total / n))
                 old_v  = weights[factor]
-                new_v  = round(max(WEIGHT_MIN, min(WEIGHT_MAX, old_v + nudge)), 2)
+                # Use per-weight bounds if defined, else global bounds
+                lo, hi = WEIGHT_BOUNDS.get(factor, (WEIGHT_MIN, WEIGHT_MAX))
+                new_v  = round(max(lo, min(hi, old_v + nudge)), 2)
                 if abs(new_v - old_v) > 0.01:
                     weights[factor] = new_v
                     changes[factor] = {'from': old_v, 'to': new_v, 'nudge': round(nudge, 2)}

@@ -3617,17 +3617,13 @@ def _analyse_date_lambda(target_date_str, tbl, winner_map=None):
 
             import re as _re2
 
-            date_part = rt[:10] if len(rt) >= 10 else target_date_str
-
-            utc_hhmm  = rt[11:16] if len(rt) >= 16 else ''
-
-            local_hhmm = _utc_to_local_hhmm(utc_hhmm, date_part)
+            race_hhmm = rt[11:16] if len(rt) >= 16 else ''
 
             course_key = course.lower().replace('-', ' ').strip()
 
             try:
 
-                lh, lm = map(int, local_hhmm.split(':'))
+                lh, lm = map(int, race_hhmm.split(':'))
 
                 local_mins = lh * 60 + lm
 
