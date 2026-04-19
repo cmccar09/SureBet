@@ -1250,7 +1250,12 @@ function Top5PicksView() {
       if (roiData?.success) setCumulRoi(roiData);
       if (data.success) {
         const picks = (data.picks || []).filter(p => p.show_in_ui !== false);
+        // Assign rank by score (highest first)
         picks.sort((a, b) => parseFloat(b.comprehensive_score || b.score || 0) - parseFloat(a.comprehensive_score || a.score || 0));
+        picks.forEach((p, i) => { p.originalRank = i + 1; });
+        // Then sort by race time ascending (soonest first)
+        const parseRT = rt => { if (!rt) return Infinity; try { let s = rt.includes('T') ? rt : rt.replace(' ', 'T'); if (!s.endsWith('Z') && !s.includes('+')) s += 'Z'; const t = new Date(s).getTime(); return isNaN(t) ? Infinity : t; } catch { return Infinity; } };
+        picks.sort((a, b) => parseRT(a.race_time) - parseRT(b.race_time));
         setAllPicks(picks);
       } else setError(data.error || 'Failed to load picks');
     } catch (err) { setError('Network error: ' + err.message); }
@@ -1360,13 +1365,18 @@ function Top5PicksView() {
           <div style={{ fontSize:'14px' }}>Today's 5 AI picks will appear here once the analysis completes at 1pm.</div>
         </div>
       ) : (() => {
-        const activePicks = allPicks.filter(p => !p.is_dropped);
+        const parseRT2 = rt => { if (!rt) return null; try { let s = rt.includes('T') ? rt : rt.replace(' ', 'T'); if (!s.endsWith('Z') && !s.includes('+')) s += 'Z'; const d = new Date(s); return isNaN(d.getTime()) ? null : d; } catch { return null; } };
+        const activePicks = allPicks.filter(p => !p.is_dropped).filter(p => {
+          const rt = parseRT2(p.race_time);
+          if (!rt) return true;
+          return rt.getTime() > now.getTime();
+        });
         const droppedPicks = allPicks.filter(p => p.is_dropped);
         return (
         <div style={{ display:'flex', flexDirection:'column', gap:'16px' }}>
           {activePicks.map((pick, idx) => {
             const tier = tierInfo(pick.comprehensive_score || pick.score);
-            const rank = idx + 1;
+            const rank = pick.originalRank || (idx + 1);
             const rankColors = { 1:'#d97706', 2:'#6b7280', 3:'#92400e', 4:'#0891b2', 5:'#7c3aed', 6:'#dc2626' };
             const ft = formatRaceTime(pick.race_time);
             const bw = bettingWindow(pick);
@@ -2726,6 +2736,7 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
   const [roi, setRoi]         = useState(null);
   const [settled, setSettled] = useState(null);
   const [roiLoading, setRoiLoading] = useState(true);
+  const [latestWinner, setLatestWinner] = useState(null);
   const [authMode, setAuthMode] = useState('login'); // 'register' | 'login' | 'forgot' | 'reset'
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 768);
 
@@ -2815,6 +2826,10 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
       .then(d => { if (d.success) { setRoi(d.roi); setSettled(d.settled); } })
       .catch(() => {})
       .finally(() => setRoiLoading(false));
+    fetch(`${API_BASE_URL}/api/results/latest-winner`)
+      .then(r => r.json())
+      .then(d => { if (d.success && d.fractional_odds) setLatestWinner(d); })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -2998,6 +3013,24 @@ function HomePageView({ onAuthSuccess, isAuthenticated, authUser }) {
           ))}
         </div>
       </div>
+
+      {/* ── LATEST WINNER BANNER (unauthenticated only) ─────────────── */}
+      {!isAuthenticated && latestWinner && (
+        <div style={{
+          maxWidth: '560px', margin: '0 auto 20px', padding: '12px 20px',
+          background: 'linear-gradient(135deg, rgba(52,211,153,0.12), rgba(16,185,129,0.06))',
+          border: '1px solid rgba(52,211,153,0.3)', borderRadius: '12px',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+          animation: 'winnerPulse 3s ease-in-out infinite',
+        }}>
+          <span style={{ fontSize: '22px' }}>🏆</span>
+          <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '14px', fontWeight: '600' }}>
+            BetBudAI landed a <span style={{ color: '#34d399', fontWeight: '900', fontSize: '16px' }}>{latestWinner.fractional_odds}</span> winner {latestWinner.label}
+            {latestWinner.winner_count > 1 ? ` (${latestWinner.winner_count} winners!)` : '!'}
+          </span>
+          <span style={{ fontSize: '14px' }}>🔥</span>
+        </div>
+      )}
 
       {/* ── COMPACT PRICING STRIP ─────────────────────────────────────── */}
       {!isAuthenticated && (
